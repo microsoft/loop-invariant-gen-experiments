@@ -5,8 +5,9 @@ Overview of Z3 Results:
 | SAT |100 |
 | UNSAT | 14 |
 | TIMEOUT | 8 |
-| ERROR | 11 |
-| UNKNOWN | 0 |
+| ERROR | 6 |
+| UNKNOWN | 5 |
+| UNKNOWN TO PARSER | 0 |
 
 | C Code | Z3 Status | Z3 Code | Z3 Output |
 |--------|-----------|---------|-----------|
@@ -66,7 +67,7 @@ Overview of Z3 Results:
 | [54.c](./c_benchmark/54.c) | SAT | [54.smt2](./z3/54.smt2) | [54.out](./z3/54.out) |
 | [55.c](./c_benchmark/55.c) | UNSAT | [55.smt2](./z3/55.smt2) | [55.out](./z3/55.out) |
 | [56.c](./c_benchmark/56.c) | SAT | [56.smt2](./z3/56.smt2) | [56.out](./z3/56.out) |
-| [57.c](./c_benchmark/57.c) | ERROR | [57.smt2](./z3/57.smt2) | [57.out](./z3/57.out) |
+| [57.c](./c_benchmark/57.c) | UNKNOWN | [57.smt2](./z3/57.smt2) | [57.out](./z3/57.out) |
 | [58.c](./c_benchmark/58.c) | SAT | [58.smt2](./z3/58.smt2) | [58.out](./z3/58.out) |
 | [59.c](./c_benchmark/59.c) | SAT | [59.smt2](./z3/59.smt2) | [59.out](./z3/59.out) |
 | [60.c](./c_benchmark/60.c) | ERROR | [60.smt2](./z3/60.smt2) | [60.out](./z3/60.out) |
@@ -80,16 +81,16 @@ Overview of Z3 Results:
 | [68.c](./c_benchmark/68.c) | SAT | [68.smt2](./z3/68.smt2) | [68.out](./z3/68.out) |
 | [69.c](./c_benchmark/69.c) | UNSAT | [69.smt2](./z3/69.smt2) | [69.out](./z3/69.out) |
 | [70.c](./c_benchmark/70.c) | UNSAT | [70.smt2](./z3/70.smt2) | [70.out](./z3/70.out) |
-| [71.c](./c_benchmark/71.c) | ERROR | [71.smt2](./z3/71.smt2) | [71.out](./z3/71.out) |
+| [71.c](./c_benchmark/71.c) | UNKNOWN | [71.smt2](./z3/71.smt2) | [71.out](./z3/71.out) |
 | [72.c](./c_benchmark/72.c) | UNSAT | [72.smt2](./z3/72.smt2) | [72.out](./z3/72.out) |
 | [73.c](./c_benchmark/73.c) | UNSAT | [73.smt2](./z3/73.smt2) | [73.out](./z3/73.out) |
 | [74.c](./c_benchmark/74.c) | ERROR | [74.smt2](./z3/74.smt2) | [74.out](./z3/74.out) |
 | [75.c](./c_benchmark/75.c) | SAT | [75.smt2](./z3/75.smt2) | [75.out](./z3/75.out) |
 | [76.c](./c_benchmark/76.c) | UNSAT | [76.smt2](./z3/76.smt2) | [76.out](./z3/76.out) |
-| [77.c](./c_benchmark/77.c) | ERROR | [77.smt2](./z3/77.smt2) | [77.out](./z3/77.out) |
-| [78.c](./c_benchmark/78.c) | ERROR | [78.smt2](./z3/78.smt2) | [78.out](./z3/78.out) |
+| [77.c](./c_benchmark/77.c) | UNKNOWN | [77.smt2](./z3/77.smt2) | [77.out](./z3/77.out) |
+| [78.c](./c_benchmark/78.c) | UNKNOWN | [78.smt2](./z3/78.smt2) | [78.out](./z3/78.out) |
 | [79.c](./c_benchmark/79.c) | SAT | [79.smt2](./z3/79.smt2) | [79.out](./z3/79.out) |
-| [80.c](./c_benchmark/80.c) | ERROR | [80.smt2](./z3/80.smt2) | [80.out](./z3/80.out) |
+| [80.c](./c_benchmark/80.c) | UNKNOWN | [80.smt2](./z3/80.smt2) | [80.out](./z3/80.out) |
 | [81.c](./c_benchmark/81.c) | SAT | [81.smt2](./z3/81.smt2) | [81.out](./z3/81.out) |
 | [82.c](./c_benchmark/82.c) | SAT | [82.smt2](./z3/82.smt2) | [82.out](./z3/82.out) |
 | [83.c](./c_benchmark/83.c) | SAT | [83.smt2](./z3/83.smt2) | [83.out](./z3/83.out) |

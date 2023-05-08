@@ -6,7 +6,8 @@ stats = {
     "UNSAT": 0,
     "TIMEOUT": 0,
     "ERROR": 0,
-    "UNKNOWN": 0
+    "UNKNOWN": 0,
+    "UNKNOWN TO PARSER": 0
 }
 
 z3_table = """| C Code | Z3 Status | Z3 Code | Z3 Output |
@@ -52,8 +53,11 @@ def run_z3(smt_file: str, num: int):
         #     f.write(output)
         status = ""
         if "error" in output:
+            # breakpoint()
             if "unsat" in output:
                 status = "UNSAT"
+            elif "unknown\n" in output:
+                status = "UNKNOWN"
             else:
                 status = "ERROR"
         elif "sat" in output:
@@ -61,7 +65,7 @@ def run_z3(smt_file: str, num: int):
         elif "timeout" in output:
             status = "TIMEOUT"
         else:
-            status = "UNKNOWN"
+            status = "UNKNOWN TO PARSER"
         with open(f"z3/{i}.out", "w") as f2:
             f2.write(output)
         stats[status] += 1
@@ -97,6 +101,7 @@ with open("z3_table.md", "w") as f:
 | TIMEOUT | {stats["TIMEOUT"]} |
 | ERROR | {stats["ERROR"]} |
 | UNKNOWN | {stats["UNKNOWN"]} |
+| UNKNOWN TO PARSER | {stats["UNKNOWN TO PARSER"]} |
 
 {z3_table}
     """)
