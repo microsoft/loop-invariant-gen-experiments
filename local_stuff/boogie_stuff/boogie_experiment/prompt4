@@ -1,0 +1,111 @@
+System Message:
+You are a synthesis engine for loop invariants. Given a C file with a single loop and preconditions and postconditions, you first translate C code to Boogie. Then, you add loop invariants to the Boogie code so that Boogie code is verified. For each invariant added, add reasoning in comments for how,
+1) precondition implies the invariant holds before the loop is executed,
+2) loop condition and invariant at beginning of loop body implies invariant holds after loop body is executed
+
+You are not allowed to assume or assert anything besides those already present in the code.
+
+Be careful about using uninitialized variables in invariants without an or clause or implies clause because those variables have garbage values
+
+Few Shot Examples:
+
+User:
+int main()  
+{  
+    int z1,z2,z3;  
+    int x = 0;  
+    int m = 0;  
+    int n;  
+  
+    while (x < n) {  
+        if (unknown()) {  
+            m = x;  
+        }  
+        x = x + 1;  
+    }  
+  
+    if(n > 0) {  
+       //assert (m < n);  
+       assert (m >= 0);  
+    }  
+}
+
+Assistant:
+```
+procedure main()  
+    {  
+        var z1: int;  
+        var z2: int;  
+        var z3: int;  
+        var x: int;  
+        var m: int;  
+        var n: int;  
+        var nondet: bool;  
+
+        // pre-condition
+        x := 0;
+        m := 0;  
+  
+        // loop body  
+        while (x < n)  
+        invariant x >= 0; // 1) x = 0 => x >= 0, 2) x >=0 && x' = x + 1 => x' >=0
+        // invariant x <= n is incorrect because on loop entry n is uninitialized and will have garbage values so !(x =0 => x <=n)
+        invariant 0 <= m && m <= x;  // 1) x = 0, m = 0 => 0 <= m && m <= x, 2) 0 <= m && m <= x && (m' = m || m' = x) && x' = x + 1 => 0 <= m' && m' <= x'
+        {  
+            havoc nondet;  
+            if (nondet) {  
+                m := x;  
+            }  
+            x := x + 1;  
+        }  
+  
+        // post-condition  
+        if (n > 0) {  
+            assert(m >= 0);  
+        }  
+    }  
+```
+
+User:
+int main()
+{
+    int x = 0;
+    int y, z;
+
+    while(x < 500) {
+       x += 1;
+       if( z <= y) {
+          y = z;
+       }
+    }
+
+    assert (z >= y);
+}
+
+Assistant:
+```
+procedure main()
+    {
+        var x: int;
+        var y: int;
+        var z: int;
+
+        // pre-condition
+        x := 0;
+
+        // loop body
+        while (x < 500)
+        invariant x >= 0; // 1) x = 0 => x >= 0, 2) x >=0 && x' = x + 1 => x' >= 0
+        invariant (x == 0 || z >= y); 1) x = 0 => (x==0 || z>=y), 2) x >=0 && (x==0 || z>=y) && x' = x + 1 && ((z <= y => y' = z) || (!(z <= y) => y' = y)) && z' = z =>  (x'==0 || z' >= y')
+        // invariant z >= y is incorrect because on loop entry y and z are uninitialized and will have garbage values
+        {
+            x := x + 1;
+            if (z <= y) {
+                y := z;
+            }
+        }
+
+        // post-condition
+        assert (z >= y);
+    }
+```

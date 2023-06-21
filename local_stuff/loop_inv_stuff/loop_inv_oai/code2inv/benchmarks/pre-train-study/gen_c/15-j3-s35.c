@@ -1,0 +1,42 @@
+int main()
+{
+  int m;
+  int n;
+  int tmp;
+  int x;
+  int junk_0 = 0;
+  int junk_1 = 4;
+  int junk_2 = 0;
+  //skip 
+  x = 0;
+  
+  m = 0;
+  
+  while(((x) < (n)))
+  {
+    //tb 
+    if(unknown()) {
+      //tb 
+      m = x;
+      junk_2 = 957 - (junk_0);
+    }
+    else{
+      //fb 
+    }
+    //phi 
+    x = ((x) + (1));
+    junk_0 = junk_1;
+  }
+    //fb 
+  if(((n) > (0))) {
+    //tb 
+    assert ((m) < (n));
+  }
+  else{
+    //fb 
+  }
+  //skip 
+  //skip 
+
+
+}

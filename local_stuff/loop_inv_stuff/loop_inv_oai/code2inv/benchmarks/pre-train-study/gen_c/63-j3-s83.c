@@ -1,0 +1,24 @@
+int main()
+{
+  int x;
+  int y;
+  int junk_0 = 4;
+  int junk_1 = 3;
+  int junk_2 = 2;
+  //skip 
+  x = 1;
+  
+  while(((x) <= (10)))
+  {
+    //tb 
+    y = ((10) - (x));
+    junk_1 = 473;
+    x = ((x) + (1));
+    junk_1 = junk_2 - (494);
+  }
+    //fb 
+  assert ((y) >= (0));
+  //skip 
+
+
+}

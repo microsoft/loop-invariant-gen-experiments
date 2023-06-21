@@ -1,0 +1,20 @@
+int main()
+{
+  int x;
+  int y;
+  int junk_0 = 3;
+  //skip 
+  x = 1;
+  
+  while(((x) < (y)))
+  {
+    //tb 
+    x = ((x) + (x));
+    junk_0 = 701;
+  }
+    //fb 
+  assert ((x) >= (1));
+  //skip 
+
+
+}

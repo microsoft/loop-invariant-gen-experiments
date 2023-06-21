@@ -1,0 +1,35 @@
+int main()
+{
+  int i;
+  int sn;
+  int junk_0 = 0;
+  int junk_1 = 7;
+  int junk_2 = 4;
+  int junk_3 = 6;
+  int junk_4 = 4;
+  //skip 
+  sn = 0;
+  
+  i = 1;
+  
+  while(((i) <= (8)))
+  {
+    //tb 
+    i = ((i) + (1));
+    junk_1 = junk_4 - (325);
+    sn = ((sn) + (1));
+    junk_3 = 847 - (junk_0);
+  }
+    //fb 
+  if(((sn) != (0))) {
+    //tb 
+    assert ((sn) == (8));
+  }
+  else{
+    //fb 
+  }
+  //skip 
+  //skip 
+
+
+}

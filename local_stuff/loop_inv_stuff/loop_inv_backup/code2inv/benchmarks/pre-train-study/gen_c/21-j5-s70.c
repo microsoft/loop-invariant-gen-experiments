@@ -1,0 +1,44 @@
+int main()
+{
+  int m;
+  int n;
+  int tmp;
+  int x;
+  int junk_0 = 0;
+  int junk_1 = 7;
+  int junk_2 = 5;
+  int junk_3 = 2;
+  int junk_4 = 1;
+  //skip 
+  x = 1;
+  
+  m = 1;
+  
+  while(((x) < (n)))
+  {
+    //tb 
+    if(unknown()) {
+      //tb 
+      m = x;
+      junk_4 = 357 + (junk_4);
+    }
+    else{
+      //fb 
+    }
+    //phi 
+    x = ((x) + (1));
+    junk_0 = 769;
+  }
+    //fb 
+  if(((n) > (1))) {
+    //tb 
+    assert ((m) < (n));
+  }
+  else{
+    //fb 
+  }
+  //skip 
+  //skip 
+
+
+}

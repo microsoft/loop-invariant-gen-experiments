@@ -1,0 +1,34 @@
+int main()
+{
+  int sn;
+  int tmp;
+  int x;
+  int junk_0 = 8;
+  int junk_1 = 3;
+  int junk_2 = 2;
+  //skip 
+  sn = 0;
+  
+  x = 0;
+  
+  while(unknown())
+  {
+    //tb 
+    x = ((x) + (1));
+    junk_0 = 246 + (junk_2);
+    sn = ((sn) + (1));
+    junk_1 = 51;
+  }
+    //fb 
+  if(((sn) != (x))) {
+    //tb 
+    assert ((sn) == (-1));
+  }
+  else{
+    //fb 
+  }
+  //skip 
+  //skip 
+
+
+}

@@ -1,0 +1,22 @@
+procedure main()
+    {
+        var x: int;
+        var y: int;
+
+        // pre-condition
+        x := 1;
+        y := 100 - x;
+
+        // loop body
+        while (x <= 100)
+        invariant x >= 1 && x <= 101;
+        invariant y >= 0;
+        invariant 100 - x <= y;
+        {
+            y := 100 - x;
+            x := x + 1;
+        }
+
+        // post-condition
+        assert (y >= 0);
+    }

@@ -1,0 +1,36 @@
+procedure main()
+{
+  var c: int;
+  var x1: int;
+  var x2: int;
+  var x3: int;
+  var y: int;
+  var z: int;
+  var nondet: bool;
+  // pre-conditions
+  c := 0;
+  assume(y >= 0);
+  assume(y >= 127);
+  z := 36 * y;
+  // loop body
+  havoc nondet;
+  while (nondet)
+  invariant 0 <= c && c <= 36;
+  invariant z >= 36 * y;
+  {
+    havoc nondet;
+    if (c < 36)
+    {
+      z := z + 1;
+      c := c + 1;
+    }
+  }
+  // post-condition
+  if (z < 0)
+  {
+    if (z >= 4608)
+    {
+      assert(c >= 36);
+    }
+  }
+}
