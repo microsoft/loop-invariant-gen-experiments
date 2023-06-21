@@ -1,1 +1,0 @@
-It seems there is no Boogie code provided in your input. Please provide the Boogie code you want me to analyze and fix the loop invariants for.
