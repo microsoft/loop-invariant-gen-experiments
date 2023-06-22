@@ -101,7 +101,7 @@ for src_root, dirs, files in os.walk('c_benchmarks'):
       file_path = os.path.join(src_root, file)
       print("Processing", file_path)
       out = conversation(open(file_path).read(), print_prompts)
-      dst_root = src_root.replace('c_benchmarks', 'boogie', 1)
+      dst_root = src_root.replace('c_benchmarks', 'boogie_translated', 1)
       os.makedirs(dst_root, exist_ok=True)
       for j, o in enumerate(out):
         # write output to file
