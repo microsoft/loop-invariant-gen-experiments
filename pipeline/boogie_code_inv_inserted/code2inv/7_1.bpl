@@ -13,8 +13,8 @@ invariant x >= 0;
 invariant x <= 30;
 invariant y >= 0;
 invariant y <= 30;
-invariant x mod 10 == 0;
-invariant y mod 10 == 0;
+invariant x % 10 == 0;
+invariant y % 10 == 0;
 {
 x := x + 10;
 y := y + 10;

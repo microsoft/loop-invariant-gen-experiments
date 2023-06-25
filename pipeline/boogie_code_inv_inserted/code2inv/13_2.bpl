@@ -12,8 +12,8 @@ assume(y >= 0);
 havoc nondet;
 while(nondet)
 // insert invariants 
-invariant x mod 2 == 0;
-invariant y mod 2 == 0;
+invariant x % 2 == 0;
+invariant y % 2 == 0;
 invariant x >= 0;
 invariant x <= 4;
 invariant y >= 0;

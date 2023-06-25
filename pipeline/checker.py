@@ -44,7 +44,7 @@ def insert_invariants(boogie_translated_code, boogie_inv_code):
 
 def evaluate_boogie_file(file_name, print_output=False, print_command=False):
     # Run Boogie on the file and capture the output
-    cmd = f'boogie {file_name}'
+    cmd = f'boogie {file_name} /timeLimit:10'
     p = subprocess.Popen(cmd.split(), stdout=subprocess.PIPE)
     output, err = p.communicate()
     output = output.decode()
@@ -186,7 +186,6 @@ def partition_invariants(boogie_code, print_progress=False):
                 invariant_line_mapping[no] = line
 
         (invariant_line_start, invariant_line_end) = list(invariant_line_mapping.keys())[0], list(invariant_line_mapping.keys())[-1]
-        # breakpoint()
 
         # get line numbers from error string
         line_numbers = get_line_no_from_error_msg(error_string)
@@ -199,7 +198,6 @@ def partition_invariants(boogie_code, print_progress=False):
         new_file = "\n".join(new_lines)
         boogie_code = new_file
         status, _ = evaluate_boogie_code(boogie_code)
-
         if status:
             break
 
@@ -230,6 +228,7 @@ def evaluate_dir(dirname):
 # combine_invariants()
 
 # # evaluate boogie code with partitioned invariants
+i = 1
 for root, dirs, files in os.walk(f"{BOOGIE_ALL_INV}/accelerating_invariant_generation"):
     for file in files:
         file_path = os.path.join(root, file)
@@ -244,14 +243,14 @@ for root, dirs, files in os.walk(f"{BOOGIE_ALL_INV}/accelerating_invariant_gener
                 os.makedirs(output_root, exist_ok=True)
                 with open(os.path.join(output_root, file), "w") as f2:
                     f2.write(boogie_code)
-                print(f"Success {file} - Partitioned invariants")
+                print(f"{i} - Success {file} - Partitioned invariants")
                 stats['Verified'] += 1
             else:
                 output_root = root.replace(BOOGIE_ALL_INV, BOOGIE_REMOVED_INV_FAILURE, 1)
                 os.makedirs(output_root, exist_ok=True)
                 with open(os.path.join(output_root, file), "w") as f2:
                     f2.write(boogie_code_orig)
-                print(f"Failed {file}")
+                print(f"{i} - Failed {file}")
                 stats['Error'] += 1
         else:
             boogie_code = open(file_path).read()
@@ -259,8 +258,9 @@ for root, dirs, files in os.walk(f"{BOOGIE_ALL_INV}/accelerating_invariant_gener
             os.makedirs(output_root, exist_ok=True)
             with open(os.path.join(output_root, file), "w") as f2:
                 f2.write(boogie_code)
-            print(f"Success {file} - No change")
+            print(f"{i} - Success {file} - No change")
             stats['Verified'] += 1
+        i += 1
 print(stats)
 
 ## OPTIONAL

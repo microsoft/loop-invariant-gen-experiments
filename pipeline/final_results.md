@@ -34,3 +34,7 @@ Error - 45
 Partitioning:
 Verified - 31
 Error - 38
+
+Healing:
+Verified - 45
+Error - 24

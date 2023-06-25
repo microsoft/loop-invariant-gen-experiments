@@ -16,7 +16,7 @@ invariant x >= 0;
 invariant x <= 20;
 invariant y >= 0;
 invariant y <= 20;
-invariant x mod 10 == y mod 10;
+invariant x % 10 == y % 10;
 {
 x := x + 10;
 y := y + 10;
