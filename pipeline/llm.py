@@ -2,6 +2,7 @@ import os
 from jinja2 import Environment, FileSystemLoader
 import openai
 from tenacity import retry, wait_exponential
+from utilities import BOOGIE_LLM_DIR
 
 model = "gpt-4"
 print_prompts = False
@@ -79,29 +80,14 @@ def conversation(code, print_progress=False):
   
   return output_responses
 
-# for i, file in enumerate(os.listdir("c_benchmark")):
-#     if i <= 18: continue
-#     with open(f"c_benchmark/{file}") as f:
-#         # if file != '23.c': continue
-#         code = f.read()
-#         out = conversation(code, print_prompts)
-#         # boogie_code = out.split('```')[1]
-#         for j, o in enumerate(out):
-#           with open(f"boogie_code/{file[:-2]}_{j}.bpl", "w") as f2:
-#               # f2.write(boogie_code)
-#               f2.write(o)
-#         print(i, file)
-
 i = 0
 for src_root, dirs, files in os.walk('c_benchmarks'):
-  if 'code2inv' in src_root: continue
-  # if '/cav' not in src_root: continue
   for file in files:
     if file.endswith('.c'):
       file_path = os.path.join(src_root, file)
       print("Processing", file_path)
       out = conversation(open(file_path).read(), print_prompts)
-      dst_root = src_root.replace('c_benchmarks', 'boogie_translated', 1)
+      dst_root = src_root.replace('c_benchmarks', BOOGIE_LLM_DIR, 1)
       os.makedirs(dst_root, exist_ok=True)
       for j, o in enumerate(out):
         # write output to file

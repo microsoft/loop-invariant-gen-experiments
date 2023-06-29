@@ -7,7 +7,7 @@ import re
 import random
 
 NUM_RETRIES = 10
-SRC_DIR = "boogie_code_removed_inv_failure"
+SRC_DIR = "boogie_code_pruned_failure"
 SUCCESS_DIR = "boogie_repaired_success"
 FAILURE_DIR = "boogie_repaired_failure"
 
