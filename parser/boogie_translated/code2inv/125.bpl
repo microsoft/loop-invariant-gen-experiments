@@ -1,0 +1,18 @@
+procedure main() {
+var nondet: bool;
+var i: int;
+var j: int;
+var x: int;
+var y: int;
+i := x;
+j := y;
+while(x != 0)
+// insert invariants 
+{
+x := x - 1;
+y := y - 1;
+}
+if(y != 0) {
+assert(i != j);
+}
+}

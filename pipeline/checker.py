@@ -72,24 +72,6 @@ def check_insert_invariant_keyword(boogie_code):
             return True
     return False
 
-# def check_file(num):
-#     file = f'{num}.bpl'
-#     with open(f"{BOOGIE_PARSED_DIR}/{file}") as f:
-#         boogie_translated_code = f.read()
-#     for j in range(NUM_COMPLETIONS):
-#         with open(f"{BOOGIE_LLM_DIR}/{file[:-4]}_{j}.bpl") as f:
-#             boogie_llm_code = f.read()
-#             boogie_with_inv_inserted_code = insert_invariants(boogie_translated_code, boogie_llm_code)
-#             with open(f"{BOOGIE_WITH_INV_INSERTED_DIR}/{file[:-4]}_{j}.bpl", "w") as f2:
-#                 f2.write(boogie_with_inv_inserted_code)
-#                 res = evaluate_boogie_file(f"{file[:-4]}_{j}.bpl")
-#                 if res:
-#                     verified.append(f"{file[:-4]}_{j}.bpl")
-#                     stats["Verified"] += 1
-#                 else:
-#                     error.append(f"{file[:-4]}_{j}.bpl")
-#                     stats["Error"] += 1
-
 def check_files():
     i = 0
     for trusted_boogie_root, dirs, files in os.walk(BOOGIE_PARSED_DIR):
@@ -152,17 +134,13 @@ def combine_invariants():
 def get_line_no_from_error_msg(error_string):
 		# Define a regular expression to match the line numbers in the error message
 		pattern = r"\((\d+),\d+\): Error"
-
 		# Find all matches of the regular expression in the error message
 		matches = re.findall(pattern, error_string)
-
 		# Convert the matches to 0 indexed integers
 		line_numbers = [int(match)-1 for match in matches]
 
 		pattern = r"\((\d+),\d+\): error"
-
 		matches = re.findall(pattern, error_string)
-
 		line_numbers2 = [int(match)-1 for match in matches]
 
 		# combine line_numbers and line_numbers2
