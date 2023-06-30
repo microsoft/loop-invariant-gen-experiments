@@ -23,7 +23,7 @@ def call_llm(messages, num_completions=1, temperature=0.7):
 	completion = openai.ChatCompletion.create(
 	  engine=model,
 	  messages=messages,
-	  temperature=0.7,
+	  temperature=temperature,
 	  max_tokens=4000,
 	  top_p=0.95,
 	  frequency_penalty=0,
