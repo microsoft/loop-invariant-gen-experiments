@@ -1,105 +1,136 @@
+import argparse
+import os
+import re
+import sys
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+import tiktoken
 from tree_sitter import Language, Parser
-import sys, os
 
-Language.build_library(
-  # Store the library in the `build` directory
-  'tree-sitter-stuff/build/my-languages.so',
 
-  # Include one or more languages
-  [
-    'tree-sitter-stuff/vendor/tree-sitter-c'
-  ]
-)
+class BenchmmarkParser:
 
-C_LANGUAGE = Language('tree-sitter-stuff/build/my-languages.so', 'c')
+    def __init__(self, language_name):
+        lib_path = os.path.join(os.path.dirname(__file__), 'tree_sitter_lib/build/')
 
-parser = Parser()
-parser.set_language(C_LANGUAGE)
+        if language_name == "c":
+            self.language = Language(lib_path + 'c-tree-sitter.so', language_name)
+        elif language_name == "cpp":
+            self.language = Language(lib_path + 'cpp-tree-sitter.so', language_name)
+        else:
+            raise ValueError("Unknown language name")
+        
+        self.parser = Parser()
+        self.parser.set_language(self.language)
+        self.queries = {}
+        self.set_queries()
 
-# tree = parser.parse(bytes("""
-# int main() {
-#     while(1){}
-#     for(;;){}
-#     int a[];
-#     int *a = {1, 2, 3, 4};
-#     return 0;
-# }
+    def set_queries(self):
+        self.queries['functions'] = self.language.query("""(function_definition) @function""")
+        self.queries['loops'] = self.language.query("""[(for_statement) @for_loop 
+                                                     (while_statement) @while_loop]""")
+        self.queries['arrays'] = self.language.query("""(array_declarator) @array""")
+        self.queries['pointers'] = self.language.query("""(pointer_declarator) @pointer""")
+        self.queries['structs'] = self.language.query("""(struct_specifier) @struct""")
+        if self.language.name == "cpp":
+            self.queries['classes'] = self.language.query("""(class_specifier) @class""")
 
-# int foo();
-# """, "utf8"))
-# print(tree.root_node.sexp())
-# print(tree.root_node.sexp().count("function_declarator"))
-# print(tree.root_node.sexp().count("for_statement"))
-# print(tree.root_node.sexp().count("while_statement"))
-# print(tree.root_node.sexp().count("array"))
-# print(tree.root_node.sexp().count("pointer"))
+    def token_length(self, code):
+        encoding = tiktoken.encoding_for_model('gpt-4')
+        num_tokens = len(encoding.encode(code))
+        return num_tokens
 
-def output_stats_to_markdown(stats):
-    s = ""
-    s += "| Attribute | Number of Files |\n"
-    s += "| --------- | --------------- |\n"
-    for key, val in stats.items():
-        s += f"| {key} | {val} |\n"
-    return s
+    def calculate_stats(self, code):
+        ast = self.parser.parse(bytes(code, "utf8"))
+        multiline = ["functions", "loops"]
+        memory = ["structs", "classes"]
+        stats = {}
+        for k, query in self.queries.items():
+            stats[k + "_count"] =  0
 
-def characterize(code):
-    tree = parser.parse(bytes(code, "utf8"))
-    # return dictionary of counts
-    results = {
-        "function": tree.root_node.sexp().count("function_definition"),
-        "for_loop": tree.root_node.sexp().count("for_statement"),
-        "while_loop": tree.root_node.sexp().count("while_statement"),
-        "array": tree.root_node.sexp().count("array"),
-        "pointer": tree.root_node.sexp().count("pointer")
-    }
+            if k in multiline:
+                stats[k + "_avg_tokens"] = 0
+            if k in multiline + memory:
+                stats[k + "_tokenized_sizes"] = []
+            
+            captures = query.captures(ast.root_node)
 
-    return results
+            for node in captures:
+                stats[k + "_count"] += 1
+                if k in multiline + memory:
+                    stats[k + "_tokenized_sizes"].append(self.token_length(code[node[0].start_byte : node[0].end_byte]))
+            
+            if k in multiline and len(stats[k + "_tokenized_sizes"]) > 0:
+                stats[k + "_avg_tokens"] = sum(stats[k + "_tokenized_sizes"]) / len(stats[k + "_tokenized_sizes"])
 
-if len(sys.argv) != 2:
-    print("Usage: python characterize.py [<file>|<dir_path>]")
-    exit(1)
+        modified_code = code
+        block_comment_pattern = r'/\*.*?\*/'
+        line_comment_pattern = r'//.*'
 
-stats = None
-if sys.argv[1].endswith(".c"):
-    stats = characterize(open(sys.argv[1], "r").read())
-elif os.path.exists(sys.argv[1]):
-# MD: attribute, num of files containing attribute
-    stats = {
-        "total files": 0,
-        "contains 1 function": 0,
-        "contains >1 function": 0,
-        "contains >1 loop": 0,
-        "contains <=1 loop": 0,
-        "contains array": 0,
-        "contains pointer": 0
-    }
-    for root, dirs, files in os.walk(sys.argv[1]):
+        modified_code = re.sub(block_comment_pattern, '', modified_code, flags=re.DOTALL)  
+        modified_code = re.sub(line_comment_pattern, '', modified_code)
+        code_length = self.token_length(modified_code)
+        stats["num_code_tokens"] = code_length
+
+        df = pd.DataFrame.from_dict(stats, orient='index').transpose()
+        return df
+
+    def parse(self, code):
+        return self.parser.parse(bytes(code, "utf8"))
+  
+
+def parse_args(args):
+    argparser = argparse.ArgumentParser(description="Characterize C code")
+    argparser.add_argument("-i", "--input-directory", help="Input directory")
+    argparser.add_argument("-o", "--output-file", help="Output file")
+    args = argparser.parse_args(args)
+    return args
+
+
+def main(args):
+    df = pd.DataFrame(columns=['benchmark', 'num_code_tokens', 'functions_count', 'functions_avg_tokens', 'functions_tokenized_sizes', 'loops_count', 'loops_avg_tokens', 'loops_tokenized_sizes', \
+                                'arrays_count', 'pointers_count', 'structs_count', 'structs_tokenized_sizes', 'classes_count', 'classes_tokenized_sizes'])
+    if args.input_directory:
+        directories = []
+        files = []
+        if ',' in args.input_directory:
+            directories = args.input_directory.split(',')
+        else:
+            directories = [args.input_directory]
+        files = []
+        for directory in directories:
+            if not os.path.isdir(directory):
+                print(f"Invalid input directory: {directory}")
+                exit(1)
+            files.extend([str(x) for x in list(Path(directory).rglob("*.[c|cpp]"))])
+
         for file in files:
-            if not file.endswith(".c"): continue
-            stats["total files"] += 1
-            results = characterize(open(os.path.join(root, file), "r").read())
-            if results["function"] == 1:
-                stats["contains 1 function"] += 1
-            if results["function"] > 1:
-                stats["contains >1 function"] += 1
-            if (results["for_loop"] + results["while_loop"]) > 1:
-                stats["contains >1 loop"] += 1
-            if (results["for_loop"] + results["while_loop"]) <= 1:
-                stats["contains <=1 loop"] += 1
-            if results["array"] > 0:
-                stats["contains array"] += 1
-            if results["pointer"] > 0:
-                stats["contains pointer"] += 1
-else:
-    print("Invalid file or directory path")
-    exit(1)
+            parser = None
+            if file.endswith(".c"):
+                parser = BenchmmarkParser('c')
+            elif file.endswith(".cpp"):
+                parser = BenchmmarkParser('cpp')
+            else:
+                continue
 
-write_to_file = False
-if write_to_file:
-    input_path = sys.argv[2][:-1] if sys.argv[2].endswith("/") else sys.argv[2]
-    dir_name = os.path.basename(input_path)
-    dir_root = os.path.dirname(input_path)
-    with open(os.path.join(dir_root, f"{dir_name}_stats.md"), "w") as f:
-        f.write(output_stats_to_markdown(stats))
-else:
-    print(output_stats_to_markdown(stats))
+            with open(file, "r") as f:
+                code = f.read()
+                stats = parser.calculate_stats(code)
+                stats['benchmark'] = file
+                df = pd.concat([df, stats], ignore_index=True)
+        df.set_index('benchmark', inplace=True)
+    else:
+        print("Invalid input directory")
+        exit(1)
+    if args.output_file:
+        df.to_excel(args.output_file)
+        print(f"Saved to {args.output_file}")
+    else:
+        print(df)
+
+
+if __name__ == "__main__":
+    main(parse_args(sys.argv[1:]))
+
