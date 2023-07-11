@@ -47,6 +47,7 @@ class BenchmmarkParser:
         multiline = ["functions", "loops"]
         memory = ["structs", "classes"]
         stats = {}
+        nested_loops = []
         for k, query in self.queries.items():
             stats[k + "_count"] =  0
 
@@ -58,6 +59,10 @@ class BenchmmarkParser:
             captures = query.captures(ast.root_node)
 
             for node in captures:
+                if node[1] == "for_loop" or node[1] == "while_loop":
+                    nesting = [(1 if (node[0].start_byte >= n.start_byte and node[0].end_byte <= n.end_byte) else 0) for (n, s) in captures if (n, s) != node]
+                    if sum(nesting) > 0:
+                        nested_loops.append(sum(nesting))
                 stats[k + "_count"] += 1
                 if k in multiline + memory:
                     stats[k + "_tokenized_sizes"].append(self.token_length(code[node[0].start_byte : node[0].end_byte]))
@@ -73,6 +78,7 @@ class BenchmmarkParser:
         modified_code = re.sub(line_comment_pattern, '', modified_code)
         code_length = self.token_length(modified_code)
         stats["num_code_tokens"] = code_length
+        stats["nesting_levels_in_loops"] = nested_loops
 
         df = pd.DataFrame.from_dict(stats, orient='index').transpose()
         return df
@@ -90,7 +96,7 @@ def parse_args(args):
 
 
 def main(args):
-    df = pd.DataFrame(columns=['benchmark', 'num_code_tokens', 'functions_count', 'functions_avg_tokens', 'functions_tokenized_sizes', 'loops_count', 'loops_avg_tokens', 'loops_tokenized_sizes', \
+    df = pd.DataFrame(columns=['benchmark', 'num_code_tokens', 'functions_count', 'functions_avg_tokens', 'functions_tokenized_sizes', 'loops_count', 'nesting_levels_in_loops', 'loops_avg_tokens', 'loops_tokenized_sizes', \
                                 'arrays_count', 'pointers_count', 'structs_count', 'structs_tokenized_sizes', 'classes_count', 'classes_tokenized_sizes'])
     if args.input_directory:
         directories = []
