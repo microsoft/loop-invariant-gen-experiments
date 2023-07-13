@@ -1,7 +1,8 @@
 import re
+import subprocess
 from copy import deepcopy
-import yaml
 
+import yaml
 from jinja2 import Environment, FileSystemLoader
 from llm_client import LLMClient
 from llm_utils import Settings
@@ -42,12 +43,30 @@ class Benchmark:
     def add_llm_outputs(self, checker, llm_output):
         return self.data, llm_output
 
+
 class Checker:
     def __init__(self, command = None):
         self.command = command
 
-    def check(self, input):
-        return False
+    def check(self, code, print_output=False, print_command=False):
+        with open("/tmp/temp_eval.bpl", "w") as f:
+            f.write(code)
+            
+        cmd = f'boogie /tmp/temp_eval.bpl /timeLimit:10'
+        p = subprocess.Popen(cmd.split(), stdout=subprocess.PIPE)
+        output, err = p.communicate()
+        output = output.decode()
+
+        if print_command:
+            print(cmd)
+
+        if print_output:
+            print(output)
+
+        if "1 verified" in output:
+            return True, output
+        else:
+            return False, output
 
     def prune_annotations_and_check(self, input):
         return False
@@ -189,7 +208,8 @@ class LoopyPipeline:
             num_retries += 1
 
         # return success
-    
+
+
 p = LoopyPipeline().from_file("config.yaml")
 print(p.llm)
 
