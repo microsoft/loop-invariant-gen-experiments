@@ -6,20 +6,20 @@ class Node:
         self.parent = None  
     
     def __repr__(self):
-        return str(self.data)
+        return "Node({})".format(self.data)
     
     def __str__(self):
-        return str(self.data)
+        return (self.data)
 
     def add_child(self, child):  
         child.parent = self  
         self.children.append(child)  
   
     def path_to_root(self):  
-        path = [self]  
+        path = [self.data]  
         node = self.parent  
         while node is not None:  
-            path.append(node)  
+            path.append(node.data)  
             node = node.parent  
         return path[::-1]  
   
@@ -52,3 +52,23 @@ class ConvTree:
     
     def get_conversation(self, leaf):
         return leaf.path_to_root()
+    
+    def get_full_tree(self):
+        if len(self.root.children) == 0:
+            return {0: [self.root]}
+
+        level = 0
+        res = {level: [self.root]}
+        while True:
+            level += 1
+            res[level] = []
+            for node in res[level-1]:
+                res[level].extend(node.children)
+            if len(res[level]) == 0:
+                res.pop(level)
+                break
+        return_res = []
+        for level in res:
+            return_res.append([node.data for node in res[level]])
+        return return_res
+

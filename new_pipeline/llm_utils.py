@@ -31,6 +31,8 @@ class Settings:
     """Returns the API key."""
     if len(self.api_key) == 0:
       self.api_key = get_openai_api_key()
+      if self.api_key is None or len(self.api_key) == 0:
+        raise ValueError("No API key provided.")
       if self.debug: 
         print(f"Found API key: {self.api_key}")
       return self.api_key

@@ -10,7 +10,7 @@ import tiktoken
 from tree_sitter import Language, Parser
 
 
-class BenchmmarkParser:
+class BenchmarkParser:
 
     def __init__(self, language_name):
         lib_path = os.path.join(os.path.dirname(__file__), 'tree_sitter_lib/build/')
@@ -115,9 +115,9 @@ def main(args):
         for file in files:
             parser = None
             if file.endswith(".c"):
-                parser = BenchmmarkParser('c')
+                parser = BenchmarkParser('c')
             elif file.endswith(".cpp"):
-                parser = BenchmmarkParser('cpp')
+                parser = BenchmarkParser('cpp')
             else:
                 continue
 
