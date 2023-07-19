@@ -26,6 +26,8 @@ class LLMClient:
     self._max_retries: int = 5
     # Statistics.
     self.prompt_count: int = 0
+    Logger.verbose = settings.verbose
+    Logger.debug = settings.debug
 
   def prompt(self, prompt: str, system_message: str) -> tuple[bool, List[str]]:
     """Send the completion prompt and get the response from the model."""
@@ -58,7 +60,7 @@ class LLMClient:
         openai.api_version = "2023-03-15-preview"
         
         # Make the request to the remote LLM API with retries.
-        Logger.log_model_request(model, [message["content"] for message in messages])
+        Logger.log_model_request(model, "\n".join(['\033[1m\033[4m\033[92m' + message["role"] + ":\033[0m " + message["content"] for message in messages]) + "\n\033[94m" + ("=="*30) + "\033[0m")
         self._last_call_time = current_time
         response: Any = openai.ChatCompletion.create(
         	engine=self._get_deployment_name(model),
@@ -73,6 +75,7 @@ class LLMClient:
         completions = []
         for completion in response["choices"]:
           completions.append(completion["message"]["content"])
+        Logger.log_model_response(model, "\n".join(['\033[1m\033[4m\033[92mCompletion ' + str(i + 1) + ':\033[0m\n' + str(completion) for i, completion in enumerate(completions)]))
         return True, completions
       except Exception as e:
         attempt += 1

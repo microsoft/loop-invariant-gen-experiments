@@ -1,11 +1,12 @@
 import datetime
 import json
+import os
 import re
 import subprocess
 from copy import deepcopy
 
 import yaml
-from jinja2 import Environment, FileSystemLoader
+from jinja2 import ChoiceLoader, Environment, FileSystemLoader, Template
 from llm_client import LLMClient
 from llm_utils import Settings
 from utils import ConvTree, Node
@@ -37,22 +38,60 @@ Repeat for 15 times
 """
 
 PROMPT_TEMPLATES_DIR = "../pipeline/templates/"
+HEALING_PROMPT_TEMPLATES_DIR = "../healing/templates/"
+
 
 class BenchmarkInstance:
-    def __init__(self, data = None, checker_input = None):
-        self.data = data
+    def __init__(self, llm_input=None, checker_input=None):
+        self.llm_input = llm_input
         self.checker_input = checker_input
 
-    def combine_llm_outputs(self, checker, llm_outputs):
-        if checker.command == 'boogie':
-            return self.add_boogie_llm_outputs(llm_outputs)
-        else:
-            print(f"Unknown checker: {checker}")
-            raise Exception("Unknown checker: {}".format(checker))
-        
-    def add_boogie_llm_outputs(self, llm_outputs):
+    def __repr__(self) -> str:
+        return f"BenchmarkInstance(data={self.llm_input}, checker_input={self.checker_input})"
 
-        if not any("insert invariant" in line for line in self.checker_input.splitlines()):
+    def __str__(self) -> str:
+        return self.__repr__()
+
+
+class Benchmark:
+    def __init__(self, llm_input_dir="", checker_input_dir=""):
+        self.llm_input_path = llm_input_dir
+        self.checker_input_path = checker_input_dir
+        self.instances: list[BenchmarkInstance] = []
+
+    def load_instances(self):
+        llm_input_files = os.listdir(
+            os.path.join(os.path.dirname(__file__), self.llm_input_path)
+        )
+        llm_input_files = sorted(llm_input_files, key=lambda x: int(x.split(".")[0]))
+
+        checker_input_files = os.listdir(
+            os.path.join(os.path.dirname(__file__), self.checker_input_path)
+        )
+        checker_input_files = sorted(
+            sorted(checker_input_files), key=lambda x: int(x.split(".")[0])
+        )
+
+        if len(llm_input_files) != len(checker_input_files):
+            raise Exception(
+                "Number of LLM input files and checker input files do not match"
+            )
+        for x, y in zip(llm_input_files, checker_input_files):
+            llm_input = None
+            checker_input = None
+            with open(os.path.join(self.llm_input_path, x)) as f:
+                llm_input = f.read()
+            with open(os.path.join(self.checker_input_path, y)) as f:
+                checker_input = f.read()
+            self.instances.append(
+                BenchmarkInstance(
+                    llm_input=llm_input,
+                    checker_input=checker_input,
+                )
+            )
+
+    def combine_llm_outputs(self, checker_input, llm_outputs):
+        if not any("insert invariant" in line for line in checker_input.splitlines()):
             print(f"Ignoring since no insert invariant keyword")
             return ""
 
@@ -63,30 +102,30 @@ class BenchmarkInstance:
                 if "invariant" in line and "insert invariants" not in line:
                     invariants.append(line.strip())
 
-        lines = self.checker_input.splitlines()
+        lines = checker_input.splitlines()
         loc = None
         for index, line in enumerate(lines):
             if "insert invariant" in line:
                 loc = index
                 break
         if loc is not None:
-            lines = lines[:loc+1] + invariants + lines[loc+1:]
+            lines = lines[: loc + 1] + invariants + lines[loc + 1 :]
         else:
-            raise Exception("No \'insert invariant\' found")
-        output = '\n'.join(lines)
+            raise Exception("No 'insert invariant' found")
+        output = "\n".join(lines)
 
         return output
 
 
 class Checker:
-    def __init__(self, command = None):
-        self.command = command
+    def __init__(self, name="boogie"):
+        self.name = name
 
     def check(self, code):
         with open("/tmp/temp_eval.bpl", "w") as f:
             f.write(code)
-            
-        cmd = f'boogie /tmp/temp_eval.bpl /timeLimit:10'
+
+        cmd = f"boogie /tmp/temp_eval.bpl /timeLimit:10"
         p = subprocess.Popen(cmd.split(), stdout=subprocess.PIPE)
         output, err = p.communicate()
         output = output.decode()
@@ -96,17 +135,29 @@ class Checker:
         else:
             return False, output
 
+    def is_invariant(self, line):
+        return "invariant" in line
+
     def get_line_no_from_error_msg(self, error_string):
         pattern = r"\((\d+),\d+\): Error"
         matches = re.findall(pattern, error_string)
-        line_numbers = [int(match)-1 for match in matches]
+        line_numbers = [int(match) - 1 for match in matches]
 
         pattern = r"\((\d+),\d+\): error"
         matches = re.findall(pattern, error_string)
-        line_numbers2 = [int(match)-1 for match in matches]
+        line_numbers2 = [int(match) - 1 for match in matches]
         line_numbers = line_numbers + line_numbers2
 
         return line_numbers
+
+    def get_incorrect_invariants(self, code, error):
+        line_numbers = self.get_line_no_from_error_msg(error)
+        lines = code.splitlines()
+        incorrect_invariants = []
+        for line_number in line_numbers:
+            if self.is_invariant(lines[int(line_number)]):
+                incorrect_invariants.append(lines[int(line_number)].strip())
+        return incorrect_invariants
 
     def prune_annotations_and_check(self, input_code):
         while True:
@@ -114,19 +165,32 @@ class Checker:
             invariant_line_mapping = {}
             lines = input_code.splitlines()
             for no, line in enumerate(lines):
-                if "invariant" in line:
+                if self.is_invariant(line):
                     invariant_line_mapping[no] = line
 
-            (invariant_line_start, invariant_line_end) = list(invariant_line_mapping.keys())[0], list(invariant_line_mapping.keys())[-1]
+            (invariant_line_start, invariant_line_end) = (
+                list(invariant_line_mapping.keys())[0],
+                list(invariant_line_mapping.keys())[-1],
+            )
 
             line_numbers = self.get_line_no_from_error_msg(error_string)
-            incorrect_invariant_line_numbers = [no for no in line_numbers if no in invariant_line_mapping.keys()]
-            correct_invariant_line_numbers = [i for i in list(invariant_line_mapping.keys()) if i not in incorrect_invariant_line_numbers]
+            incorrect_invariant_line_numbers = [
+                no for no in line_numbers if no in invariant_line_mapping.keys()
+            ]
+            correct_invariant_line_numbers = [
+                i
+                for i in list(invariant_line_mapping.keys())
+                if i not in incorrect_invariant_line_numbers
+            ]
 
             if len(incorrect_invariant_line_numbers) == 0:
                 break
 
-            new_lines = lines[:invariant_line_start] + [lines[i] for i in correct_invariant_line_numbers] + lines[invariant_line_end+1:]
+            new_lines = (
+                lines[:invariant_line_start]
+                + [lines[i] for i in correct_invariant_line_numbers]
+                + lines[invariant_line_end + 1 :]
+            )
             new_code = "\n".join(new_lines)
             input_code = new_code
             status, _ = self.check(input_code)
@@ -137,22 +201,36 @@ class Checker:
 
 
 class PromptConfig:
-    def __init__(self, prompt_file = None, temperature = 0.7, num_completions = 1, set_output = None):
+    def __init__(
+        self,
+        prompt_file=None,
+        temperature=0.7,
+        num_completions=1,
+        set_output=None,
+        dir=None,
+    ):
         self.prompt_file = prompt_file
         self.temperature = temperature
         self.num_completions = num_completions
         self.set_output = set_output
+        self.dir = os.path.join(os.path.dirname(__file__), dir)
 
     def __repr__(self) -> str:
-        return "<PromptConfig prompt_file: {}, temperature: {}, num_completions: {}, set_output: {}>".format(self.prompt_file, self.temperature, self.num_completions, self.set_output)
+        return "<PromptConfig prompt_file: {}, temperature: {}, num_completions: {}, set_output: {}>".format(
+            self.prompt_file, self.temperature, self.num_completions, self.set_output
+        )
 
     def render(self, input):
-        template = Environment(loader=FileSystemLoader(PROMPT_TEMPLATES_DIR)).get_template(self.prompt_file)
+        template = Environment(loader=FileSystemLoader(self.dir)).get_template(
+            self.prompt_file
+        )
         prompt = template.render(input)
         return prompt
-    
+
     def render_fixed_output(self, input):
-        template = Environment(loader=FileSystemLoader(PROMPT_TEMPLATES_DIR)).get_template(self.set_output)
+        template = Environment(
+            loader=FileSystemLoader(PROMPT_TEMPLATES_DIR)
+        ).get_template(self.set_output)
         prompt = template.render(input)
         return prompt
 
@@ -169,36 +247,48 @@ class PromptConfig:
 
 
 class LLM:
-    def __init__(self, prompt_configs = None, healing_prompt_configs = None):
+    def __init__(self, prompt_configs=None, healing_prompt_configs=None):
         self.prompt_configs = prompt_configs
         self.healing_prompt_configs = healing_prompt_configs
 
     def __repr__(self) -> str:
-        return "<LLM prompt_configs: {}, healing_prompt_configs: {}>".format(self.prompt_configs, self.healing_prompt_configs)
+        return "<LLM prompt_configs: {}, healing_prompt_configs: {}>".format(
+            self.prompt_configs, self.healing_prompt_configs
+        )
 
     def extract_code(self, output):
-        lines = output.split('\n')
+        lines = output.split("\n")
         line_nos = []
         for i, line in enumerate(lines):
             if "```" in line:
                 line_nos.append(i)
         if len(line_nos) != 2:
             raise Exception("Output does not contain 1 code block")
-        return '\n'.join(lines[line_nos[0]+1:line_nos[1]])
+        return "\n".join(lines[line_nos[0] + 1 : line_nos[1]])
 
     def run__(self, input, configs):
         responses = None
         conversation = ConvTree(
             Node(
-                {"role": "system", "content": "You are a helpful AI software assistant that reasons about how code behaves."}
+                {
+                    "role": "system",
+                    "content": "You are a helpful AI software assistant that reasons about how code behaves.",
+                }
             )
         )
 
         for prompt_config in configs:
             if prompt_config.set_output:
                 latest = conversation.get_latest()
-                user_node = Node({"role": "user", "content": prompt_config.render(input)})
-                assistant_node = Node({"role": "assistant", "content": prompt_config.render_fixed_output(input)})
+                user_node = Node(
+                    {"role": "user", "content": prompt_config.render(input)}
+                )
+                assistant_node = Node(
+                    {
+                        "role": "assistant",
+                        "content": prompt_config.render_fixed_output(input),
+                    }
+                )
                 for node in latest:
                     user_node_ = deepcopy(user_node)
                     assistant_node_ = deepcopy(assistant_node)
@@ -207,15 +297,18 @@ class LLM:
             else:
                 llm_client = LLMClient(
                     Settings(
-                        model='gpt-3.5-turbo',
+                        model="gpt-3.5-turbo",
                         temperature=prompt_config.temperature,
                         num_completions=prompt_config.num_completions,
+                        debug=True,
                     )
                 )
                 latest = conversation.get_latest()
-                
+
                 for node in latest:
-                    last_node = deepcopy(Node({"role": "user", "content": prompt_config.render(input)}))
+                    last_node = deepcopy(
+                        Node({"role": "user", "content": prompt_config.render(input)})
+                    )
                     node.add_child(last_node)
 
                     (_, responses) = llm_client.chat(last_node.path_to_root())
@@ -240,112 +333,195 @@ class LLM:
 
 
 class LoopyPipeline:
-    def __init__(self, 
-            benchmark : BenchmarkInstance = None, 
-            checker : Checker = 'boogie', 
-            llm : LLM = None, 
-            num_retries = 5):
+    def __init__(
+        self,
+        benchmark: Benchmark = None,
+        checker: Checker = Checker("boogie"),
+        llm: LLM = None,
+        num_retries: int = 5,
+        verbose: bool = False,
+        debug: bool = False,
+    ):
         self.benchmark = benchmark
         self.checker = checker
         self.llm = llm
         self.num_retries = num_retries
-        self.log_path = datetime.datetime.now().strftime("loopy_%Y_%m_%d_%H_%M_%S.json")
+        self.verbose = verbose
+        self.debug = debug
+        self.log_path = datetime.datetime.now().strftime("logs/loopy_%Y_%m_%d_%H_%M_%S.json")
 
-    def from_file(self, config_file):
+    def load_config(self, config_file):
         config = yaml.load(open(config_file, "r"), Loader=yaml.FullLoader)
 
         prompt_configs = []
-        if "prompts" not in config:
-            raise Exception("No prompts specified in config file")
-        for prompt_config in config["prompts"]:
-            prompt_configs.append(PromptConfig().from_file(prompt_config))
+        if "prompts" in config:
+            prompt_template_dir = (
+                None
+                if "prompt_template_dir" not in config
+                else config["prompt_template_dir"]
+            )
+
+            for prompt_config in config["prompts"]:
+                prompt_configs.append(
+                    PromptConfig(dir=prompt_template_dir).from_file(prompt_config)
+                )
 
         healing_prompt_configs = []
-        if "healing_prompts" not in config:
-            raise Exception("No healing prompts specified in config file")
-        for healing_prompt_config in config["healing_prompts"]:
-            healing_prompt_configs.append(PromptConfig().from_file(healing_prompt_config))
+        if "healing_prompts" in config:
+            healing_template_dir = (
+                None
+                if "healing_template_dir" not in config
+                else config["healing_template_dir"]
+            )
 
-        checker = Checker(config["checker_cmd"])
-        benchmark = BenchmarkInstance(config["benchmark"])
-        llm = LLM(prompt_configs, healing_prompt_configs)
+            for healing_prompt_config in config["healing_prompts"]:
+                healing_prompt_configs.append(
+                    PromptConfig(dir=healing_template_dir).from_file(
+                        healing_prompt_config
+                    )
+                )
+        self.llm = LLM(prompt_configs, healing_prompt_configs)
 
-        self.benchmark = benchmark
-        self.checker = checker
-        self.llm = llm
-        self.num_retries = config["num_retries"]
+        if "llm_input_dir" not in config:
+            config["llm_input_dir"] = "llm_input"
+        if "checker_input_dir" not in config:
+            config["checker_input_dir"] = "checker_input"
+        if self.benchmark is None:
+            self.benchmark = Benchmark(
+                config["llm_input_dir"], config["checker_input_dir"]
+            )
+        else:
+            self.benchmark.llm_input_path = config["llm_input_dir"]
+            self.benchmark.checker_input_path = config["checker_input_dir"]
+        self.benchmark.load_instances()
+
+        if "healing_retries" in config:
+            self.num_retries = config["healing_retries"]
 
         return self
 
     def run(self):
-        log_json = {}
-        log_file = open(self.log_path, "w")
-        raw_input = self.benchmark.data
-        llm_outputs, conversations = self.llm.run(raw_input)
-        log_json["conversations"] = conversations
-        checker_input = self.benchmark.combine_llm_outputs(self.checker, llm_outputs)
-        log_json["checker_input"] = checker_input
-        success, checker_message = self.checker.check(checker_input)
-        log_json["checker_output"] = success
-        log_json["checker_message"] = checker_message
-        if not success:
-            pruned_code = self.checker.prune_annotations_and_check(checker_input)
-            success, checker_message = self.checker.check(pruned_code)
-            log_json["pruned_checker_output"] = success
-            log_json["pruned_checker_message"] = checker_message
-            log_json["pruned_code"] = pruned_code
+        log_json = []
+        log_file = open(self.log_path, "w", encoding="utf-8")
+        for i, instance in enumerate(self.benchmark.instances[:1]):
+            print(
+                "Running instance: {i}/{n}".format(i=i, n=len(self.benchmark.instances))
+            )
+            instance_log_json = {}
+            try:
+                llm_outputs, conversations = self.llm.run({"code": instance.llm_input})
+                checker_input = self.benchmark.combine_llm_outputs(
+                    instance.checker_input, llm_outputs
+                )
+                success, checker_message = self.checker.check(checker_input)
 
-        num_retries = 0
-        while not success and num_retries < self.num_retries:
-            llm_outputs = self.llm.heal(checker_input)
-            checker_input = self.benchmark.add_llm_outputs(self.checker, llm_outputs)
-            success = self.checker.check(checker_input)
-            if not success:
-                success = self.checker.prune_annotations_and_check(checker_input)
-            num_retries += 1
+                instance_log_json["primary_conversation"] = conversations
+                instance_log_json["final_code_outputs"] = llm_outputs
+                instance_log_json["checker_input"] = checker_input
+                instance_log_json["checker_output"] = success
+                instance_log_json["checker_message"] = checker_message
 
-        log_file.write(json.dumps(log_json))
+                if not success:
+                    pruned_code = self.checker.prune_annotations_and_check(
+                        checker_input
+                    )
+                    success, checker_message = self.checker.check(pruned_code)
+
+                    instance_log_json["checker_output_after_prune"] = success
+                    instance_log_json["checker_message_after_prune"] = checker_message
+                    instance_log_json["code_after_prune"] = pruned_code
+
+                num_retries = 0
+                instance_log_json["healing_conversations"] = []
+
+                while not success and num_retries < self.num_retries:
+                    healing_json = {}
+                    llm_outputs, conversations = self.llm.heal(
+                        input={
+                            "code": pruned_code,
+                            "error": checker_message,
+                            "incorrect_invariants": self.checker.get_incorrect_invariants(
+                                pruned_code, checker_message
+                            ),
+                        }
+                    )
+                    checker_input = self.benchmark.combine_llm_outputs(
+                        instance.checker_input, llm_outputs
+                    )
+                    success, checker_message = self.checker.check(checker_input)
+
+                    healing_json["final_code_outputs"] = llm_outputs
+                    healing_json["conversation"] = conversations
+                    healing_json["checker_input"] = checker_input
+                    healing_json["checker_output"] = success
+                    healing_json["checker_message"] = checker_message
+
+                    if not success:
+                        pruned_code = self.checker.prune_annotations_and_check(
+                            checker_input
+                        )
+                        success, checker_message = self.checker.check(pruned_code)
+                        healing_json["code_after_prune"] = pruned_code
+                        healing_json["checker_output_after_prune"] = success
+                        healing_json["checker_message_after_prune"] = checker_message
+
+                        checker_input = pruned_code
+                    instance_log_json["healing_conversations"].append(healing_json)
+                    num_retries += 1
+                log_json.append(instance_log_json)
+            except Exception as e:
+                print(e)
+                instance_log_json["error"] = str(e)
+                log_json.append(instance_log_json)
+                continue
+
+        log_file.write(json.dumps(log_json), indent=4, ensure_ascii=False)
         log_file.close()
 
-        return success
+        return
 
-p = LoopyPipeline().from_file("config.yaml")
-b = BenchmarkInstance({"c_code" : """int main() {
-  // variable declarations
-  int x;
-  int y;
-  // pre-conditions
-  (x = 1);
-  (y = 0);
-  // loop body
-  while ((y < 1000)) {
-    {
-    (x  = (x + y));
-    (y  = (y + 1));
-    }
 
-  }
-  // post-condition
-assert( (x >= y) );
-}"""},
-"""
-procedure main() {
-var nondet: bool;
-var x: int;
-var y: int;
-x := 1;
-y := 0;
-while(y < 100000)
-// insert invariants 
-{
-x := x + y;
-y := y + 1;
-}
-assert(x >= y);
-}""")
-c = Checker("boogie")
-p.benchmark = b
-p.checker = c
-p.run()
+p = LoopyPipeline().load_config("config.yaml")
+# b = BenchmarkInstance(
+#     """int main()
+# {
+#     int x = 0;
+#     int y, z;
+
+#     while(x < 5) {
+#        x += 1;
+#        if( z <= y) {
+#           y = z;
+#        }
+#     }
+
+#     assert (z >= y);
+# }""",
+#     """procedure main() {
+# var nondet: bool;
+# var x: int;
+# var y: int;
+# var z: int;
+# x := 0;
+# while(x < 5)
+# // insert invariants
+# {
+# x := x + 1;
+# if(z <= y) {
+# y := z;
+# }
+# }
+# assert(z >= y);
+# }""",
+# )
+# c = Checker("boogie")
+# p.benchmark = b
+# p.checker = c
+# p.llm.heal({
+#     ""
+# })
+# print(p.benchmark.instances)
+# print(p.benchmark.instances[0].llm_input)
+# print(p.benchmark.instances[0].checker_input)
 # p.llm.run({"c_code" : """int main() """})
-
+p.run()
