@@ -28,10 +28,7 @@ class FramaCChecker(Checker):
                     if row["property kind"] == "loop invariant"
                 ]
             )
-            if success:
-                return True, csv_output
-            else:
-                return False, csv_output
+            return success, csv_output
 
     def get_line_no_from_error_msg(self, checker_output):
         pattern = r"on line (\d+): [^Valid]"

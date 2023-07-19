@@ -6,39 +6,10 @@ import subprocess
 from copy import deepcopy
 
 import yaml
-from jinja2 import ChoiceLoader, Environment, FileSystemLoader, Template
+from jinja2 import Environment, FileSystemLoader
 from llm_client import LLMClient
 from llm_utils import Settings
 from utils import ConvTree, Node
-
-"""We need the following to abstract the pipeline
-1. Raw input benchmark
-2. Prompt(s) to be used
-3. Take raw input/transformed input and combine with LLM output
-4. Take combined output and invoke the checker
-5. "Prune" annotations/invariants and retry invoking the checker
-6. Take the combined output + error and heal with the LLM
-7. Redo steps 3-5 for a fixed number of iterations
-
-Pipeline:
-Raw input + prompt to the LLM 
-    - multiple stages in the prompt
-    - each stage could have different inputs
-    - some stages could have multiple completions
-
-Raw input transformed to checker input
-LLM output + checker input to checker
-
-Prune annotations/invariants and retry
-LLM output + checker input + error to LLM
-    - multiple stages in the prompt
-    - each stage could have different inputs
-    - some stages could have multiple completions
-Repeat for 15 times
-"""
-
-PROMPT_TEMPLATES_DIR = "../pipeline/templates/"
-HEALING_PROMPT_TEMPLATES_DIR = "../healing/templates/"
 
 
 class BenchmarkInstance:
@@ -228,9 +199,9 @@ class PromptConfig:
         return prompt
 
     def render_fixed_output(self, input):
-        template = Environment(
-            loader=FileSystemLoader(PROMPT_TEMPLATES_DIR)
-        ).get_template(self.set_output)
+        template = Environment(loader=FileSystemLoader(self.dir)).get_template(
+            self.set_output
+        )
         prompt = template.render(input)
         return prompt
 
@@ -348,7 +319,9 @@ class LoopyPipeline:
         self.num_retries = num_retries
         self.verbose = verbose
         self.debug = debug
-        self.log_path = datetime.datetime.now().strftime("logs/loopy_%Y_%m_%d_%H_%M_%S.json")
+        self.log_path = datetime.datetime.now().strftime(
+            "logs/loopy_%Y_%m_%d_%H_%M_%S.json"
+        )
 
     def load_config(self, config_file):
         config = yaml.load(open(config_file, "r"), Loader=yaml.FullLoader)
