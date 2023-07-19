@@ -34,7 +34,7 @@ class FramaCChecker(Checker):
                 return False, csv_output
 
     def get_line_no_from_error_msg(self, checker_output):
-        pattern = r"on line (\d+): "
+        pattern = r"on line (\d+): [^Valid]"
         matches = re.findall(pattern, checker_output)
         line_numbers = [int(match) - 1 for match in matches]
 

@@ -482,46 +482,4 @@ class LoopyPipeline:
 
 
 p = LoopyPipeline().load_config("config.yaml")
-# b = BenchmarkInstance(
-#     """int main()
-# {
-#     int x = 0;
-#     int y, z;
-
-#     while(x < 5) {
-#        x += 1;
-#        if( z <= y) {
-#           y = z;
-#        }
-#     }
-
-#     assert (z >= y);
-# }""",
-#     """procedure main() {
-# var nondet: bool;
-# var x: int;
-# var y: int;
-# var z: int;
-# x := 0;
-# while(x < 5)
-# // insert invariants
-# {
-# x := x + 1;
-# if(z <= y) {
-# y := z;
-# }
-# }
-# assert(z >= y);
-# }""",
-# )
-# c = Checker("boogie")
-# p.benchmark = b
-# p.checker = c
-# p.llm.heal({
-#     ""
-# })
-# print(p.benchmark.instances)
-# print(p.benchmark.instances[0].llm_input)
-# print(p.benchmark.instances[0].checker_input)
-# p.llm.run({"c_code" : """int main() """})
 p.run()
