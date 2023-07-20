@@ -339,7 +339,7 @@ class LoopyPipeline:
         self.model = model
         self.debug = debug
         self.log_path = log_path
-        
+
         self.num_healing_retries = num_healing_retries
         self.heal_errors = heal_errors
         self.heal_errors_input = heal_errors_input

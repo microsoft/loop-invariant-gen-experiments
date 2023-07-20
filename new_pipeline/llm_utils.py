@@ -1,10 +1,6 @@
 import os
 
 
-def get_openai_api_key():
-    return os.environ.get("OPENAI_API_KEY")
-
-
 class Settings:
     def __init__(
         self,
@@ -32,7 +28,7 @@ class Settings:
     def get_api_key(self) -> str:
         """Returns the API key."""
         if len(self.api_key) == 0:
-            self.api_key = get_openai_api_key()
+            self.api_key = os.environ.get("OPENAI_API_KEY")
             if self.api_key is None or len(self.api_key) == 0:
                 raise ValueError("No API key provided.")
             return self.api_key
