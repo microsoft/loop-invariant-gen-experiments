@@ -565,7 +565,3 @@ class LoopyPipeline:
         log_file.close()
 
         return
-
-
-# p = LoopyPipeline().load_config("config.yaml")
-# p.run()

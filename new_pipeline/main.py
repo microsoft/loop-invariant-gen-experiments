@@ -10,28 +10,32 @@ def parse_args(args):
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--checker",
-        help="Checker to use",
+        help="Checker to use [Required]",
         choices=["boogie", "frama-c"],
         required=True,
+        type=str
     )
     parser.add_argument(
         "--log-file",
         help="File to write logs to",
         default=datetime.datetime.now().strftime("logs/loopy_%Y_%m_%d_%H_%M_%S.json"),
+        type=str
     )
     parser.add_argument(
         "--config-file",
         help="File to read prompt configs from",
         default="config.yaml",
+        type=str
     )
     parser.add_argument(
         "--model",
         help="Model to use",
         choices=["gpt-4", "gpt-3.5-turbo"],
         default="gpt-3.5-turbo",
+        type=str
     )
     parser.add_argument(
-        "--debug",
+        "-d", "--debug",
         help="Debug mode",
         action="store_true",
     )
@@ -44,6 +48,7 @@ def parse_args(args):
         "--heal-errors-input",
         help="Input file to heal errors from",
         default="",
+        type=str
     )
     parser.add_argument(
         "--max-benchmarks",
@@ -68,6 +73,7 @@ def parse_args(args):
         help="Provider to fetch the model from",
         choices=["azure-open-ai", "huggingface"],
         default="azure-open-ai",
+        type=str
     )
 
 
