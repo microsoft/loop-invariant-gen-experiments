@@ -446,13 +446,16 @@ class LoopyPipeline:
                 stats["total"] += 1
 
                 log_json.append(instance_log_json)
-            except Exception as e:
+            except (Exception, KeyboardInterrupt) as e:
                 print(traceback.format_exc())
                 instance_log_json["error"] = str(e)
                 log_json.append(instance_log_json)
                 stats["failure"].append(i)
                 stats["total"] += 1
-                continue
+                if isinstance(e, KeyboardInterrupt):
+                    break
+                else:
+                    continue
 
         if stats["total"] != 0:
             stats["success_rate"] = len(stats["success"]) / stats["total"]
