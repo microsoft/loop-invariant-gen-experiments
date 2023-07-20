@@ -3,8 +3,8 @@ import json
 import os
 import re
 import subprocess
-from copy import deepcopy
 import traceback
+from copy import deepcopy
 
 import yaml
 from jinja2 import Environment, FileSystemLoader
@@ -328,18 +328,19 @@ class LoopyPipeline:
         benchmark: Benchmark = None,
         checker: Checker = Checker("boogie"),
         model: str = "gpt-3.5-turbo",
-        num_retries: int = 5,
         debug: bool = False,
         log_path: str = None,
+        num_healing_retries: int = 5,
         heal_errors: bool = False,
         heal_errors_input: str = "",
     ):
         self.benchmark = benchmark
         self.checker = checker
         self.model = model
-        self.num_retries = num_retries
         self.debug = debug
         self.log_path = log_path
+        
+        self.num_healing_retries = num_healing_retries
         self.heal_errors = heal_errors
         self.heal_errors_input = heal_errors_input
 
@@ -389,7 +390,7 @@ class LoopyPipeline:
         self.benchmark.load_instances()
 
         if "healing_retries" in config:
-            self.num_retries = config["healing_retries"]
+            self.num_healing_retries = config["healing_retries"]
 
         return self
 
@@ -500,7 +501,7 @@ class LoopyPipeline:
 
                 failed_checker_input = instance["checker_input"]
                 checker_error_message = instance["checker_message"]
-                while not success and num_retries < self.num_retries:
+                while not success and num_retries < self.num_healing_retries:
                     healing_json = {}
                     llm_outputs, conversations = self.llm.heal(
                         input={

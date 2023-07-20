@@ -57,6 +57,13 @@ def parse_args(args):
         type=int,
         default=0,
     )
+    parser.add_argument(
+        "--healing-iterations",
+        help="Number of retries for each healing run",
+        type=int,
+        default=5,
+    )
+
 
     return parser.parse_args(args)
 
@@ -70,16 +77,24 @@ def main(args):
     elif args.checker == "frama-c":
         checker = FramaCChecker()
 
+    benchmark = None
+    if args.checker == "boogie":
+        benchmark = Benchmark()
+    elif args.checker == "frama-c":
+        benchmark = FramaCBenchmark()
+
     if args.heal_errors and args.heal_errors_input == "":
         raise Exception("Please provide an input file to heal errors from")
 
     p = LoopyPipeline(
+        benchmark=benchmark,
         checker=checker,
         model=args.model,
         debug=args.debug,
         log_path=args.log_file,
         heal_errors=args.heal_errors,
         heal_errors_input=args.heal_errors_input,
+        num_healing_retries=args.healing_iterations,
     )
     p = p.load_config(args.config_file)
     p.run(
