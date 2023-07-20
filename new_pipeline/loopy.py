@@ -4,6 +4,7 @@ import os
 import re
 import subprocess
 from copy import deepcopy
+import traceback
 
 import yaml
 from jinja2 import Environment, FileSystemLoader
@@ -31,11 +32,17 @@ class Benchmark:
         self.instances: list[BenchmarkInstance] = []
 
     def load_instances(self):
+        if self.llm_input_path == "" or not os.path.exists(self.llm_input_path):
+            raise Exception("LLM input directory path not found")
         llm_input_files = os.listdir(
             os.path.join(os.path.dirname(__file__), self.llm_input_path)
         )
         llm_input_files = sorted(llm_input_files, key=lambda x: int(x.split(".")[0]))
 
+        # TODO: Move this to a separate function. Ideally take in a transform function
+        # that can be applied to the LLM input. For now, just read the dir as is.
+        if self.checker_input_path == "" or not os.path.exists(self.checker_input_path):
+            raise Exception("Checker input directory path not found")
         checker_input_files = os.listdir(
             os.path.join(os.path.dirname(__file__), self.checker_input_path)
         )
@@ -128,7 +135,7 @@ class Checker:
         for line_number in line_numbers:
             if self.is_invariant(lines[int(line_number)]):
                 incorrect_invariants.append(lines[int(line_number)].strip())
-        return incorrect_invariants
+        return "\n".join(incorrect_invariants)
 
     def prune_annotations_and_check(self, input_code):
         while True:
@@ -138,6 +145,8 @@ class Checker:
             for no, line in enumerate(lines):
                 if self.is_invariant(line):
                     invariant_line_mapping[no] = line
+            if len(invariant_line_mapping) == 0:
+                raise Exception("No invariants found")
 
             (invariant_line_start, invariant_line_end) = (
                 list(invariant_line_mapping.keys())[0],
@@ -156,7 +165,9 @@ class Checker:
 
             if len(incorrect_invariant_line_numbers) == 0:
                 break
-
+            if len(correct_invariant_line_numbers) == 0:
+                print("No correct invariants found")
+                break
             new_lines = (
                 lines[:invariant_line_start]
                 + [lines[i] for i in correct_invariant_line_numbers]
@@ -268,7 +279,7 @@ class LLM:
             else:
                 llm_client = LLMClient(
                     Settings(
-                        model="gpt-3.5-turbo",
+                        model="gpt-4",
                         temperature=prompt_config.temperature,
                         num_completions=prompt_config.num_completions,
                         debug=True,
@@ -444,15 +455,16 @@ class LoopyPipeline:
                 log_json.append(instance_log_json)
             except Exception as e:
                 print(e)
+                print(traceback.format_exc())
                 instance_log_json["error"] = str(e)
                 log_json.append(instance_log_json)
                 continue
 
-        log_file.write(json.dumps(log_json), indent=4, ensure_ascii=False)
+        log_file.write(json.dumps(log_json, indent=4, ensure_ascii=False))
         log_file.close()
 
         return
 
 
-p = LoopyPipeline().load_config("config.yaml")
-p.run()
+# p = LoopyPipeline().load_config("config.yaml")
+# p.run()

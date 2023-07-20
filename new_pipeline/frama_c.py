@@ -69,3 +69,15 @@ p = LoopyPipeline(benchmark=FramaCBenchmark(), checker=FramaCChecker()).load_con
     "config_frama_c.yaml"
 )
 p.run()
+
+# ic = """
+# /*@
+# loop invariant x >= 1;
+# loop invariant y >= 0;
+# loop invariant x >= y;
+# loop invariant y <= 100000;
+# loop invariant x >= (y * (y + 1)) / 2;
+# loop invariant x <= ((y + 1) * (y + 2)) / 2;
+# */ """
+# p = FramaCChecker().prune_annotations_and_check(ic)
+# print(p)
