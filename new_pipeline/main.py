@@ -82,7 +82,10 @@ def main(args):
         heal_errors_input=args.heal_errors_input,
     )
     p = p.load_config(args.config_file)
-    p.run()
+    p.run(
+        max_benchmarks=args.max_benchmarks,
+        start_index=args.start_index,
+    )
 
 
 if __name__ == "__main__":

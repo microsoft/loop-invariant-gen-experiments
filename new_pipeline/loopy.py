@@ -331,7 +331,7 @@ class LoopyPipeline:
         num_retries: int = 5,
         debug: bool = False,
         log_path: str = None,
-        healing_run: bool = False,
+        heal_errors: bool = False,
         heal_errors_input: str = "",
     ):
         self.benchmark = benchmark
@@ -340,7 +340,7 @@ class LoopyPipeline:
         self.num_retries = num_retries
         self.debug = debug
         self.log_path = log_path
-        self.healing_run = healing_run
+        self.heal_errors = heal_errors
         self.heal_errors_input = heal_errors_input
 
     def load_config(self, config_file):
@@ -393,16 +393,21 @@ class LoopyPipeline:
 
         return self
 
-    def run(self):
+    def run(self, max_benchmarks=1, start_index=0):
         if self.llm is None:
             raise Exception(
                 "LLM not initialized. Call load_config first, to load input and prompt files."
             )
 
+        if self.heal_errors:
+            return self.heal(max_benchmarks, start_index)
+
         log_json = []
-        stats = {"success": 0, "failure": 0, "total": 0}
+        stats = {"success": [], "failure": [], "total": 0}
         log_file = open(self.log_path, "w", encoding="utf-8")
-        for i, instance in enumerate(self.benchmark.instances[:1]):
+        for i, instance in enumerate(
+            self.benchmark.instances[start_index : start_index + max_benchmarks]
+        ):
             print(
                 "Running benchmark: {i}/{n}".format(
                     i=i, n=len(self.benchmark.instances)
@@ -418,6 +423,7 @@ class LoopyPipeline:
 
                 instance_log_json["primary_conversation"] = conversations
                 instance_log_json["final_code_outputs"] = llm_outputs
+                instance_log_json["raw_checker_code"] = instance.checker_input
                 instance_log_json["checker_input"] = checker_input
                 instance_log_json["checker_output"] = success
                 instance_log_json["checker_message"] = checker_message
@@ -432,22 +438,82 @@ class LoopyPipeline:
                     instance_log_json["checker_message_after_prune"] = checker_message
                     instance_log_json["code_after_prune"] = pruned_code
 
+                if success:
+                    stats["success"].append(i)
+                else:
+                    stats["failure"].append(i)
+                stats["total"] += 1
+
+                log_json.append(instance_log_json)
+            except Exception as e:
+                print(traceback.format_exc())
+                instance_log_json["error"] = str(e)
+                log_json.append(instance_log_json)
+                stats["failure"].append(i)
+                stats["total"] += 1
+                continue
+
+        if stats["total"] != 0:
+            stats["success_rate"] = len(stats["success"]) / stats["total"]
+        else:
+            stats["success_rate"] = 0
+
+        log_file.write(
+            json.dumps({"logs": log_json, "stats": stats}, indent=4, ensure_ascii=False)
+        )
+        log_file.close()
+
+        return
+
+    def heal(self, max_benchmarks=1, start_index=0):
+        if self.llm is None:
+            raise Exception(
+                "LLM not initialized. Call load_config first, to load input and prompt files."
+            )
+
+        error_logs = None
+        with open("healing_" + self.heal_errors_input, "r", encoding="utf-8") as f:
+            error_logs = json.load(f)
+
+        error_logs = error_logs["logs"]
+
+        log_json = []
+        stats = {"success": [], "failure": [], "total": 0}
+        log_file = open(self.log_path, "w", encoding="utf-8")
+        for i, instance in enumerate(
+            error_logs[start_index : start_index + max_benchmarks]
+        ):
+            if instance["checker_output_after_prune"] or instance["checker_output"]:
+                print(
+                    "Skipping successful benchmark: {i}/{n}".format(
+                        i=i, n=len(error_logs)
+                    )
+                )
+                continue
+
+            print("Healing benchmark: {i}/{n}".format(i=i, n=len(error_logs)))
+            instance_log_json = {}
+            try:
+                success = False
                 num_retries = 0
                 instance_log_json["healing_conversations"] = []
 
+                failed_checker_input = instance["checker_input"]
+                checker_error_message = instance["checker_message"]
                 while not success and num_retries < self.num_retries:
                     healing_json = {}
                     llm_outputs, conversations = self.llm.heal(
                         input={
-                            "code": pruned_code,
-                            "error": checker_message,
+                            "code": failed_checker_input,
+                            "error": checker_error_message,
                             "incorrect_invariants": self.checker.get_incorrect_invariants(
-                                pruned_code, checker_message
+                                failed_checker_input, checker_error_message
                             ),
                         }
                     )
+
                     checker_input = self.benchmark.combine_llm_outputs(
-                        instance.checker_input, llm_outputs
+                        instance["raw_checker_code"], llm_outputs
                     )
                     success, checker_message = self.checker.check(checker_input)
 
@@ -466,18 +532,35 @@ class LoopyPipeline:
                         healing_json["checker_output_after_prune"] = success
                         healing_json["checker_message_after_prune"] = checker_message
 
-                        checker_input = pruned_code
+                        failed_checker_input = checker_input
+                        checker_error_message = checker_message
+
                     instance_log_json["healing_conversations"].append(healing_json)
                     num_retries += 1
+
+                if success:
+                    stats["success"].append(i)
+                else:
+                    stats["failure"].append(i)
+                stats["total"] += 1
+
                 log_json.append(instance_log_json)
             except Exception as e:
-                print(e)
                 print(traceback.format_exc())
                 instance_log_json["error"] = str(e)
                 log_json.append(instance_log_json)
+                stats["failure"].append(i)
+                stats["total"] += 1
                 continue
 
-        log_file.write(json.dumps(log_json, indent=4, ensure_ascii=False))
+        if stats["total"] != 0:
+            stats["success_rate"] = len(stats["success"]) / stats["total"]
+        else:
+            stats["success_rate"] = 0
+
+        log_file.write(
+            json.dumps({"logs": log_json, "stats": stats}, indent=4, ensure_ascii=False)
+        )
         log_file.close()
 
         return
