@@ -229,13 +229,21 @@ class PromptConfig:
 
 
 class LLM:
-    def __init__(self, prompt_configs=None, healing_prompt_configs=None):
+    def __init__(
+        self,
+        prompt_configs=None,
+        healing_prompt_configs=None,
+        model="gpt-3.5-turbo",
+        debug=False,
+    ):
         self.prompt_configs = prompt_configs
         self.healing_prompt_configs = healing_prompt_configs
+        self.model = model
+        self.debug = debug
 
     def __repr__(self) -> str:
-        return "<LLM prompt_configs: {}, healing_prompt_configs: {}>".format(
-            self.prompt_configs, self.healing_prompt_configs
+        return "<LLM prompt_configs: {}, healing_prompt_configs: {}, model: {}>".format(
+            self.prompt_configs, self.healing_prompt_configs, self.model
         )
 
     def extract_code(self, output):
@@ -279,10 +287,10 @@ class LLM:
             else:
                 llm_client = LLMClient(
                     Settings(
-                        model="gpt-4",
+                        model=self.model,
                         temperature=prompt_config.temperature,
                         num_completions=prompt_config.num_completions,
-                        debug=True,
+                        debug=self.debug,
                     )
                 )
                 latest = conversation.get_latest()
@@ -319,20 +327,21 @@ class LoopyPipeline:
         self,
         benchmark: Benchmark = None,
         checker: Checker = Checker("boogie"),
-        llm: LLM = None,
+        model: str = "gpt-3.5-turbo",
         num_retries: int = 5,
-        verbose: bool = False,
         debug: bool = False,
+        log_path: str = None,
+        healing_run: bool = False,
+        heal_errors_input: str = "",
     ):
         self.benchmark = benchmark
         self.checker = checker
-        self.llm = llm
+        self.model = model
         self.num_retries = num_retries
-        self.verbose = verbose
         self.debug = debug
-        self.log_path = datetime.datetime.now().strftime(
-            "logs/loopy_%Y_%m_%d_%H_%M_%S.json"
-        )
+        self.log_path = log_path
+        self.healing_run = healing_run
+        self.heal_errors_input = heal_errors_input
 
     def load_config(self, config_file):
         config = yaml.load(open(config_file, "r"), Loader=yaml.FullLoader)
@@ -364,7 +373,7 @@ class LoopyPipeline:
                         healing_prompt_config
                     )
                 )
-        self.llm = LLM(prompt_configs, healing_prompt_configs)
+        self.llm = LLM(prompt_configs, healing_prompt_configs, self.model, self.debug)
 
         if "llm_input_dir" not in config:
             config["llm_input_dir"] = "llm_input"
@@ -385,11 +394,19 @@ class LoopyPipeline:
         return self
 
     def run(self):
+        if self.llm is None:
+            raise Exception(
+                "LLM not initialized. Call load_config first, to load input and prompt files."
+            )
+
         log_json = []
+        stats = {"success": 0, "failure": 0, "total": 0}
         log_file = open(self.log_path, "w", encoding="utf-8")
         for i, instance in enumerate(self.benchmark.instances[:1]):
             print(
-                "Running instance: {i}/{n}".format(i=i, n=len(self.benchmark.instances))
+                "Running benchmark: {i}/{n}".format(
+                    i=i, n=len(self.benchmark.instances)
+                )
             )
             instance_log_json = {}
             try:

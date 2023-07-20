@@ -65,10 +65,10 @@ class FramaCBenchmark(Benchmark):
         return output
 
 
-p = LoopyPipeline(benchmark=FramaCBenchmark(), checker=FramaCChecker()).load_config(
-    "config_frama_c.yaml"
-)
-p.run()
+# p = LoopyPipeline(benchmark=FramaCBenchmark(), checker=FramaCChecker()).load_config(
+#     "config_frama_c.yaml"
+# )
+# p.run()
 
 # ic = """
 # /*@
