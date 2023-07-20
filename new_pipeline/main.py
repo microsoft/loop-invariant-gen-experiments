@@ -63,6 +63,12 @@ def parse_args(args):
         type=int,
         default=5,
     )
+    parser.add_argument(
+        "--provider",
+        help="Provider to fetch the model from",
+        choices=["azure-open-ai", "huggingface"],
+        default="azure-open-ai",
+    )
 
 
     return parser.parse_args(args)
@@ -71,6 +77,10 @@ def parse_args(args):
 def main(args):
     args = parse_args(args[1:])
 
+    # TODO: Add support for other models when they are available
+    if args.provider != "azure-open-ai":
+        raise Exception("Only Azure Open AI models are supported for now")
+    
     checker = None
     if args.checker == "boogie":
         checker = Checker("boogie")
