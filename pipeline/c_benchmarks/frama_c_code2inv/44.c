@@ -1,3 +1,7 @@
+#define assume(e) if(!(e)) return 0;
+#define assert(e) "{; //@ assert(" #e ")}"
+extern int unknown(void);
+
 int main() {
   // variable declarations
   int c;
@@ -25,6 +29,6 @@ int main() {
   }
   // post-condition
 if ( (n <= -1) )
-//@ assert( (c != n) );
+assert( (c != n) );
 
 }

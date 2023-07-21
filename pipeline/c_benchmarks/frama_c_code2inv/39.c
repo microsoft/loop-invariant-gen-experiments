@@ -1,3 +1,7 @@
+#define assume(e) if(!(e)) return 0;
+#define assert(e) "{; //@ assert(" #e ")}"
+extern int unknown(void);
+
 
 int main() {
     int n;
@@ -14,7 +18,7 @@ int main() {
     }
 
     if(c == n) {
-        ////@ assert( c >= 0);
-        //@ assert( c <= n);
+        //assert( c >= 0);
+        assert( c <= n);
     }
 }

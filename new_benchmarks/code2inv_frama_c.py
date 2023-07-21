@@ -15,32 +15,48 @@ class Code2InvParser:
 
     def get_modified_asserts(self, code):
         ast = self.parse(code)
-        qs = self.get_query_string(2)
-        f1 = bp.language.query(qs).captures(ast.root_node)
+
+        matching_nodes = []
+        ast_query_depth = 3
+
+        while ast_query_depth >= 0:
+            qs = self.get_query_string(ast_query_depth)
+            matching_nodes = self.language.query(qs).captures(ast.root_node)
+            if len(matching_nodes) > 0:
+                break
+            ast_query_depth -= 1
+
+        if matching_nodes is []:
+            return code
 
         premise = " ∧ ".join(
-            [
-                self.strip_matching_brackets(x[0].text.decode("utf-8"))
-                for x in f1
-                if x[1] == "premise"
-            ]
+            [x[0].text.decode("utf-8") for x in matching_nodes if x[1] == "premise"]
         )
         conclusion = " ∧ ".join(
-            [
-                self.strip_matching_brackets(x[0].text.decode("utf-8"))
-                for x in f1
-                if x[1] == "conclusion"
-            ]
+            [x[0].text.decode("utf-8") for x in matching_nodes if x[1] == "conclusion"]
         )
-        post_c = "//@ assert(" + premise + " => " + conclusion + ");"
 
-        return post_c
+        if premise == "":
+            post_c = "//@ assert " + conclusion + ";"
+        else:
+            post_c = "//@ assert " + premise + " => " + conclusion + ";"
 
-    def strip_matching_brackets(self, s):
-        c = s.strip()
-        if c.startswith("(") and c.endswith(")"):
-            return self.strip_matching_brackets(c[1:-1])
-        return s
+        parent_node_type = "outer-if-statement" if ast_query_depth > 0 else "conclusion"
+        parent_nodes = [x[0] for x in matching_nodes if x[1] == parent_node_type]
+
+        if len(parent_nodes) > 1:
+            print("Multiple parent nodes found. Using the first one.")
+
+        parent_node = parent_nodes[0]
+
+        new_c_program = code
+        new_c_program = (
+            code[: parent_node.parent.start_byte]
+            + post_c
+            + code[parent_node.parent.end_byte :]
+        )
+
+        return new_c_program
 
     def __get_query_string(self, cur_depth, max_depth):
         if max_depth == 0:
@@ -48,17 +64,24 @@ class Code2InvParser:
             (#eq? @function-name "assert"))"""
 
         elif cur_depth == 0:
-            return """(expression_statement (call_expression ((identifier) @function-name) ((argument_list) @conclusion)))"""
+            return """[(expression_statement (call_expression ((identifier) @function-name) ((argument_list) @conclusion)))
+                            (_ (expression_statement (call_expression ((identifier) @function-name) ((argument_list) @conclusion))))]"""
 
         elif cur_depth < max_depth:
             return (
-                """(if_statement (
+                """[(if_statement (
+                    ((parenthesized_expression) @premise)
+                    """
+                + self.__get_query_string(cur_depth - 1, max_depth)
+                + """))
+                (_ (if_statement (
                     ((parenthesized_expression) @premise)
                     """
                 + self.__get_query_string(cur_depth - 1, max_depth)
                 + """
-                    ))"""
+                    )))]"""
             )
+
         elif cur_depth == max_depth:
             return (
                 """((if_statement (
@@ -85,83 +108,3 @@ class Code2InvParser:
 
     def parse(self, code):
         return self.parser.parse(bytes(code, "utf8"))
-
-
-c_program = """
-int main() {
-  // variable declarations
-  int c;
-  int y;
-  int z;
-  // pre-conditions
-  (c = 0);
-  assume((y >= 0));
-  assume((y >= 127));
-  (z = (36 * y));
-  // loop body
-  while (unknown()) {
-    if ( (c < 36) )
-    {
-    (z  = (z + 1));
-    (c  = (c + 1));
-    }
-
-  }
-  // post-condition
-if ( (z < 0) )
-if ( (z >= 4608) )
-assert( (c >= 36) );
-
-}
-
-int unknown() {
-
-}
-"""
-
-
-# def strip_matching_brackets(s):
-#     c = s.strip()
-#     if c.startswith("(") and c.endswith(")"):
-#         return strip_matching_brackets(c[1:-1])
-#     return s
-
-
-# def __get_query_string(cur_depth, max_depth):
-#     if max_depth == 0:
-#         return """((expression_statement (call_expression ((identifier) @function-name) ((argument_list) @conclusion)))
-#         (#eq? @function-name "assert"))"""
-
-#     elif cur_depth == 0:
-#         return """(expression_statement (call_expression ((identifier) @function-name) ((argument_list) @conclusion)))"""
-
-#     elif cur_depth < max_depth:
-#         return (
-#             """(if_statement (
-#                 ((parenthesized_expression) @premise)
-#                 """
-#             + __get_query_string(cur_depth - 1, max_depth)
-#             + """
-#                 ))"""
-#         )
-#     elif cur_depth == max_depth:
-#         return (
-#             """((if_statement (
-#                         ((parenthesized_expression) @premise)
-#                         """
-#             + __get_query_string(cur_depth - 1, max_depth)
-#             + """
-#                             ) @outer-if-statement
-#                     )
-#                     (#eq? @function-name "assert")
-#                     )"""
-#         )
-
-
-# def get_query_string(n):
-#     return __get_query_string(n, n)
-
-
-bp = Code2InvParser("c")
-ast = bp.parse(c_program)
-print(bp.get_modified_asserts(c_program))
