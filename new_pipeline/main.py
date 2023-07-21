@@ -75,6 +75,13 @@ def parse_args(args):
         default="azure-open-ai",
         type=str
     )
+    parser.add_argument(
+        "--problem-ids",
+        help="Problem IDs to run",
+        nargs="+",
+        default=[],
+        type=str
+    )
 
 
     return parser.parse_args(args)
@@ -113,10 +120,19 @@ def main(args):
         num_healing_retries=args.healing_iterations,
     )
     p = p.load_config(args.config_file)
-    p.run(
-        max_benchmarks=args.max_benchmarks,
-        start_index=args.start_index,
-    )
+
+    if args.problem_ids:
+        for problem_id in args.problem_ids:
+            p.log_path = datetime.datetime.now().strftime(f"logs/loopy_{problem_id}_%Y_%m_%d_%H_%M_%S.json")
+            p.run(
+                max_benchmarks=1,
+                start_index=int(problem_id),
+            )
+    else:    
+        p.run(
+            max_benchmarks=args.max_benchmarks,
+            start_index=args.start_index,
+        )
 
 
 if __name__ == "__main__":

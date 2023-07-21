@@ -6,3 +6,4 @@ __VERIFIER_assert(int cond) {
   return;
 }
 
+#define __VERIFIER_assert(cond) sassert(cond)

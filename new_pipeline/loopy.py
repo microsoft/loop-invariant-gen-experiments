@@ -252,8 +252,8 @@ class LLM:
         for i, line in enumerate(lines):
             if "```" in line:
                 line_nos.append(i)
-        if len(line_nos) != 2:
-            raise Exception("Output does not contain 1 code block")
+        if len(line_nos) < 2:
+            return ("ERROR: Output does not contain at least 1 code block") + "\n" + output
         return "\n".join(lines[line_nos[0] + 1 : line_nos[1]])
 
     def run__(self, input, configs):
@@ -418,7 +418,7 @@ class LoopyPipeline:
             try:
                 llm_outputs, conversations = self.llm.run({"code": instance.llm_input})
                 checker_input = self.benchmark.combine_llm_outputs(
-                    instance.checker_input, llm_outputs
+                    instance.checker_input, [llm_output for llm_output in llm_outputs if not llm_output.startswith("ERROR")]
                 )
                 success, checker_message = self.checker.check(checker_input)
 
