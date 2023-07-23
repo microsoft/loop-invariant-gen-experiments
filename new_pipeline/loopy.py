@@ -197,6 +197,8 @@ class LoopyPipeline:
             error_logs[start_index : start_index + max_benchmarks]
         ):
             if instance["checker_output_after_prune"] or instance["checker_output"]:
+                stats["success"].append(i)
+                stats["total"] += 1
                 print(
                     "Skipping successful benchmark: {i}/{n}".format(
                         i=i, n=len(error_logs)
