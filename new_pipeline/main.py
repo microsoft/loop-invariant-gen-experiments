@@ -82,6 +82,12 @@ def parse_args(args):
         default=[],
         type=str
     )
+    parser.add_argument(
+        "--recheck-logs",
+        help="Recheck logs for errors",
+        type=str,
+        default="",
+    )
 
 
     return parser.parse_args(args)
@@ -128,10 +134,13 @@ def main(args):
                 max_benchmarks=1,
                 start_index=int(problem_id),
             )
-    else:    
+    else:
+        if args.heal_errors:
+            p.log_path = datetime.datetime.now().strftime(f"logs/healing_loopy_%Y_%m_%d_%H_%M_%S.json")
         p.run(
             max_benchmarks=args.max_benchmarks,
             start_index=args.start_index,
+            recheck_logfile=args.recheck_logs,
         )
 
 

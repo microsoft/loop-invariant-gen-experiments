@@ -2,7 +2,9 @@ import csv
 import os
 import re
 import subprocess
-from loopy import Checker, Benchmark, LoopyPipeline
+
+from benchmark import Benchmark
+from checker import Checker
 
 
 class FramaCChecker(Checker):
@@ -54,7 +56,23 @@ class FramaCChecker(Checker):
         # Parse the output dump
         with open(f"/tmp/frama_c_eval.csv", "r", encoding="utf-8") as f:
             csv_output = [row for row in csv.DictReader(f, delimiter="\t")]
-            success = all(row["status"] == "Valid" for row in csv_output)
+            success = all(
+                row["status"] == "Valid"
+                for row in csv_output
+                if row["property kind"] == "loop invariant"
+            ) and any(
+                row["property kind"] == "user assertion" and row["status"] == "Valid"
+                for row in csv_output
+            )
+            
+            user_assertion = "\n".join(
+                [
+                    f"Post-condition {row['property']} on line {row['line']}: {row['status']}"
+                    for row in csv_output
+                    if row["property kind"] == "user assertion"
+                ]
+            )
+
             csv_output = "\n".join(
                 [
                     f"Invariant {row['property']} on line {row['line']}: {row['status']}"
@@ -62,6 +80,7 @@ class FramaCChecker(Checker):
                     if row["property kind"] == "loop invariant"
                 ]
             )
+            csv_output = csv_output + "\n" + user_assertion
 
         os.remove("/tmp/temp_eval.c")
         os.remove("/tmp/frama_c_kernel_logs.txt")
@@ -85,8 +104,9 @@ class FramaCBenchmark(Benchmark):
         for llm_output in llm_outputs:
             lines = llm_output.splitlines()
             for line in lines:
-                if "loop invariant" in line:
-                    invariants.append(line.strip())
+                invariant = re.findall(r"(loop invariant .+;)", line)
+                if len(invariant) > 0:
+                    invariants.append(invariant[0])
 
         lines = checker_input.splitlines()
         loc = None
@@ -95,9 +115,27 @@ class FramaCBenchmark(Benchmark):
                 loc = index - 1
                 break
         if loc is not None:
-            lines = lines[:loc] + ["/*@\n"] + invariants + ["\n*/"] + lines[loc + 1 :]
+            lines = (
+                lines[:loc]
+                + ((["/*@\n"] + invariants + ["\n*/"]) if len(invariants) > 0 else [""])
+                + lines[loc + 1 :]
+            )
         else:
             raise Exception("No while loop found")
         output = "\n".join(lines)
 
         return output
+
+    def raw_input_to_checker_input(self, code):
+        lines = code.splitlines()
+        new_code = ""
+        for line in lines:
+            if "assert" in line and not "//assert" in line:
+                assertion = line.strip()
+                line = line.replace(assertion, "{;\n //@ " + assertion + "\n}")
+            new_code += line + "\n"
+        new_code = (
+            """#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\n"""
+            + "".join(new_code)
+        )
+        return new_code

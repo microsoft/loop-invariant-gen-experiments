@@ -31,4 +31,3 @@ pre( A >= 0 && B > 0 );
 
     return r;
     }
-post( result == A % B);

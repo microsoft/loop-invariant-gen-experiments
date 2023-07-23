@@ -1,5 +1,4 @@
 #define assume(e) if(!(e)) return 0;
-#define assert(e) "{; //@ assert(" #e ")}"
 extern int unknown(void);
 
 int main() {
@@ -24,6 +23,8 @@ int main() {
   // post-condition
 if ( (z < 0) )
 if ( (z >= 4608) )
-assert( (c >= 36) );
+{;
+ //@ assert( (c >= 36) );
+}
 
 }

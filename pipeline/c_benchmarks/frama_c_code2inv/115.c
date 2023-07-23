@@ -1,5 +1,4 @@
 #define assume(e) if(!(e)) return 0;
-#define assert(e) "{; //@ assert(" #e ")}"
 extern int unknown(void);
 
 int main() {
@@ -19,6 +18,8 @@ int main() {
   }
   // post-condition
 if ( (sn != -1) )
-assert( (sn == x) );
+{;
+ //@ assert( (sn == x) );
+}
 
 }

@@ -4,11 +4,10 @@
 
 - (Checker + prompt sequence)-parametric pipeline
 - Added new benchmarks for array reasoning
-- Code2Inv experiment with Frama-C running
+- Report Code2Inv numbers using new pipeline without healing
 
 ## TODO
 
-- Report Code2Inv numbers without healing
 - Run healing on Code2Inv
 - Merge `adharsh/new-pipeline` into `main`
 - Try simplified prompt sequence (don't do 3+ back-and-forth with the model; just one prompt)

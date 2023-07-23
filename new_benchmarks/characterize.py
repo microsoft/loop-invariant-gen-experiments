@@ -28,7 +28,7 @@ class BenchmarkParser:
         self.set_queries()
 
     def set_queries(self):
-        self.queries['functions'] = self.language.query("""(function_definition) @function""")
+        self.queries['functions'] = self.language.query("""((function_definition) @function)""")
         self.queries['loops'] = self.language.query("""[(for_statement) @for_loop 
                                                      (while_statement) @while_loop]""")
         self.queries['arrays'] = self.language.query("""(array_declarator) @array""")
@@ -36,6 +36,15 @@ class BenchmarkParser:
         self.queries['structs'] = self.language.query("""(struct_specifier) @struct""")
         if self.language.name == "cpp":
             self.queries['classes'] = self.language.query("""(class_specifier) @class""")
+
+    def filter_func_by_name(self, node):
+        name = self.language.query("(_ (identifier) @name)").captures(node)
+        if len(name) == 0 or len(name[0]) == 0:
+            raise ValueError("Function name not found")
+        if re.match(r"^(__VERIFIER_.+|unknown\d)$", name[0][0].text.decode('utf-8')):
+            # Don't count __VERIFIER_* functions or unknown functions
+            return False
+        return True
 
     def token_length(self, code):
         encoding = tiktoken.encoding_for_model('gpt-4')
@@ -57,6 +66,8 @@ class BenchmarkParser:
                 stats[k + "_tokenized_sizes"] = []
             
             captures = query.captures(ast.root_node)
+            if k == "functions":
+                captures = [x for x in captures if self.filter_func_by_name(x[0])]
 
             for node in captures:
                 if node[1] == "for_loop" or node[1] == "while_loop":

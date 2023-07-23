@@ -1,5 +1,4 @@
 #define assume(e) if(!(e)) return 0;
-#define assert(e) "{; //@ assert(" #e ")}"
 extern int unknown(void);
 
 
@@ -18,6 +17,8 @@ int main()
     }
 
     if(size > 0) {
-       assert (z >= y);
+       {;
+ //@ assert (z >= y);
+}
     }
 }
