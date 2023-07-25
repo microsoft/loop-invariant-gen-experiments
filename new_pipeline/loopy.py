@@ -196,7 +196,7 @@ class LoopyPipeline:
         for i, instance in enumerate(
             error_logs[start_index : start_index + max_benchmarks]
         ):
-            if instance["checker_output_after_prune"] or instance["checker_output"]:
+            if instance["checker_output"] or instance["checker_output_after_prune"]:
                 stats["success"].append(i)
                 stats["total"] += 1
                 print(
