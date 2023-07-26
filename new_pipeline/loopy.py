@@ -30,6 +30,7 @@ class LoopyPipeline:
         self.num_healing_retries = num_healing_retries
         self.heal_errors = heal_errors
         self.heal_errors_input = heal_errors_input
+        self.system_message = None
 
     def load_config(self, config_file):
         config = yaml.load(open(config_file, "r"), Loader=yaml.FullLoader)
@@ -61,7 +62,21 @@ class LoopyPipeline:
                         healing_prompt_config
                     )
                 )
-        self.llm = LLM(prompt_configs, healing_prompt_configs, self.model, self.debug)
+
+        if "system_message_file" in config:
+            self.system_message_file = config["system_message_file"]
+            self.system_message = open(self.system_message_file, "r").read()
+
+        self.llm = LLM(
+            self.system_message,
+            prompt_configs,
+            healing_prompt_configs,
+            self.model,
+            self.debug,
+        )
+
+        if "llm_input_file_path" not in config:
+            config["llm_input_file_path"] = ""
 
         if "llm_input_dir" not in config:
             config["llm_input_dir"] = "llm_input"
@@ -69,11 +84,12 @@ class LoopyPipeline:
             config["checker_input_dir"] = "checker_input"
         if self.benchmark is None:
             self.benchmark = Benchmark(
-                config["llm_input_dir"], config["checker_input_dir"]
+                config["llm_input_dir"], config["checker_input_dir"], config["llm_input_file_path"]
             )
         else:
             self.benchmark.llm_input_path = config["llm_input_dir"]
             self.benchmark.checker_input_path = config["checker_input_dir"]
+            self.benchmark.llm_input_file = config["llm_input_file_path"]
         self.benchmark.load_instances()
 
         if "healing_retries" in config:
@@ -102,11 +118,7 @@ class LoopyPipeline:
                 with open(recheck_logfile, "r", encoding="utf-8") as f:
                     recheck_logs = json.load(f)
 
-            print(
-                "Running benchmark: {i}/{n}".format(
-                    i=i, n=len(self.benchmark.instances)
-                )
-            )
+            print(f"Running benchmark: {i+1}/{len(self.benchmark.instances)}")
             instance_log_json = {"file": instance.llm_input_path}
             try:
                 if recheck_logs is None:
@@ -207,7 +219,7 @@ class LoopyPipeline:
                 continue
 
             print("Healing benchmark: {i}/{n}".format(i=i, n=len(error_logs)))
-            instance_log_json = { "file": instance["file"] }
+            instance_log_json = {"file": instance["file"]}
             try:
                 success = False
                 num_retries = 0
@@ -234,8 +246,12 @@ class LoopyPipeline:
 
                     healing_json["conversation"] = conversations
                     healing_json["final_code_outputs"] = llm_outputs
-                    healing_json["checker_input_without_invariants"] = instance["checker_input_without_invariants"]
-                    healing_json["checker_input_with_old_invariants"] = instance["checker_input_with_invariants"]
+                    healing_json["checker_input_without_invariants"] = instance[
+                        "checker_input_without_invariants"
+                    ]
+                    healing_json["checker_input_with_old_invariants"] = instance[
+                        "checker_input_with_invariants"
+                    ]
                     healing_json["input_error_message"] = instance["checker_message"]
                     healing_json["checker_input_with_new_invariants"] = checker_input
                     healing_json["checker_output"] = success
@@ -248,7 +264,9 @@ class LoopyPipeline:
                         success, prune_checker_message = self.checker.check(pruned_code)
                         healing_json["code_after_prune"] = pruned_code
                         healing_json["checker_output_after_prune"] = success
-                        healing_json["checker_message_after_prune"] = prune_checker_message
+                        healing_json[
+                            "checker_message_after_prune"
+                        ] = prune_checker_message
 
                         failed_checker_input = checker_input
                         checker_error_message = checker_message
@@ -280,7 +298,15 @@ class LoopyPipeline:
             stats["success_rate"] = 0
 
         log_file.write(
-            json.dumps({"heal_input" : self.heal_errors_input, "logs": log_json, "stats": stats}, indent=4, ensure_ascii=False)
+            json.dumps(
+                {
+                    "heal_input": self.heal_errors_input,
+                    "logs": log_json,
+                    "stats": stats,
+                },
+                indent=4,
+                ensure_ascii=False,
+            )
         )
         log_file.close()
 

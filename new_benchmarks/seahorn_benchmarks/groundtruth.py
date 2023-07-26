@@ -1,6 +1,7 @@
 import argparse
 import os
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -96,8 +97,6 @@ def parse_args(args):
 
 
 def main(args):
-    df = pd.DataFrame(columns=['benchmark', 'num_code_tokens', 'functions_count', 'functions_avg_tokens', 'functions_tokenized_sizes', 'loops_count', 'nesting_levels_in_loops', 'loops_avg_tokens', 'loops_tokenized_sizes', \
-                                'arrays_count', 'pointers_count', 'structs_count', 'structs_tokenized_sizes', 'classes_count', 'classes_tokenized_sizes'])
     if args.input_directory:
         directories = []
         files = []
@@ -113,28 +112,17 @@ def main(args):
             files.extend([str(x) for x in list(Path(directory).rglob("*.[c|cpp]"))])
 
         for file in files:
-            parser = None
-            if file.endswith(".c"):
-                parser = BenchmarkParser('c')
-            elif file.endswith(".cpp"):
-                parser = BenchmarkParser('cpp')
-            else:
-                continue
+            print(f"Processing {file}")
+            cmd = f"echo {file}"
+            p = subprocess.Popen(cmd.split(), stdout=subprocess.PIPE)
+            output, err = p.communicate()
+            output = output.decode()
+            with open(file + ".sh_output", "w") as f:
+                f.write(output)
 
-            with open(file, "r") as f:
-                code = f.read()
-                stats = parser.calculate_stats(code)
-                stats['benchmark'] = file
-                df = pd.concat([df, stats], ignore_index=True)
-        df.set_index('benchmark', inplace=True)
     else:
         print("Invalid input directory")
         exit(1)
-    if args.output_file:
-        df.to_excel(args.output_file)
-        print(f"Saved to {args.output_file}")
-    else:
-        print(df)
 
 
 if __name__ == "__main__":
