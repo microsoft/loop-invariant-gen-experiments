@@ -22,12 +22,27 @@ class BenchmarkInstance:
 
 
 class Benchmark:
-    def __init__(self, llm_input_dir="", checker_input_dir=""):
+    def __init__(self, llm_input_dir="", checker_input_dir="", llm_input_file=""):
         self.llm_input_path = llm_input_dir
         self.checker_input_path = checker_input_dir
+        self.llm_input_file = ""
         self.instances: list[BenchmarkInstance] = []
 
     def load_instances(self):
+        if self.llm_input_file != "":
+            with open(self.llm_input_file) as f:
+                files = f.read().splitlines()
+                for file in files:
+                    with open(os.path.join("../new_benchmarks/", file)) as code_file:
+                        code = code_file.read()
+                        self.instances.append(
+                            BenchmarkInstance(
+                                llm_input=code,
+                                checker_input=self.raw_input_to_checker_input(code),
+                            )
+                        )
+            return
+
         if self.llm_input_path == "" or not os.path.exists(self.llm_input_path):
             raise Exception("LLM input directory path not found")
         llm_input_files = os.listdir(
@@ -35,8 +50,6 @@ class Benchmark:
         )
         llm_input_files = sorted(llm_input_files, key=lambda x: int(x.split(".")[0]))
 
-        # TODO: Move this to a separate function. Ideally take in a transform function
-        # that can be applied to the LLM input. For now, just read the dir as is.
         if self.checker_input_path != "" and os.path.exists(self.checker_input_path):
             checker_input_files = os.listdir(
                 os.path.join(os.path.dirname(__file__), self.checker_input_path)

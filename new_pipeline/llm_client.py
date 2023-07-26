@@ -91,7 +91,7 @@ class LLMClient:
                     max_tokens=self._max_tokens,
                     temperature=self._temperature,
                     n=self._num_completions,
-                    top_p=1,
+                    top_p=0.95,
                     frequency_penalty=0,
                     presence_penalty=0,
                     stop=None,

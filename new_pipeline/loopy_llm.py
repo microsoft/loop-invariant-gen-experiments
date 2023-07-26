@@ -56,11 +56,13 @@ class PromptConfig:
 class LLM:
     def __init__(
         self,
+        system_message=None,
         prompt_configs=None,
         healing_prompt_configs=None,
         model="gpt-3.5-turbo",
         debug=False,
     ):
+        self.system_message = system_message
         self.prompt_configs = prompt_configs
         self.healing_prompt_configs = healing_prompt_configs
         self.model = model
@@ -89,7 +91,7 @@ class LLM:
             Node(
                 {
                     "role": "system",
-                    "content": "You are a helpful AI software assistant that reasons about how code behaves.",
+                    "content": "You are a helpful AI software assistant that reasons about how code behaves." if self.system_message is None else self.system_message,
                 }
             )
         )
