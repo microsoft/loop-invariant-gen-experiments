@@ -36,4 +36,6 @@
     - implement in framework - do Monday (Adharsh)
     - design nudges - do Monday (Subhajit)
     - run diffy benchmarks - schedule Tuesday 
+- remove faulty benchmarks
+    - run with seahorn and other verfiers to remove instances that are buggy/non-terminating
 
