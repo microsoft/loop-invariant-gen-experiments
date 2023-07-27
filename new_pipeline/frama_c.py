@@ -2,6 +2,7 @@ import csv
 import os
 import re
 import subprocess
+from copy import deepcopy
 
 from benchmark import Benchmark
 from checker import Checker
@@ -98,6 +99,93 @@ class FramaCChecker(Checker):
 
         return line_numbers
 
+    def get_unknown_inv_no_from_error_msg(self, checker_output):
+        pattern = r"on line (\d+): Unknown"
+        matches = re.findall(pattern, checker_output)
+        line_numbers = [int(match) - 1 for match in matches]
+
+        return line_numbers
+
+    def get_partially_proven_inv_from_error_msg(self, checker_output):
+        pattern = r"on line (\d+): Partially proven"
+        matches = re.findall(pattern, checker_output)
+        line_numbers = [int(match) - 1 for match in matches]
+
+        return line_numbers
+    
+    def get_incorrect_invariants(self, code, error):
+        line_numbers = self.get_line_no_from_error_msg(error)
+        lines = code.splitlines()
+        incorrect_invariants = []
+        for line_number in line_numbers:
+            if self.is_invariant(lines[int(line_number)]):
+                incorrect_invariants.append(lines[int(line_number)].strip())
+        return "\n".join(incorrect_invariants)
+
+    def prune_annotations_and_check(self, input_code):
+        print("Pruning annotations...")
+
+        invariant_line_mapping = {}
+        lines = input_code.splitlines()
+        for no, line in enumerate(lines):
+            if self.is_invariant(line):
+                invariant_line_mapping[no] = line
+        if len(invariant_line_mapping) == 0:
+            raise Exception("No invariants found")
+        
+        inv_mapping_queue = [invariant_line_mapping]
+        status = False
+
+        while len(inv_mapping_queue) > 0:
+            status, checker_message = self.check(input_code)
+            if status:
+                break
+
+            invariant_line_mapping = inv_mapping_queue.pop(0)
+            inv_line_list = list(invariant_line_mapping.keys())
+            (invariant_line_start, invariant_line_end) = (
+                inv_line_list[0],
+                inv_line_list[-1],
+            )
+
+            # Remove Annotation error invariants
+            if "Annotation error" in checker_message:
+                annotation_error_line_no = self.get_line_no_from_error_msg(checker_message)[0]
+                invariant_line_mapping.pop(annotation_error_line_no)
+
+            else:
+                # Remove all "Unknown" invariants
+                unknown_inv_lines = self.get_unknown_inv_no_from_error_msg(checker_message)
+                for line_no in unknown_inv_lines:
+                    invariant_line_mapping.pop(line_no)
+
+                # Push invariant_mappings with one "Partially proven" invariant removed to the queue
+                partially_proven_inv_line_nos = self.get_partially_proven_inv_from_error_msg(checker_message)
+                for line_no in partially_proven_inv_line_nos:
+                    inv_mapping_copy = deepcopy(invariant_line_mapping)
+                    inv_mapping_copy.pop(line_no)
+                    inv_mapping_queue.append(inv_mapping_copy)
+
+            known_invariant_line_numbers = [
+                i
+                for i in list(invariant_line_mapping.keys())
+            ]
+
+            new_lines = ""
+            if len(known_invariant_line_numbers) == 0:
+                print("No invariants remaining")
+                break
+            else:
+                new_lines = (
+                    lines[:invariant_line_start]
+                    + [lines[i] for i in known_invariant_line_numbers]
+                    + lines[invariant_line_end + 1 :]
+                )
+            new_code = "\n".join(new_lines)
+            input_code = new_code
+
+        return input_code
+
 
 class FramaCBenchmark(Benchmark):
     def __init__(self, llm_input_dir=None, checker_input_dir=None):
@@ -151,7 +239,9 @@ class FramaCBenchmark(Benchmark):
             elif "__VERIFIER_nondet_ushort" in line:
                 line = line.replace("__VERIFIER_nondet_ushort", "unknown_ushort")
             elif "__VERIFIER_assume" in line:
-                line = line.replace("__VERIFIER_assume", "assume")
+                assuming_conditions = re.findall(r"(__VERIFIER_assume\(([^\(\)]+)\);)", line)
+                for condition in assuming_conditions:
+                    line = line.replace(condition[0], "assume(" + condition[1] + ");\n")
             elif "__VERIFIER_assert" in line:
                 asserting_conditions = re.findall(r"(__VERIFIER_assert\(([^\(\)]+)\);)", line)
                 for condition in asserting_conditions:
@@ -162,7 +252,13 @@ class FramaCBenchmark(Benchmark):
             #     line = line.replace(assertion, "{;\n //@ " + assertion + "\n}")
             new_code += line + "\n"
         new_code = (
-            """#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\n"""
+            """#define assume(e) if(!(e)) return 0;\n
+extern int unknown(void);
+extern int unknown_int(void);
+extern uint unknown_uint(void);
+extern bool unknown_bool(void);
+extern char unknown_char(void);
+extern ushort unknown_ushort(void);\n"""
             + "".join(new_code)
         )
         return new_code

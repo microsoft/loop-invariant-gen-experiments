@@ -130,7 +130,7 @@ class LoopyPipeline:
                 else:
                     llm_outputs, conversations = (
                         recheck_logs["logs"][i]["final_code_outputs"],
-                        recheck_logs["logs"][i]["primary_conversation"],
+                        recheck_logs["logs"][i]["llm_conversation"],
                     )
 
                 checker_input = self.benchmark.combine_llm_outputs(
