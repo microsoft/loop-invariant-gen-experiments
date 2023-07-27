@@ -34,6 +34,8 @@ class FramaCChecker(Checker):
         output, err = p.communicate()
 
         # Look for errors in the kernel logs
+        if not os.path.exists("/tmp/frama_c_kernel_logs.txt"):
+            return False, "No kernel logs found"
         with open("/tmp/frama_c_kernel_logs.txt", "r", encoding="utf-8") as f:
             kernel_logs = f.read()
             kl_lines = kernel_logs.splitlines()
@@ -54,6 +56,8 @@ class FramaCChecker(Checker):
                 return False, error_message
 
         # Parse the output dump
+        if not os.path.exists("/tmp/frama_c_eval.csv"):
+            return False, "No output dump found"
         with open(f"/tmp/frama_c_eval.csv", "r", encoding="utf-8") as f:
             csv_output = [row for row in csv.DictReader(f, delimiter="\t")]
             success = all(
@@ -111,7 +115,9 @@ class FramaCBenchmark(Benchmark):
         lines = checker_input.splitlines()
         loc = None
         for index, line in enumerate(lines):
-            if "while" in line:
+            while_re = re.findall(r"while\s*\((.+)\)", line)
+            for_re = re.findall(r"for\s*\((.+)\)", line)
+            if len(while_re) > 0 or len(for_re) > 0:
                 loc = index - 1
                 break
         if loc is not None:
@@ -130,9 +136,30 @@ class FramaCBenchmark(Benchmark):
         lines = code.splitlines()
         new_code = ""
         for line in lines:
-            if "assert" in line and not "//assert" in line:
-                assertion = line.strip()
-                line = line.replace(assertion, "{;\n //@ " + assertion + "\n}")
+            if "ERROR:" in line:
+                error_text = re.findall(r"ERROR:(.+)", line)[0]
+                line = line.replace("ERROR:", "ERROR: //@ assert(\\false);\n")
+
+            elif "__VERIFIER_nondet_int" in line:
+                line = line.replace("__VERIFIER_nondet_int", "unknown_int")
+            elif "__VERIFIER_nondet_uint" in line:
+                line = line.replace("__VERIFIER_nondet_uint", "unknown_uint")
+            elif "__VERIFIER_nondet_bool" in line:
+                line = line.replace("__VERIFIER_nondet_bool", "unknown_bool")
+            elif "__VERIFIER_nondet_char" in line:
+                line = line.replace("__VERIFIER_nondet_char", "unknown_char")
+            elif "__VERIFIER_nondet_ushort" in line:
+                line = line.replace("__VERIFIER_nondet_ushort", "unknown_ushort")
+            elif "__VERIFIER_assume" in line:
+                line = line.replace("__VERIFIER_assume", "assume")
+            elif "__VERIFIER_assert" in line:
+                asserting_conditions = re.findall(r"(__VERIFIER_assert\(([^\(\)]+)\);)", line)
+                for condition in asserting_conditions:
+                    line = line.replace(condition[0], "//@ assert(" + condition[1] + ");\n")
+
+            # if "assert" in line and not "//assert" in line:
+            #     assertion = line.strip()
+            #     line = line.replace(assertion, "{;\n //@ " + assertion + "\n}")
             new_code += line + "\n"
         new_code = (
             """#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\n"""

@@ -38,6 +38,7 @@ class Benchmark:
                         self.instances.append(
                             BenchmarkInstance(
                                 llm_input=code,
+                                llm_input_path=os.path.join("../new_benchmarks/", file),
                                 checker_input=self.raw_input_to_checker_input(code),
                             )
                         )

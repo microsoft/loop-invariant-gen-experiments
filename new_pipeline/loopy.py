@@ -108,9 +108,11 @@ class LoopyPipeline:
 
         log_json = []
         stats = {"success": [], "failure": [], "total": 0}
-        log_file = open(self.log_path, "w", encoding="utf-8")
+        if not os.path.exists(os.path.dirname(self.log_path)):
+            os.makedirs(os.path.dirname(self.log_path))
+        log_file = open(self.log_path + "final.json", "w", encoding="utf-8")
         recheck_logs = None
-
+        total_benchmarks = len(self.benchmark.instances[start_index : start_index + max_benchmarks])
         for i, instance in enumerate(
             self.benchmark.instances[start_index : start_index + max_benchmarks]
         ):
@@ -118,7 +120,7 @@ class LoopyPipeline:
                 with open(recheck_logfile, "r", encoding="utf-8") as f:
                     recheck_logs = json.load(f)
 
-            print(f"Running benchmark: {i+1}/{len(self.benchmark.instances)}")
+            print(f"Running benchmark: {i+1}/{total_benchmarks}")
             instance_log_json = {"file": instance.llm_input_path}
             try:
                 if recheck_logs is None:
@@ -166,10 +168,32 @@ class LoopyPipeline:
                     stats["failure"].append(i)
                 stats["total"] += 1
 
+                with open(os.path.join(self.log_path, instance.llm_input_path.replace(".c", ".json").replace("../", "").replace("/", "__")), "w", encoding="utf-8") as f:
+                    f.write(
+                        json.dumps(
+                            {
+                                "logs": instance_log_json,
+                                "stats": stats,
+                            },
+                            indent=4,
+                            ensure_ascii=False,
+                        )
+                    )
                 log_json.append(instance_log_json)
             except (Exception, KeyboardInterrupt) as e:
                 print(traceback.format_exc())
                 instance_log_json["error"] = str(e)
+                with open(os.path.join(self.log_path, instance.llm_input_path.replace(".c", ".json").replace("../", "").replace("/", "__")), "w", encoding="utf-8") as f:
+                    f.write(
+                        json.dumps(
+                            {
+                                "logs": instance_log_json,
+                                "stats": stats,
+                            },
+                            indent=4,
+                            ensure_ascii=False,
+                        )
+                    )
                 log_json.append(instance_log_json)
                 stats["failure"].append(i)
                 stats["total"] += 1
