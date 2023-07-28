@@ -8,12 +8,6 @@ int main() {
   assume((y <= 2));
   assume((y >= 0));
   // loop body
-  /*@   
-  loop invariant x % 2 == \at(x, Pre) % 2;  
-  loop invariant y % 2 == \at(y, Pre) % 2;  
-  loop invariant x >= 0;  
-  loop invariant y >= 0;  
-*/ 
   while (unknown()) {
     {
     (x  = (x + 2));
