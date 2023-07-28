@@ -46,6 +46,9 @@ class FramaCChecker(Checker):
                     "Didn't expect more than 2 lines in Frama-C kernel logs. \
                         Proceeding anyway. Hopefully it's fine."
                 )
+                for i, x in enumerate(kl_lines):
+                    print(f"{i+1}: {x}")
+                print(kernel_logs)
             error_line = None
             for line in kl_lines:
                 if "[kernel:annot-error]" in line:
@@ -200,6 +203,7 @@ class FramaCChecker(Checker):
 
         if not status:
             print("Invariants not strong enough to prove")
+            print(input_code)
         else:
             print("Found strong enough invariants")
 

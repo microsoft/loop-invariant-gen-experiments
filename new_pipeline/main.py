@@ -129,14 +129,14 @@ def main(args):
 
     if args.problem_ids:
         for problem_id in args.problem_ids:
-            p.log_path = datetime.datetime.now().strftime(f"logs/loopy_{problem_id}_%Y_%m_%d_%H_%M_%S")
+            p.log_path = datetime.datetime.now().strftime(f"logs/loopy_{problem_id}_%Y_%m_%d_%H_%M_%S/")
             p.run(
                 max_benchmarks=1,
                 start_index=int(problem_id),
             )
     else:
         if args.heal_errors:
-            p.log_path = datetime.datetime.now().strftime(f"logs/healing_loopy_%Y_%m_%d_%H_%M_%S")
+            p.log_path = datetime.datetime.now().strftime(f"logs/healing_loopy_%Y_%m_%d_%H_%M_%S/")
         p.run(
             max_benchmarks=args.max_benchmarks,
             start_index=args.start_index,
