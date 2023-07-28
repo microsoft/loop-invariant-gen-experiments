@@ -187,7 +187,7 @@ class FramaCChecker(Checker):
                 for line_no in unknown_inv_lines:
                     code_lines[line_no] = ""
                 input_code = "\n".join(code_lines)
-                code_queue.append(input_code)
+                code_queue.append("\n".join(code_lines))
 
                 # Push code with one "Partially proven" invariant removed to the queue
                 partially_proven_inv_line_nos = (
