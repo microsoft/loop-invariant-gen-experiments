@@ -39,3 +39,18 @@ wget wget https://github.com/Z3Prover/z3/releases/download/z3-4.12.2/z3-4.12.2-x
 unzip z3-4.12.2-x64-glibc-2.31.zip
 ln -s z3-4.12.2-x64-glibc-2.31/bin/z3
 ```
+
+### Install python dependencies
+
+```bash
+# Ensure python version >= 3.11
+pip install pyyaml jinja2 openai tiktoken
+```
+
+### Tell Why3 about the solvers
+
+```bash
+rm -f ~/.why3.conf
+
+why3 config detect
+```
