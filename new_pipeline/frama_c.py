@@ -203,7 +203,6 @@ class FramaCChecker(Checker):
 
         if not status:
             print("Invariants not strong enough to prove")
-            print(input_code)
         else:
             print("Found strong enough invariants")
 
