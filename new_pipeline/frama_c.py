@@ -167,7 +167,6 @@ class FramaCChecker(Checker):
             if len(self.get_invariants(code_lines)) == 0:
                 print("No invariants found")
                 break
-            print(self.get_invariants(code_lines))
             status, checker_message = self.check(input_code)
             if status:
                 break
@@ -185,7 +184,6 @@ class FramaCChecker(Checker):
                 unknown_inv_lines = self.get_unknown_inv_no_from_error_msg(
                     checker_message
                 )
-                print(f"Removing unknown invariants on lines {unknown_inv_lines}")
                 for line_no in unknown_inv_lines:
                     code_lines[line_no] = ""
                     code_queue.append("\n".join(code_lines))
@@ -194,9 +192,6 @@ class FramaCChecker(Checker):
                 # Push code with one "Partially proven" invariant removed to the queue
                 partially_proven_inv_line_nos = (
                     self.get_partially_proven_inv_from_error_msg(checker_message)
-                )
-                print(
-                    f"Partially proven invariants on lines {partially_proven_inv_line_nos}"
                 )
                 for line_no in partially_proven_inv_line_nos:
                     code_lines__ = deepcopy(code_lines)
