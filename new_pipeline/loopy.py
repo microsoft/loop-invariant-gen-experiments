@@ -133,14 +133,14 @@ class LoopyPipeline:
                     )
                 else:
                     llm_outputs, conversations = (
-                        recheck_logs["logs"][i]["final_code_outputs"],
-                        recheck_logs["logs"][i]["llm_conversation"],
+                        recheck_logs["logs"][start_index + i]["final_code_outputs"],
+                        recheck_logs["logs"][start_index + i]["llm_conversation"],
                     )
 
                 checker_input = self.benchmark.combine_llm_outputs(
                     instance.checker_input
                     if not recheck_logs
-                    else recheck_logs["logs"][i]["checker_input_without_invariants"],
+                    else recheck_logs["logs"][start_index + i]["checker_input_without_invariants"],
                     [
                         llm_output
                         for llm_output in llm_outputs
@@ -154,7 +154,7 @@ class LoopyPipeline:
                 instance_log_json["checker_input_without_invariants"] = (
                     instance.checker_input
                     if not recheck_logs
-                    else recheck_logs["logs"][i]["checker_input_without_invariants"]
+                    else recheck_logs["logs"][start_index + i]["checker_input_without_invariants"]
                 )
                 instance_log_json["checker_input_with_invariants"] = checker_input
                 instance_log_json["checker_output"] = success
