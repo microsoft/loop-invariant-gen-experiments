@@ -42,13 +42,7 @@ class FramaCChecker(Checker):
             kernel_logs = f.read()
             kl_lines = kernel_logs.splitlines()
             if len(kl_lines) > 2:
-                print(
-                    "Didn't expect more than 2 lines in Frama-C kernel logs. \
-                        Proceeding anyway. Hopefully it's fine."
-                )
-                for i, x in enumerate(kl_lines):
-                    print(f"{i+1}: {x}")
-                print(kernel_logs)
+                print("More than 2 lines in Frama-C kernel logs.")
             error_line = None
             for line in kl_lines:
                 if "[kernel:annot-error]" in line:
@@ -58,6 +52,8 @@ class FramaCChecker(Checker):
                     continue
             if error_line is not None:
                 error_message = self.get_annotation_error_from_kernel_logs(error_line)
+                if " unexpected token ''" in error_message:
+                    error_message = "No invariants found."
                 return False, error_message
 
         # Parse the output dump
@@ -169,7 +165,7 @@ class FramaCChecker(Checker):
             code_lines = input_code.splitlines()
             if len(self.get_invariants(code_lines)) == 0:
                 print("No invariants found")
-                break
+                continue
             status, checker_message = self.check(input_code)
             if status:
                 break
