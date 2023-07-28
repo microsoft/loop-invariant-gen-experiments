@@ -84,7 +84,9 @@ class LoopyPipeline:
             config["checker_input_dir"] = "checker_input"
         if self.benchmark is None:
             self.benchmark = Benchmark(
-                config["llm_input_dir"], config["checker_input_dir"], config["llm_input_file_path"]
+                config["llm_input_dir"],
+                config["checker_input_dir"],
+                config["llm_input_file_path"],
             )
         else:
             self.benchmark.llm_input_path = config["llm_input_dir"]
@@ -108,9 +110,13 @@ class LoopyPipeline:
 
         log_json = []
         stats = {"success": [], "failure": [], "total": 0}
-        log_file = open(self.log_path, "w", encoding="utf-8")
+        if not os.path.exists(os.path.dirname(self.log_path)):
+            os.makedirs(os.path.dirname(self.log_path))
+        log_file = open(self.log_path + "final.json", "w", encoding="utf-8")
         recheck_logs = None
-
+        total_benchmarks = len(
+            self.benchmark.instances[start_index : start_index + max_benchmarks]
+        )
         for i, instance in enumerate(
             self.benchmark.instances[start_index : start_index + max_benchmarks]
         ):
@@ -118,7 +124,7 @@ class LoopyPipeline:
                 with open(recheck_logfile, "r", encoding="utf-8") as f:
                     recheck_logs = json.load(f)
 
-            print(f"Running benchmark: {i+1}/{len(self.benchmark.instances)}")
+            print(f"Running benchmark: {i+1}/{total_benchmarks}")
             instance_log_json = {"file": instance.llm_input_path}
             try:
                 if recheck_logs is None:
@@ -127,12 +133,14 @@ class LoopyPipeline:
                     )
                 else:
                     llm_outputs, conversations = (
-                        recheck_logs["logs"][i]["final_code_outputs"],
-                        recheck_logs["logs"][i]["primary_conversation"],
+                        recheck_logs["logs"][start_index + i]["final_code_outputs"],
+                        recheck_logs["logs"][start_index + i]["llm_conversation"],
                     )
 
                 checker_input = self.benchmark.combine_llm_outputs(
-                    instance.checker_input,
+                    instance.checker_input
+                    if not recheck_logs
+                    else recheck_logs["logs"][start_index + i]["checker_input_without_invariants"],
                     [
                         llm_output
                         for llm_output in llm_outputs
@@ -143,9 +151,11 @@ class LoopyPipeline:
 
                 instance_log_json["llm_conversation"] = conversations
                 instance_log_json["final_code_outputs"] = llm_outputs
-                instance_log_json[
-                    "checker_input_without_invariants"
-                ] = instance.checker_input
+                instance_log_json["checker_input_without_invariants"] = (
+                    instance.checker_input
+                    if not recheck_logs
+                    else recheck_logs["logs"][start_index + i]["checker_input_without_invariants"]
+                )
                 instance_log_json["checker_input_with_invariants"] = checker_input
                 instance_log_json["checker_output"] = success
                 instance_log_json["checker_message"] = checker_message
@@ -166,10 +176,50 @@ class LoopyPipeline:
                     stats["failure"].append(i)
                 stats["total"] += 1
 
+                with open(
+                    os.path.join(
+                        self.log_path,
+                        instance.llm_input_path.replace(".c", ".json")
+                        .replace("../", "")
+                        .replace("/", "__"),
+                    ),
+                    "w",
+                    encoding="utf-8",
+                ) as f:
+                    f.write(
+                        json.dumps(
+                            {
+                                "logs": instance_log_json,
+                                "stats": stats,
+                            },
+                            indent=4,
+                            ensure_ascii=False,
+                        )
+                    )
                 log_json.append(instance_log_json)
             except (Exception, KeyboardInterrupt) as e:
                 print(traceback.format_exc())
                 instance_log_json["error"] = str(e)
+                with open(
+                    os.path.join(
+                        self.log_path,
+                        instance.llm_input_path.replace(".c", ".json")
+                        .replace("../", "")
+                        .replace("/", "__"),
+                    ),
+                    "w",
+                    encoding="utf-8",
+                ) as f:
+                    f.write(
+                        json.dumps(
+                            {
+                                "logs": instance_log_json,
+                                "stats": stats,
+                            },
+                            indent=4,
+                            ensure_ascii=False,
+                        )
+                    )
                 log_json.append(instance_log_json)
                 stats["failure"].append(i)
                 stats["total"] += 1

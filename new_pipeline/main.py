@@ -18,7 +18,7 @@ def parse_args(args):
     parser.add_argument(
         "--log-file",
         help="File to write logs to",
-        default=datetime.datetime.now().strftime("logs/loopy_%Y_%m_%d_%H_%M_%S.json"),
+        default=datetime.datetime.now().strftime("logs/loopy_%Y_%m_%d_%H_%M_%S/"),
         type=str
     )
     parser.add_argument(
@@ -30,7 +30,7 @@ def parse_args(args):
     parser.add_argument(
         "--model",
         help="Model to use",
-        choices=["gpt-4", "gpt-3.5-turbo"],
+        choices=["gpt-4", "gpt-3.5-turbo", "gpt-4-32k"],
         default="gpt-3.5-turbo",
         type=str
     )
@@ -129,14 +129,14 @@ def main(args):
 
     if args.problem_ids:
         for problem_id in args.problem_ids:
-            p.log_path = datetime.datetime.now().strftime(f"logs/loopy_{problem_id}_%Y_%m_%d_%H_%M_%S.json")
+            p.log_path = datetime.datetime.now().strftime(f"logs/loopy_{problem_id}_%Y_%m_%d_%H_%M_%S/")
             p.run(
                 max_benchmarks=1,
                 start_index=int(problem_id),
             )
     else:
         if args.heal_errors:
-            p.log_path = datetime.datetime.now().strftime(f"logs/healing_loopy_%Y_%m_%d_%H_%M_%S.json")
+            p.log_path = datetime.datetime.now().strftime(f"logs/healing_loopy_%Y_%m_%d_%H_%M_%S/")
         p.run(
             max_benchmarks=args.max_benchmarks,
             start_index=args.start_index,
