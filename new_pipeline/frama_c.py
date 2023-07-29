@@ -168,41 +168,47 @@ class FramaCChecker(Checker):
                 continue
             status, checker_message = self.check(input_code)
             if status:
+                print("Proved")
                 break
 
             if "Annotation error " in checker_message:
+                #TODO: Why not remove all annotation errors?
                 annotation_error_line_no = self.get_line_no_from_error_msg(
                     checker_message
                 )[0]
 
+                print("Removing (syntax error): ", code_lines[line_no])
                 code_lines[annotation_error_line_no] = ""
                 input_code = "\n".join(code_lines)
                 code_queue.append(input_code)
             else:
+                #TODO: What about TIMEOUT?
                 # Remove all "Unknown" invariants
                 unknown_inv_lines = self.get_unknown_inv_no_from_error_msg(
                     checker_message
                 )
-                for line_no in unknown_inv_lines:
-                    code_lines[line_no] = ""
                 if len(unknown_inv_lines) > 0:
+                    for line_no in unknown_inv_lines:
+                        print("Removing (proof fail): ", code_lines[line_no])
+                        code_lines[line_no] = ""
                     code_queue.append("\n".join(code_lines))
-
-                # Push code with one "Partially proven" invariant removed to the queue
-                partially_proven_inv_line_nos = (
-                    self.get_partially_proven_inv_from_error_msg(checker_message)
-                )
-                for line_no in partially_proven_inv_line_nos:
-                    code_lines__ = deepcopy(code_lines)
-                    code_lines__[line_no] = ""
-                    code_queue.append("\n".join(code_lines__))
+                else:
+                    print("Forking: All partially proven invariants.")
+                    # Push code with one "Partially proven" invariant removed to the queue
+                    partially_proven_inv_line_nos = (
+                        self.get_partially_proven_inv_from_error_msg(checker_message)
+                    )
+                    for line_no in partially_proven_inv_line_nos:
+                        code_lines__ = deepcopy(code_lines)
+                        code_lines__[line_no] = ""
+                        code_queue.append("\n".join(code_lines__))
 
         if not status:
             print("Invariants not strong enough to prove")
         else:
             print("Found strong enough invariants")
 
-        return input_code
+        return status, input_code
 
 
 class FramaCBenchmark(Benchmark):
