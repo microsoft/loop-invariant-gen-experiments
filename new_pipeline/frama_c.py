@@ -26,10 +26,12 @@ class FramaCChecker(Checker):
         error_message = f"Annotation error on line {line_num}: {error_message}"
         return error_message
 
-    def check(self, input):
+    def check(self, input, verbose=False):
         with open("/tmp/temp_eval.c", "w") as f:
             f.write(input)
 
+        if verbose:
+            print("==============================")
         cmd = "frama-c -wp -wp-verbose 100 -wp-debug 100 -wp-timeout 3 -wp-prover=alt-ergo,z3,cvc4 /tmp/temp_eval.c -kernel-warn-key annot-error=active \
             -kernel-log a:/tmp/frama_c_kernel_logs.txt -then -report -report-csv /tmp/frama_c_eval.csv"
         p = subprocess.Popen(cmd.split(), stdout=subprocess.PIPE)
@@ -59,6 +61,7 @@ class FramaCChecker(Checker):
         # Parse the output dump
         if not os.path.exists("/tmp/frama_c_eval.csv"):
             return False, "No output dump found"
+
         with open(f"/tmp/frama_c_eval.csv", "r", encoding="utf-8") as f:
             csv_output = [row for row in csv.DictReader(f, delimiter="\t")]
             success = all(
@@ -100,11 +103,11 @@ class FramaCChecker(Checker):
         return line_numbers
 
     def get_unknown_inv_no_from_error_msg(self, checker_output):
-        checker_output = "".join(
+        checker_out = "".join(
             [c for c in checker_output.splitlines() if c.startswith("Invariant ")]
         )
         pattern = r"on line (\d+): Unknown"
-        matches = re.findall(pattern, checker_output)
+        matches = re.findall(pattern, checker_out)
         line_numbers = [int(match) - 1 for match in matches]
 
         return line_numbers
@@ -137,7 +140,7 @@ class FramaCChecker(Checker):
                     invariants.append(inv)
         return invariants
 
-    def prune_annotations_and_check(self, input_code):
+    def prune_annotations_and_check(self, input_code, verbose=False):
         print("Pruning annotations...")
         invariant_line_mapping = {}
         lines = input_code.splitlines()
@@ -166,9 +169,14 @@ class FramaCChecker(Checker):
             if len(self.get_invariants(code_lines)) == 0:
                 print("No invariants found")
                 continue
-            status, checker_message = self.check(input_code)
+            status, checker_message = self.check(input_code, verbose)
+
+            if verbose:
+                print(checker_message)
+
             if status:
-                print("Proved")
+                if verbose:
+                    print("Proved")
                 break
 
             if "Annotation error " in checker_message:
@@ -177,7 +185,8 @@ class FramaCChecker(Checker):
                     checker_message
                 )[0]
 
-                print("Removing (syntax error): ", code_lines[line_no])
+                if verbose:
+                    print("Removing (syntax error): ", code_lines[annotation_error_line_no])
                 code_lines[annotation_error_line_no] = ""
                 input_code = "\n".join(code_lines)
                 code_queue.append(input_code)
@@ -189,15 +198,21 @@ class FramaCChecker(Checker):
                 )
                 if len(unknown_inv_lines) > 0:
                     for line_no in unknown_inv_lines:
-                        print("Removing (proof fail): ", code_lines[line_no])
+                        if verbose:
+                            print("Removing (proof fail): ", code_lines[line_no])
                         code_lines[line_no] = ""
                     code_queue.append("\n".join(code_lines))
                 else:
-                    print("Forking: All partially proven invariants.")
                     # Push code with one "Partially proven" invariant removed to the queue
                     partially_proven_inv_line_nos = (
                         self.get_partially_proven_inv_from_error_msg(checker_message)
                     )
+                    if verbose:
+                        if len(partially_proven_inv_line_nos) > 0:
+                            print("Forking: All partially proven invariants.")
+                        else:
+                            print("No partially proven invariant")
+
                     for line_no in partially_proven_inv_line_nos:
                         code_lines__ = deepcopy(code_lines)
                         code_lines__[line_no] = ""
