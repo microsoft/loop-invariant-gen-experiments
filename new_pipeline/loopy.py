@@ -124,7 +124,7 @@ class LoopyPipeline:
                 with open(recheck_logfile, "r", encoding="utf-8") as f:
                     recheck_logs = json.load(f)
 
-            print(f"Running benchmark: {i+1}/{total_benchmarks}")
+            print(f"Running benchmark: {start_index+i+1}/{total_benchmarks}")
             instance_log_json = {"file": instance.llm_input_path}
             try:
                 if recheck_logs is None:
@@ -161,7 +161,7 @@ class LoopyPipeline:
                 instance_log_json["checker_message"] = checker_message
 
                 if not success:
-                    pruned_code = self.checker.prune_annotations_and_check(
+                    success, pruned_code = self.checker.prune_annotations_and_check(
                         checker_input
                     )
                     success, checker_message = self.checker.check(pruned_code)
