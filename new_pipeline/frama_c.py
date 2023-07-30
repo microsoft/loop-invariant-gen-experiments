@@ -181,6 +181,9 @@ class FramaCChecker(Checker):
 
             if "Annotation error " in checker_message:
                 #TODO: Why not remove all annotation errors?
+                # A: Frama-C panics and skips the entire annotation block
+                # as soon as it sees an annotation error. 
+                # So we get only one annotation error at a time.
                 annotation_error_line_no = self.get_line_no_from_error_msg(
                     checker_message
                 )[0]
@@ -192,6 +195,8 @@ class FramaCChecker(Checker):
                 code_queue.append(input_code)
             else:
                 #TODO: What about TIMEOUT?
+                # If any invariant causes a Timeout, it's marked as "Unknown" 
+                # because the prover could not prove it. So removing it for now.
                 # Remove all "Unknown" invariants
                 unknown_inv_lines = self.get_unknown_inv_no_from_error_msg(
                     checker_message
