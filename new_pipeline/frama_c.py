@@ -33,7 +33,7 @@ class FramaCChecker(Checker):
         if verbose:
             print("==============================")
         cmd = "frama-c -wp -wp-verbose 100 -wp-debug 100 -wp-timeout 3 -wp-prover=alt-ergo,z3,cvc4 /tmp/temp_eval.c -kernel-warn-key annot-error=active \
-            -kernel-log a:/tmp/frama_c_kernel_logs.txt -then -report -report-csv /tmp/frama_c_eval.csv"
+            -kernel-log a:/tmp/frama_c_kernel_logs.txt -then -no-unicode -report -report-csv /tmp/frama_c_eval.csv"
         p = subprocess.Popen(cmd.split(), stdout=subprocess.PIPE)
         output, err = p.communicate()
 

@@ -160,7 +160,7 @@ class LoopyPipeline:
                 success, checker_message = self.checker.check(checker_input)
 
                 instance_log_json["llm_conversation"] = conversations.get_full_tree()
-                instance_log_json["invariants_without_nudge"] = llm_outputs
+                instance_log_json["invariants"] = llm_outputs
                 instance_log_json["checker_input_without_invariants"] = (
                     instance.checker_input
                     if not recheck_logs
@@ -198,11 +198,11 @@ class LoopyPipeline:
                     instance_log_json[
                         "nudge_conversation"
                     ] = nudge_conversation.get_full_tree()
-                    instance_log_json["invariants_with_nudge"] = nudge_outputs
-                    instance_log_json["checker_input_with_nudge"] = nudge_checker_input
-                    instance_log_json["checker_output_with_nudge"] = success
+                    instance_log_json["invariants_after_nudge"] = nudge_outputs
+                    instance_log_json["checker_input_after_nudge"] = nudge_checker_input
+                    instance_log_json["checker_output_after_nudge"] = success
                     instance_log_json[
-                        "checker_message_with_nudge"
+                        "checker_message_after_nudge"
                     ] = nudge_checker_message
 
                 if not success:
@@ -211,9 +211,9 @@ class LoopyPipeline:
                     )
                     success, checker_message = self.checker.check(pruned_code)
 
-                    instance_log_json["code_after_prune_and_nudge"] = pruned_code
-                    instance_log_json["checker_output_after_prune_and_nudge"] = success
-                    instance_log_json["checker_message_after_prune_and_nudge"] = checker_message
+                    instance_log_json["code_after_nudge_and_prune"] = pruned_code
+                    instance_log_json["checker_output_after_nudge_and_prune"] = success
+                    instance_log_json["checker_message_after_nudge_and_prune"] = checker_message
 
                 if success:
                     stats["success"].append(i)

@@ -157,7 +157,7 @@ class LLM:
         return self.run__(input, self.prompt_configs, input_tree, output_full_tree)
     
     def nudge(self, input_tree=None, output_full_tree=False):
-        return self.run__(input=None, configs=self.nudge_prompt_config, input_tree=input_tree, output_full_tree=output_full_tree)
+        return self.run__(input={}, configs=[self.nudge_prompt_config], input_tree=input_tree, output_full_tree=output_full_tree)
 
     def heal(self, input):
         return self.run__(input, self.healing_prompt_configs)
