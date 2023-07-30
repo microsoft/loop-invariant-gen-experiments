@@ -71,6 +71,7 @@ class LoopyPipeline:
 
         if "nudge_prompts" in config:
             self.nudge_prompts_file = config["nudge_prompts"]
+            nudge_config = PromptConfig().from_file(self.nudge_prompts_file)
 
         self.llm = LLM(
             self.system_message,
@@ -78,6 +79,7 @@ class LoopyPipeline:
             healing_prompt_configs,
             self.model,
             self.debug,
+            nudge_config
         )
 
         if "llm_input_file_path" not in config:

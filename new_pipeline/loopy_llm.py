@@ -59,14 +59,14 @@ class LLM:
         system_message=None,
         prompt_configs=None,
         healing_prompt_configs=None,
-        nudge_prompt_configs=None,
         model="gpt-3.5-turbo",
         debug=False,
+        nudge_prompt_file=None,
     ):
         self.system_message = system_message
         self.prompt_configs = prompt_configs
         self.healing_prompt_configs = healing_prompt_configs
-        self.nudge_prompt_configs = nudge_prompt_configs
+        self.nudge_prompt_file = nudge_prompt_file
         self.model = model
         self.debug = debug
 
@@ -157,7 +157,7 @@ class LLM:
         return self.run__(input, self.prompt_configs, input_tree, output_full_tree)
     
     def nudge(self, input_tree=None, output_full_tree=False):
-        return self.run__(configs=self.nudge_prompt_configs, input_tree=input_tree, output_full_tree=output_full_tree)
+        return self.run__(configs=self.nudge_prompt_file, input_tree=input_tree, output_full_tree=output_full_tree)
 
     def heal(self, input):
         return self.run__(input, self.healing_prompt_configs)
