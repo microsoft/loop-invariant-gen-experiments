@@ -21,6 +21,7 @@ class LoopyPipeline:
         num_healing_retries: int = 5,
         heal_errors: bool = False,
         heal_errors_input: str = "",
+        nudge: bool = True,
     ):
         self.benchmark = benchmark
         self.checker = checker
@@ -30,7 +31,7 @@ class LoopyPipeline:
 
         self.num_healing_retries = num_healing_retries
         self.heal_errors = heal_errors
-        self.nudge = True
+        self.nudge = nudge
         self.heal_errors_input = heal_errors_input
         self.system_message = None
 
@@ -71,7 +72,7 @@ class LoopyPipeline:
 
         if "nudge_prompts" in config:
             self.nudge_prompts_file = config["nudge_prompts"]
-            nudge_config = PromptConfig().from_file(self.nudge_prompts_file)
+            nudge_config = PromptConfig(dir=".").from_file(self.nudge_prompts_file)
 
         self.llm = LLM(
             self.system_message,

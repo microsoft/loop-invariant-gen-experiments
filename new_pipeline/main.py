@@ -88,6 +88,11 @@ def parse_args(args):
         type=str,
         default="",
     )
+    parser.add_argument(
+        "--nudge",
+        help="Nudge the model to generate better code",
+        action="store_true",
+    )
 
 
     return parser.parse_args(args)
@@ -124,6 +129,7 @@ def main(args):
         heal_errors=args.heal_errors,
         heal_errors_input=args.heal_errors_input,
         num_healing_retries=args.healing_iterations,
+        nudge=args.nudge,
     )
     p = p.load_config(args.config_file)
 
