@@ -211,9 +211,9 @@ class LoopyPipeline:
                     )
                     success, checker_message = self.checker.check(pruned_code)
 
-                    instance_log_json["code_after_prune"] = pruned_code
-                    instance_log_json["checker_output_after_prune"] = success
-                    instance_log_json["checker_message_after_prune"] = checker_message
+                    instance_log_json["code_after_prune_and_nudge"] = pruned_code
+                    instance_log_json["checker_output_after_prune_and_nudge"] = success
+                    instance_log_json["checker_message_after_prune_and_nudge"] = checker_message
 
                 if success:
                     stats["success"].append(i)
