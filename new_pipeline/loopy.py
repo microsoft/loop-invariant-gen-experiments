@@ -10,6 +10,8 @@ from loopy_llm import LLM, PromptConfig
 
 
 class LoopyPipeline:
+    #TODO: why is the model gpt-3.5?
+
     def __init__(
         self,
         benchmark: Benchmark = None,
