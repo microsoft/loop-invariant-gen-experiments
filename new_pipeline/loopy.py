@@ -1,3 +1,4 @@
+from copy import deepcopy
 import json
 import os
 import traceback
@@ -22,6 +23,7 @@ class LoopyPipeline:
         num_healing_retries: int = 5,
         heal_errors: bool = False,
         heal_errors_input: str = "",
+        nudge: bool = True,
     ):
         self.benchmark = benchmark
         self.checker = checker
@@ -31,6 +33,7 @@ class LoopyPipeline:
 
         self.num_healing_retries = num_healing_retries
         self.heal_errors = heal_errors
+        self.nudge = nudge
         self.heal_errors_input = heal_errors_input
         self.system_message = None
 
@@ -69,12 +72,17 @@ class LoopyPipeline:
             self.system_message_file = config["system_message_file"]
             self.system_message = open(self.system_message_file, "r").read()
 
+        if "nudge_prompts" in config:
+            self.nudge_prompts_file = config["nudge_prompts"]
+            nudge_config = PromptConfig(dir=".").from_file(self.nudge_prompts_file)
+
         self.llm = LLM(
             self.system_message,
             prompt_configs,
             healing_prompt_configs,
             self.model,
             self.debug,
+            nudge_config
         )
 
         if "llm_input_file_path" not in config:
@@ -126,12 +134,12 @@ class LoopyPipeline:
                 with open(recheck_logfile, "r", encoding="utf-8") as f:
                     recheck_logs = json.load(f)
 
-            print(f"Running benchmark: {i+1}/{total_benchmarks}")
+            print(f"Running benchmark: {start_index+i+1}/{total_benchmarks}")
             instance_log_json = {"file": instance.llm_input_path}
             try:
                 if recheck_logs is None:
                     llm_outputs, conversations = self.llm.run(
-                        {"code": instance.llm_input}
+                        {"code": instance.llm_input}, output_full_tree=True
                     )
                 else:
                     llm_outputs, conversations = (
@@ -142,7 +150,9 @@ class LoopyPipeline:
                 checker_input = self.benchmark.combine_llm_outputs(
                     instance.checker_input
                     if not recheck_logs
-                    else recheck_logs["logs"][start_index + i]["checker_input_without_invariants"],
+                    else recheck_logs["logs"][start_index + i][
+                        "checker_input_without_invariants"
+                    ],
                     [
                         llm_output
                         for llm_output in llm_outputs
@@ -151,19 +161,21 @@ class LoopyPipeline:
                 )
                 success, checker_message = self.checker.check(checker_input)
 
-                instance_log_json["llm_conversation"] = conversations
-                instance_log_json["final_code_outputs"] = llm_outputs
+                instance_log_json["llm_conversation"] = conversations.get_full_tree()
+                instance_log_json["invariants"] = llm_outputs
                 instance_log_json["checker_input_without_invariants"] = (
                     instance.checker_input
                     if not recheck_logs
-                    else recheck_logs["logs"][start_index + i]["checker_input_without_invariants"]
+                    else recheck_logs["logs"][start_index + i][
+                        "checker_input_without_invariants"
+                    ]
                 )
                 instance_log_json["checker_input_with_invariants"] = checker_input
                 instance_log_json["checker_output"] = success
                 instance_log_json["checker_message"] = checker_message
 
                 if not success:
-                    pruned_code = self.checker.prune_annotations_and_check(
+                    success, pruned_code = self.checker.prune_annotations_and_check(
                         checker_input
                     )
                     success, checker_message = self.checker.check(pruned_code)
@@ -171,6 +183,39 @@ class LoopyPipeline:
                     instance_log_json["code_after_prune"] = pruned_code
                     instance_log_json["checker_output_after_prune"] = success
                     instance_log_json["checker_message_after_prune"] = checker_message
+
+                if not success and self.nudge:
+                    nudge_outputs, nudge_conversation = self.llm.nudge(
+                        input_tree=deepcopy(conversations),
+                        output_full_tree=True,
+                    )
+                    nudge_checker_input = self.benchmark.combine_llm_outputs(
+                        instance.checker_input, nudge_outputs + llm_outputs
+                    )
+                    checker_input = nudge_checker_input
+                    success, nudge_checker_message = self.checker.check(
+                        nudge_checker_input
+                    )
+
+                    instance_log_json[
+                        "nudge_conversation"
+                    ] = nudge_conversation.get_full_tree()
+                    instance_log_json["invariants_after_nudge"] = nudge_outputs
+                    instance_log_json["checker_input_after_nudge"] = nudge_checker_input
+                    instance_log_json["checker_output_after_nudge"] = success
+                    instance_log_json[
+                        "checker_message_after_nudge"
+                    ] = nudge_checker_message
+
+                if not success:
+                    success, pruned_code = self.checker.prune_annotations_and_check(
+                        checker_input
+                    )
+                    success, checker_message = self.checker.check(pruned_code)
+
+                    instance_log_json["code_after_nudge_and_prune"] = pruned_code
+                    instance_log_json["checker_output_after_nudge_and_prune"] = success
+                    instance_log_json["checker_message_after_nudge_and_prune"] = checker_message
 
                 if success:
                     stats["success"].append(i)

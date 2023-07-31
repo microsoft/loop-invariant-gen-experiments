@@ -61,10 +61,12 @@ class LLM:
         healing_prompt_configs=None,
         model="gpt-3.5-turbo",
         debug=False,
+        nudge_prompt_config=None,
     ):
         self.system_message = system_message
         self.prompt_configs = prompt_configs
         self.healing_prompt_configs = healing_prompt_configs
+        self.nudge_prompt_config = nudge_prompt_config
         self.model = model
         self.debug = debug
 
@@ -85,16 +87,19 @@ class LLM:
             )
         return "\n".join(lines[line_nos[0] + 1 : line_nos[1]])
 
-    def run__(self, input, configs):
+    def run__(self, input, configs, input_tree=None, output_full_tree=False):
         responses = None
-        conversation = ConvTree(
-            Node(
-                {
-                    "role": "system",
-                    "content": "You are a helpful AI software assistant that reasons about how code behaves." if self.system_message is None else self.system_message,
-                }
+        if input_tree is not None:
+            conversation = input_tree
+        else:
+            conversation = ConvTree(
+                Node(
+                    {
+                        "role": "system",
+                        "content": "You are a helpful AI software assistant that reasons about how code behaves." if self.system_message is None else self.system_message,
+                    }
+                )
             )
-        )
 
         for prompt_config in configs:
             if prompt_config.set_output:
@@ -138,14 +143,21 @@ class LLM:
 
         latest = conversation.get_latest()
         return_code = []
-        return_logs = conversation.get_full_tree()
+        return_logs = None
+        if output_full_tree:
+            return_logs = deepcopy(conversation)
+        else:
+            return_logs = conversation.get_full_tree()
         for response in latest:
             return_code.append(self.extract_code(response.data["content"]))
 
         return return_code, return_logs
 
-    def run(self, input):
-        return self.run__(input, self.prompt_configs)
+    def run(self, input, input_tree=None, output_full_tree=False):
+        return self.run__(input, self.prompt_configs, input_tree, output_full_tree)
+    
+    def nudge(self, input_tree=None, output_full_tree=False):
+        return self.run__(input={}, configs=[self.nudge_prompt_config], input_tree=input_tree, output_full_tree=output_full_tree)
 
     def heal(self, input):
         return self.run__(input, self.healing_prompt_configs)

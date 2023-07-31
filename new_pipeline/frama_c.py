@@ -33,7 +33,7 @@ class FramaCChecker(Checker):
         if verbose:
             print("==============================")
         cmd = "frama-c -wp -wp-verbose 100 -wp-debug 100 -wp-timeout 3 -wp-prover=alt-ergo,z3,cvc4 /tmp/temp_eval.c -kernel-warn-key annot-error=active \
-            -kernel-log a:/tmp/frama_c_kernel_logs.txt -then -report -report-csv /tmp/frama_c_eval.csv"
+            -kernel-log a:/tmp/frama_c_kernel_logs.txt -then -no-unicode -report -report-csv /tmp/frama_c_eval.csv"
         p = subprocess.Popen(cmd.split(), stdout=subprocess.PIPE)
         output, err = p.communicate()
 
@@ -162,6 +162,7 @@ class FramaCChecker(Checker):
             + lines[invariant_line_end + 1 :]
         )
         code_queue = [input_code]
+        checked_already = [input_code]
 
         while len(code_queue) > 0:
             input_code = code_queue.pop(0)
@@ -180,18 +181,26 @@ class FramaCChecker(Checker):
                 break
 
             if "Annotation error " in checker_message:
-                #TODO: Why not remove all annotation errors?
+                # TODO: Why not remove all annotation errors?
+                # A: Frama-C panics and skips the entire annotation block
+                # as soon as it sees an annotation error.
+                # So we get only one annotation error at a time.
                 annotation_error_line_no = self.get_line_no_from_error_msg(
                     checker_message
                 )[0]
 
                 if verbose:
-                    print("Removing (syntax error): ", code_lines[annotation_error_line_no])
+                    print(
+                        "Removing (syntax error): ",
+                        code_lines[annotation_error_line_no],
+                    )
                 code_lines[annotation_error_line_no] = ""
                 input_code = "\n".join(code_lines)
                 code_queue.append(input_code)
             else:
-                #TODO: What about TIMEOUT?
+                # TODO: What about TIMEOUT?
+                # If any invariant causes a Timeout, it's marked as "Unknown"
+                # because the prover could not prove it. So removing it for now.
                 # Remove all "Unknown" invariants
                 unknown_inv_lines = self.get_unknown_inv_no_from_error_msg(
                     checker_message
@@ -245,13 +254,13 @@ class FramaCBenchmark(Benchmark):
             while_re = re.findall(r"while\s*\((.+)\)", line)
             for_re = re.findall(r"for\s*\((.+)\)", line)
             if len(while_re) > 0 or len(for_re) > 0:
-                loc = index - 1
+                loc = index
                 break
         if loc is not None:
             lines = (
                 lines[:loc]
                 + ((["/*@\n"] + invariants + ["\n*/"]) if len(invariants) > 0 else [""])
-                + lines[loc + 1 :]
+                + lines[loc :]
             )
         else:
             raise Exception("No while loop found")
@@ -262,11 +271,25 @@ class FramaCBenchmark(Benchmark):
     def raw_input_to_checker_input(self, code):
         lines = code.splitlines()
         new_code = ""
+        int_main = False
         for line in lines:
+            # Replace return with return 0 if main returns int
+            if "int main" in line:
+                int_main = True
+            if "return;" in line and int_main:
+                line = line.replace("return;", "return 0;")
+
+            # Remove all local assert header files
+            if "#include \"myassert.h\"" in line or "#include \"assert.h\"" in line:
+                continue
+
+            # Convert ERROR: to assert(\false)
             if "ERROR:" in line:
                 error_text = re.findall(r"ERROR:(.+)", line)[0]
-                line = line.replace("ERROR:", "ERROR: //@ assert(\\false);\n")
+                if len(error_text) > 0:
+                    line = line.replace("ERROR:", "ERROR: //@ assert(\\false);\n")
 
+            # Remove local nondet functions
             elif "__VERIFIER_nondet_int" in line:
                 line = line.replace("__VERIFIER_nondet_int", "unknown_int")
             elif "__VERIFIER_nondet_uint" in line:
@@ -277,12 +300,18 @@ class FramaCBenchmark(Benchmark):
                 line = line.replace("__VERIFIER_nondet_char", "unknown_char")
             elif "__VERIFIER_nondet_ushort" in line:
                 line = line.replace("__VERIFIER_nondet_ushort", "unknown_ushort")
+            elif "nondet" in line:
+                line = line.replace("nondet", "unknown")
+            
+            # Remove local assume function
             elif "__VERIFIER_assume" in line:
                 assuming_conditions = re.findall(
                     r"(__VERIFIER_assume\(([^\(\)]+)\);)", line
                 )
                 for condition in assuming_conditions:
                     line = line.replace(condition[0], "assume(" + condition[1] + ");\n")
+            
+            # Remove local assert function
             elif "__VERIFIER_assert" in line:
                 asserting_conditions = re.findall(
                     r"(__VERIFIER_assert\(([^\(\)]+)\);)", line
@@ -291,18 +320,21 @@ class FramaCBenchmark(Benchmark):
                     line = line.replace(
                         condition[0], "//@ assert(" + condition[1] + ");\n"
                     )
+            
             elif "assert" in line and not "//assert" in line:
                 assertion = line.strip()
                 line = line.replace(assertion, "{;\n //@ " + assertion + "\n}")
 
             new_code += line + "\n"
-        new_code = """#define assume(e) if(!(e)) return 0;\n
+        new_code = """#define assume(e) if(!(e)) return 0;
+
 extern int unknown(void);
 extern int unknown_int(void);
 extern unsigned int unknown_uint(void);
 extern _Bool unknown_bool(void);
 extern char unknown_char(void);
-extern unsigned short unknown_ushort(void);\n""" + "".join(
+extern unsigned short unknown_ushort(void);
+""" + "".join(
             new_code
         )
         return new_code
