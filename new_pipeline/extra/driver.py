@@ -4,7 +4,7 @@ sys.path.append('../')
 import frama_c
 
 print("Program file: ", sys.argv[1])
-print("Error file: ", sys.argv[2])
+print("Invariant file: ", sys.argv[2])
 checker = frama_c.FramaCChecker()
 bench = frama_c.FramaCBenchmark()
 

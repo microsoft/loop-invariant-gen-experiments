@@ -16,8 +16,12 @@ def getfiles(filename, mode, healing, phrase=None):
             if mode == "invariant":
                 if "checker_message_after_prune" in bench:
                     checker_message[cfilename] = bench["checker_message_after_prune"]
-                else:
+                elif "checker_message_after_nudge_and_prune" in bench:
+                    checker_message[cfilename] = bench["checker_message_after_nudge_and_prune"]
+                elif "checker_message" in bench:
                     checker_message[cfilename] = bench["checker_message"]
+                else:
+                    assert(0)
                 if "final_code_outputs" in bench:
                     invariant[cfilename] = bench["final_code_outputs"]
                 else:
@@ -57,8 +61,9 @@ mode = sys.argv[3]
 if mode == "statistics":
     ta, fa, ea = getfiles(sys.argv[1], mode, False, "checker_output")
     tb, fb, eb = getfiles(sys.argv[1], mode, False, "checker_output_after_prune")
-    print("Files solved in first round:", len(ta) + len(tb))
-    print(ta + tb)
+    tn, fb, en = getfiles(sys.argv[1], mode, False, "checker_output_after_nudge_and_prune")
+    print("Files solved in first round:", len(ta) + len(tb) + len(tn))
+    print(ta + tb + tn)
     print("\n")
 
     tc, fc, ec = getfiles(sys.argv[2], mode, True, "checker_output")
