@@ -271,11 +271,25 @@ class FramaCBenchmark(Benchmark):
     def raw_input_to_checker_input(self, code):
         lines = code.splitlines()
         new_code = ""
+        int_main = False
         for line in lines:
+            # Replace return with return 0 if main returns int
+            if "int main" in line:
+                int_main = True
+            if "return;" in line and int_main:
+                line = line.replace("return;", "return 0;")
+
+            # Remove all local assert header files
+            if "#include \"myassert.h\"" in line or "#include \"assert.h\"" in line:
+                continue
+
+            # Convert ERROR: to assert(\false)
             if "ERROR:" in line:
                 error_text = re.findall(r"ERROR:(.+)", line)[0]
-                line = line.replace("ERROR:", "ERROR: //@ assert(\\false);\n")
+                if len(error_text) > 0:
+                    line = line.replace("ERROR:", "ERROR: //@ assert(\\false);\n")
 
+            # Remove local nondet functions
             elif "__VERIFIER_nondet_int" in line:
                 line = line.replace("__VERIFIER_nondet_int", "unknown_int")
             elif "__VERIFIER_nondet_uint" in line:
@@ -286,12 +300,18 @@ class FramaCBenchmark(Benchmark):
                 line = line.replace("__VERIFIER_nondet_char", "unknown_char")
             elif "__VERIFIER_nondet_ushort" in line:
                 line = line.replace("__VERIFIER_nondet_ushort", "unknown_ushort")
+            elif "nondet" in line:
+                line = line.replace("nondet", "unknown")
+            
+            # Remove local assume function
             elif "__VERIFIER_assume" in line:
                 assuming_conditions = re.findall(
                     r"(__VERIFIER_assume\(([^\(\)]+)\);)", line
                 )
                 for condition in assuming_conditions:
                     line = line.replace(condition[0], "assume(" + condition[1] + ");\n")
+            
+            # Remove local assert function
             elif "__VERIFIER_assert" in line:
                 asserting_conditions = re.findall(
                     r"(__VERIFIER_assert\(([^\(\)]+)\);)", line
@@ -300,18 +320,21 @@ class FramaCBenchmark(Benchmark):
                     line = line.replace(
                         condition[0], "//@ assert(" + condition[1] + ");\n"
                     )
+            
             elif "assert" in line and not "//assert" in line:
                 assertion = line.strip()
                 line = line.replace(assertion, "{;\n //@ " + assertion + "\n}")
 
             new_code += line + "\n"
-        new_code = """#define assume(e) if(!(e)) return 0;\n
+        new_code = """#define assume(e) if(!(e)) return 0;
+
 extern int unknown(void);
 extern int unknown_int(void);
 extern unsigned int unknown_uint(void);
 extern _Bool unknown_bool(void);
 extern char unknown_char(void);
-extern unsigned short unknown_ushort(void);\n""" + "".join(
+extern unsigned short unknown_ushort(void);
+""" + "".join(
             new_code
         )
         return new_code
