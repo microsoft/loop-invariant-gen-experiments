@@ -315,7 +315,3 @@ extern unsigned short unknown_ushort(void);\n""" + "".join(
             new_code
         )
         return new_code
-
-p = FramaCBenchmark()
-pq = p.combine_llm_outputs("int main() \n{ \nint x = 0;\n while (x < 10) \n{ x++; }\n return 0; \n}", ["loop invariant x < 10;"])
-print(pq)
