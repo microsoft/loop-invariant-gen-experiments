@@ -100,6 +100,9 @@ class Benchmark:
                 )
 
     def combine_llm_outputs(self, checker_input, llm_outputs):
+        """
+        This is for the default Boogie checker with Code2Inv benchmark
+        """
         if not any("insert invariant" in line for line in checker_input.splitlines()):
             print(f"Ignoring since no insert invariant keyword")
             return ""

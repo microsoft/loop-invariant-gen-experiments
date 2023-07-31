@@ -254,13 +254,13 @@ class FramaCBenchmark(Benchmark):
             while_re = re.findall(r"while\s*\((.+)\)", line)
             for_re = re.findall(r"for\s*\((.+)\)", line)
             if len(while_re) > 0 or len(for_re) > 0:
-                loc = index - 1
+                loc = index
                 break
         if loc is not None:
             lines = (
                 lines[:loc]
                 + ((["/*@\n"] + invariants + ["\n*/"]) if len(invariants) > 0 else [""])
-                + lines[loc + 1 :]
+                + lines[loc :]
             )
         else:
             raise Exception("No while loop found")
@@ -315,3 +315,7 @@ extern unsigned short unknown_ushort(void);\n""" + "".join(
             new_code
         )
         return new_code
+
+p = FramaCBenchmark()
+pq = p.combine_llm_outputs("int main() \n{ \nint x = 0;\n while (x < 10) \n{ x++; }\n return 0; \n}", ["loop invariant x < 10;"])
+print(pq)
