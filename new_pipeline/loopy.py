@@ -462,7 +462,7 @@ class LoopyPipeline:
                 instance_log_json["checker_message"] = checker_message
 
                 if not success:
-                    pruned_code = self.checker.prune_annotations_and_check(
+                    success, pruned_code = self.checker.prune_annotations_and_check(
                         checker_input_with_invariants
                     )
                     success, prune_checker_message = self.checker.check(pruned_code)
@@ -487,7 +487,7 @@ class LoopyPipeline:
                     instance_log_json["checker_message_after_nudge"] = checker_message
 
                     if not success:
-                        pruned_code = self.checker.prune_annotations_and_check(
+                        success, pruned_code = self.checker.prune_annotations_and_check(
                             checker_input_with_invariants_after_nudge
                         )
                         success, prune_checker_message = self.checker.check(pruned_code)
