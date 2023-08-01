@@ -207,15 +207,15 @@ class LoopyPipeline:
                         "checker_message_after_nudge"
                     ] = nudge_checker_message
 
-                if not success:
-                    success, pruned_code = self.checker.prune_annotations_and_check(
-                        checker_input
-                    )
-                    success, checker_message = self.checker.check(pruned_code)
+                    if not success:
+                        success, pruned_code = self.checker.prune_annotations_and_check(
+                            checker_input
+                        )
+                        success, checker_message = self.checker.check(pruned_code)
 
-                    instance_log_json["code_after_nudge_and_prune"] = pruned_code
-                    instance_log_json["checker_output_after_nudge_and_prune"] = success
-                    instance_log_json["checker_message_after_nudge_and_prune"] = checker_message
+                        instance_log_json["code_after_nudge_and_prune"] = pruned_code
+                        instance_log_json["checker_output_after_nudge_and_prune"] = success
+                        instance_log_json["checker_message_after_nudge_and_prune"] = checker_message
 
                 if success:
                     stats["success"].append(i)

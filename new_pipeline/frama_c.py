@@ -3,6 +3,8 @@ import os
 import re
 import subprocess
 from copy import deepcopy
+import datetime
+import random
 
 from benchmark import Benchmark
 from checker import Checker
@@ -27,20 +29,25 @@ class FramaCChecker(Checker):
         return error_message
 
     def check(self, input, verbose=False):
-        with open("/tmp/temp_eval.c", "w") as f:
+        temp_file = datetime.datetime.now().strftime("/tmp/temp_eval_%Y_%m_%d_%H_%M_%S_") + str(random.randint(0, 1000000))
+        temp_c_file = temp_file + "_.c"
+        temp_kernel_log_file = temp_file + "_kernel_logs.txt"
+        temp_output_dump_file = temp_file + "_output_dump.csv"
+
+        with open(temp_c_file, "w") as f:
             f.write(input)
 
         if verbose:
             print("==============================")
-        cmd = "frama-c -wp -wp-verbose 100 -wp-debug 100 -wp-timeout 3 -wp-prover=alt-ergo,z3,cvc4 /tmp/temp_eval.c -kernel-warn-key annot-error=active \
-            -kernel-log a:/tmp/frama_c_kernel_logs.txt -then -no-unicode -report -report-csv /tmp/frama_c_eval.csv"
+        cmd = f"frama-c -wp -wp-verbose 100 -wp-debug 100 -wp-timeout 3 -wp-prover=alt-ergo,z3,cvc4 {temp_c_file} -kernel-warn-key annot-error=active \
+            -kernel-log a:{temp_kernel_log_file} -then -no-unicode -report -report-csv {temp_output_dump_file}"
         p = subprocess.Popen(cmd.split(), stdout=subprocess.PIPE)
         output, err = p.communicate()
 
         # Look for errors in the kernel logs
-        if not os.path.exists("/tmp/frama_c_kernel_logs.txt"):
+        if not os.path.exists(temp_kernel_log_file):
             return False, "No kernel logs found"
-        with open("/tmp/frama_c_kernel_logs.txt", "r", encoding="utf-8") as f:
+        with open(temp_kernel_log_file, "r", encoding="utf-8") as f:
             kernel_logs = f.read()
             kl_lines = kernel_logs.splitlines()
             if len(kl_lines) > 2:
@@ -59,10 +66,10 @@ class FramaCChecker(Checker):
                 return False, error_message
 
         # Parse the output dump
-        if not os.path.exists("/tmp/frama_c_eval.csv"):
+        if not os.path.exists(temp_output_dump_file):
             return False, "No output dump found"
 
-        with open(f"/tmp/frama_c_eval.csv", "r", encoding="utf-8") as f:
+        with open(temp_output_dump_file, "r", encoding="utf-8") as f:
             csv_output = [row for row in csv.DictReader(f, delimiter="\t")]
             success = all(
                 row["status"] == "Valid"
@@ -90,9 +97,9 @@ class FramaCChecker(Checker):
             )
             csv_output = csv_output + "\n" + user_assertion
 
-        os.remove("/tmp/temp_eval.c")
-        os.remove("/tmp/frama_c_kernel_logs.txt")
-        os.remove("/tmp/frama_c_eval.csv")
+        os.remove(temp_c_file)
+        os.remove(temp_kernel_log_file)
+        os.remove(temp_output_dump_file)
         return success, csv_output
 
     def get_line_no_from_error_msg(self, checker_output):
@@ -267,7 +274,21 @@ class FramaCBenchmark(Benchmark):
         output = "\n".join(lines)
 
         return output
+    
+    def fix_void_main(self, code):
+        void_main_returning_nothing = re.findall(r"void \w+\(((.|\n|\t)*)*(return;)", code)
+        while len(void_main_returning_nothing) > 0:
+            code.replace(void_main_returning_nothing[0][2], "return 0;")
+            void_main_returning_nothing = re.findall(r"void \w+\(((.|\n|\t)*)*(return;)", code)
+        return code
 
+    def fix_int_main(self, code):
+        int_main_returning_nothing = re.findall(r"int \w+\(((.|\n|\t)*)*(return;)", code)
+        while len(int_main_returning_nothing) > 0:
+            code.replace(int_main_returning_nothing[0][2], "return 0;")
+            int_main_returning_nothing = re.findall(r"int \w+\(((.|\n|\t)*)*(return;)", code)
+        return code
+    
     def raw_input_to_checker_input(self, code):
         lines = code.splitlines()
         new_code = ""
@@ -285,7 +306,7 @@ class FramaCBenchmark(Benchmark):
                 line = line.replace("return", "return;")
 
             # Remove all local assert header files
-            if "#include \"myassert.h\"" in line or "#include \"assert.h\"" in line:
+            if re.findall(r"#include\s+\".*\"", line):
                 continue
 
             # Convert ERROR: to assert(\false)
