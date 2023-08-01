@@ -371,7 +371,7 @@ class FramaCBenchmark(Benchmark):
                     line = line.replace("ERROR:", "ERROR: //@ assert(\\false);\n")
 
             # Remove local nondet functions
-            if "__VERIFIER_nondet_" in line:
+            elif "__VERIFIER_nondet_" in line:
                 if "__VERIFIER_nondet_int" in line:
                     line = line.replace("__VERIFIER_nondet_int", "unknown_int")
                 if "__VERIFIER_nondet_uint" in line:
