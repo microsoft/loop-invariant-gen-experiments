@@ -13,29 +13,30 @@ def parse_args(args):
         help="Checker to use [Required]",
         choices=["boogie", "frama-c"],
         required=True,
-        type=str
+        type=str,
     )
     parser.add_argument(
         "--log-file",
         help="File to write logs to",
         default=datetime.datetime.now().strftime("logs/loopy_%Y_%m_%d_%H_%M_%S/"),
-        type=str
+        type=str,
     )
     parser.add_argument(
         "--config-file",
         help="File to read prompt configs from",
         default="config.yaml",
-        type=str
+        type=str,
     )
     parser.add_argument(
         "--model",
         help="Model to use",
         choices=["gpt-4", "gpt-3.5-turbo", "gpt-4-32k"],
         default="gpt-3.5-turbo",
-        type=str
+        type=str,
     )
     parser.add_argument(
-        "-d", "--debug",
+        "-d",
+        "--debug",
         help="Debug mode",
         action="store_true",
     )
@@ -48,7 +49,7 @@ def parse_args(args):
         "--heal-errors-input",
         help="Input file to heal errors from",
         default="",
-        type=str
+        type=str,
     )
     parser.add_argument(
         "--max-benchmarks",
@@ -73,14 +74,10 @@ def parse_args(args):
         help="Provider to fetch the model from",
         choices=["azure-open-ai", "huggingface"],
         default="azure-open-ai",
-        type=str
+        type=str,
     )
     parser.add_argument(
-        "--problem-ids",
-        help="Problem IDs to run",
-        nargs="+",
-        default=[],
-        type=str
+        "--problem-ids", help="Problem IDs to run", nargs="+", default=[], type=str
     )
     parser.add_argument(
         "--recheck-logs",
@@ -94,7 +91,6 @@ def parse_args(args):
         action="store_true",
     )
 
-
     return parser.parse_args(args)
 
 
@@ -104,7 +100,7 @@ def main(args):
     # TODO: Add support for other models when they are available
     if args.provider != "azure-open-ai":
         raise Exception("Only Azure Open AI models are supported for now")
-    
+
     checker = None
     if args.checker == "boogie":
         checker = Checker("boogie")
@@ -135,14 +131,27 @@ def main(args):
 
     if args.problem_ids:
         for problem_id in args.problem_ids:
-            p.log_path = datetime.datetime.now().strftime(f"logs/loopy_{problem_id}_%Y_%m_%d_%H_%M_%S/")
+            p.log_path = datetime.datetime.now().strftime(
+                f"logs/loopy_{problem_id}_%Y_%m_%d_%H_%M_%S/"
+            )
             p.run(
                 max_benchmarks=1,
                 start_index=int(problem_id),
             )
+    elif args.recheck_logs != "":
+        p.recheck_logs(
+            max_benchmarks=args.max_benchmarks,
+            start_index=args.start_index,
+            input_log_path=args.recheck_logs,
+            output_log_path=args.recheck_logs.replace(
+                "final.json", "final_rechecked.json"
+            )
+        )
     else:
         if args.heal_errors:
-            p.log_path = datetime.datetime.now().strftime(f"logs/healing_loopy_%Y_%m_%d_%H_%M_%S/")
+            p.log_path = datetime.datetime.now().strftime(
+                f"logs/healing_loopy_%Y_%m_%d_%H_%M_%S/"
+            )
         p.run(
             max_benchmarks=args.max_benchmarks,
             start_index=args.start_index,

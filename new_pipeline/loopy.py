@@ -11,7 +11,7 @@ from loopy_llm import LLM, PromptConfig
 
 
 class LoopyPipeline:
-    #TODO: why is the model gpt-3.5?
+    # TODO: why is the model gpt-3.5?
 
     def __init__(
         self,
@@ -82,7 +82,7 @@ class LoopyPipeline:
             healing_prompt_configs,
             self.model,
             self.debug,
-            nudge_config
+            nudge_config,
         )
 
         if "llm_input_file_path" not in config:
@@ -214,8 +214,12 @@ class LoopyPipeline:
                         success, checker_message = self.checker.check(pruned_code)
 
                         instance_log_json["code_after_nudge_and_prune"] = pruned_code
-                        instance_log_json["checker_output_after_nudge_and_prune"] = success
-                        instance_log_json["checker_message_after_nudge_and_prune"] = checker_message
+                        instance_log_json[
+                            "checker_output_after_nudge_and_prune"
+                        ] = success
+                        instance_log_json[
+                            "checker_message_after_nudge_and_prune"
+                        ] = checker_message
 
                 if success:
                     stats["success"].append(i)
@@ -409,86 +413,105 @@ class LoopyPipeline:
 
         return
 
-    def run_internal(self, max_benchmarks=1, start_index=0, nudge=False, log_path=""):
+    def recheck_logs(
+        self, max_benchmarks=1, start_index=0, input_log_path="", output_log_path=""
+    ):
+        # Rerun only the checker on the logs and generate new logs
         if self.llm is None:
             raise Exception(
-                "LLM not initialized."
+                "LLM not initialized. Call load_config first, to load input and prompt files."
             )
 
-        if log_path == "":
-            log_path = self.log_path
+        if output_log_path == "":
+            output_log_path = self.log_path
+
+        existing_log_json = None
+        with open(input_log_path, "r", encoding="utf-8") as f:
+            existing_log_json = json.load(f)
 
         log_json = []
-        stats = {"success": [], "failure": [], "total": 0}
-        log_file = open(log_path, "w", encoding="utf-8")
-        for i, instance in enumerate(self.benchmark.benchmarks[start_index:]):
-            print("Running benchmark: {i}/{n}".format(i=i, n=len(self.benchmark)))
-            instance_log_json = {"file": instance.llm_input_path}
-            try:
-                llm_outputs, conversations = self.llm.run(input=instance.llm_input)
-                instance_log_json["conversations"] = conversations
-                instance_log_json["final_code_outputs"] = llm_outputs
-                instance_log_json["checker_input_without_invariants"] = instance.checker_input_without_invariants
-                instance_log_json["checker_input_with_invariants"] = instance.checker_input_with_invariants
-                instance_log_json["checker_output"] = instance.checker_output
-                instance_log_json["checker_message"] = instance.checker_message
-                instance_log_json["checker_output_after_prune"] = instance.checker_output_after_prune
-                instance_log_json["checker_message_after_prune"] = instance.checker_message_after_prune
 
-                if instance.checker_output:
+        stats = {"success": [], "failure": [], "total": 0}
+        log_file = open(output_log_path, "w", encoding="utf-8")
+        benchmark_subset = existing_log_json["logs"][start_index : start_index + max_benchmarks]
+        total = len(benchmark_subset)
+        for i, instance in enumerate(benchmark_subset):
+            print("Rechecking benchmark: {i}/{n}".format(i=i, n=total))
+            instance_log_json = deepcopy(instance)
+            try:
+                success = False
+                raw_benchmark = ""
+                with open(instance["file"], "r", encoding="utf-8") as f:
+                    raw_benchmark = f.read()
+                checker_input_without_invariants = (
+                    self.benchmark.raw_input_to_checker_input(raw_benchmark)
+                )
+                instance_log_json[
+                    "checker_input_without_invariants"
+                ] = checker_input_without_invariants
+                checker_input_with_invariants = self.benchmark.combine_llm_outputs(
+                    checker_input_without_invariants, instance["invariants"]
+                )
+                instance_log_json[
+                    "checker_input_with_invariants"
+                ] = checker_input_with_invariants
+                success, checker_message = self.checker.check(
+                    checker_input_with_invariants
+                )
+                instance_log_json["checker_output"] = success
+                instance_log_json["checker_message"] = checker_message
+
+                if not success:
+                    pruned_code = self.checker.prune_annotations_and_check(
+                        checker_input_with_invariants
+                    )
+                    success, prune_checker_message = self.checker.check(pruned_code)
+                    instance_log_json["code_after_prune"] = pruned_code
+                    instance_log_json["checker_output_after_prune"] = success
+                    instance_log_json[
+                        "checker_message_after_prune"
+                    ] = prune_checker_message
+
+                if not success and "invariants_after_nudge" in instance:
+                    checker_input_with_invariants_after_nudge = self.benchmark.combine_llm_outputs(
+                        checker_input_without_invariants,
+                        instance["invariants"] + instance["invariants_after_nudge"],
+                    )
+                    instance_log_json[
+                        "checker_input_after_nudge"
+                    ] = checker_input_with_invariants_after_nudge
+                    success, checker_message = self.checker.check(
+                        checker_input_with_invariants_after_nudge
+                    )
+                    instance_log_json["checker_output_after_nudge"] = success
+                    instance_log_json["checker_message_after_nudge"] = checker_message
+
+                    if not success:
+                        pruned_code = self.checker.prune_annotations_and_check(
+                            checker_input_with_invariants_after_nudge
+                        )
+                        success, prune_checker_message = self.checker.check(pruned_code)
+                        instance_log_json["code_after_nudge_and_prune"] = pruned_code
+                        instance_log_json[
+                            "checker_output_after_nudge_and_prune"
+                        ] = success
+                        instance_log_json[
+                            "checker_message_after_nudge_and_prune"
+                        ] = prune_checker_message
+
+                if success:
                     stats["success"].append(i)
                 else:
                     stats["failure"].append(i)
                 stats["total"] += 1
 
-                with open(
-                    os.path.join(
-                        self.log_path,
-                        instance.llm_input_path.replace(".c", ".json")
-                        .replace("../", "")
-                        .replace("/", "__"),
-                    ),
-                    "w",
-                    encoding="utf-8",
-                ) as f:
-                    f.write(
-                        json.dumps(
-                            {
-                                "logs": instance_log_json,
-                                "stats": stats,
-                            },
-                            indent=4,
-                            ensure_ascii=False,
-                        )
-                    )
                 log_json.append(instance_log_json)
             except (Exception, KeyboardInterrupt) as e:
                 print(traceback.format_exc())
                 instance_log_json["error"] = str(e)
-                with open(
-                    os.path.join(
-                        self.log_path,
-                        instance.llm_input_path.replace(".c", ".json")
-                        .replace("../", "")
-                        .replace("/", "__"),
-                    ),
-                    "w",
-                    encoding="utf-8",
-                ) as f:
-                    f.write(
-                        json.dumps(
-                            {
-                                "logs": instance_log_json,
-                                "stats": stats,
-                            },
-                            indent=4,
-                            ensure_ascii=False,
-                        )
-                    )
                 log_json.append(instance_log_json)
                 stats["failure"].append(i)
                 stats["total"] += 1
-
                 if isinstance(e, KeyboardInterrupt):
                     break
                 else:
@@ -500,16 +523,7 @@ class LoopyPipeline:
             stats["success_rate"] = 0
 
         log_file.write(
-            json.dumps(
-                {
-                    "logs": log_json,
-                    "stats": stats,
-                },
-                indent=4,
-                ensure_ascii=False,
-            )
+            json.dumps({"logs": log_json, "stats": stats}, indent=4, ensure_ascii=False)
         )
         log_file.close()
 
-        return
-    
