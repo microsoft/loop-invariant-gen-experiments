@@ -75,7 +75,7 @@ class FramaCChecker(Checker):
                 row["status"] == "Valid"
                 for row in csv_output
                 if row["property kind"] == "loop invariant"
-            ) and any(
+            ) and all(
                 row["property kind"] == "user assertion" and row["status"] == "Valid"
                 for row in csv_output
             )
@@ -235,8 +235,8 @@ class FramaCChecker(Checker):
                         code_queue.append("\n".join(code_lines__))
             iterations += 1
 
-        if iterations == 10000:
-            print("Crossed 10000 iterations. Stopping pruning...")
+        if iterations == 1000:
+            print("Crossed 1000 iterations. Stopping pruning...")
 
         if not status:
             print("Invariants not strong enough to prove")
@@ -298,6 +298,7 @@ class FramaCBenchmark(Benchmark):
         new_code = ""
         int_main = False
         void_main = False
+        inside_main = False
         for line in lines:
             # Replace return with return 0 if main returns int
             if "int main" in line:
@@ -308,6 +309,8 @@ class FramaCBenchmark(Benchmark):
                 void_main = True
             if len(re.findall(r"return .+", line)) > 0 and void_main:
                 line = line.replace("return", "return;")
+            if len(re.findall(r"main\s*\(", line)):
+                inside_main = True
 
             # Remove all local assert header files
             if len(re.findall(r"#include\s+\".*\"", line)) > 0:
@@ -317,7 +320,7 @@ class FramaCBenchmark(Benchmark):
                 continue
 
             # Convert ERROR: to assert(\false)
-            if "ERROR:" in line:
+            if "ERROR:" in line and inside_main:
                 error_text = re.findall(r"ERROR:(.+)", line)[0]
                 if len(error_text) > 0:
                     line = line.replace("ERROR:", "ERROR: //@ assert(\\false);\n")
@@ -339,31 +342,32 @@ class FramaCBenchmark(Benchmark):
             # Remove local assume function
             elif "__VERIFIER_assume" in line:
                 assuming_conditions = re.findall(
-                    r"(__VERIFIER_assume\(([^\(\)]+)\);)", line
+                    r"(__VERIFIER_assume\s+\((.+)\);)", line
                 )
                 for condition in assuming_conditions:
                     line = line.replace(condition[0], "assume(" + condition[1] + ");\n")
             
             # Remove local assert function
             elif "__VERIFIER_assert" in line:
-                asserting_conditions = re.findall(
-                    r"(__VERIFIER_assert\(([^\(\)]+)\);)", line
-                )
+                asserting_conditions = re.findall(r"(__VERIFIER_assert\s+\((.+)\);)", line)
                 for condition in asserting_conditions:
                     line = line.replace(
-                        condition[0], "{; //@ assert(" + condition[1] + ");\n}\n"
+                        condition[0], "{;\n //@ assert(" + condition[1] + ");\n}\n"
                     )
             
             elif "assert" in line and not ("//assert" in line or "sassert" in line):
                 line = line.replace("sassert", "assert")
                 assertion = line.strip()
-                line = line.replace(assertion, "{;\n //@ " + assertion + "\n}")
+                line = line.replace(assertion, "{;\n //@ " + assertion + "\n}\n")
 
             elif "tmpl(" in line:
                 line = "// " + line
 
+            elif len(re.findall(r"__VERIFIER_error\s+\(\);", line)) > 0:
+                line = re.sub(r"__VERIFIER_error\s+\(\);", ";", line)
+
             new_code += line + "\n"
-        new_code = """#define assume(e) if(!(e)) return 0;
+        new_code = ("#define assume(e) if(!(e)) return;" if void_main else "#define assume(e) if(!(e)) return 0;") + """
 
 extern int unknown(void);
 extern int unknown_int(void);
