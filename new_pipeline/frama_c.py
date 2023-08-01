@@ -18,6 +18,10 @@ class FramaCChecker(Checker):
         inv = re.findall(r"loop invariant (.+);", line)
         return len(inv) > 0
 
+    def is_variant(self, line):
+        inv = re.findall(r"loop variant (.+);", line)
+        return len(inv) > 0
+
     def get_annotation_error_from_kernel_logs(self, error_line):
         line_num = re.search(r"\:(\d+)\:", error_line)
         if line_num is not None:
@@ -49,6 +53,7 @@ class FramaCChecker(Checker):
             return False, "No kernel logs found"
         with open(temp_kernel_log_file, "r", encoding="utf-8") as f:
             kernel_logs = f.read()
+            print(kernel_logs)
             kl_lines = kernel_logs.splitlines()
             if len(kl_lines) > 2:
                 print("More than 2 lines in Frama-C kernel logs.")
@@ -71,6 +76,7 @@ class FramaCChecker(Checker):
 
         with open(temp_output_dump_file, "r", encoding="utf-8") as f:
             csv_output = [row for row in csv.DictReader(f, delimiter="\t")]
+            print(csv_output)
             success = all(
                 row["status"] == "Valid"
                 for row in csv_output
@@ -147,15 +153,31 @@ class FramaCChecker(Checker):
     def get_invariants_count(self, code):
         return len(self.get_invariants(code.splitlines()))
 
-    def prune_annotations_and_check(self, input_code, verbose=False):
+    def get_variants(self, lines):
+        invariants = []
+        for line in lines:
+            if self.is_variant(line):
+                inv = re.findall(r"(loop variant .+;)", line)[0]
+                if inv not in invariants:
+                    invariants.append(inv)
+        return invariants
+
+    def prune_annotations_and_check(self, input_code, mode="invariant", verbose=False):
         print("Pruning annotations...")
+        getf = None
+        if mode == "invariant":
+            get_f = self.get_invariants
+            is_f = self.is_invariant
+        else:
+            get_f = self.get_variants
+            is_f = self.is_variant
         invariant_line_mapping = {}
         lines = input_code.splitlines()
         for no, line in enumerate(lines):
-            if self.is_invariant(line):
+            if is_f(line):
                 invariant_line_mapping[no] = line
         if len(invariant_line_mapping) == 0:
-            raise Exception("No invariants found")
+            raise Exception("No invariants/variants found")
 
         inv_line_list = list(invariant_line_mapping.keys())
         (invariant_line_start, invariant_line_end) = (
@@ -165,7 +187,7 @@ class FramaCChecker(Checker):
 
         input_code = "\n".join(
             lines[:invariant_line_start]
-            + self.get_invariants(lines)
+            + get_f(lines)
             + lines[invariant_line_end + 1 :]
         )
         code_queue = [input_code]
@@ -174,8 +196,8 @@ class FramaCChecker(Checker):
         while len(code_queue) > 0 and iterations < 1000:
             input_code = code_queue.pop(0)
             code_lines = input_code.splitlines()
-            if len(self.get_invariants(code_lines)) == 0:
-                print("No invariants found")
+            if len(get_f(code_lines)) == 0:
+                print("No invariants/variants found")
                 continue
             status, checker_message = self.check(input_code, verbose)
 
@@ -254,12 +276,15 @@ class FramaCBenchmark(Benchmark):
     def __init__(self, llm_input_dir=None, checker_input_dir=None):
         super().__init__(llm_input_dir, checker_input_dir)
 
-    def combine_llm_outputs(self, checker_input, llm_outputs):
+    def combine_llm_outputs(self, checker_input, llm_outputs, mode='invariant'):
         invariants = []
         for llm_output in llm_outputs:
             lines = llm_output.splitlines()
             for line in lines:
-                invariant = re.findall(r"(loop invariant .+;)", line)
+                if mode == "invariant":
+                    invariant = re.findall(r"(loop invariant .+;)", line)
+                else:
+                    invariant = re.findall(r"(loop variant .+;)", line)
                 if len(invariant) > 0:
                     invariants.append(invariant[0])
 
