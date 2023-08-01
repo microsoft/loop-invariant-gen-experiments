@@ -344,10 +344,11 @@ class FramaCBenchmark(Benchmark):
                 )
                 for condition in asserting_conditions:
                     line = line.replace(
-                        condition[0], "//@ assert(" + condition[1] + ");\n"
+                        condition[0], "{; //@ assert(" + condition[1] + ");}\n"
                     )
             
-            elif "assert" in line and not "//assert" in line:
+            elif "assert" in line and not ("//assert" in line or "sassert" in line):
+                line = line.replace("sassert", "assert")
                 assertion = line.strip()
                 line = line.replace(assertion, "{;\n //@ " + assertion + "\n}")
 
