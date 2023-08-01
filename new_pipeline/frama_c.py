@@ -341,6 +341,10 @@ class FramaCBenchmark(Benchmark):
             if len(re.findall(r"main\s*\(", line)):
                 inside_main = True
 
+            # Remove pre-processor directives
+            if re.match(r"#\s+\d+\s+\"[^\"]*\"[\s\d]*", line):
+                continue
+
             # Remove all local assert header files
             if len(re.findall(r"#include\s+\".*\"", line)) > 0:
                 continue
@@ -350,7 +354,7 @@ class FramaCBenchmark(Benchmark):
 
             # Convert ERROR: to assert(\false)
             if "ERROR:" in line and inside_main:
-                error_text = re.findall(r"ERROR:(.+)", line)[0]
+                error_text = re.findall(r"ERROR:(.*)", line)[0]
                 if len(error_text) > 0:
                     line = line.replace("ERROR:", "ERROR: //@ assert(\\false);\n")
 
@@ -385,11 +389,12 @@ class FramaCBenchmark(Benchmark):
                         condition[0], "{;\n //@ assert(" + condition[1] + ");\n}\n"
                     )
             
-            elif len(re.findall(r"assert\s+\(.*\);", line)) > 0:
+            elif len(re.findall(r"[^s]assert\s*\([^{}]*\);", line)) > 0:
                 assertion = line.strip()
                 line = line.replace(assertion, "{;\n //@ " + assertion + "\n}\n")
+                print(line)
 
-            elif len(re.findall(r"sassert\s+\(.*\);", line)) > 0:
+            elif len(re.findall(r"sassert\s*\(*\);", line)) > 0:
                 line = line.replace("sassert", "assert")
                 assertion = line.strip()
                 line = line.replace(assertion, "{;\n //@ " + assertion + "\n}\n")
@@ -397,11 +402,13 @@ class FramaCBenchmark(Benchmark):
             if "tmpl(" in line:
                 line = "// " + line
 
-            if len(re.findall(r"__VERIFIER_error\s+\(\);", line)) > 0:
-                line = re.sub(r"__VERIFIER_error\s+\(\);", ";", line)
-
+            if len(re.findall(r"__VERIFIER_error\s*\(\);", line)) > 0:
+                line = re.sub(r"__VERIFIER_error\s*\(\);", ";", line)
+            
             new_code += line + "\n"
-        new_code = ("#define assume(e) if(!(e)) return;" if void_main else "#define assume(e) if(!(e)) return 0;") + """
+        new_code = ("#define assume(e) if(!(e)) return;" if void_main else "#define assume(e) if(!(e)) return 0;") + \
+        ("\n#define LARGE_INT 1000000" if "LARGE_INT" in code else "") + \
+        """
 
 extern int unknown(void);
 extern int unknown_int(void);
@@ -413,3 +420,34 @@ extern unsigned short unknown_ushort(void);
             new_code
         )
         return new_code
+
+code = """# 1 "/tmp/tmp.6E3V4HoYk8.c"
+# 1 "<built-in>"
+# 1 "<command-line>"
+# 1 "/usr/include/stdc-predef.h" 1 3 4
+# 1 "<command-line>" 2
+# 1 "/tmp/tmp.6E3V4HoYk8.c"
+extern void __VERIFIER_error();
+
+void __VERIFIER_assert(int /*@  predicates{cond!=0} predicates_tpl{0==0} @*/ cond){
+  if(!(cond)){
+    ERROR: __VERIFIER_error();
+  }
+  return;
+}
+unsigned int __VERIFIER_nondet_uint();
+
+int main()
+{
+  unsigned int n = __VERIFIER_nondet_uint();
+  unsigned int /*@  predicates{x<=n,x>0,x>=0} @*/ x=n, /*@  predicates{y!=n,y<=x,y==n,y>=x} terms_tpl{y+x} @*/ y=0;
+  while(x>0)
+  {
+    x--;
+    y++;
+  }
+  __VERIFIER_assert(y!=n);
+}
+"""
+pb = FramaCBenchmark()
+print(pb.raw_input_to_checker_input(code))
