@@ -33,8 +33,10 @@ class FramaCChecker(Checker):
         error_message = f"Annotation error on line {line_num}: {error_message}"
         return error_message
 
-    def check(self, input, mode='invariant', verbose=False):
-        temp_file = datetime.datetime.now().strftime("/tmp/temp_eval_%Y_%m_%d_%H_%M_%S_") + str(random.randint(0, 1000000))
+    def check(self, input, mode="invariant", verbose=False):
+        temp_file = datetime.datetime.now().strftime(
+            "/tmp/temp_eval_%Y_%m_%d_%H_%M_%S_"
+        ) + str(random.randint(0, 1000000))
         temp_c_file = temp_file + "_.c"
         temp_kernel_log_file = temp_file + "_kernel_logs.txt"
         temp_output_dump_file = temp_file + "_output_dump.csv"
@@ -77,9 +79,9 @@ class FramaCChecker(Checker):
 
         csv_output = None
         if mode == "variant":
-            msg = str(output, 'UTF-8').split('\n')
+            msg = str(output, "UTF-8").split("\n")
             result = list(filter(lambda x: "Loop variant" in x, msg))
-            assert(len(result) == 1)
+            assert len(result) == 1
             if "Valid" in result[0]:
                 csv_output = "Loop variant is Valid"
                 success = True
@@ -92,7 +94,8 @@ class FramaCChecker(Checker):
                 success = all(
                     row["status"] == "Valid"
                     for row in csv_output
-                    if row["property kind"] == "loop invariant" or row["property kind"] == "user assertion"
+                    if row["property kind"] == "loop invariant"
+                    or row["property kind"] == "user assertion"
                 )
 
                 user_assertion = "\n".join(
@@ -257,8 +260,10 @@ class FramaCChecker(Checker):
                     partially_proven_inv_line_nos = (
                         self.get_partially_proven_inv_from_error_msg(checker_message)
                     )
-                    if self.get_invariants_count(input_code) == len(partially_proven_inv_line_nos):
-                        # If all invariants are partially proven, then we can't afford 
+                    if self.get_invariants_count(input_code) == len(
+                        partially_proven_inv_line_nos
+                    ):
+                        # If all invariants are partially proven, then we can't afford
                         # to prune further. example, there's an assertion inside the loop which is Unknown
                         break
                     if verbose:
@@ -277,7 +282,9 @@ class FramaCChecker(Checker):
             print("Crossed 1000 iterations. Stopping pruning...")
 
         if not status:
-            print("Invariants/variant not strong enough to prove or benchmark is invalid.")
+            print(
+                "Invariants/variant not strong enough to prove or benchmark is invalid."
+            )
         else:
             print("Found strong enough invariants/variant.")
 
@@ -288,7 +295,7 @@ class FramaCBenchmark(Benchmark):
     def __init__(self, llm_input_dir=None, checker_input_dir=None):
         super().__init__(llm_input_dir, checker_input_dir)
 
-    def combine_llm_outputs(self, checker_input, llm_outputs, mode='invariant'):
+    def combine_llm_outputs(self, checker_input, llm_outputs, mode="invariant"):
         invariants = []
         for llm_output in llm_outputs:
             lines = llm_output.splitlines()
@@ -312,28 +319,36 @@ class FramaCBenchmark(Benchmark):
             lines = (
                 lines[:loc]
                 + ((["/*@\n"] + invariants + ["\n*/"]) if len(invariants) > 0 else [""])
-                + lines[loc :]
+                + lines[loc:]
             )
         else:
             raise Exception("No while loop found")
         output = "\n".join(lines)
 
         return output
-    
+
     def fix_void_main(self, code):
-        void_main_returning_nothing = re.findall(r"void \w+\(((.|\n|\t)*)*(return;)", code)
+        void_main_returning_nothing = re.findall(
+            r"void \w+\(((.|\n|\t)*)*(return;)", code
+        )
         while len(void_main_returning_nothing) > 0:
             code.replace(void_main_returning_nothing[0][2], "return 0;")
-            void_main_returning_nothing = re.findall(r"void \w+\(((.|\n|\t)*)*(return;)", code)
+            void_main_returning_nothing = re.findall(
+                r"void \w+\(((.|\n|\t)*)*(return;)", code
+            )
         return code
 
     def fix_int_main(self, code):
-        int_main_returning_nothing = re.findall(r"int \w+\(((.|\n|\t)*)*(return;)", code)
+        int_main_returning_nothing = re.findall(
+            r"int \w+\(((.|\n|\t)*)*(return;)", code
+        )
         while len(int_main_returning_nothing) > 0:
             code.replace(int_main_returning_nothing[0][2], "return 0;")
-            int_main_returning_nothing = re.findall(r"int \w+\(((.|\n|\t)*)*(return;)", code)
+            int_main_returning_nothing = re.findall(
+                r"int \w+\(((.|\n|\t)*)*(return;)", code
+            )
         return code
-    
+
     def raw_input_to_checker_input(self, code):
         lines = code.splitlines()
         new_code = ""
@@ -384,7 +399,7 @@ class FramaCBenchmark(Benchmark):
                     line = line.replace("__VERIFIER_nondet_ushort", "unknown_ushort")
             elif "nondet" in line:
                 line = line.replace("nondet", "unknown")
-            
+
             # Remove local assume function
             elif "__VERIFIER_assume" in line:
                 assuming_conditions = re.findall(
@@ -392,16 +407,21 @@ class FramaCBenchmark(Benchmark):
                 )
                 for condition in assuming_conditions:
                     line = line.replace(condition[0], "assume(" + condition[1] + ");\n")
-            
+
             # Remove local assert function
             elif "__VERIFIER_assert" in line:
-                asserting_conditions = re.findall(r"(__VERIFIER_assert\s*\((.+)\);)", line)
+                asserting_conditions = re.findall(
+                    r"(__VERIFIER_assert\s*\((.+)\);)", line
+                )
                 for condition in asserting_conditions:
                     line = line.replace(
                         condition[0], "{;\n //@ assert(" + condition[1] + ");\n}\n"
                     )
-            
-            elif len(re.findall(r"[^s]assert\s*\([^{}]*\);", line)) > 0:
+
+            elif (
+                len(re.findall(r"[^s]assert\s*\([^{}]*\);", line)) > 0
+                and len(re.findall(r"extern\s+\w+\s+assert\s*\([^{}]*\);", line)) == 0
+            ):
                 assertion = line.strip()
                 line = line.replace(assertion, "{;\n //@ " + assertion + "\n}\n")
                 print(line)
@@ -416,11 +436,16 @@ class FramaCBenchmark(Benchmark):
 
             if len(re.findall(r"__VERIFIER_error\s*\(\);", line)) > 0:
                 line = re.sub(r"__VERIFIER_error\s*\(\);", ";", line)
-            
+
             new_code += line + "\n"
-        new_code = ("#define assume(e) if(!(e)) return;" if void_main else "#define assume(e) if(!(e)) return 0;") + \
-        ("\n#define LARGE_INT 1000000" if "LARGE_INT" in code else "") + \
-        """
+        new_code = (
+            (
+                "#define assume(e) if(!(e)) return;"
+                if void_main
+                else "#define assume(e) if(!(e)) return 0;"
+            )
+            + ("\n#define LARGE_INT 1000000" if "LARGE_INT" in code else "")
+            + """
 
 extern int unknown(void);
 extern int unknown_int(void);
@@ -428,7 +453,7 @@ extern unsigned int unknown_uint(void);
 extern _Bool unknown_bool(void);
 extern char unknown_char(void);
 extern unsigned short unknown_ushort(void);
-""" + "".join(
-            new_code
+"""
+            + "".join(new_code)
         )
         return new_code

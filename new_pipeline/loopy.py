@@ -408,3 +408,108 @@ class LoopyPipeline:
         log_file.close()
 
         return
+
+    def run_internal(self, max_benchmarks=1, start_index=0, nudge=False, log_path=""):
+        if self.llm is None:
+            raise Exception(
+                "LLM not initialized."
+            )
+
+        if log_path == "":
+            log_path = self.log_path
+
+        log_json = []
+        stats = {"success": [], "failure": [], "total": 0}
+        log_file = open(log_path, "w", encoding="utf-8")
+        for i, instance in enumerate(self.benchmark.benchmarks[start_index:]):
+            print("Running benchmark: {i}/{n}".format(i=i, n=len(self.benchmark)))
+            instance_log_json = {"file": instance.llm_input_path}
+            try:
+                llm_outputs, conversations = self.llm.run(input=instance.llm_input)
+                instance_log_json["conversations"] = conversations
+                instance_log_json["final_code_outputs"] = llm_outputs
+                instance_log_json["checker_input_without_invariants"] = instance.checker_input_without_invariants
+                instance_log_json["checker_input_with_invariants"] = instance.checker_input_with_invariants
+                instance_log_json["checker_output"] = instance.checker_output
+                instance_log_json["checker_message"] = instance.checker_message
+                instance_log_json["checker_output_after_prune"] = instance.checker_output_after_prune
+                instance_log_json["checker_message_after_prune"] = instance.checker_message_after_prune
+
+                if instance.checker_output:
+                    stats["success"].append(i)
+                else:
+                    stats["failure"].append(i)
+                stats["total"] += 1
+
+                with open(
+                    os.path.join(
+                        self.log_path,
+                        instance.llm_input_path.replace(".c", ".json")
+                        .replace("../", "")
+                        .replace("/", "__"),
+                    ),
+                    "w",
+                    encoding="utf-8",
+                ) as f:
+                    f.write(
+                        json.dumps(
+                            {
+                                "logs": instance_log_json,
+                                "stats": stats,
+                            },
+                            indent=4,
+                            ensure_ascii=False,
+                        )
+                    )
+                log_json.append(instance_log_json)
+            except (Exception, KeyboardInterrupt) as e:
+                print(traceback.format_exc())
+                instance_log_json["error"] = str(e)
+                with open(
+                    os.path.join(
+                        self.log_path,
+                        instance.llm_input_path.replace(".c", ".json")
+                        .replace("../", "")
+                        .replace("/", "__"),
+                    ),
+                    "w",
+                    encoding="utf-8",
+                ) as f:
+                    f.write(
+                        json.dumps(
+                            {
+                                "logs": instance_log_json,
+                                "stats": stats,
+                            },
+                            indent=4,
+                            ensure_ascii=False,
+                        )
+                    )
+                log_json.append(instance_log_json)
+                stats["failure"].append(i)
+                stats["total"] += 1
+
+                if isinstance(e, KeyboardInterrupt):
+                    break
+                else:
+                    continue
+
+        if stats["total"] != 0:
+            stats["success_rate"] = len(stats["success"]) / stats["total"]
+        else:
+            stats["success_rate"] = 0
+
+        log_file.write(
+            json.dumps(
+                {
+                    "logs": log_json,
+                    "stats": stats,
+                },
+                indent=4,
+                ensure_ascii=False,
+            )
+        )
+        log_file.close()
+
+        return
+    
