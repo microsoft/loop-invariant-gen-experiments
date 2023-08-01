@@ -5,6 +5,7 @@ import subprocess
 from copy import deepcopy
 import datetime
 import random
+import sys
 
 from benchmark import Benchmark
 from checker import Checker
@@ -32,7 +33,7 @@ class FramaCChecker(Checker):
         error_message = f"Annotation error on line {line_num}: {error_message}"
         return error_message
 
-    def check(self, input, verbose=False):
+    def check(self, input, mode='invariant', verbose=False):
         temp_file = datetime.datetime.now().strftime("/tmp/temp_eval_%Y_%m_%d_%H_%M_%S_") + str(random.randint(0, 1000000))
         temp_c_file = temp_file + "_.c"
         temp_kernel_log_file = temp_file + "_kernel_logs.txt"
@@ -71,34 +72,45 @@ class FramaCChecker(Checker):
                 return False, error_message
 
         # Parse the output dump
-        if not os.path.exists(temp_output_dump_file):
+        if mode == "invariant" and not os.path.exists(temp_output_dump_file):
             return False, "No output dump found"
 
-        with open(temp_output_dump_file, "r", encoding="utf-8") as f:
-            csv_output = [row for row in csv.DictReader(f, delimiter="\t")]
-            print(csv_output)
-            success = all(
-                row["status"] == "Valid"
-                for row in csv_output
-                if row["property kind"] == "loop invariant" or row["property kind"] == "user assertion"
-            )
-
-            user_assertion = "\n".join(
-                [
-                    f"Post-condition {row['property']} on line {row['line']}: {row['status']}"
+        csv_output = None
+        if mode == "variant":
+            msg = str(output, 'UTF-8').split('\n')
+            result = list(filter(lambda x: "Loop variant" in x, msg))
+            assert(len(result) == 1)
+            if "Valid" in result[0]:
+                csv_output = "Loop variant is Valid"
+                success = True
+            else:
+                csv_output = "Loop variant is Invalid"
+                success = False
+        else:
+            with open(temp_output_dump_file, "r", encoding="utf-8") as f:
+                csv_output = [row for row in csv.DictReader(f, delimiter="\t")]
+                success = all(
+                    row["status"] == "Valid"
                     for row in csv_output
-                    if row["property kind"] == "user assertion"
-                ]
-            )
+                    if row["property kind"] == "loop invariant" or row["property kind"] == "user assertion"
+                )
 
-            csv_output = "\n".join(
-                [
-                    f"Invariant {row['property']} on line {row['line']}: {row['status']}"
-                    for row in csv_output
-                    if row["property kind"] == "loop invariant"
-                ]
-            )
-            csv_output = csv_output + "\n" + user_assertion
+                user_assertion = "\n".join(
+                    [
+                        f"Post-condition {row['property']} on line {row['line']}: {row['status']}"
+                        for row in csv_output
+                        if row["property kind"] == "user assertion"
+                    ]
+                )
+
+                csv_output = "\n".join(
+                    [
+                        f"Invariant {row['property']} on line {row['line']}: {row['status']}"
+                        for row in csv_output
+                        if row["property kind"] == "loop invariant"
+                    ]
+                )
+                csv_output = csv_output + "\n" + user_assertion
 
         os.remove(temp_c_file)
         os.remove(temp_kernel_log_file)
@@ -199,7 +211,7 @@ class FramaCChecker(Checker):
             if len(get_f(code_lines)) == 0:
                 print("No invariants/variants found")
                 continue
-            status, checker_message = self.check(input_code, verbose)
+            status, checker_message = self.check(input_code, mode, verbose)
 
             if verbose:
                 print(checker_message)
@@ -265,9 +277,9 @@ class FramaCChecker(Checker):
             print("Crossed 1000 iterations. Stopping pruning...")
 
         if not status:
-            print("Invariants not strong enough to prove or benchmark is invalid.")
+            print("Invariants/variant not strong enough to prove or benchmark is invalid.")
         else:
-            print("Found strong enough invariants.")
+            print("Found strong enough invariants/variant.")
 
         return status, input_code
 
