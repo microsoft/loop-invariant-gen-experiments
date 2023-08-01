@@ -424,7 +424,6 @@ class FramaCBenchmark(Benchmark):
             ):
                 assertion = line.strip()
                 line = line.replace(assertion, "{;\n //@ " + assertion + "\n}\n")
-                print(line)
 
             elif len(re.findall(r"sassert\s*\(*\);", line)) > 0:
                 line = line.replace("sassert", "assert")
