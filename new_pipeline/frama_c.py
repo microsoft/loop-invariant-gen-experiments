@@ -380,7 +380,7 @@ class FramaCBenchmark(Benchmark):
             if len(re.findall(r"#include\s+\".*\"", line)) > 0:
                 continue
 
-            if len(re.findall(r"extern\s+.*\s+__VERIFIER_.*;", line)) > 0:
+            if len(re.findall(r"(extern\s)?\s*[int|char|_Bool|void]\s+__VERIFIER_[^\(]*(.*);", line)) > 0:
                 continue
 
             # Convert ERROR: to assert(\false)
@@ -429,7 +429,7 @@ class FramaCBenchmark(Benchmark):
                 assertion = line.strip()
                 line = line.replace(assertion, "{;\n //@ " + assertion + "\n}\n")
 
-            elif len(re.findall(r"sassert\s*\(*\);", line)) > 0:
+            elif len(re.findall(r"sassert\s*\(.*\);", line)) > 0:
                 line = line.replace("sassert", "assert")
                 assertion = line.strip()
                 line = line.replace(assertion, "{;\n //@ " + assertion + "\n}\n")
@@ -460,3 +460,31 @@ extern unsigned short unknown_ushort(void);
             + "".join(new_code)
         )
         return new_code
+
+code = """#include "seahorn/seahorn.h"
+extern int unknown1();
+extern int unknown2();
+
+void main()
+{
+	int flag = unknown1();
+	int x = 0;
+	int y = 0;
+
+	int j = 0;
+	int i = 0;
+
+
+	while(unknown2())
+	{
+	  x++;
+	  y++;
+	  i+=x;
+	  j+=y;
+	  if(flag)  j+=1;
+	} 
+	sassert(j>=i);
+}
+"""
+fb = FramaCBenchmark()
+print(fb.raw_input_to_checker_input(code))
