@@ -162,6 +162,9 @@ class FramaCChecker(Checker):
                     invariants.append(inv)
         return invariants
 
+    def get_invariants_count(self, code):
+        return len(self.get_invariants(code.splitlines()))
+
     def get_variants(self, lines):
         invariants = []
         for line in lines:
@@ -202,7 +205,7 @@ class FramaCChecker(Checker):
         code_queue = [input_code]
         iterations = 0
 
-        while len(code_queue) > 0 and iterations < 10000:
+        while len(code_queue) > 0 and iterations < 1000:
             input_code = code_queue.pop(0)
             code_lines = input_code.splitlines()
             if len(get_f(code_lines)) == 0:
@@ -254,6 +257,10 @@ class FramaCChecker(Checker):
                     partially_proven_inv_line_nos = (
                         self.get_partially_proven_inv_from_error_msg(checker_message)
                     )
+                    if self.get_invariants_count(input_code) == len(partially_proven_inv_line_nos):
+                        # If all invariants are partially proven, then we can't afford 
+                        # to prune further. example, there's an assertion inside the loop which is Unknown
+                        break
                     if verbose:
                         if len(partially_proven_inv_line_nos) > 0:
                             print("Forking: All partially proven invariants.")
@@ -270,9 +277,9 @@ class FramaCChecker(Checker):
             print("Crossed 1000 iterations. Stopping pruning...")
 
         if not status:
-            print("Invariants/variant not strong enough to prove")
+            print("Invariants/variant not strong enough to prove or benchmark is invalid.")
         else:
-            print("Found strong enough invariants/variant")
+            print("Found strong enough invariants/variant.")
 
         return status, input_code
 
@@ -337,11 +344,11 @@ class FramaCBenchmark(Benchmark):
             # Replace return with return 0 if main returns int
             if "int main" in line:
                 int_main = True
-            if "return;" in line and int_main:
-                line = line.replace("return;", "return 0;")
+            if len(re.findall(r"return\s*;", line)) > 0 and int_main:
+                line = line.replace("return", "return 0;")
             if "void main" in line:
                 void_main = True
-            if len(re.findall(r"return .+", line)) > 0 and void_main:
+            if len(re.findall(r"return\s+[a-zA-Z0-9_]+;", line)) > 0 and void_main:
                 line = line.replace("return", "return;")
             if len(re.findall(r"main\s*\(", line)):
                 inside_main = True
@@ -350,7 +357,7 @@ class FramaCBenchmark(Benchmark):
             if len(re.findall(r"#include\s+\".*\"", line)) > 0:
                 continue
 
-            if len(re.findall(r"extern\s+.*\s+__VERIFIER_nondet_.*;", line)) > 0:
+            if len(re.findall(r"extern\s+.*\s+__VERIFIER_.*;", line)) > 0:
                 continue
 
             # Convert ERROR: to assert(\false)
@@ -360,21 +367,22 @@ class FramaCBenchmark(Benchmark):
                     line = line.replace("ERROR:", "ERROR: //@ assert(\\false);\n")
 
             # Remove local nondet functions
-            elif "__VERIFIER_nondet_int" in line:
-                line = line.replace("__VERIFIER_nondet_int", "unknown_int")
-            elif "__VERIFIER_nondet_uint" in line:
-                line = line.replace("__VERIFIER_nondet_uint", "unknown_uint")
-            elif "__VERIFIER_nondet_bool" in line:
-                line = line.replace("__VERIFIER_nondet_bool", "unknown_bool")
-            elif "__VERIFIER_nondet_char" in line:
-                line = line.replace("__VERIFIER_nondet_char", "unknown_char")
-            elif "__VERIFIER_nondet_ushort" in line:
-                line = line.replace("__VERIFIER_nondet_ushort", "unknown_ushort")
+            if "__VERIFIER_nondet_" in line:
+                if "__VERIFIER_nondet_int" in line:
+                    line = line.replace("__VERIFIER_nondet_int", "unknown_int")
+                if "__VERIFIER_nondet_uint" in line:
+                    line = line.replace("__VERIFIER_nondet_uint", "unknown_uint")
+                if "__VERIFIER_nondet_bool" in line:
+                    line = line.replace("__VERIFIER_nondet_bool", "unknown_bool")
+                if "__VERIFIER_nondet_char" in line:
+                    line = line.replace("__VERIFIER_nondet_char", "unknown_char")
+                if "__VERIFIER_nondet_ushort" in line:
+                    line = line.replace("__VERIFIER_nondet_ushort", "unknown_ushort")
             elif "nondet" in line:
                 line = line.replace("nondet", "unknown")
             
             # Remove local assume function
-            elif "__VERIFIER_assume" in line:
+            if "__VERIFIER_assume" in line:
                 assuming_conditions = re.findall(
                     r"(__VERIFIER_assume\s*\((.+)\);)", line
                 )
@@ -382,22 +390,26 @@ class FramaCBenchmark(Benchmark):
                     line = line.replace(condition[0], "assume(" + condition[1] + ");\n")
             
             # Remove local assert function
-            elif "__VERIFIER_assert" in line:
+            if "__VERIFIER_assert" in line:
                 asserting_conditions = re.findall(r"(__VERIFIER_assert\s*\((.+)\);)", line)
                 for condition in asserting_conditions:
                     line = line.replace(
                         condition[0], "{;\n //@ assert(" + condition[1] + ");\n}\n"
                     )
             
-            elif "assert" in line and not ("//assert" in line or "sassert" in line):
+            elif len(re.findall(r"assert\s+\(.*\);", line)) > 0:
+                assertion = line.strip()
+                line = line.replace(assertion, "{;\n //@ " + assertion + "\n}\n")
+
+            elif len(re.findall(r"sassert\s+\(.*\);", line)) > 0:
                 line = line.replace("sassert", "assert")
                 assertion = line.strip()
                 line = line.replace(assertion, "{;\n //@ " + assertion + "\n}\n")
 
-            elif "tmpl(" in line:
+            if "tmpl(" in line:
                 line = "// " + line
 
-            elif len(re.findall(r"__VERIFIER_error\s+\(\);", line)) > 0:
+            if len(re.findall(r"__VERIFIER_error\s+\(\);", line)) > 0:
                 line = re.sub(r"__VERIFIER_error\s+\(\);", ";", line)
 
             new_code += line + "\n"
