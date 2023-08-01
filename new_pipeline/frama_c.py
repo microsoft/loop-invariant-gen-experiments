@@ -368,6 +368,10 @@ class FramaCBenchmark(Benchmark):
             if len(re.findall(r"main\s*\(", line)):
                 inside_main = True
 
+            # Remove existing annotation-like comments
+            if len(re.findall(r"/\*@[^\b\*/]*\*/", line)) > 0:
+                line = re.sub(r"/\*@[^\b\*/]*\*/", "", line)
+
             # Remove pre-processor directives
             if re.match(r"#\s+\d+\s+\"[^\"]*\"[\s\d]*", line):
                 continue
