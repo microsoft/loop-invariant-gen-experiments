@@ -3,6 +3,8 @@ import os
 import re
 import subprocess
 from copy import deepcopy
+import datetime
+import random
 
 from benchmark import Benchmark
 from checker import Checker
@@ -31,20 +33,25 @@ class FramaCChecker(Checker):
         return error_message
 
     def check(self, input, verbose=False):
-        with open("/tmp/temp_eval.c", "w") as f:
+        temp_file = datetime.datetime.now().strftime("/tmp/temp_eval_%Y_%m_%d_%H_%M_%S_") + str(random.randint(0, 1000000))
+        temp_c_file = temp_file + "_.c"
+        temp_kernel_log_file = temp_file + "_kernel_logs.txt"
+        temp_output_dump_file = temp_file + "_output_dump.csv"
+
+        with open(temp_c_file, "w") as f:
             f.write(input)
 
         if verbose:
             print("==============================")
-        cmd = "frama-c -wp -wp-verbose 100 -wp-debug 100 -wp-timeout 3 -wp-prover=alt-ergo,z3,cvc4 /tmp/temp_eval.c -kernel-warn-key annot-error=active \
-            -kernel-log a:/tmp/frama_c_kernel_logs.txt -then -no-unicode -report -report-csv /tmp/frama_c_eval.csv"
+        cmd = f"frama-c -wp -wp-verbose 100 -wp-debug 100 -wp-timeout 3 -wp-prover=alt-ergo,z3,cvc4 {temp_c_file} -kernel-warn-key annot-error=active \
+            -kernel-log a:{temp_kernel_log_file} -then -no-unicode -report -report-csv {temp_output_dump_file}"
         p = subprocess.Popen(cmd.split(), stdout=subprocess.PIPE)
         output, err = p.communicate()
 
         # Look for errors in the kernel logs
-        if not os.path.exists("/tmp/frama_c_kernel_logs.txt"):
+        if not os.path.exists(temp_kernel_log_file):
             return False, "No kernel logs found"
-        with open("/tmp/frama_c_kernel_logs.txt", "r", encoding="utf-8") as f:
+        with open(temp_kernel_log_file, "r", encoding="utf-8") as f:
             kernel_logs = f.read()
             print(kernel_logs)
             kl_lines = kernel_logs.splitlines()
@@ -64,19 +71,16 @@ class FramaCChecker(Checker):
                 return False, error_message
 
         # Parse the output dump
-        if not os.path.exists("/tmp/frama_c_eval.csv"):
+        if not os.path.exists(temp_output_dump_file):
             return False, "No output dump found"
 
-        with open(f"/tmp/frama_c_eval.csv", "r", encoding="utf-8") as f:
+        with open(temp_output_dump_file, "r", encoding="utf-8") as f:
             csv_output = [row for row in csv.DictReader(f, delimiter="\t")]
             print(csv_output)
             success = all(
                 row["status"] == "Valid"
                 for row in csv_output
-                if row["property kind"] == "loop invariant"
-            ) and any(
-                row["property kind"] == "user assertion" and row["status"] == "Valid"
-                for row in csv_output
+                if row["property kind"] == "loop invariant" or row["property kind"] == "user assertion"
             )
 
             user_assertion = "\n".join(
@@ -96,9 +100,9 @@ class FramaCChecker(Checker):
             )
             csv_output = csv_output + "\n" + user_assertion
 
-        os.remove("/tmp/temp_eval.c")
-        os.remove("/tmp/frama_c_kernel_logs.txt")
-        os.remove("/tmp/frama_c_eval.csv")
+        os.remove(temp_c_file)
+        os.remove(temp_kernel_log_file)
+        os.remove(temp_output_dump_file)
         return success, csv_output
 
     def get_line_no_from_error_msg(self, checker_output):
@@ -184,9 +188,9 @@ class FramaCChecker(Checker):
             + lines[invariant_line_end + 1 :]
         )
         code_queue = [input_code]
-        checked_already = [input_code]
+        iterations = 0
 
-        while len(code_queue) > 0:
+        while len(code_queue) > 0 and iterations < 10000:
             input_code = code_queue.pop(0)
             code_lines = input_code.splitlines()
             if len(get_f(code_lines)) == 0:
@@ -248,6 +252,10 @@ class FramaCChecker(Checker):
                         code_lines__ = deepcopy(code_lines)
                         code_lines__[line_no] = ""
                         code_queue.append("\n".join(code_lines__))
+            iterations += 1
+
+        if iterations == 1000:
+            print("Crossed 1000 iterations. Stopping pruning...")
 
         if not status:
             print("Invariants not strong enough to prove")
@@ -292,24 +300,49 @@ class FramaCBenchmark(Benchmark):
         output = "\n".join(lines)
 
         return output
+    
+    def fix_void_main(self, code):
+        void_main_returning_nothing = re.findall(r"void \w+\(((.|\n|\t)*)*(return;)", code)
+        while len(void_main_returning_nothing) > 0:
+            code.replace(void_main_returning_nothing[0][2], "return 0;")
+            void_main_returning_nothing = re.findall(r"void \w+\(((.|\n|\t)*)*(return;)", code)
+        return code
 
+    def fix_int_main(self, code):
+        int_main_returning_nothing = re.findall(r"int \w+\(((.|\n|\t)*)*(return;)", code)
+        while len(int_main_returning_nothing) > 0:
+            code.replace(int_main_returning_nothing[0][2], "return 0;")
+            int_main_returning_nothing = re.findall(r"int \w+\(((.|\n|\t)*)*(return;)", code)
+        return code
+    
     def raw_input_to_checker_input(self, code):
         lines = code.splitlines()
         new_code = ""
         int_main = False
+        void_main = False
+        inside_main = False
         for line in lines:
             # Replace return with return 0 if main returns int
             if "int main" in line:
                 int_main = True
             if "return;" in line and int_main:
                 line = line.replace("return;", "return 0;")
+            if "void main" in line:
+                void_main = True
+            if len(re.findall(r"return .+", line)) > 0 and void_main:
+                line = line.replace("return", "return;")
+            if len(re.findall(r"main\s*\(", line)):
+                inside_main = True
 
             # Remove all local assert header files
-            if "#include \"myassert.h\"" in line or "#include \"assert.h\"" in line:
+            if len(re.findall(r"#include\s+\".*\"", line)) > 0:
+                continue
+
+            if len(re.findall(r"extern\s+.*\s+__VERIFIER_nondet_.*;", line)) > 0:
                 continue
 
             # Convert ERROR: to assert(\false)
-            if "ERROR:" in line:
+            if "ERROR:" in line and inside_main:
                 error_text = re.findall(r"ERROR:(.+)", line)[0]
                 if len(error_text) > 0:
                     line = line.replace("ERROR:", "ERROR: //@ assert(\\false);\n")
@@ -331,27 +364,32 @@ class FramaCBenchmark(Benchmark):
             # Remove local assume function
             elif "__VERIFIER_assume" in line:
                 assuming_conditions = re.findall(
-                    r"(__VERIFIER_assume\(([^\(\)]+)\);)", line
+                    r"(__VERIFIER_assume\s*\((.+)\);)", line
                 )
                 for condition in assuming_conditions:
                     line = line.replace(condition[0], "assume(" + condition[1] + ");\n")
             
             # Remove local assert function
             elif "__VERIFIER_assert" in line:
-                asserting_conditions = re.findall(
-                    r"(__VERIFIER_assert\(([^\(\)]+)\);)", line
-                )
+                asserting_conditions = re.findall(r"(__VERIFIER_assert\s*\((.+)\);)", line)
                 for condition in asserting_conditions:
                     line = line.replace(
-                        condition[0], "//@ assert(" + condition[1] + ");\n"
+                        condition[0], "{;\n //@ assert(" + condition[1] + ");\n}\n"
                     )
             
-            elif "assert" in line and not "//assert" in line:
+            elif "assert" in line and not ("//assert" in line or "sassert" in line):
+                line = line.replace("sassert", "assert")
                 assertion = line.strip()
-                line = line.replace(assertion, "{;\n //@ " + assertion + "\n}")
+                line = line.replace(assertion, "{;\n //@ " + assertion + "\n}\n")
+
+            elif "tmpl(" in line:
+                line = "// " + line
+
+            elif len(re.findall(r"__VERIFIER_error\s+\(\);", line)) > 0:
+                line = re.sub(r"__VERIFIER_error\s+\(\);", ";", line)
 
             new_code += line + "\n"
-        new_code = """#define assume(e) if(!(e)) return 0;
+        new_code = ("#define assume(e) if(!(e)) return;" if void_main else "#define assume(e) if(!(e)) return 0;") + """
 
 extern int unknown(void);
 extern int unknown_int(void);
