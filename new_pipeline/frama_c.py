@@ -169,9 +169,9 @@ class FramaCChecker(Checker):
             + lines[invariant_line_end + 1 :]
         )
         code_queue = [input_code]
-        checked_already = [input_code]
+        iterations = 0
 
-        while len(code_queue) > 0:
+        while len(code_queue) > 0 and iterations < 10000:
             input_code = code_queue.pop(0)
             code_lines = input_code.splitlines()
             if len(self.get_invariants(code_lines)) == 0:
@@ -233,6 +233,10 @@ class FramaCChecker(Checker):
                         code_lines__ = deepcopy(code_lines)
                         code_lines__[line_no] = ""
                         code_queue.append("\n".join(code_lines__))
+            iterations += 1
+
+        if iterations == 10000:
+            print("Crossed 10000 iterations. Stopping pruning...")
 
         if not status:
             print("Invariants not strong enough to prove")
