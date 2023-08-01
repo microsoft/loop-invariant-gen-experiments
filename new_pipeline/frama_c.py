@@ -272,12 +272,17 @@ class FramaCBenchmark(Benchmark):
         lines = code.splitlines()
         new_code = ""
         int_main = False
+        void_main = False
         for line in lines:
             # Replace return with return 0 if main returns int
             if "int main" in line:
                 int_main = True
             if "return;" in line and int_main:
                 line = line.replace("return;", "return 0;")
+            if "void main" in line:
+                void_main = True
+            if len(re.findall(r"return .+", line)) > 0 and void_main:
+                line = line.replace("return", "return;")
 
             # Remove all local assert header files
             if "#include \"myassert.h\"" in line or "#include \"assert.h\"" in line:
@@ -324,6 +329,9 @@ class FramaCBenchmark(Benchmark):
             elif "assert" in line and not "//assert" in line:
                 assertion = line.strip()
                 line = line.replace(assertion, "{;\n //@ " + assertion + "\n}")
+
+            elif "tmpl(" in line:
+                line = "// " + line
 
             new_code += line + "\n"
         new_code = """#define assume(e) if(!(e)) return 0;
