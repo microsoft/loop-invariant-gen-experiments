@@ -386,7 +386,7 @@ class FramaCBenchmark(Benchmark):
                 line = line.replace("nondet", "unknown")
             
             # Remove local assume function
-            if "__VERIFIER_assume" in line:
+            elif "__VERIFIER_assume" in line:
                 assuming_conditions = re.findall(
                     r"(__VERIFIER_assume\s*\((.+)\);)", line
                 )
@@ -394,7 +394,7 @@ class FramaCBenchmark(Benchmark):
                     line = line.replace(condition[0], "assume(" + condition[1] + ");\n")
             
             # Remove local assert function
-            if "__VERIFIER_assert" in line:
+            elif "__VERIFIER_assert" in line:
                 asserting_conditions = re.findall(r"(__VERIFIER_assert\s*\((.+)\);)", line)
                 for condition in asserting_conditions:
                     line = line.replace(
