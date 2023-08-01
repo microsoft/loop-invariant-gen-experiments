@@ -74,10 +74,7 @@ class FramaCChecker(Checker):
             success = all(
                 row["status"] == "Valid"
                 for row in csv_output
-                if row["property kind"] == "loop invariant"
-            ) and all(
-                row["property kind"] == "user assertion" and row["status"] == "Valid"
-                for row in csv_output
+                if row["property kind"] == "loop invariant" or row["property kind"] == "user assertion"
             )
 
             user_assertion = "\n".join(
