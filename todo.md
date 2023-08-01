@@ -9,11 +9,8 @@
 - Try simplified prompt sequence (don't do 3+ back-and-forth with the model; just one prompt)
 
 ## TODO
-
+- 
 - Merge `adharsh/new-pipeline` into `main`
-- Make the "library" of prompt lines to be used with the simplified sequence
-- Run `seahorn` for `new_benchmarks`
-- Write the `transform` function for `new_benchmarks`
 
 ## Plan (Day 0: Wednesday, 26th July)
 - healing
