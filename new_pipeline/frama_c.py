@@ -310,7 +310,10 @@ class FramaCBenchmark(Benchmark):
                 line = line.replace("return", "return;")
 
             # Remove all local assert header files
-            if re.findall(r"#include\s+\".*\"", line):
+            if len(re.findall(r"#include\s+\".*\"", line)) > 0:
+                continue
+
+            if len(re.findall(r"extern\s+.*\s+__VERIFIER_nondet_.*;", line)) > 0:
                 continue
 
             # Convert ERROR: to assert(\false)
@@ -348,7 +351,7 @@ class FramaCBenchmark(Benchmark):
                 )
                 for condition in asserting_conditions:
                     line = line.replace(
-                        condition[0], "{; //@ assert(" + condition[1] + ");}\n"
+                        condition[0], "{; //@ assert(" + condition[1] + ");\n}\n"
                     )
             
             elif "assert" in line and not ("//assert" in line or "sassert" in line):
