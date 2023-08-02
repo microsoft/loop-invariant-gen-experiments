@@ -305,7 +305,9 @@ class LoopyPipeline:
 
         log_json = []
         stats = {"success": [], "failure": [], "total": 0}
-        log_file = open(self.log_path, "w", encoding="utf-8")
+        if not os.path.exists(os.path.dirname(self.log_path)):
+            os.makedirs(os.path.dirname(self.log_path))
+        log_file = open(self.log_path + "final.json", "w", encoding="utf-8")
         for i, instance in enumerate(
             error_logs[start_index : start_index + max_benchmarks]
         ):
