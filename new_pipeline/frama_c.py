@@ -494,3 +494,43 @@ extern unsigned short unknown_ushort(void);
         code1 = self.raw_input_to_checker_input(code0)
         code2, loop_list = self.add_loop_ids(code1)
         return code2, loop_list
+
+
+def parse_log(logfile, cfile):
+    with open(logfile, "r", encoding="utf-8") as log_file:
+        selectentry = None
+        error_logs = json.load(log_file)
+        error_logs = error_logs["logs"]
+        for entry in error_logs:
+            if cfile == entry["file"]:
+                selectentry = entry
+                break
+
+ 
+
+        if selectentry is None:
+            print("File report not present in log", file=stderr)
+            sys.exit(-1)
+        else:
+            if selectentry["checker_output"] or selectentry["checker_output_after_prune"] or selectentry["checker_output_after_nudge"] or selectentry["checker_output_after_nudge_and_prune"]:
+                print("File was already proved correct in log", file=stderr)
+                sys.exit(-1)
+
+ 
+
+        failed_checker_input = selectentry["checker_input_with_invariants"]
+        checker_error_message = selectentry["checker_message"]
+        checker_error_final = selectentry["checker_message_after_nudge_and_prune"]
+
+        invs = ""
+        for e in checker_error_final.split('\n'):
+            if not "Post-condition" in e:
+                invs += "\n" + e
+        if invs == "":
+            analysis = "the invariants were not inductive"
+        else:
+            analysis = "the following subset of the invariants are inductive but they are not strong enough to prove the postcondition." + invs
+
+ 
+
+        return failed_checker_input, checker_error_message, analysis
