@@ -416,7 +416,7 @@ class LoopyPipeline:
                             output_full_tree=True,
                         )
                         nudge_checker_input = self.benchmark.combine_llm_outputs(
-                            instance.checker_input, nudge_outputs + llm_outputs
+                            instance["checker_input_without_invariants"], nudge_outputs + llm_outputs
                         )
                         checker_input = nudge_checker_input
                         success, nudge_checker_message = self.checker.check(
