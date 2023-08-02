@@ -311,7 +311,7 @@ class FramaCBenchmark(Benchmark):
         loc = None
         for index, line in enumerate(lines):
             while_re = re.findall(r"while\s*\((.+)\)", line)
-            for_re = re.findall(r"for\s*\((.+)\)", line)
+            for_re = re.findall(r"for\s*\(", line)
             if len(while_re) > 0 or len(for_re) > 0:
                 loc = index
                 break
