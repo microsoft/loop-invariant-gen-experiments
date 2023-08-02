@@ -380,7 +380,15 @@ class FramaCBenchmark(Benchmark):
             if len(re.findall(r"#include\s+\".*\"", line)) > 0:
                 continue
 
-            if len(re.findall(r"(extern\s)?\s*[int|char|_Bool|void]\s+__VERIFIER_[^\(]*(.*);", line)) > 0:
+            if (
+                len(
+                    re.findall(
+                        r"(extern\s)?\s*[int|char|_Bool|void]\s+__VERIFIER_[^\(]*(.*);",
+                        line,
+                    )
+                )
+                > 0
+            ):
                 continue
 
             # Convert ERROR: to assert(\false)
@@ -415,7 +423,7 @@ class FramaCBenchmark(Benchmark):
             # Remove local assert function
             elif "__VERIFIER_assert" in line:
                 asserting_conditions = re.findall(
-                    re.findall(r"^(?!\s*//).*(__VERIFIER_assert\((.+)\);)",  line)
+                    r"^(?!\s*//).*(__VERIFIER_assert\((.+)\);)", line
                 )
                 for condition in asserting_conditions:
                     line = line.replace(
@@ -425,7 +433,12 @@ class FramaCBenchmark(Benchmark):
             elif (
                 len(re.findall(r"[^s]assert\s*\([^{}]*\);", line)) > 0
                 and len(re.findall(r"extern\s+\w+\s+assert\s*\([^{}]*\);", line)) == 0
-                and len(re.findall(r"\bvoid\s+reach_error\(\)\s+\{\s+assert\(0\);\s+\}", line)) == 0
+                and len(
+                    re.findall(
+                        r"\bvoid\s+reach_error\(\)\s+\{\s+assert\(0\);\s+\}", line
+                    )
+                )
+                == 0
                 and len(re.findall(r"//\s*assert\s*\([^{}]*\);", line)) == 0
             ):
                 assertion = line.strip()
