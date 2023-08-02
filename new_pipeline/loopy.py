@@ -344,12 +344,12 @@ class LoopyPipeline:
 
                 failed_checker_input = None
                 checker_error_message = None
-                if "checker_input_after_nudge" in instance.keys():
-                    failed_checker_input = instance["checker_input_after_nudge"]
-                    checker_error_message = instance["checker_message_after_nudge"]
-                elif "checker_input_with_invariants" in instance.keys():
-                    failed_checker_input = instance["checker_input_with_invariants"]
-                    checker_error_message = instance["checker_message"]
+                if "code_after_nudge_and_prune" in instance.keys():
+                    failed_checker_input = instance["code_after_nudge_and_prune"]
+                    checker_error_message = instance["checker_message_after_nudge_and_prune"]
+                elif "code_after_prune" in instance.keys():
+                    failed_checker_input = instance["code_after_prune"]
+                    checker_error_message = instance["checker_message_after_prune"]
                 else:
                     # This benchmark was not run previously. So we will skip it.
                     continue
