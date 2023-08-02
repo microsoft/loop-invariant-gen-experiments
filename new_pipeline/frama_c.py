@@ -10,6 +10,7 @@ import sys
 from benchmark import Benchmark
 from checker import Checker
 
+err_json = False
 
 class FramaCChecker(Checker):
     def __init__(self):
@@ -39,15 +40,19 @@ class FramaCChecker(Checker):
         ) + str(random.randint(0, 1000000))
         temp_c_file = temp_file + "_.c"
         temp_kernel_log_file = temp_file + "_kernel_logs.txt"
-        temp_output_dump_file = temp_file + "_output_dump.csv"
+        temp_output_dump_file = temp_file + "_output_dump.json"
+        temp_output_dump_file2 = temp_file + "_output_dump2.json"
 
         with open(temp_c_file, "w") as f:
             f.write(input)
 
         if verbose:
             print("==============================")
-        cmd = f"frama-c -wp -wp-verbose 100 -wp-debug 100 -wp-timeout 3 -wp-prover=alt-ergo,z3,cvc4 {temp_c_file} -kernel-warn-key annot-error=active \
-            -kernel-log a:{temp_kernel_log_file} -then -no-unicode -report -report-csv {temp_output_dump_file}"
+        cmd = "frama-c -wp -wp-verbose 100 -wp-debug 100 -wp-timeout 10 -wp-prover=alt-ergo,z3,cvc4 {temp_c_file} -wp-report-json {temp_output_dump_file} \
+                -kernel-warn-key annot-error=active -kernel-log a:{temp_kernel_log_file} -then -report -report-classify \
+                -report-output {temp_output_dump_file2}" if err_json else f"frama-c -wp -wp-verbose 100 -wp-debug 100 -wp-timeout 3 \
+                -wp-prover=alt-ergo,z3,cvc4 {temp_c_file} -kernel-warn-key annot-error=active \
+                -kernel-log a:{temp_kernel_log_file} -then -no-unicode -report -report-csv {temp_output_dump_file}"
         p = subprocess.Popen(cmd.split(), stdout=subprocess.PIPE)
         output, err = p.communicate()
 
@@ -78,16 +83,12 @@ class FramaCChecker(Checker):
             return False, "No output dump found"
 
         csv_output = None
-        if mode == "variant":
-            msg = str(output, "UTF-8").split("\n")
-            result = list(filter(lambda x: "Loop variant" in x, msg))
-            assert len(result) == 1
-            if "Valid" in result[0]:
-                csv_output = "Loop variant is Valid"
-                success = True
-            else:
-                csv_output = "Loop variant is Invalid"
-                success = False
+        success = True
+        if err_json:
+            # TODO: handle the json output, but it seems buggy
+            with open(temp_output_dump_file, "r") as errfile:
+                outmsg = json.load(errfile)
+                print(outmsg)
         else:
             with open(temp_output_dump_file, "r", encoding="utf-8") as f:
                 csv_output = [row for row in csv.DictReader(f, delimiter="\t")]
@@ -113,7 +114,17 @@ class FramaCChecker(Checker):
                         if row["property kind"] == "loop invariant"
                     ]
                 )
-                csv_output = csv_output + "\n" + user_assertion
+                csv_output = csv_output + "\n" + user_assertion + "\n"
+            if mode == "variant":
+                msg = str(output, "UTF-8").split("\n")
+                result = list(filter(lambda x: "Loop variant" in x, msg))
+                assert len(result) == 1
+                if "Valid" in result[0]:
+                    csv_output += "Loop variant is Valid"
+                    success = success and True
+                else:
+                    csv_output += "Loop variant is Invalid"
+                    success = False
 
         os.remove(temp_c_file)
         os.remove(temp_kernel_log_file)
@@ -300,9 +311,8 @@ class FramaCBenchmark(Benchmark):
         for llm_output in llm_outputs:
             lines = llm_output.splitlines()
             for line in lines:
-                if mode == "invariant":
-                    invariant = re.findall(r"(loop invariant .+;)", line)
-                else:
+                invariant = re.findall(r"(loop invariant .+;)", line)
+                if len(invariant) == 0 and mode == "variant":
                     invariant = re.findall(r"(loop variant .+;)", line)
                 if len(invariant) > 0:
                     invariants.append(invariant[0])
