@@ -452,6 +452,9 @@ class LoopyPipeline:
                                 "checker_message_after_nudge_and_prune"
                             ] = checker_message
 
+                            failed_checker_input = checker_input
+                            checker_error_message = checker_message
+
                     instance_log_json["healing_conversations"].append(healing_json)
                     num_retries += 1
 
