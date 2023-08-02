@@ -415,25 +415,26 @@ class FramaCBenchmark(Benchmark):
             # Remove local assert function
             elif "__VERIFIER_assert" in line:
                 asserting_conditions = re.findall(
-                    r"(__VERIFIER_assert\s*\((.+)\);)", line
+                    re.findall(r"^(?!\s*//).*(__VERIFIER_assert\((.+)\);)",  line)
                 )
                 for condition in asserting_conditions:
                     line = line.replace(
-                        condition[0], "{;\n //@ assert(" + condition[1] + ");\n}\n"
+                        condition[0], "{; //@ assert(" + condition[1] + ");\n}\n"
                     )
 
             elif (
                 len(re.findall(r"[^s]assert\s*\([^{}]*\);", line)) > 0
                 and len(re.findall(r"extern\s+\w+\s+assert\s*\([^{}]*\);", line)) == 0
                 and len(re.findall(r"\bvoid\s+reach_error\(\)\s+\{\s+assert\(0\);\s+\}", line)) == 0
+                and len(re.findall(r"//\s*assert\s*\([^{}]*\);", line)) == 0
             ):
                 assertion = line.strip()
-                line = line.replace(assertion, "{;\n //@ " + assertion + "\n}\n")
+                line = line.replace(assertion, "{; //@ " + assertion + "\n}\n")
 
             elif len(re.findall(r"sassert\s*\(.*\);", line)) > 0:
                 line = line.replace("sassert", "assert")
                 assertion = line.strip()
-                line = line.replace(assertion, "{;\n //@ " + assertion + "\n}\n")
+                line = line.replace(assertion, "{; //@ " + assertion + "\n}\n")
 
             if "tmpl(" in line:
                 line = "// " + line
