@@ -425,6 +425,7 @@ class FramaCBenchmark(Benchmark):
             elif (
                 len(re.findall(r"[^s]assert\s*\([^{}]*\);", line)) > 0
                 and len(re.findall(r"extern\s+\w+\s+assert\s*\([^{}]*\);", line)) == 0
+                and len(re.findall(r"\bvoid\s+reach_error\(\)\s+\{\s+assert\(0\);\s+\}", line)) == 0
             ):
                 assertion = line.strip()
                 line = line.replace(assertion, "{;\n //@ " + assertion + "\n}\n")
