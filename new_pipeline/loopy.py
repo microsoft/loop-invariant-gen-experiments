@@ -309,7 +309,16 @@ class LoopyPipeline:
         for i, instance in enumerate(
             error_logs[start_index : start_index + max_benchmarks]
         ):
-            if instance["checker_output"] or instance["checker_output_after_prune"]:
+            if "checker_output" in instance.keys() and (instance["checker_output"] or instance["checker_output_after_prune"]):
+                stats["success"].append(i)
+                stats["total"] += 1
+                print(
+                    "Skipping successful benchmark: {i}/{n}".format(
+                        i=i, n=len(error_logs)
+                    )
+                )
+                continue
+            if "checker_output_after_nudge" in instance.keys() and (instance["checker_output_after_nudge"] or instance["checker_output_after_nudge_and_prune"]):
                 stats["success"].append(i)
                 stats["total"] += 1
                 print(

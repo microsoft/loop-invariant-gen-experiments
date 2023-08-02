@@ -8,9 +8,21 @@
 - Run healing on Code2Inv
 - Try simplified prompt sequence (don't do 3+ back-and-forth with the model; just one prompt)
 
-## TODO
-- 
-- Merge `adharsh/new-pipeline` into `main`
+## TODO (Adharsh)
+
+- Run healing for valid benchmarks
+- Add LLM support for multi-loops
+- Add LLM support for non-termination
+- Run the non-termination benchmarks
+- Remove faulty benchmarks
+
+## TODO (Subhajit)
+
+- Handle non-termination for invariants and variants
+- multi-loop instrumentation
+- Design prompts for array reasoning/multi-loop
+- Design nudges for non-termination
+
 
 ## Plan (Day 0: Wednesday, 26th July)
 - healing

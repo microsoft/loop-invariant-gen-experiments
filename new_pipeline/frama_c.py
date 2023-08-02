@@ -475,3 +475,12 @@ extern unsigned short unknown_ushort(void);
             + "".join(new_code)
         )
         return new_code
+
+    def add_loop_ids(self, code):
+        return ""
+
+    def preprocess(self, code):
+        code0 = self.remove_comments(code)
+        code1 = self.raw_input_to_checker_input(code0)
+        code2, loop_list = self.add_loop_ids(code1)
+        return code2, loop_list
