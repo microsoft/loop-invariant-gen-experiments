@@ -321,6 +321,8 @@ class FramaCBenchmark(Benchmark):
                 if len(invariant) == 0 and mode == "variant":
                     invariant = re.findall(r"(loop variant .+;)", line)
                 if len(invariant) > 0:
+                    if len(label) == 0:
+                        invariants[invariant[0]] = []
                     if not label in invariants:
                         invariants[label] = []
                     invariants[label].append(invariant[0])
@@ -340,6 +342,8 @@ class FramaCBenchmark(Benchmark):
                     clabel = label[0]
                     label = clabel[2:-2]
                     new_lines += ["/*@"] + invariants[label] + ["*/"] if len(invariants[label]) > 0 else [""]
+                else:
+                    new_lines += ["/*@"] + invariants.keys() + ["*/"] if len(invariants.keys()) > 0 else [""]
             new_lines.append(line)
         if not found:
             raise Exception("No while loop found")
