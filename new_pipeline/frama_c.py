@@ -5,11 +5,13 @@ import subprocess
 from copy import deepcopy
 import datetime
 import random
+import string
 import sys
 
 from benchmark import Benchmark
 from checker import Checker
 
+err_json = False
 
 class FramaCChecker(Checker):
     def __init__(self):
@@ -39,15 +41,19 @@ class FramaCChecker(Checker):
         ) + str(random.randint(0, 1000000))
         temp_c_file = temp_file + "_.c"
         temp_kernel_log_file = temp_file + "_kernel_logs.txt"
-        temp_output_dump_file = temp_file + "_output_dump.csv"
+        temp_output_dump_file = temp_file + "_output_dump.json"
+        temp_output_dump_file2 = temp_file + "_output_dump2.json"
 
         with open(temp_c_file, "w") as f:
             f.write(input)
 
         if verbose:
             print("==============================")
-        cmd = f"frama-c -wp -wp-verbose 100 -wp-debug 100 -wp-timeout 3 -wp-prover=alt-ergo,z3,cvc4 {temp_c_file} -kernel-warn-key annot-error=active \
-            -kernel-log a:{temp_kernel_log_file} -then -no-unicode -report -report-csv {temp_output_dump_file}"
+        cmd = "frama-c -wp -wp-verbose 100 -wp-debug 100 -wp-timeout 10 -wp-prover=alt-ergo,z3,cvc4 {temp_c_file} -wp-report-json {temp_output_dump_file} \
+                -kernel-warn-key annot-error=active -kernel-log a:{temp_kernel_log_file} -then -report -report-classify \
+                -report-output {temp_output_dump_file2}" if err_json else f"frama-c -wp -wp-verbose 100 -wp-debug 100 -wp-timeout 3 \
+                -wp-prover=alt-ergo,z3,cvc4 {temp_c_file} -kernel-warn-key annot-error=active \
+                -kernel-log a:{temp_kernel_log_file} -then -no-unicode -report -report-csv {temp_output_dump_file}"
         p = subprocess.Popen(cmd.split(), stdout=subprocess.PIPE)
         output, err = p.communicate()
 
@@ -78,16 +84,12 @@ class FramaCChecker(Checker):
             return False, "No output dump found"
 
         csv_output = None
-        if mode == "variant":
-            msg = str(output, "UTF-8").split("\n")
-            result = list(filter(lambda x: "Loop variant" in x, msg))
-            assert len(result) == 1
-            if "Valid" in result[0]:
-                csv_output = "Loop variant is Valid"
-                success = True
-            else:
-                csv_output = "Loop variant is Invalid"
-                success = False
+        success = True
+        if err_json:
+            # TODO: handle the json output, but it seems buggy
+            with open(temp_output_dump_file, "r") as errfile:
+                outmsg = json.load(errfile)
+                print(outmsg)
         else:
             with open(temp_output_dump_file, "r", encoding="utf-8") as f:
                 csv_output = [row for row in csv.DictReader(f, delimiter="\t")]
@@ -113,7 +115,19 @@ class FramaCChecker(Checker):
                         if row["property kind"] == "loop invariant"
                     ]
                 )
-                csv_output = csv_output + "\n" + user_assertion
+                csv_output = csv_output + "\n" + user_assertion + "\n"
+            if mode == "variant":
+                msg = str(output, "UTF-8").split("\n")
+                result = list(filter(lambda x: "Loop variant" in x, msg))
+                if len(result) < 1:
+                    print("No variant found (wrong mode?)")
+                    sys.exit(-1)
+                if "Valid" in result[0]:
+                    csv_output += "Loop variant is Valid"
+                    success = success and True
+                else:
+                    csv_output += "Loop variant is Invalid"
+                    success = False
 
         os.remove(temp_c_file)
         os.remove(temp_kernel_log_file)
@@ -180,16 +194,10 @@ class FramaCChecker(Checker):
     def prune_annotations_and_check(self, input_code, mode="invariant", verbose=False):
         print("Pruning annotations...")
         getf = None
-        if mode == "invariant":
-            get_f = self.get_invariants
-            is_f = self.is_invariant
-        else:
-            get_f = self.get_variants
-            is_f = self.is_variant
         invariant_line_mapping = {}
         lines = input_code.splitlines()
         for no, line in enumerate(lines):
-            if is_f(line):
+            if self.is_invariant(line) or self.is_invariant(line):
                 invariant_line_mapping[no] = line
         if len(invariant_line_mapping) == 0:
             raise Exception("No invariants/variants found")
@@ -202,7 +210,8 @@ class FramaCChecker(Checker):
 
         input_code = "\n".join(
             lines[:invariant_line_start]
-            + get_f(lines)
+            + self.get_invariants(lines)
+            + self.get_variants(lines)
             + lines[invariant_line_end + 1 :]
         )
         code_queue = [input_code]
@@ -211,7 +220,7 @@ class FramaCChecker(Checker):
         while len(code_queue) > 0 and iterations < 1000:
             input_code = code_queue.pop(0)
             code_lines = input_code.splitlines()
-            if len(get_f(code_lines)) == 0:
+            if len(self.get_invariants(lines)) == 0 and len(self.get_variants(lines)) == 0:
                 print("No invariants/variants found")
                 continue
             status, checker_message = self.check(input_code, mode, verbose)
@@ -296,34 +305,40 @@ class FramaCBenchmark(Benchmark):
         super().__init__(llm_input_dir, checker_input_dir)
 
     def combine_llm_outputs(self, checker_input, llm_outputs, mode="invariant"):
-        invariants = []
+        invariants = {}
         for llm_output in llm_outputs:
             lines = llm_output.splitlines()
             for line in lines:
-                if mode == "invariant":
-                    invariant = re.findall(r"(loop invariant .+;)", line)
-                else:
+                label = re.findall(r"(Loop[A-Z]:)", line)
+                if len(label) > 0:
+                    label = label[0][:-1]
+                invariant = re.findall(r"(loop invariant .+;)", line)
+                if len(invariant) == 0 and mode == "variant":
                     invariant = re.findall(r"(loop variant .+;)", line)
                 if len(invariant) > 0:
-                    invariants.append(invariant[0])
+                    if not label in invariants:
+                        invariants[label] = []
+                    invariants[label].append(invariant[0])
 
         lines = checker_input.splitlines()
         loc = None
+        new_lines = []
+        found = True
         for index, line in enumerate(lines):
             while_re = re.findall(r"while\s*\((.+)\)", line)
             for_re = re.findall(r"for\s*\(", line)
-            if len(while_re) > 0 or len(for_re) > 0:
-                loc = index
-                break
-        if loc is not None:
-            lines = (
-                lines[:loc]
-                + ((["/*@\n"] + invariants + ["\n*/"]) if len(invariants) > 0 else [""])
-                + lines[loc:]
-            )
-        else:
+            do_re = re.findall(r"do\s*", line)
+            if len(while_re) > 0 or len(for_re) > 0 or len(do_re) > 0:
+                found = True
+                label = re.findall(r"([/][*]Loop[A-Z][*][/])", line)
+                if len(label) > 0:
+                    clabel = label[0]
+                    label = clabel[2:-2]
+                    new_lines += ["/*@"] + invariants[label] + ["*/"] if len(invariants[label]) > 0 else [""]
+            new_lines.append(line)
+        if not found:
             raise Exception("No while loop found")
-        output = "\n".join(lines)
+        output = "\n".join(new_lines)
 
         return output
 
@@ -477,14 +492,33 @@ extern unsigned short unknown_ushort(void);
         return new_code
 
     def add_loop_ids(self, code):
-        return ""
+        lines = code.splitlines()
+        new_code = []
+        labels = string.ascii_uppercase
+        loop_list = []
+        i = 0
+        new_code = []
+        for line in lines:
+            if "while" in line or "for" in line or "do" in line:
+                label = "Loop" + labels[i] 
+                new_line = "/*" + label + "*/" + line
+                loop_list.append(label)
+                new_code.append(new_line)
+                i += 1
+            else:
+                new_code.append(line)
+
+        new_codes = "\n".join(new_code)
+        return new_codes, label
+
+    def remove_comments(self, code):
+        return code
 
     def preprocess(self, code):
         code0 = self.remove_comments(code)
         code1 = self.raw_input_to_checker_input(code0)
         code2, loop_list = self.add_loop_ids(code1)
         return code2, loop_list
-
 
 def parse_log(logfile, cfile):
     with open(logfile, "r", encoding="utf-8") as log_file:
@@ -496,8 +530,6 @@ def parse_log(logfile, cfile):
                 selectentry = entry
                 break
 
- 
-
         if selectentry is None:
             print("File report not present in log", file=stderr)
             sys.exit(-1)
@@ -505,8 +537,6 @@ def parse_log(logfile, cfile):
             if selectentry["checker_output"] or selectentry["checker_output_after_prune"] or selectentry["checker_output_after_nudge"] or selectentry["checker_output_after_nudge_and_prune"]:
                 print("File was already proved correct in log", file=stderr)
                 sys.exit(-1)
-
- 
 
         failed_checker_input = selectentry["checker_input_with_invariants"]
         checker_error_message = selectentry["checker_message"]
@@ -520,7 +550,5 @@ def parse_log(logfile, cfile):
             analysis = "the invariants were not inductive"
         else:
             analysis = "the following subset of the invariants are inductive but they are not strong enough to prove the postcondition." + invs
-
- 
 
         return failed_checker_input, checker_error_message, analysis
