@@ -1,15 +1,16 @@
 import csv
-import os
-import re
-import subprocess
-from copy import deepcopy
 import datetime
+import os
 import random
+import re
 import string
+import subprocess
 import sys
+from copy import deepcopy
 
 from benchmark import Benchmark
 from checker import Checker
+from tree_sitter import Language, Parser
 
 err_json = False
 
@@ -303,6 +304,10 @@ class FramaCChecker(Checker):
 class FramaCBenchmark(Benchmark):
     def __init__(self, llm_input_dir=None, checker_input_dir=None):
         super().__init__(llm_input_dir, checker_input_dir)
+        lib_path = os.path.join(os.path.dirname(__file__), "tree_sitter_lib/build/")
+        self.language = Language(lib_path + "c-tree-sitter.so", "c")
+        self.parser = Parser()
+        self.parser.set_language(self.language)
 
     def combine_llm_outputs(self, checker_input, llm_outputs, mode="invariant"):
         invariants = {}
@@ -512,13 +517,23 @@ extern unsigned short unknown_ushort(void);
         return new_codes, label
 
     def remove_comments(self, code):
+        comment_query = self.language.query(
+            """
+            (comment) @comment 
+            """
+        )
+        ast = self.parser.parse(bytes(code, "utf-8"))
+        comments = comment_query.captures(ast.root_node)
+        comments = sorted(comments, key=lambda x: x[0].start_byte, reverse=True)
+        for comment in comments:
+            code = code[: comment[0].start_byte] + code[comment[0].end_byte :]
         return code
 
     def preprocess(self, code):
-        code0 = self.remove_comments(code)
-        code1 = self.raw_input_to_checker_input(code0)
-        code2, loop_list = self.add_loop_ids(code1)
-        return code2, loop_list
+        code_0 = self.remove_comments(code)
+        code_1 = self.raw_input_to_checker_input(code_0)
+        # code2, loop_list = self.add_loop_ids(code1)
+        return code_1
 
 def parse_log(logfile, cfile):
     with open(logfile, "r", encoding="utf-8") as log_file:

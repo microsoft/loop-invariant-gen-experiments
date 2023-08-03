@@ -28,6 +28,9 @@ class Benchmark:
         self.llm_input_file = ""
         self.instances: list[BenchmarkInstance] = []
 
+    def preprocess(self, code):
+        raise NotImplementedError
+
     def load_instances(self):
         if self.llm_input_file != "":
             with open(self.llm_input_file) as f:
@@ -37,9 +40,9 @@ class Benchmark:
                         code = code_file.read()
                         self.instances.append(
                             BenchmarkInstance(
-                                llm_input=code,
+                                llm_input=self.preprocess(code),
                                 llm_input_path=os.path.join("../new_benchmarks/", file),
-                                checker_input=self.raw_input_to_checker_input(code),
+                                checker_input=self.preprocess(code),
                             )
                         )
             return
