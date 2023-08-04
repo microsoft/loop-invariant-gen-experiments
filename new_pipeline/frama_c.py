@@ -533,11 +533,67 @@ extern unsigned short unknown_ushort(void);
             code = code[: comment[0].start_byte] + code[comment[0].end_byte :]
         return code
 
+    def remove_verifier_function_declartions(self, code):
+        declarations = self.language.query(
+            """
+            (((declaration (function_declarator (identifier) @function_name)) @function_declaration)
+            (#match? @function_name "^__VERIFIER_.*"))
+            """
+        )
+        ast = self.parser.parse(bytes(code, "utf-8"))
+        declarations = declarations.captures(ast.root_node)
+        declarations = [d for d in declarations if d[1] == "function_declaration"]
+        declarations = sorted(declarations, key=lambda x: x[0].start_byte, reverse=True)
+        for declaration in declarations:
+            code = code[: declaration[0].start_byte] + code[declaration[0].end_byte :]
+        return code
+    
+    def remove_verifier_function_definitions(self, code):
+        definitions = self.language.query(
+            """
+            (((function_definition (function_declarator (identifier) @function_name)) @function_definition)
+            (#match? @function_name "^__VERIFIER_.*"))
+            """
+        )
+        ast = self.parser.parse(bytes(code, "utf-8"))
+        definitions = definitions.captures(ast.root_node)
+        definitions = [d for d in definitions if d[1] == "function_definition"]
+        definitions = sorted(definitions, key=lambda x: x[0].start_byte, reverse=True)
+        for definition in definitions:
+            code = code[: definition[0].start_byte] + code[definition[0].end_byte :]
+        return code
+
+    def clean_newlines(self, code):
+        lines = code.splitlines()
+        new_code = []
+        for line in lines:
+            if line.strip() != "":
+                new_code.append(line)
+        return "\n".join(new_code)
+
+    def replace_nondets(self, code):
+        verifier_nondet_calls = self.language.query(
+            """
+            (call_expression (identifier) @nondet)
+            (#match? @nondet "^(__VERIFIER_)?nondet_(.*)")
+            """
+        )
+        ast = self.parser.parse(bytes(code, "utf-8"))
+        verifier_nondet_calls = verifier_nondet_calls.captures(ast.root_node)
+        verifier_nondet_calls = sorted(verifier_nondet_calls, key=lambda x: x[0].start_byte, reverse=True)
+        for nondet_call in verifier_nondet_calls:
+            code = (
+                code[: nondet_call[0].start_byte]
+                + "unknown_" + nondet_call[0].text.decode('utf-8').split("_")[-1].lower()
+                + code[nondet_call[0].end_byte :]
+            )
+        return code
+
     def preprocess(self, code):
         code_0 = self.remove_comments(code)
         code_1 = self.raw_input_to_checker_input(code_0)
-        # code2, loop_list = self.add_loop_ids(code1)
-        return code_1
+        code2, loop_list = self.add_loop_ids(code_1)
+        return code2, loop_list
 
 def parse_log(logfile, cfile):
     with open(logfile, "r", encoding="utf-8") as log_file:
@@ -571,3 +627,51 @@ def parse_log(logfile, cfile):
             analysis = "the following subset of the invariants are inductive but they are not strong enough to prove the postcondition." + invs
 
         return failed_checker_input, checker_error_message, analysis
+
+
+c = """
+void __VERIFIER_assert(int cond) {
+  if (!(cond)) {
+    ERROR: goto ERROR;
+  }
+  return;
+}
+extern unsigned int __VERIFIER_nondet_uint();
+extern int __VERIFIER_nondet_int();
+
+int main()
+{
+  unsigned int N_LIN=nondet_uint();
+  unsigned int N_COL=__VERIFIER_nondet_uint();
+  unsigned int j,k;
+  int matriz[N_COL][N_LIN], maior;
+  
+  maior = __VERIFIER_nondet_int();
+  for(j=0;j<N_COL;j++)
+    for(k=0;k<N_LIN;k++)
+    {       
+       matriz[j][k] = __VERIFIER_nondet_int();
+       
+       if(matriz[j][k]>maior)
+          maior = matriz[j][k];                          
+    }                       
+    
+  for(j=0;j<N_COL;j++)
+    for(k=0;k<N_LIN;k++)
+      __VERIFIER_assert(matriz[j][k]<maior);    
+}
+
+"""
+bm = FramaCBenchmark()
+code = bm.remove_verifier_function_declartions(c)
+print(code)
+print("=====================================================")
+code = bm.remove_verifier_function_definitions(code)
+print(code)
+print("=====================================================")
+code = bm.clean_newlines(code)
+print(code)
+print("=====================================================")
+code = bm.replace_nondets(code)
+print(code)
+print("=====================================================")
