@@ -14,6 +14,7 @@ from tree_sitter import Language, Parser
 
 err_json = False
 
+
 class FramaCChecker(Checker):
     def __init__(self):
         super().__init__("frama-c")
@@ -50,11 +51,15 @@ class FramaCChecker(Checker):
 
         if verbose:
             print("==============================")
-        cmd = "frama-c -wp -wp-verbose 100 -wp-debug 100 -wp-timeout 10 -wp-prover=alt-ergo,z3,cvc4 {temp_c_file} -wp-report-json {temp_output_dump_file} \
+        cmd = (
+            "frama-c -wp -wp-verbose 100 -wp-debug 100 -wp-timeout 10 -wp-prover=alt-ergo,z3,cvc4 {temp_c_file} -wp-report-json {temp_output_dump_file} \
                 -kernel-warn-key annot-error=active -kernel-log a:{temp_kernel_log_file} -then -report -report-classify \
-                -report-output {temp_output_dump_file2}" if err_json else f"frama-c -wp -wp-verbose 100 -wp-debug 100 -wp-timeout 3 \
+                -report-output {temp_output_dump_file2}"
+            if err_json
+            else f"frama-c -wp -wp-verbose 100 -wp-debug 100 -wp-timeout 3 \
                 -wp-prover=alt-ergo,z3,cvc4 {temp_c_file} -kernel-warn-key annot-error=active \
                 -kernel-log a:{temp_kernel_log_file} -then -no-unicode -report -report-csv {temp_output_dump_file}"
+        )
         p = subprocess.Popen(cmd.split(), stdout=subprocess.PIPE)
         output, err = p.communicate()
 
@@ -221,7 +226,10 @@ class FramaCChecker(Checker):
         while len(code_queue) > 0 and iterations < 1000:
             input_code = code_queue.pop(0)
             code_lines = input_code.splitlines()
-            if len(self.get_invariants(lines)) == 0 and len(self.get_variants(lines)) == 0:
+            if (
+                len(self.get_invariants(lines)) == 0
+                and len(self.get_variants(lines)) == 0
+            ):
                 print("No invariants/variants found")
                 continue
             status, checker_message = self.check(input_code, mode, verbose)
@@ -341,9 +349,17 @@ class FramaCBenchmark(Benchmark):
                 if len(label) > 0:
                     clabel = label[0]
                     label = clabel[2:-2]
-                    new_lines += ["/*@"] + invariants[label] + ["*/"] if len(invariants[label]) > 0 else [""]
+                    new_lines += (
+                        ["/*@"] + invariants[label] + ["*/"]
+                        if len(invariants[label]) > 0
+                        else [""]
+                    )
                 else:
-                    new_lines += ["/*@"] + list(invariants.keys()) + ["*/"] if len(invariants.keys()) > 0 else [""]
+                    new_lines += (
+                        ["/*@"] + list(invariants.keys()) + ["*/"]
+                        if len(invariants.keys()) > 0
+                        else [""]
+                    )
             new_lines.append(line)
         if not found:
             raise Exception("No while loop found")
@@ -509,7 +525,7 @@ extern unsigned short unknown_ushort(void);
         new_code = []
         for line in lines:
             if "while" in line or "for" in line or "do" in line:
-                label = "Loop" + labels[i] 
+                label = "Loop" + labels[i]
                 new_line = "/*" + label + "*/" + line
                 loop_list.append(label)
                 new_code.append(new_line)
@@ -547,7 +563,7 @@ extern unsigned short unknown_ushort(void);
         for declaration in declarations:
             code = code[: declaration[0].start_byte] + code[declaration[0].end_byte :]
         return code
-    
+
     def remove_verifier_function_definitions(self, code):
         definitions = self.language.query(
             """
@@ -566,34 +582,379 @@ extern unsigned short unknown_ushort(void);
     def clean_newlines(self, code):
         lines = code.splitlines()
         new_code = []
-        for line in lines:
-            if line.strip() != "":
+        for i, line in enumerate(lines):
+            if (line.strip() == "") and (i > 0 and lines[i - 1].strip() == ""):
+                continue
+            else:
                 new_code.append(line)
         return "\n".join(new_code)
 
-    def replace_nondets(self, code):
-        verifier_nondet_calls = self.language.query(
+    def replace_nondets_and_assert_assumes(self, code):
+        # get main
+        ast = self.parser.parse(bytes(code, "utf-8"))
+        main_query = self.language.query(
             """
-            (call_expression (identifier) @nondet)
-            (#match? @nondet "^(__VERIFIER_)?nondet_(.*)")
+            (((function_definition (function_declarator (identifier) @function_name)) @main_definition)
+            (#eq? @function_name "main"))
             """
         )
+        main = main_query.captures(ast.root_node)
+        main_definition = [m[0] for m in main if m[1] == "main_definition"]
+
+        if len(main_definition) != 1:
+            return "ERROR: No main function found"
+        main_definition = main_definition[0]
+
+        nondets_assert_assumes_query = self.language.query(
+            """
+            (call_expression (identifier) @nondet)
+            """
+        )
+
+        # replace nondet calls with unknowns
         ast = self.parser.parse(bytes(code, "utf-8"))
-        verifier_nondet_calls = verifier_nondet_calls.captures(ast.root_node)
-        verifier_nondet_calls = sorted(verifier_nondet_calls, key=lambda x: x[0].start_byte, reverse=True)
+        main = main_query.captures(ast.root_node)
+        main_definition = [m[0] for m in main if m[1] == "main_definition"]
+        main_definition = main_definition[0]
+        nondets_assert_assumes = nondets_assert_assumes_query.captures(main_definition)
+        verifier_nondet_calls = list(
+            filter(
+                lambda x: len(
+                    re.findall(r"^(__VERIFIER_)?nondet_(.*)", x[0].text.decode("utf-8"))
+                )
+                > 0,
+                nondets_assert_assumes,
+            )
+        )
+        verifier_nondet_calls = sorted(
+            verifier_nondet_calls, key=lambda x: x[0].start_byte, reverse=True
+        )
         for nondet_call in verifier_nondet_calls:
             code = (
                 code[: nondet_call[0].start_byte]
-                + "unknown_" + nondet_call[0].text.decode('utf-8').split("_")[-1].lower()
+                + "unknown_"
+                + nondet_call[0].text.decode("utf-8").split("_")[-1].lower()
                 + code[nondet_call[0].end_byte :]
             )
+
+        return self.replace_assumes(self.replace_asserts(code))
+
+    def replace_assumes(self, code):
+        # replace __VERIFIER_assume calls with assumes
+        main_query = self.language.query(
+            """
+            (((function_definition (function_declarator (identifier) @function_name)) @main_definition)
+            (#eq? @function_name "main"))
+            """
+        )
+        nondets_assert_assumes_query = self.language.query(
+            """
+            (call_expression (identifier) @nondet)
+            """
+        )
+        ast = self.parser.parse(bytes(code, "utf-8"))
+        main = main_query.captures(ast.root_node)
+        main_definition = [m[0] for m in main if m[1] == "main_definition"]
+        main_definition = main_definition[0]
+        nondets_assert_assumes = nondets_assert_assumes_query.captures(main_definition)
+        verifier_assume_calls = list(
+            filter(
+                lambda x: len(
+                    re.findall(r"^__VERIFIER_assume", x[0].text.decode("utf-8"))
+                )
+                > 0,
+                nondets_assert_assumes,
+            )
+        )
+        verifier_assume_calls = sorted(
+            verifier_assume_calls, key=lambda x: x[0].start_byte, reverse=True
+        )
+        for assume_call in verifier_assume_calls:
+            code = (
+                code[: assume_call[0].start_byte]
+                + re.sub(
+                    r"^(__VERIFIER_assume)",
+                    "assume",
+                    assume_call[0].text.decode("utf-8"),
+                )
+                + code[assume_call[0].end_byte :]
+            )
+
         return code
 
-    def preprocess(self, code):
-        code_0 = self.remove_comments(code)
-        code_1 = self.raw_input_to_checker_input(code_0)
-        code2, loop_list = self.add_loop_ids(code_1)
-        return code2, loop_list
+    def replace_asserts(self, code):
+        # replace __VERIFIER_assert/sassert calls with asserts
+        main_query = self.language.query(
+            """
+            (((function_definition (function_declarator (identifier) @function_name)) @main_definition)
+            (#eq? @function_name "main"))
+            """
+        )
+        ast = self.parser.parse(bytes(code, "utf-8"))
+        main = main_query.captures(ast.root_node)
+        main_definition = [m[0] for m in main if m[1] == "main_definition"]
+        main_definition = main_definition[0]
+        assert_assumes_query = self.language.query(
+            """
+            (call_expression (identifier) @fun_name) @call
+            """
+        )
+        assert_assumes = assert_assumes_query.captures(main_definition)
+        assert_assumes = [a for a in assert_assumes if a[1] == "call"]
+        assert_assumes = sorted(
+            assert_assumes, key=lambda x: x[0].start_byte, reverse=True
+        )
+        assert_assumes = [a[0].parent for a in assert_assumes]
+        verifier_assert_calls = list(
+            filter(
+                lambda x: len(
+                    re.findall(
+                        r"^((__VERIFIER_|s)assert)\s*(\(.*\))\s*;.*",
+                        x.text.decode("utf-8"),
+                    )
+                )
+                > 0,
+                assert_assumes,
+            )
+        )
+        verifier_assert_calls = sorted(
+            verifier_assert_calls, key=lambda x: x.start_byte, reverse=True
+        )
+
+        for assert_call in verifier_assert_calls:
+            code = (
+                code[: assert_call.start_byte]
+                + re.sub(
+                    r"^(__VERIFIER_|s)assert\s*(?P<arg>\(.*\));(?P<rest>.*)",
+                    r"//@ assert\(\g<arg>\);\n\g<rest>",
+                    assert_call.text.decode("utf-8"),
+                )
+                + code[assert_call.end_byte :]
+            )
+
+        return code
+
+    def analyze_main(self, code):
+        # Fix missing type for main. Default to int.
+        code = re.sub(r"^\s*main\s*\(", "int main(", code, flags=re.MULTILINE)
+
+        ast = self.parser.parse(bytes(code, "utf-8"))
+        main = self.language.query(
+            """
+            (((function_definition (function_declarator (identifier) @function_name)) @main_definition)
+            (#eq? @function_name "main"))
+            """
+        )
+        main = main.captures(ast.root_node)
+        main_definition = [m[0] for m in main if m[1] == "main_definition"]
+
+        if len(main_definition) != 1:
+            return "ERROR: No main function found"
+
+        main_definition = main_definition[0]
+        main_definition_type = main_definition.child_by_field_name("type")
+        if main_definition_type is None:
+            return "ERROR: No return type for main function"
+        main_definition_type = main_definition_type.text.decode("utf-8")
+
+        return_stmt = self.language.query(
+            """
+            (return_statement) @return_stmt
+            """
+        )
+        return_stmt = return_stmt.captures(main_definition)
+        if len(return_stmt) < 1:
+            return code
+
+        if main_definition_type == "void":
+            for rv in return_stmt:
+                code = code[: rv[0].start_byte] + "return;" + code[rv[0].end_byte :]
+        else:
+            for rv in return_stmt:
+                return_value = [
+                    x for x in rv[0].children if x.type != "return" and x.type != ";"
+                ]
+                code = (
+                    code[: rv[0].start_byte]
+                    + (
+                        rv[0].text.decode("utf-8")
+                        if len(return_value) > 0
+                        else "return 0;"
+                    )
+                    + code[rv[0].end_byte :]
+                )
+
+        return code
+
+    def remove_preprocess_lines(self, code):
+        lines = code.split("\n")
+        lines = list(filter(lambda x: not re.match(r"^#\s\d+\s.*", x), lines))
+        return "\n".join(lines)
+
+    def is_interprocedural(self, code):
+        """should be called after all __VERIFIER_ functions are removed.
+        and after main is fixed."""
+
+        # get main function
+        ast = self.parser.parse(bytes(code, "utf-8"))
+        main = self.language.query(
+            """
+            (((function_definition (function_declarator (identifier) @function_name)) @main_definition)
+            (#eq? @function_name "main"))
+            """
+        )
+        main = main.captures(ast.root_node)
+        main_definition = [m[0] for m in main if m[1] == "main_definition"]
+
+        if len(main_definition) != 1:
+            return "ERROR: No main function found"
+
+        main_definition = main_definition[0]
+
+        # catch non assume assert function calls
+        function_calls = self.language.query(
+            """
+            (call_expression) @function_call
+            """
+        )
+        function_calls = function_calls.captures(main_definition)
+        function_calls = [
+            f
+            for f in function_calls
+            if f[1] == "function_call"
+            and not re.match(r"(assert|assume|unknown_.*)", f[0].text.decode("utf-8"))
+        ]
+
+        return len(function_calls) != 0
+
+    def add_boiler_plate(self, code):
+        ast = self.parser.parse(bytes(code, "utf-8"))
+        main = self.language.query(
+            """
+            (((function_definition (function_declarator (identifier) @function_name)) @main_definition)
+            (#eq? @function_name "main"))
+            """
+        )
+        main = main.captures(ast.root_node)
+        main_definition = [m[0] for m in main if m[1] == "main_definition"]
+
+        if len(main_definition) != 1:
+            return "ERROR: No main function found"
+
+        main_definition = main_definition[0]
+        main_definition_type = main_definition.child_by_field_name("type")
+
+        code = (
+            (
+                "#define assume(e) if(!(e)) return;\n"
+                if main_definition_type == "void"
+                else "#define assume(e) if(!(e)) return 0;\n"
+            )
+            + ("#define LARGE_INT 1000000\n" if "LARGE_INT" in code else "")
+            + ("extern int unknown(void);\n" if "unknown" in code else "")
+            + ("extern int unknown_int(void);\n" if "unknown_uint" in code else "")
+            + (
+                "extern unsigned int unknown_uint(void);\n"
+                if "unknown_uint" in code
+                else ""
+            )
+            + ("extern _Bool unknown_bool(void);\n" if "unknown_bool" in code else "")
+            + ("extern char unknown_char(void);\n" if "unknown_char" in code else "")
+            + (
+                "extern unsigned short unknown_ushort(void);\n"
+                if "unknown_ushort" in code
+                else ""
+            )
+            + "\n"
+            + code
+        )
+        return code
+
+    def add_frama_c_asserts(self, code):
+        # get main function
+        ast = self.parser.parse(bytes(code, "utf-8"))
+        main = self.language.query(
+            """
+            (((function_definition (function_declarator (identifier) @function_name)) @main_definition)
+            (#eq? @function_name "main"))
+            """
+        )
+        main = main.captures(ast.root_node)
+        main_definition = [m[0] for m in main if m[1] == "main_definition"]
+
+        if len(main_definition) != 1:
+            return "ERROR: No main function found"
+
+        main_definition = main_definition[0]
+
+        # catch ERROR: in main
+        error = self.language.query(
+            """
+            (((labeled_statement ((statement_identifier) @error_id) ((expression_statement) @error_expression)) @error)
+            (#eq? @error_id "ERROR"))
+            """
+        )
+        errors = error.captures(main_definition)
+        errors = [e[0] for e in errors if e[1] == "error_expression"]
+        errors = sorted(errors, key=lambda x: x.start_byte, reverse=True)
+        for e in errors:
+            code = (
+                code[: e.start_byte]
+                + "//@ assert(\\false);\n"
+                + e.text.decode("utf-8")
+                + code[e.end_byte :]
+            )
+
+        return code
+
+    def add_loop_labels(self, code):
+        labels = string.ascii_uppercase
+        ast = self.parser.parse(bytes(code, "utf-8"))
+        main = self.language.query(
+            """
+            (((function_definition (function_declarator (identifier) @function_name)) @main_definition)
+            (#eq? @function_name "main"))
+            """
+        )
+        main = main.captures(ast.root_node)
+        main_definition = [m[0] for m in main if m[1] == "main_definition"]
+
+        if len(main_definition) != 1:
+            return "ERROR: No main function found"
+
+        main_definition = main_definition[0]
+        loops_1 = self.language.query(
+            """
+            (while_statement) @loop
+            """
+        )
+        loops_2 = self.language.query(
+            """
+            (for_statement) @loop
+            """
+        )
+        loops_3 = self.language.query(
+            """
+            (do_statement) @loop
+            """
+        )
+
+        loops = (
+            loops_1.captures(main_definition)
+            + loops_2.captures(main_definition)
+            + loops_3.captures(main_definition)
+        )
+        loops = [l[0] for l in loops if l[1] == "loop"]
+        loops = sorted(loops, key=lambda x: x.start_byte, reverse=True)
+
+        for i, l in enumerate(loops):
+            loop_text = l.text.decode("utf-8").split("\n")
+            loop_text = (
+                "/* Loop_" + labels[len(loops) - i - 1] + " */  " + "\n".join(loop_text[:])
+            )
+            code = code[: l.start_byte] + loop_text + code[l.end_byte :]
+        return code
+
 
 def parse_log(logfile, cfile):
     with open(logfile, "r", encoding="utf-8") as log_file:
@@ -609,7 +970,12 @@ def parse_log(logfile, cfile):
             print("File report not present in log", file=stderr)
             sys.exit(-1)
         else:
-            if selectentry["checker_output"] or selectentry["checker_output_after_prune"] or selectentry["checker_output_after_nudge"] or selectentry["checker_output_after_nudge_and_prune"]:
+            if (
+                selectentry["checker_output"]
+                or selectentry["checker_output_after_prune"]
+                or selectentry["checker_output_after_nudge"]
+                or selectentry["checker_output_after_nudge_and_prune"]
+            ):
                 print("File was already proved correct in log", file=stderr)
                 sys.exit(-1)
 
@@ -618,52 +984,81 @@ def parse_log(logfile, cfile):
         checker_error_final = selectentry["checker_message_after_nudge_and_prune"]
 
         invs = ""
-        for e in checker_error_final.split('\n'):
+        for e in checker_error_final.split("\n"):
             if not "Post-condition" in e:
                 invs += "\n" + e
         if invs == "":
             analysis = "the invariants were not inductive"
         else:
-            analysis = "the following subset of the invariants are inductive but they are not strong enough to prove the postcondition." + invs
+            analysis = (
+                "the following subset of the invariants are inductive but they are not strong enough to prove the postcondition."
+                + invs
+            )
 
         return failed_checker_input, checker_error_message, analysis
 
 
-c = """
-void __VERIFIER_assert(int cond) {
-  if (!(cond)) {
-    ERROR: goto ERROR;
+c = """extern void __VERIFIER_error() __attribute__((noreturn));
+void __VERIFIER_assert (int cond) { if (!cond) __VERIFIER_error (); }
+unsigned int __VERIFIER_nondet_uint();
+void errorFn() {ERROR: goto ERROR;}
+# 1 "MAP/SAFE-exbench/TRACER-testfunc14.tmp.c"
+# 1 "<command-line>"
+# 1 "MAP/SAFE-exbench/TRACER-testfunc14.tmp.c"
+# 23 "MAP/SAFE-exbench/TRACER-testfunc14.tmp.c"
+
+void bar(){
+  int i,NONDET,q,z;
+  i=0;
+
+  if (q>0) z=4;
+  else z=5;
+
+  while (NONDET){
+    i++;
   }
   return;
 }
-extern unsigned int __VERIFIER_nondet_uint();
-extern int __VERIFIER_nondet_int();
 
-int main()
-{
-  unsigned int N_LIN=nondet_uint();
-  unsigned int N_COL=__VERIFIER_nondet_uint();
-  unsigned int j,k;
-  int matriz[N_COL][N_LIN], maior;
-  
-  maior = __VERIFIER_nondet_int();
-  for(j=0;j<N_COL;j++)
-    for(k=0;k<N_LIN;k++)
-    {       
-       matriz[j][k] = __VERIFIER_nondet_int();
-       
-       if(matriz[j][k]>maior)
-          maior = matriz[j][k];                          
-    }                       
+main(){
+  int p,x;
+
+  if (p>0) x=1;
+  else x=3;
+
+  bar();
+  int x = __VERIFIER_nondet_uint();
+
+  if (x ==1 )
+  {
+  goto ERROR; ERROR:;
+  }
+
+  do {
+    if (x==2) break;
+  } while (1);
+
+  for (int i=0; i<10; i++){
+    if (x==3) break;
+    }
     
-  for(j=0;j<N_COL;j++)
-    for(k=0;k<N_LIN;k++)
-      __VERIFIER_assert(matriz[j][k]<maior);    
+  for (int i=0; i<10; i++){
+    if (x==3) break;
+    }
+    
+  for (int i=0; i<10; i++){
+    if (x==3) break;
+    }
+  __VERIFIER_assert(!( x==2 ));  __VERIFIER_assert((!( x==2 )));
+
 }
 
 """
 bm = FramaCBenchmark()
-code = bm.remove_verifier_function_declartions(c)
+code = bm.remove_preprocess_lines(c)
+print(code)
+print("=====================================================")
+code = bm.analyze_main(code)
 print(code)
 print("=====================================================")
 code = bm.remove_verifier_function_definitions(code)
@@ -672,6 +1067,20 @@ print("=====================================================")
 code = bm.clean_newlines(code)
 print(code)
 print("=====================================================")
-code = bm.replace_nondets(code)
+code = bm.remove_verifier_function_declartions(code)
 print(code)
+print("=====================================================")
+code = bm.replace_nondets_and_assert_assumes(code)
+print(code)
+print("=====================================================")
+code = bm.add_boiler_plate(code)
+print(code)
+print("=====================================================")
+code = bm.add_frama_c_asserts(code)
+print(code)
+print("=====================================================")
+code = bm.add_loop_labels(code)
+print(code)
+print("=====================================================")
+print(bm.is_interprocedural(code))
 print("=====================================================")
