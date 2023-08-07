@@ -317,53 +317,56 @@ class FramaCBenchmark(Benchmark):
         self.parser = Parser()
         self.parser.set_language(self.language)
 
-    def combine_llm_outputs(self, checker_input, llm_outputs, mode="variant"):
+    def combine_llm_outputs(self, checker_input, llm_outputs, mode="invariant"):
         invariants = {}
         for llm_output in llm_outputs:
             lines = llm_output.splitlines()
             for line in lines:
-                label = re.findall(r"(Loop[A-Z]:)", line)
+                label = re.findall(r"Loop([A-Z]):", line)
                 if len(label) > 0:
-                    label = label[0][:-1]
+                    label = label[0]
                 invariant = re.findall(r"(loop invariant .+;)", line)
                 if len(invariant) == 0 and mode == "variant":
                     invariant = re.findall(r"(loop variant .+;)", line)
                 if len(invariant) > 0:
                     if len(label) == 0:
                         invariants[invariant[0]] = []
-                    elif not label in invariants:
-                        invariants[label] = []
+                    else:
+                        if not label in invariants:
+                            invariants[label] = []
                         invariants[label].append(invariant[0])
 
         lines = checker_input.splitlines()
         loc = None
         new_lines = []
         found = True
-        for index, line in enumerate(lines):
-            while_re = re.findall(r"while\s*\((.+)\)", line)
-            for_re = re.findall(r"for\s*\(", line)
-            do_re = re.findall(r"do\s*", line)
-            if len(while_re) > 0 or len(for_re) > 0 or len(do_re) > 0:
-                found = True
-                label = re.findall(r"([/][*]Loop[A-Z][*][/])", line)
-                if len(label) > 0:
-                    clabel = label[0]
-                    label = clabel[2:-2]
-                    new_lines += (
-                        ["/*@"] + invariants[label] + ["*/"]
-                        if len(invariants[label]) > 0
-                        else [""]
-                    )
-                else:
+        new_checker_input = deepcopy(checker_input)
+        output = ""
+        multi_loop = re.findall(r"/\* Loop([A-Z]) \*/", checker_input)
+        if len(multi_loop) > 0:
+            for loop_label in multi_loop:
+                new_checker_input = re.sub(
+                    r"/\* Loop" + loop_label + r" \*/",
+                    "/*@\n" + "\n".join(invariants[loop_label]) + "\n*/\n",
+                    new_checker_input,
+                )
+            output = new_checker_input
+        else:
+            for _, line in enumerate(lines):
+                while_re = re.findall(r"while\s*\((.+)\)", line)
+                for_re = re.findall(r"for\s*\(", line)
+                do_re = re.findall(r"do\s*", line)
+                if len(while_re) > 0 or len(for_re) > 0 or len(do_re) > 0:
+                    found = True
                     new_lines += (
                         ["/*@"] + list(invariants.keys()) + ["*/"]
                         if len(invariants.keys()) > 0
                         else [""]
                     )
-            new_lines.append(line)
-        if not found:
-            raise Exception("No while loop found")
-        output = "\n".join(new_lines)
+                new_lines.append(line)
+            if not found:
+                raise Exception("No while loop found")
+            output = "\n".join(new_lines)
 
         return output
 
@@ -790,7 +793,7 @@ extern unsigned short unknown_ushort(void);
         lines = code.split("\n")
         lines = list(filter(lambda x: not re.match(r"^#\s\d+\s.*", x), lines))
         return "\n".join(lines)
-    
+
     def remove_local_includes(self, code):
         lines = code.split("\n")
         lines = list(filter(lambda x: not re.match(r"^#include \".*\"", x), lines))
@@ -955,7 +958,10 @@ extern unsigned short unknown_ushort(void);
         for i, l in enumerate(loops):
             loop_text = l.text.decode("utf-8").split("\n")
             loop_text = (
-                "/* Loop_" + labels[len(loops) - i - 1] + " */  " + "\n".join(loop_text[:])
+                "/* Loop"
+                + labels[len(loops) - i - 1]
+                + " */  "
+                + "\n".join(loop_text[:])
             )
             code = code[: l.start_byte] + loop_text + code[l.end_byte :]
         return code
@@ -1014,4 +1020,3 @@ def parse_log(logfile, cfile):
             )
 
         return failed_checker_input, checker_error_message, analysis
-
