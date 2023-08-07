@@ -37,7 +37,7 @@ class FramaCChecker(Checker):
         error_message = f"Annotation error on line {line_num}: {error_message}"
         return error_message
 
-    def check(self, input, mode="invariant", verbose=False):
+    def check(self, input, mode="variant", verbose=False):
         temp_file = datetime.datetime.now().strftime(
             "/tmp/temp_eval_%Y_%m_%d_%H_%M_%S_"
         ) + str(random.randint(0, 1000000))
@@ -197,7 +197,7 @@ class FramaCChecker(Checker):
                     invariants.append(inv)
         return invariants
 
-    def prune_annotations_and_check(self, input_code, mode="invariant", verbose=False):
+    def prune_annotations_and_check(self, input_code, mode="variant", verbose=False):
         print("Pruning annotations...")
         getf = None
         invariant_line_mapping = {}
@@ -317,7 +317,7 @@ class FramaCBenchmark(Benchmark):
         self.parser = Parser()
         self.parser.set_language(self.language)
 
-    def combine_llm_outputs(self, checker_input, llm_outputs, mode="invariant"):
+    def combine_llm_outputs(self, checker_input, llm_outputs, mode="variant"):
         invariants = {}
         for llm_output in llm_outputs:
             lines = llm_output.splitlines()
@@ -549,7 +549,7 @@ extern unsigned short unknown_ushort(void);
             code = code[: comment[0].start_byte] + code[comment[0].end_byte :]
         return code
 
-    def remove_verifier_function_declartions(self, code):
+    def remove_verifier_function_declarations(self, code):
         declarations = self.language.query(
             """
             (((declaration (function_declarator (identifier) @function_name)) @function_declaration)
@@ -790,6 +790,11 @@ extern unsigned short unknown_ushort(void);
         lines = code.split("\n")
         lines = list(filter(lambda x: not re.match(r"^#\s\d+\s.*", x), lines))
         return "\n".join(lines)
+    
+    def remove_local_includes(self, code):
+        lines = code.split("\n")
+        lines = list(filter(lambda x: not re.match(r"^#include \".*\"", x), lines))
+        return "\n".join(lines)
 
     def is_interprocedural(self, code):
         """should be called after all __VERIFIER_ functions are removed.
@@ -955,6 +960,19 @@ extern unsigned short unknown_ushort(void);
             code = code[: l.start_byte] + loop_text + code[l.end_byte :]
         return code
 
+    def preprocess(self, code):
+        code = self.remove_comments(code)
+        code = self.remove_local_includes(code)
+        code = self.remove_preprocess_lines(code)
+        code = self.analyze_main(code)
+        code = self.remove_verifier_function_definitions(code)
+        code = self.remove_verifier_function_declarations(code)
+        code = self.replace_nondets_and_assert_assumes(code)
+        code = self.add_boiler_plate(code)
+        code = self.add_frama_c_asserts(code)
+        code = self.add_loop_labels(code)
+        return code
+
 
 def parse_log(logfile, cfile):
     with open(logfile, "r", encoding="utf-8") as log_file:
@@ -1067,7 +1085,7 @@ print("=====================================================")
 code = bm.clean_newlines(code)
 print(code)
 print("=====================================================")
-code = bm.remove_verifier_function_declartions(code)
+code = bm.remove_verifier_function_declarations(code)
 print(code)
 print("=====================================================")
 code = bm.replace_nondets_and_assert_assumes(code)
