@@ -857,7 +857,7 @@ extern unsigned short unknown_ushort(void);
             )
             + ("#define LARGE_INT 1000000\n" if "LARGE_INT" in code else "")
             + ("extern int unknown(void);\n" if "unknown" in code else "")
-            + ("extern int unknown_int(void);\n" if "unknown_uint" in code else "")
+            + ("extern int unknown_int(void);\n" if "unknown_int" in code else "")
             + (
                 "extern unsigned int unknown_uint(void);\n"
                 if "unknown_uint" in code
