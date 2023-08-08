@@ -636,7 +636,7 @@ extern unsigned short unknown_ushort(void);
             code = (
                 code[: nondet_call[0].start_byte]
                 + "unknown_"
-                + "int" if not '_' in nondet_call[0].text.decode("utf-8") else nondet_call[0].text.decode("utf-8").split("_")[-1].lower()
+                + ("int" if not '_' in nondet_call[0].text.decode("utf-8") else nondet_call[0].text.decode("utf-8").split("_")[-1].lower())
                 + code[nondet_call[0].end_byte :]
             )
 
@@ -772,6 +772,7 @@ extern unsigned short unknown_ushort(void);
             """
         )
         return_stmt = return_stmt.captures(main_definition)
+        return_stmt = sorted(return_stmt, key=lambda x: x[0].start_byte, reverse=True)
         if len(return_stmt) < 1:
             return code
 
@@ -1003,6 +1004,7 @@ extern unsigned short unknown_ushort(void);
             raise InvalidBenchmarkException("Interprocedural analysis not supported")
         if self.multiple_loops:
             code = self.add_loop_labels(code)
+        code = self.clean_newlines(code)
         return code
 
 
