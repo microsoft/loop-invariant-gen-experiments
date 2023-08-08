@@ -37,13 +37,13 @@ class Benchmark:
             with open(self.llm_input_file) as f:
                 files = f.read().splitlines()
                 for file in files:
-                    with open(os.path.join("../new_benchmarks/", file)) as code_file:
+                    with open(file) as code_file:
                         code = code_file.read()
                         try:
                             self.instances.append(
                                 BenchmarkInstance(
                                     llm_input=self.preprocess(code),
-                                    llm_input_path=os.path.join("../new_benchmarks/", file),
+                                    llm_input_path=file,
                                     checker_input=self.preprocess(code),
                                 )
                             )
