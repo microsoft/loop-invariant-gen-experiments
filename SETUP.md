@@ -1,8 +1,6 @@
 # Instructions for setup
 
-## Linux
-
-### Install Frama-C
+## Install Frama-C
 
 ```bash
 # Install opam (OCaml package manager)
@@ -19,20 +17,20 @@ eval $(opam env)
 opam install frama-c
 ```
 
-### Install CVC4
+## Install CVC4
 
 ```bash
 wget http://cvc4.cs.stanford.edu/downloads/builds/{x86_64-linux, win64}-opt/cvc4-1.6-{x86_64-linux, win64}-opt/
 mv cvc4-1.6-{x86_64-linux, win64}-opt cvc4
 ```
 
-### Install Alt-Ergo
+## Install Alt-Ergo
 
 ```bash
 opam install alt-ergo
 ```
 
-### Install Z3
+## Install Z3
 
 ```bash
 wget wget https://github.com/Z3Prover/z3/releases/download/z3-4.12.2/z3-4.12.2-x64-glibc-2.31.zip
@@ -40,7 +38,7 @@ unzip z3-4.12.2-x64-glibc-2.31.zip
 ln -s z3-4.12.2-x64-glibc-2.31/bin/z3
 ```
 
-### Tell Why3 about the solvers
+## Tell Why3 about the solvers
 
 ```bash
 rm -f ~/.why3.conf
@@ -48,17 +46,23 @@ rm -f ~/.why3.conf
 why3 config detect
 ```
 
-### Install python dependencies
+## Install python dependencies
 
 ```bash
 # Ensure python version >= 3.11
 pip install pyyaml jinja2 openai tiktoken tree_sitter
 ```
 
-### Build the tree-sitter-c library
+## Build the tree-sitter-c library
 
 ```bash
 cd pipeline/
 git clone https://github.com/tree-sitter/tree-sitter-c.git tree_sitter_lib/vendor/tree-sitter-c
 python3 build_parser.py
+```
+
+## Set the OpenAI API key
+
+```bash
+export OPENAI_API_KEY=<your key>
 ```
