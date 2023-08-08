@@ -33,6 +33,7 @@ class Benchmark:
         raise NotImplementedError
 
     def load_instances(self):
+        input_files = []
         if self.llm_input_file != "":
             with open(self.llm_input_file) as f:
                 files = f.read().splitlines()
@@ -47,9 +48,12 @@ class Benchmark:
                                     checker_input=self.preprocess(code),
                                 )
                             )
+                            input_files.append(file)
                         except InvalidBenchmarkException as e:
                             print(e)
                             continue
+            with open("benchmark_input_files.txt", "w") as f:
+                f.write("\n".join(input_files))
             return
 
         if self.llm_input_path == "" or not os.path.exists(self.llm_input_path):
