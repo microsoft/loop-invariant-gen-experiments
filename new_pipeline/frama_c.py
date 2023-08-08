@@ -658,6 +658,9 @@ extern unsigned short unknown_ushort(void);
         ast = self.parser.parse(bytes(code, "utf-8"))
         main = main_query.captures(ast.root_node)
         main_definition = [m[0] for m in main if m[1] == "main_definition"]
+        if len(main_definition) != 1:
+            raise InvalidBenchmarkException("No main function found")
+
         main_definition = main_definition[0]
         nondets_assert_assumes = nondets_assert_assumes_query.captures(main_definition)
         verifier_assume_calls = list(
@@ -696,6 +699,9 @@ extern unsigned short unknown_ushort(void);
         ast = self.parser.parse(bytes(code, "utf-8"))
         main = main_query.captures(ast.root_node)
         main_definition = [m[0] for m in main if m[1] == "main_definition"]
+        if len(main_definition) != 1:
+            raise InvalidBenchmarkException("No main function found")
+
         main_definition = main_definition[0]
         assert_assumes_query = self.language.query(
             """
