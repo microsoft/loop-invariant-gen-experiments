@@ -37,7 +37,7 @@ class FramaCChecker(Checker):
         error_message = f"Annotation error on line {line_num}: {error_message}"
         return error_message
 
-    def check(self, input, mode="variant", verbose=False):
+    def check(self, input, mode, verbose=False):
         temp_file = datetime.datetime.now().strftime(
             "/tmp/temp_eval_%Y_%m_%d_%H_%M_%S_"
         ) + str(random.randint(0, 1000000))
@@ -197,7 +197,7 @@ class FramaCChecker(Checker):
                     invariants.append(inv)
         return invariants
 
-    def prune_annotations_and_check(self, input_code, mode="variant", verbose=False):
+    def prune_annotations_and_check(self, input_code, mode, verbose=False):
         print("Pruning annotations...")
         getf = None
         invariant_line_mapping = {}

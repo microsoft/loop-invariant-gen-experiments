@@ -24,6 +24,7 @@ class LoopyPipeline:
         heal_errors: bool = False,
         heal_errors_input: str = "",
         nudge: bool = True,
+        mode: str = "invariant",
     ):
         self.benchmark = benchmark
         self.checker = checker
@@ -36,6 +37,7 @@ class LoopyPipeline:
         self.nudge = nudge
         self.heal_errors_input = heal_errors_input
         self.system_message = None
+        self.mode = mode
 
     def load_config(self, config_file):
         config = yaml.load(open(config_file, "r"), Loader=yaml.FullLoader)
@@ -159,7 +161,7 @@ class LoopyPipeline:
                         if not llm_output.startswith("ERROR")
                     ],
                 )
-                success, checker_message = self.checker.check(checker_input)
+                success, checker_message = self.checker.check(checker_input, self.mode)
 
                 instance_log_json["llm_conversation"] = conversations.get_full_tree()
                 instance_log_json["invariants"] = llm_outputs
@@ -176,9 +178,9 @@ class LoopyPipeline:
 
                 if not success:
                     success, pruned_code = self.checker.prune_annotations_and_check(
-                        checker_input
+                        checker_input, self.mode
                     )
-                    success, checker_message = self.checker.check(pruned_code)
+                    success, checker_message = self.checker.check(pruned_code, self.mode)
 
                     instance_log_json["code_after_prune"] = pruned_code
                     instance_log_json["checker_output_after_prune"] = success
@@ -194,7 +196,7 @@ class LoopyPipeline:
                     )
                     checker_input = nudge_checker_input
                     success, nudge_checker_message = self.checker.check(
-                        nudge_checker_input
+                        nudge_checker_input, self.mode
                     )
 
                     instance_log_json[
@@ -209,9 +211,9 @@ class LoopyPipeline:
 
                     if not success:
                         success, pruned_code = self.checker.prune_annotations_and_check(
-                            checker_input
+                            checker_input, self.mode
                         )
-                        success, checker_message = self.checker.check(pruned_code)
+                        success, checker_message = self.checker.check(pruned_code, self.mode)
 
                         instance_log_json["code_after_nudge_and_prune"] = pruned_code
                         instance_log_json[
@@ -381,7 +383,7 @@ class LoopyPipeline:
                     checker_input = self.benchmark.combine_llm_outputs(
                         instance["checker_input_without_invariants"], llm_outputs
                     )
-                    success, checker_message = self.checker.check(checker_input)
+                    success, checker_message = self.checker.check(checker_input, self.mode)
 
                     healing_json["conversation"] = conversations.get_full_tree()
                     healing_json["invariants"] = llm_outputs
@@ -398,9 +400,9 @@ class LoopyPipeline:
 
                     if not success:
                         success, pruned_code = self.checker.prune_annotations_and_check(
-                            checker_input
+                            checker_input, self.mode
                         )
-                        success, prune_checker_message = self.checker.check(pruned_code)
+                        success, prune_checker_message = self.checker.check(pruned_code, self.mode)
                         healing_json["code_after_prune"] = pruned_code
                         healing_json["checker_output_after_prune"] = success
                         healing_json[
@@ -420,7 +422,7 @@ class LoopyPipeline:
                         )
                         checker_input = nudge_checker_input
                         success, nudge_checker_message = self.checker.check(
-                            nudge_checker_input
+                            nudge_checker_input, self.mode
                         )
 
                         instance_log_json[
@@ -439,8 +441,8 @@ class LoopyPipeline:
                             (
                                 success,
                                 pruned_code,
-                            ) = self.checker.prune_annotations_and_check(checker_input)
-                            success, checker_message = self.checker.check(pruned_code)
+                            ) = self.checker.prune_annotations_and_check(checker_input, self.mode)
+                            success, checker_message = self.checker.check(pruned_code, self.mode)
 
                             instance_log_json[
                                 "code_after_nudge_and_prune"
@@ -558,16 +560,16 @@ class LoopyPipeline:
                     "checker_input_with_invariants"
                 ] = checker_input_with_invariants
                 success, checker_message = self.checker.check(
-                    checker_input_with_invariants
+                    checker_input_with_invariants, self.mode
                 )
                 instance_log_json["checker_output"] = success
                 instance_log_json["checker_message"] = checker_message
 
                 if not success:
                     success, pruned_code = self.checker.prune_annotations_and_check(
-                        checker_input_with_invariants
+                        checker_input_with_invariants, self.mode
                     )
-                    success, prune_checker_message = self.checker.check(pruned_code)
+                    success, prune_checker_message = self.checker.check(pruned_code, self.mode)
                     instance_log_json["code_after_prune"] = pruned_code
                     instance_log_json["checker_output_after_prune"] = success
                     instance_log_json[
@@ -585,16 +587,16 @@ class LoopyPipeline:
                         "checker_input_after_nudge"
                     ] = checker_input_with_invariants_after_nudge
                     success, checker_message = self.checker.check(
-                        checker_input_with_invariants_after_nudge
+                        checker_input_with_invariants_after_nudge, self.mode
                     )
                     instance_log_json["checker_output_after_nudge"] = success
                     instance_log_json["checker_message_after_nudge"] = checker_message
 
                     if not success:
                         success, pruned_code = self.checker.prune_annotations_and_check(
-                            checker_input_with_invariants_after_nudge
+                            checker_input_with_invariants_after_nudge, self.mode
                         )
-                        success, prune_checker_message = self.checker.check(pruned_code)
+                        success, prune_checker_message = self.checker.check(pruned_code, self.mode)
                         instance_log_json["code_after_nudge_and_prune"] = pruned_code
                         instance_log_json[
                             "checker_output_after_nudge_and_prune"

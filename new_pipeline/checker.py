@@ -6,7 +6,7 @@ class Checker:
     def __init__(self, name="boogie"):
         self.name = name
 
-    def check(self, code):
+    def check(self, code, mode, verbose=False):
         with open("/tmp/temp_eval.bpl", "w") as f:
             f.write(code)
 
