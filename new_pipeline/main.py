@@ -97,6 +97,11 @@ def parse_args(args):
         default="invariant",
         type=str,
     )
+    parser.add_argument(
+        "--multiple-loops",
+        help="Run benchmarks with multiple loops",
+        action="store_true",
+    )
 
 
     return parser.parse_args(args)
@@ -135,6 +140,7 @@ def main(args):
         num_healing_retries=args.healing_iterations,
         nudge=args.nudge,
         mode=args.mode,
+        multiple_loops=args.multiple_loops,
     )
     p = p.load_config(args.config_file)
 
