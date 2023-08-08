@@ -355,45 +355,14 @@ class FramaCBenchmark(Benchmark):
                 )
             output = new_checker_input
         else:
-            for _, line in enumerate(lines):
-                while_re = re.findall(r"while\s*\((.+)\)", line)
-                for_re = re.findall(r"for\s*\(", line)
-                do_re = re.findall(r"do\s*", line)
-                if len(while_re) > 0 or len(for_re) > 0 or len(do_re) > 0:
-                    found = True
-                    new_lines += (
-                        ["/*@"] + list(invariants.keys()) + ["*/"]
-                        if len(invariants.keys()) > 0
-                        else [""]
-                    )
-                new_lines.append(line)
-            if not found:
-                raise Exception("No while loop found")
-            output = "\n".join(new_lines)
+            loop = self.get_loops(self.get_main_definition(checker_input))
+            if len(loop) != 1:
+                raise Exception("No singular loop found")
+            loop = loop[0]
+            output = checker_input[ : loop.start_byte] + "/*@" + "\n".join(
+                list(invariants.keys())) + "\n*/\n" + checker_input[loop.start_byte : ]
 
         return output
-
-    def fix_void_main(self, code):
-        void_main_returning_nothing = re.findall(
-            r"void \w+\(((.|\n|\t)*)*(return;)", code
-        )
-        while len(void_main_returning_nothing) > 0:
-            code.replace(void_main_returning_nothing[0][2], "return 0;")
-            void_main_returning_nothing = re.findall(
-                r"void \w+\(((.|\n|\t)*)*(return;)", code
-            )
-        return code
-
-    def fix_int_main(self, code):
-        int_main_returning_nothing = re.findall(
-            r"int \w+\(((.|\n|\t)*)*(return;)", code
-        )
-        while len(int_main_returning_nothing) > 0:
-            code.replace(int_main_returning_nothing[0][2], "return 0;")
-            int_main_returning_nothing = re.findall(
-                r"int \w+\(((.|\n|\t)*)*(return;)", code
-            )
-        return code
 
     def raw_input_to_checker_input(self, code):
         lines = code.splitlines()
@@ -554,6 +523,21 @@ extern unsigned short unknown_ushort(void);
         for comment in comments:
             code = code[: comment[0].start_byte] + code[comment[0].end_byte :]
         return code
+
+    def get_main_definition(self, code):
+        ast = self.parser.parse(bytes(code, "utf-8"))
+        main_query = self.language.query(
+            """
+            (((function_definition (function_declarator (identifier) @function_name)) @main_definition)
+            (#eq? @function_name "main"))
+            """
+        )
+        main = main_query.captures(ast.root_node)
+        main_definition = [m[0] for m in main if m[1] == "main_definition"]
+
+        if len(main_definition) != 1:
+            return "ERROR: No main function found"
+        return main_definition[0]
 
     def get_child_by_type(self, node, type):
         for child in node.children:
