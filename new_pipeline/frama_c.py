@@ -991,7 +991,6 @@ extern unsigned short unknown_ushort(void);
         code = self.add_boiler_plate(code)
         code = self.add_frama_c_asserts(code)
         code = self.remove_tmpl(code)
-        print(code)
         if self.has_ill_formed_asserts(code):
             raise InvalidBenchmarkException("Ill-formed asserts")
         if self.is_interprocedural(code):
