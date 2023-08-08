@@ -76,6 +76,7 @@ class LoopyPipeline:
             self.system_message_file = config["system_message_file"]
             self.system_message = open(self.system_message_file, "r").read()
 
+        nudge_config = None
         if "nudge_prompts" in config:
             self.nudge_prompts_file = config["nudge_prompts"]
             nudge_config = PromptConfig(dir=".").from_file(self.nudge_prompts_file)

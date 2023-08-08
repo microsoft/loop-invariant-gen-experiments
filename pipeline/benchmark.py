@@ -53,7 +53,7 @@ class Benchmark:
                         except InvalidBenchmarkException as e:
                             print(e)
                             continue
-            with open(datetime.now().strftime("benchmark_input_files_%Y_%m_%d_%H_%M_%S.txt"), "w") as f:
+            with open(datetime.datetime.now().strftime("benchmark_input_files_%Y_%m_%d_%H_%M_%S.txt"), "w") as f:
                 f.write("\n".join(input_files))
             return
 
