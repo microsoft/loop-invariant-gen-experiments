@@ -25,6 +25,7 @@ class LoopyPipeline:
         heal_errors_input: str = "",
         nudge: bool = True,
         mode: str = "invariant",
+        multiple_loops: bool = False,
     ):
         self.benchmark = benchmark
         self.checker = checker
@@ -38,6 +39,7 @@ class LoopyPipeline:
         self.heal_errors_input = heal_errors_input
         self.system_message = None
         self.mode = mode
+        self.multiple_loops = multiple_loops
 
     def load_config(self, config_file):
         config = yaml.load(open(config_file, "r"), Loader=yaml.FullLoader)
@@ -99,11 +101,13 @@ class LoopyPipeline:
                 config["llm_input_dir"],
                 config["checker_input_dir"],
                 config["llm_input_file_path"],
+                self.multiple_loops
             )
         else:
             self.benchmark.llm_input_path = config["llm_input_dir"]
             self.benchmark.checker_input_path = config["checker_input_dir"]
             self.benchmark.llm_input_file = config["llm_input_file_path"]
+            self.benchmark.multiple_loops = self.multiple_loops
         self.benchmark.load_instances()
 
         if "healing_retries" in config:
@@ -160,6 +164,7 @@ class LoopyPipeline:
                         for llm_output in llm_outputs
                         if not llm_output.startswith("ERROR")
                     ],
+                    self.mode,
                 )
                 success, checker_message = self.checker.check(checker_input, self.mode)
 
@@ -192,7 +197,7 @@ class LoopyPipeline:
                         output_full_tree=True,
                     )
                     nudge_checker_input = self.benchmark.combine_llm_outputs(
-                        instance.checker_input, nudge_outputs + llm_outputs
+                        instance.checker_input, nudge_outputs + llm_outputs, self.mode
                     )
                     checker_input = nudge_checker_input
                     success, nudge_checker_message = self.checker.check(
@@ -381,7 +386,7 @@ class LoopyPipeline:
                     )
 
                     checker_input = self.benchmark.combine_llm_outputs(
-                        instance["checker_input_without_invariants"], llm_outputs
+                        instance["checker_input_without_invariants"], llm_outputs, self.mode
                     )
                     success, checker_message = self.checker.check(checker_input, self.mode)
 
@@ -418,7 +423,7 @@ class LoopyPipeline:
                             output_full_tree=True,
                         )
                         nudge_checker_input = self.benchmark.combine_llm_outputs(
-                            instance["checker_input_without_invariants"], nudge_outputs + llm_outputs
+                            instance["checker_input_without_invariants"], nudge_outputs + llm_outputs, self.mode
                         )
                         checker_input = nudge_checker_input
                         success, nudge_checker_message = self.checker.check(
@@ -554,7 +559,7 @@ class LoopyPipeline:
                     "checker_input_without_invariants"
                 ] = checker_input_without_invariants
                 checker_input_with_invariants = self.benchmark.combine_llm_outputs(
-                    checker_input_without_invariants, instance["invariants"]
+                    checker_input_without_invariants, instance["invariants"], self.mode
                 )
                 instance_log_json[
                     "checker_input_with_invariants"
@@ -581,6 +586,7 @@ class LoopyPipeline:
                         self.benchmark.combine_llm_outputs(
                             checker_input_without_invariants,
                             instance["invariants"] + instance["invariants_after_nudge"],
+                            self.mode,
                         )
                     )
                     instance_log_json[

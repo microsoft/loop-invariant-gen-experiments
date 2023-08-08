@@ -22,10 +22,11 @@ class BenchmarkInstance:
 
 
 class Benchmark:
-    def __init__(self, llm_input_dir="", checker_input_dir="", llm_input_file=""):
+    def __init__(self, llm_input_dir="", checker_input_dir="", llm_input_file="", multiple_loops=False):
         self.llm_input_path = llm_input_dir
         self.checker_input_path = checker_input_dir
         self.llm_input_file = ""
+        self.multiple_loops = multiple_loops
         self.instances: list[BenchmarkInstance] = []
 
     def preprocess(self, code):
@@ -108,7 +109,7 @@ class Benchmark:
                     "Error loading instances. Neither checker_input dir nor raw_input_to_checker_input function provided."
                 )
 
-    def combine_llm_outputs(self, checker_input, llm_outputs):
+    def combine_llm_outputs(self, checker_input, llm_outputs, mode):
         """
         Takes in un-annotated checker input (processed-benchmarks) 
         and annotated llm outputs and combines them.
