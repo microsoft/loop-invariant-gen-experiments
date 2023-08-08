@@ -623,7 +623,7 @@ extern unsigned short unknown_ushort(void);
         verifier_nondet_calls = list(
             filter(
                 lambda x: len(
-                    re.findall(r"^(__VERIFIER_)?nondet_(.*)", x[0].text.decode("utf-8"))
+                    re.findall(r"^(__VERIFIER_)?nondet(.*)", x[0].text.decode("utf-8"))
                 )
                 > 0,
                 nondets_assert_assumes,
@@ -636,7 +636,7 @@ extern unsigned short unknown_ushort(void);
             code = (
                 code[: nondet_call[0].start_byte]
                 + "unknown_"
-                + nondet_call[0].text.decode("utf-8").split("_")[-1].lower()
+                + "int" if not '_' in nondet_call[0].text.decode("utf-8") else nondet_call[0].text.decode("utf-8").split("_")[-1].lower()
                 + code[nondet_call[0].end_byte :]
             )
 
