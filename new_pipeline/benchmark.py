@@ -38,13 +38,19 @@ class Benchmark:
                 for file in files:
                     with open(os.path.join("../new_benchmarks/", file)) as code_file:
                         code = code_file.read()
-                        self.instances.append(
-                            BenchmarkInstance(
-                                llm_input=self.preprocess(code),
-                                llm_input_path=os.path.join("../new_benchmarks/", file),
-                                checker_input=self.preprocess(code),
+                        try:
+                            self.instances.append(
+                                BenchmarkInstance(
+                                    llm_input=self.preprocess(code),
+                                    llm_input_path=os.path.join("../new_benchmarks/", file),
+                                    checker_input=self.preprocess(code),
+                                )
                             )
-                        )
+                        except Exception as e:
+                            if e.args[0] == "Interprocedural analysis not supported":
+                                continue
+                            else:
+                                raise e
             return
 
         if self.llm_input_path == "" or not os.path.exists(self.llm_input_path):
