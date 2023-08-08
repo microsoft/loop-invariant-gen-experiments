@@ -977,6 +977,8 @@ extern unsigned short unknown_ushort(void);
         code = self.add_boiler_plate(code)
         code = self.add_frama_c_asserts(code)
         code = self.add_loop_labels(code)
+        if self.is_interprocedural(code):
+            raise Exception("Interprocedural analysis not supported")
         return code
 
 
