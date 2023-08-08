@@ -1012,6 +1012,11 @@ extern unsigned short unknown_ushort(void);
             code = code[: l.start_byte] + loop_label + code[l.start_byte :]
         return code
 
+    def is_multi_loop(self, code):
+        main_definition = self.get_main_definition(code)
+        loops = self.get_loops(main_definition)
+        return len(loops) > 1
+
     def preprocess(self, code):
         code = self.remove_comments(code)
         code = self.remove_local_includes(code)
@@ -1029,6 +1034,8 @@ extern unsigned short unknown_ushort(void);
             raise InvalidBenchmarkException("Ill-formed asserts")
         if self.multiple_loops:
             code = self.add_loop_labels(code)
+        elif self.is_multi_loop(code):
+            raise InvalidBenchmarkException("Multiple loops")
         code = self.clean_newlines(code)
         return code
 
