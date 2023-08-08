@@ -48,6 +48,7 @@ class Benchmark:
                                 )
                             )
                         except InvalidBenchmarkException as e:
+                            print(e)
                             continue
             return
 
