@@ -310,8 +310,11 @@ class FramaCChecker(Checker):
 
 
 class FramaCBenchmark(Benchmark):
-    def __init__(self, llm_input_dir=None, checker_input_dir=None, multiple_loops=False):
+    def __init__(
+        self, llm_input_dir=None, checker_input_dir=None, multiple_loops=False
+    ):
         super().__init__(llm_input_dir, checker_input_dir, multiple_loops)
+        self.multiple_loops = multiple_loops
         lib_path = os.path.join(os.path.dirname(__file__), "tree_sitter_lib/build/")
         self.language = Language(lib_path + "c-tree-sitter.so", "c")
         self.parser = Parser()
@@ -436,9 +439,9 @@ class FramaCBenchmark(Benchmark):
 
             # Convert ERROR: to assert(\false)
             if "ERROR:" in line and inside_main:
-                error_text = re.findall(r"ERROR:(.*)", line)[0]
+                error_text = re.findall(r"ERROR\s*:(.*)", line)[0]
                 if len(error_text) > 0:
-                    line = line.replace("ERROR:", "ERROR: //@ assert(\\false);\n")
+                    line = re.sub(r"ERROR\s*:", "ERROR: //@ assert(\\false);\n", line)
 
             # Remove local nondet functions
             elif "__VERIFIER_nondet_" in line:
@@ -552,34 +555,63 @@ extern unsigned short unknown_ushort(void);
             code = code[: comment[0].start_byte] + code[comment[0].end_byte :]
         return code
 
+    def get_child_by_type(self, node, type):
+        for child in node.children:
+            if child.type == type:
+                return child
+        return None
+
+    def get_function_declarations(self, root):
+        nodes = [root]
+        function_declarations = []
+        while len(nodes) > 0:
+            node = nodes.pop()
+            if node.type == "declaration" and any(
+                [c.type == "function_declarator" for c in node.children]
+            ):
+                declaration = self.get_child_by_type(node, "function_declarator")
+                function_declarations.append(
+                    (
+                        node,
+                        self.get_child_by_type(declaration, "identifier").text.decode(
+                            "utf-8"
+                        ),
+                    )
+                )
+            else:
+                nodes.extend(node.children)
+        return function_declarations
+
     def remove_verifier_function_declarations(self, code):
-        declarations = self.language.query(
-            """
-            (((declaration (function_declarator (identifier) @function_name)) @function_declaration)
-            (#match? @function_name "^__VERIFIER_.*"))
-            """
-        )
         ast = self.parser.parse(bytes(code, "utf-8"))
-        declarations = declarations.captures(ast.root_node)
-        declarations = [d for d in declarations if d[1] == "function_declaration"]
-        declarations = sorted(declarations, key=lambda x: x[0].start_byte, reverse=True)
+
+        declarations = self.get_function_declarations(ast.root_node)
+        declarations = [d for d, e in declarations if e.startswith("__VERIFIER_")]
+        declarations = sorted(declarations, key=lambda x: x.start_byte, reverse=True)
         for declaration in declarations:
-            code = code[: declaration[0].start_byte] + code[declaration[0].end_byte :]
+            code = code[: declaration.start_byte] + code[declaration.end_byte :]
         return code
 
+    def get_function_definitions(self, root):
+        nodes = [root]
+        function_definitions = []
+        while len(nodes) > 0:
+            node = nodes.pop()
+            if node.type == "function_definition":
+                declaration = self.get_child_by_type(node, "function_declarator")
+                identifier = self.get_child_by_type(declaration, "identifier")
+                function_definitions.append((node, identifier.text.decode("utf-8")))
+            else:
+                nodes.extend(node.children)
+        return function_definitions
+
     def remove_verifier_function_definitions(self, code):
-        definitions = self.language.query(
-            """
-            (((function_definition (function_declarator (identifier) @function_name)) @function_definition)
-            (#match? @function_name "^__VERIFIER_.*"))
-            """
-        )
         ast = self.parser.parse(bytes(code, "utf-8"))
-        definitions = definitions.captures(ast.root_node)
-        definitions = [d for d in definitions if d[1] == "function_definition"]
-        definitions = sorted(definitions, key=lambda x: x[0].start_byte, reverse=True)
+        definitions = self.get_function_definitions(ast.root_node)
+        definitions = [d for d, e in definitions if e.startswith("__VERIFIER_") or e == "reach_error"]
+        definitions = sorted(definitions, key=lambda x: x.start_byte, reverse=True)
         for definition in definitions:
-            code = code[: definition[0].start_byte] + code[definition[0].end_byte :]
+            code = code[: definition.start_byte] + code[definition.end_byte :]
         return code
 
     def clean_newlines(self, code):
@@ -591,6 +623,17 @@ extern unsigned short unknown_ushort(void);
             else:
                 new_code.append(line)
         return "\n".join(new_code)
+
+    def get_function_calls(self, main):
+        function_calls = []
+        nodes = [main]
+        while len(nodes) > 0:
+            node = nodes.pop()
+            if node.type == "call_expression":
+                function_calls.append((node, self.get_child_by_type(node, "identifier").text.decode("utf-8")))
+            else:
+                nodes.extend(node.children)
+        return function_calls
 
     def replace_nondets_and_assert_assumes(self, code):
         # get main
@@ -608,18 +651,8 @@ extern unsigned short unknown_ushort(void);
             return "ERROR: No main function found"
         main_definition = main_definition[0]
 
-        nondets_assert_assumes_query = self.language.query(
-            """
-            (call_expression (identifier) @nondet)
-            """
-        )
-
         # replace nondet calls with unknowns
-        ast = self.parser.parse(bytes(code, "utf-8"))
-        main = main_query.captures(ast.root_node)
-        main_definition = [m[0] for m in main if m[1] == "main_definition"]
-        main_definition = main_definition[0]
-        nondets_assert_assumes = nondets_assert_assumes_query.captures(main_definition)
+        nondets_assert_assumes = self.get_function_calls(main_definition)
         verifier_nondet_calls = list(
             filter(
                 lambda x: len(
@@ -635,8 +668,12 @@ extern unsigned short unknown_ushort(void);
         for nondet_call in verifier_nondet_calls:
             code = (
                 code[: nondet_call[0].start_byte]
-                + "unknown_"
-                + ("int" if not '_' in nondet_call[0].text.decode("utf-8") else nondet_call[0].text.decode("utf-8").split("_")[-1].lower())
+                + "unknown"
+                + (
+                    "_int()"
+                    if not "_" in nondet_call[0].text.decode("utf-8")
+                    else ("_" + nondet_call[0].text.decode("utf-8").split("_")[-1].lower())
+                )
                 + code[nondet_call[0].end_byte :]
             )
 
@@ -650,11 +687,6 @@ extern unsigned short unknown_ushort(void);
             (#eq? @function_name "main"))
             """
         )
-        nondets_assert_assumes_query = self.language.query(
-            """
-            (call_expression (identifier) @nondet)
-            """
-        )
         ast = self.parser.parse(bytes(code, "utf-8"))
         main = main_query.captures(ast.root_node)
         main_definition = [m[0] for m in main if m[1] == "main_definition"]
@@ -662,7 +694,7 @@ extern unsigned short unknown_ushort(void);
             raise InvalidBenchmarkException("No main function found")
 
         main_definition = main_definition[0]
-        nondets_assert_assumes = nondets_assert_assumes_query.captures(main_definition)
+        nondets_assert_assumes = self.get_function_calls(main_definition)
         verifier_assume_calls = list(
             filter(
                 lambda x: len(
@@ -701,15 +733,9 @@ extern unsigned short unknown_ushort(void);
         main_definition = [m[0] for m in main if m[1] == "main_definition"]
         if len(main_definition) != 1:
             raise InvalidBenchmarkException("No main function found")
-
         main_definition = main_definition[0]
-        assert_assumes_query = self.language.query(
-            """
-            (call_expression (identifier) @fun_name) @call
-            """
-        )
-        assert_assumes = assert_assumes_query.captures(main_definition)
-        assert_assumes = [a for a in assert_assumes if a[1] == "call"]
+
+        assert_assumes = self.get_function_calls(main_definition)
         assert_assumes = sorted(
             assert_assumes, key=lambda x: x[0].start_byte, reverse=True
         )
@@ -735,7 +761,7 @@ extern unsigned short unknown_ushort(void);
                 code[: assert_call.start_byte]
                 + re.sub(
                     r"^(__VERIFIER_|s)assert\s*(?P<arg>\(.*\));(?P<rest>.*)",
-                    r"//@ assert\(\g<arg>\);\n\g<rest>",
+                    r"//@ assert\g<arg>;" + '\n' + r"\g<rest>",
                     assert_call.text.decode("utf-8"),
                 )
                 + code[assert_call.end_byte :]
@@ -899,6 +925,17 @@ extern unsigned short unknown_ushort(void);
         )
         return code
 
+    def get_error_labels(self, main_node):
+        nodes = [main_node]
+        error_nodes = []
+        while len(nodes) > 0:
+            node = nodes.pop()
+            if node.type == "labeled_statement":
+                if node.child_by_field_name("label").text.decode("utf-8") == "ERROR":
+                    error_nodes.append(node.child_by_field_name("label"))
+            nodes += node.children
+        return error_nodes
+
     def add_frama_c_asserts(self, code):
         # get main function
         ast = self.parser.parse(bytes(code, "utf-8"))
@@ -917,24 +954,30 @@ extern unsigned short unknown_ushort(void);
         main_definition = main_definition[0]
 
         # catch ERROR: in main
-        error = self.language.query(
-            """
-            (((labeled_statement ((statement_identifier) @error_id) ((expression_statement) @error_expression)) @error)
-            (#eq? @error_id "ERROR"))
-            """
-        )
-        errors = error.captures(main_definition)
-        errors = [e[0] for e in errors if e[1] == "error_expression"]
+        errors = self.get_error_labels(main_definition)
         errors = sorted(errors, key=lambda x: x.start_byte, reverse=True)
         for e in errors:
             code = (
-                code[: e.start_byte]
+                code[: e.end_byte + 1]  # +1 to account for the colon
                 + "//@ assert(\\false);\n"
-                + e.text.decode("utf-8")
-                + code[e.end_byte :]
+                + code[e.end_byte + 1 :]
             )
 
         return code
+
+    def get_loops(self, main_definition):
+        nodes = [main_definition]
+        loops = []
+        while len(nodes) > 0:
+            node = nodes.pop()
+            if node.type == "while_statement" or node.type == "for_statement":
+                loops.append(node)
+            elif node.type == "do_statement" and any(
+                [c.type == "while" for c in node.children]
+            ):
+                loops.append(node)
+            nodes += node.children
+        return loops
 
     def add_loop_labels(self, code):
         labels = string.ascii_uppercase
@@ -952,39 +995,13 @@ extern unsigned short unknown_ushort(void);
             return "ERROR: No main function found"
 
         main_definition = main_definition[0]
-        loops_1 = self.language.query(
-            """
-            (while_statement) @loop
-            """
-        )
-        loops_2 = self.language.query(
-            """
-            (for_statement) @loop
-            """
-        )
-        loops_3 = self.language.query(
-            """
-            (do_statement) @loop
-            """
-        )
 
-        loops = (
-            loops_1.captures(main_definition)
-            + loops_2.captures(main_definition)
-            + loops_3.captures(main_definition)
-        )
-        loops = [l[0] for l in loops if l[1] == "loop"]
+        loops = self.get_loops(main_definition)
         loops = sorted(loops, key=lambda x: x.start_byte, reverse=True)
 
         for i, l in enumerate(loops):
-            loop_text = l.text.decode("utf-8").split("\n")
-            loop_text = (
-                "/* Loop"
-                + labels[len(loops) - i - 1]
-                + " */  "
-                + "\n".join(loop_text[:])
-            )
-            code = code[: l.start_byte] + loop_text + code[l.end_byte :]
+            loop_label = "/* Loop" + labels[len(loops) - i - 1] + " */  "
+            code = code[: l.start_byte] + loop_label + code[l.start_byte :]
         return code
 
     def preprocess(self, code):
