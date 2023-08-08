@@ -40,17 +40,25 @@ unzip z3-4.12.2-x64-glibc-2.31.zip
 ln -s z3-4.12.2-x64-glibc-2.31/bin/z3
 ```
 
-### Install python dependencies
-
-```bash
-# Ensure python version >= 3.11
-pip install pyyaml jinja2 openai tiktoken
-```
-
 ### Tell Why3 about the solvers
 
 ```bash
 rm -f ~/.why3.conf
 
 why3 config detect
+```
+
+### Install python dependencies
+
+```bash
+# Ensure python version >= 3.11
+pip install pyyaml jinja2 openai tiktoken tree_sitter
+```
+
+### Build the tree-sitter-c library
+
+```bash
+cd pipeline/
+git clone https://github.com/tree-sitter/tree-sitter-c.git tree_sitter_lib/vendor/tree-sitter-c
+python3 build_parser.py
 ```
