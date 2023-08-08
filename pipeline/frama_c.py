@@ -361,7 +361,7 @@ class FramaCBenchmark(Benchmark):
             loop = loop[0]
             output = (
                 checker_input[: loop.start_byte]
-                + "/*@"
+                + "/*@\n"
                 + "\n".join(list(invariants.keys()))
                 + "\n*/\n"
                 + checker_input[loop.start_byte :]
