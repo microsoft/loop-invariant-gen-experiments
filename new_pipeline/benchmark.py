@@ -47,11 +47,8 @@ class Benchmark:
                                     checker_input=self.preprocess(code),
                                 )
                             )
-                        except Exception as e:
-                            if e.args[0] == "Interprocedural analysis not supported":
-                                continue
-                            else:
-                                raise e
+                        except InvalidBenchmarkException as e:
+                            continue
             return
 
         if self.llm_input_path == "" or not os.path.exists(self.llm_input_path):
@@ -141,3 +138,8 @@ class Benchmark:
 
     def raw_input_to_checker_input(self, code):
         raise NotImplementedError
+
+class InvalidBenchmarkException(Exception):
+    def __init__(self, message):
+        self.message = message
+        super().__init__(self.message)
