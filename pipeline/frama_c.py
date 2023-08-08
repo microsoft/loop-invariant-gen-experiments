@@ -545,6 +545,8 @@ extern unsigned short unknown_ushort(void);
         return main_definition[0]
 
     def get_child_by_type(self, node, type):
+        if node is None:
+            return None
         for child in node.children:
             if child.type == type:
                 return child
@@ -559,6 +561,8 @@ extern unsigned short unknown_ushort(void);
                 [c.type == "function_declarator" for c in node.children]
             ):
                 declaration = self.get_child_by_type(node, "function_declarator")
+                if declaration is None:
+                    continue
                 function_declarations.append(
                     (
                         node,
@@ -588,7 +592,11 @@ extern unsigned short unknown_ushort(void);
             node = nodes.pop()
             if node.type == "function_definition":
                 declaration = self.get_child_by_type(node, "function_declarator")
+                if declaration is None:
+                    continue
                 identifier = self.get_child_by_type(declaration, "identifier")
+                if identifier is None:
+                    continue
                 function_definitions.append((node, identifier.text.decode("utf-8")))
             else:
                 nodes.extend(node.children)
