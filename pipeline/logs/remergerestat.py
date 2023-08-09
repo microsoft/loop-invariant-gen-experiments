@@ -30,6 +30,8 @@ latest_logs["stats"]["need_nudging"] = []
 latest_logs["stats"]["skipped"] = []
 latest_logs["stats"]["success_without_nudging"] = []
 latest_logs["stats"]["success_with_nudging"] = []
+latest_logs["stats"]["success_without_nudging_with_prune"] = []
+latest_logs["stats"]["success_with_nudging_with_prune"] = []
 latest_logs["stats"]["success_count"] = 0
 latest_logs["stats"]["failure_count"] = 0
 latest_logs["stats"]["need_nudging_count"] = 0
@@ -43,18 +45,26 @@ for x, i in enumerate(latest_logs["logs"]):
         latest_logs["stats"]["skipped"].append(x)
     elif i["checker_output"] or i["checker_output_after_prune"]:
         latest_logs["stats"]["success"].append(x)
-        latest_logs["stats"]["success_without_nudging"].append(x)
+        if i["checker_output"]:
+            latest_logs["stats"]["success_without_nudging"].append(x)
+        elif "checker_output_after_prune" in i.keys() and i["checker_output_after_prune"]:
+            latest_logs["stats"]["success_without_nudging_with_prune"].append(x)
     elif "checker_output_after_nudge" not in i.keys():
         latest_logs["stats"]["need_nudging"].append(x)
     elif i["checker_output_after_nudge"] or i["checker_output_after_nudge_and_prune"]:
         latest_logs["stats"]["success"].append(x)
-        latest_logs["stats"]["success_with_nudging"].append(x)
+        if i["checker_output_after_nudge"]:
+            latest_logs["stats"]["success_with_nudging"].append(x)
+        elif "checker_output_after_nudge_and_prune" in i.keys() and i["checker_output_after_nudge_and_prune"]:
+            latest_logs["stats"]["success_with_nudging_with_prune"].append(x)
     else:
         latest_logs["stats"]["failure"].append(x)
 latest_logs["stats"]["success_count"] = len(latest_logs["stats"]["success"])
 latest_logs["stats"]["failure_count"] = len(latest_logs["stats"]["failure"])
 latest_logs["stats"]["success_without_nudging_count"] = len(latest_logs["stats"]["success_without_nudging"])
+latest_logs["stats"]["success_without_nudging_with_prune"] = len(latest_logs["stats"]["success_without_nudging_with_prune"])
 latest_logs["stats"]["success_with_nudging_count"] = len(latest_logs["stats"]["success_with_nudging"])
+latest_logs["stats"]["success_with_nudging_with_prune"] = len(latest_logs["stats"]["success_with_nudging_with_prune"])
 latest_logs["stats"]["skipped_count"] = len(latest_logs["stats"]["skipped"])
 latest_logs["stats"]["need_nudging_count"] = len(latest_logs["stats"]["need_nudging"])
 latest_logs["stats"]["total"] = len(latest_logs["logs"])
