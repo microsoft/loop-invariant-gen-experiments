@@ -280,8 +280,6 @@ class LoopyPipeline:
                         )
                     )
                 log_json.append(instance_log_json)
-                stats["failure"].append(i)
-                stats["total"] += 1
                 if isinstance(e, KeyboardInterrupt):
                     break
                 else:
@@ -559,6 +557,8 @@ class LoopyPipeline:
                 instance_log_json[
                     "checker_input_without_invariants"
                 ] = checker_input_without_invariants
+                if not "invariants" in instance:
+                    continue
                 checker_input_with_invariants = self.benchmark.combine_llm_outputs(
                     checker_input_without_invariants, instance["invariants"], self.mode
                 )
@@ -623,8 +623,6 @@ class LoopyPipeline:
                 print(traceback.format_exc())
                 instance_log_json["error"] = str(e)
                 log_json.append(instance_log_json)
-                stats["failure"].append(i)
-                stats["total"] += 1
                 if isinstance(e, KeyboardInterrupt):
                     break
                 else:
