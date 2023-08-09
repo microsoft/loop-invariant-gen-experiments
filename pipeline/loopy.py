@@ -554,7 +554,7 @@ class LoopyPipeline:
                 with open(instance["file"], "r", encoding="utf-8") as f:
                     raw_benchmark = f.read()
                 checker_input_without_invariants = (
-                    self.benchmark.raw_input_to_checker_input(raw_benchmark)
+                    self.benchmark.preprocess(raw_benchmark)
                 )
                 instance_log_json[
                     "checker_input_without_invariants"
