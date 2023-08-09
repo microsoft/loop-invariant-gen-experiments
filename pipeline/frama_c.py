@@ -415,7 +415,7 @@ class FramaCBenchmark(Benchmark):
             if "ERROR:" in line and inside_main:
                 error_text = re.findall(r"ERROR\s*:(.*)", line)[0]
                 if len(error_text) > 0:
-                    line = re.sub(r"ERROR\s*:", "ERROR: //@ assert(\\false);\n", line)
+                    line = re.sub(r"ERROR\s*:", "ERROR: {; //@ assert(\\false);\n}", line)
 
             # Remove local nondet functions
             elif "__VERIFIER_nondet_" in line:
@@ -769,7 +769,7 @@ extern unsigned short unknown_ushort(void);
                 code[: assert_call.start_byte]
                 + re.sub(
                     r"^(__VERIFIER_|s)assert\s*(?P<arg>\(.*\));(?P<rest>.*)",
-                    r"//@ assert\g<arg>;" + "\n" + r"\g<rest>",
+                    r"{;//@ assert\g<arg>;" + "\n" + r"\g<rest>}",
                     assert_call.text.decode("utf-8"),
                 )
                 + code[assert_call.end_byte :]
@@ -967,7 +967,7 @@ extern unsigned short unknown_ushort(void);
         for e in errors:
             code = (
                 code[: e.end_byte + 1]  # +1 to account for the colon
-                + "//@ assert(\\false);\n"
+                + "{; //@ assert(\\false);\n}"
                 + code[e.end_byte + 1 :]
             )
 
