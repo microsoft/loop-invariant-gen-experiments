@@ -145,7 +145,7 @@ class LoopyPipeline:
 
                     checker_input = self.benchmark.combine_llm_outputs(
                         self.benchmark.get_code(instance),
-                        llm_output if not llm_output.startswith("ERROR") else "",
+                        [llm_output if not llm_output.startswith("ERROR") else ""],
                         self.features,
                     )
                     completion["invariants"] = llm_output
@@ -166,8 +166,7 @@ class LoopyPipeline:
                             completion["success_after_prune"] = False
                             completion["pruned_code"] = checker_input
                             completion["checker_message_after_prune"] = e.args[0]
-                            success = False
-                            continue
+                            success = False 
 
                     completions.append(completion)
 
