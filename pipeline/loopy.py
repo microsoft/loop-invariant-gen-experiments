@@ -135,7 +135,8 @@ class LoopyPipeline:
                 )
                 
                 completions = []
-                for llm_output in llm_outputs:
+                for i, llm_output in enumerate(llm_outputs):
+                    print(f"Checking completion {i + 1}/{len(llm_outputs)}")
                     completion = {}
                     if llm_output.startswith("ERROR: Output does not contain at least 1 code block"):
                         completion["success"] = False
@@ -155,6 +156,7 @@ class LoopyPipeline:
                     completion["checker_message"] = checker_message
 
                     if not success:
+                        print(f"Pruning completion {i + 1}/{len(llm_outputs)}")
                         try:
                             success, pruned_code = self.checker.prune_annotations_and_check(checker_input, self.features)
                             success, checker_message = self.checker.check(pruned_code, ("termination" in self.features))
@@ -173,6 +175,7 @@ class LoopyPipeline:
 
                 instance_log_json["completions"] = completions
 
+                print(f"Checking combined completion")
                 checker_input = self.benchmark.combine_llm_outputs(
                     self.benchmark.get_code(instance),
                     [
@@ -186,24 +189,25 @@ class LoopyPipeline:
 
                 instance_log_json["llm_conversation"] = conversations.get_full_tree()
                 instance_log_json["invariants"] = llm_outputs
-                instance_log_json["code_with_unioned_invariants"] = checker_input
+                instance_log_json["code_with_combined_invariants"] = checker_input
                 instance_log_json["checker_output"] = success
                 instance_log_json["checker_message"] = checker_message
 
                 if not success:
+                    print("Pruning combined completion")
                     try:
                         success, pruned_code = self.checker.prune_annotations_and_check(
                             checker_input, self.features
                         )
                         success, checker_message = self.checker.check(pruned_code, ("termination" in self.features))
-                        instance_log_json["code_after_union_and_prune"] = pruned_code
-                        instance_log_json["checker_output_after_union_and_prune"] = success
-                        instance_log_json["checker_message_after_union_and_prune"] = checker_message
+                        instance_log_json["code_after_combine_and_prune"] = pruned_code
+                        instance_log_json["checker_output_after_combine_and_prune"] = success
+                        instance_log_json["checker_message_after_combine_and_prune"] = checker_message
                     except Exception as e:
                         print(e)
-                        instance_log_json["checker_output_after_union_and_prune"] = False
-                        instance_log_json["code_after_union_and_prune"] = checker_input                    
-                        instance_log_json["checker_message_after_union_and_prune"] = e.args[0]
+                        instance_log_json["checker_output_after_combine_and_prune"] = False
+                        instance_log_json["code_after_combine_and_prune"] = checker_input                    
+                        instance_log_json["checker_message_after_combine_and_prune"] = e.args[0]
                         success = False
 
                 if not success and self.nudge:
