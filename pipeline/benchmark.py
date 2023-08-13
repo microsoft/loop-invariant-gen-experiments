@@ -1,121 +1,84 @@
-import datetime
+from datetime import datetime
 import os
 
 
-class BenchmarkInstance:
-    def __init__(
-        self,
-        llm_input=None,
-        checker_input=None,
-        llm_input_path=None,
-        checker_input_path=None,
-    ):
-        self.llm_input = llm_input
-        self.checker_input = checker_input
-        self.llm_input_path = llm_input_path
-        self.checker_input_path = checker_input_path
-
-    def __repr__(self) -> str:
-        return f"BenchmarkInstance(data={self.llm_input}, checker_input={self.checker_input})"
-
-    def __str__(self) -> str:
-        return self.__repr__()
-
-
 class Benchmark:
-    def __init__(self, llm_input_dir="", checker_input_dir="", llm_input_file="", multiple_loops=False):
+    def __init__(self, llm_input_dir="", llm_input_file="", features=None):
         self.llm_input_path = llm_input_dir
-        self.checker_input_path = checker_input_dir
-        self.llm_input_file = ""
-        self.multiple_loops = multiple_loops
-        self.instances: list[BenchmarkInstance] = []
+        self.llm_input_file = llm_input_file
+        self.features = features
+        self.input_file_paths = []
 
     def preprocess(self, code):
         raise NotImplementedError
 
-    def load_instances(self):
-        input_files = []
+    def check_input(self):
         if self.llm_input_file != "":
             with open(self.llm_input_file) as f:
                 files = f.read().splitlines()
                 for file in files:
-                    with open(file) as code_file:
-                        code = code_file.read()
-                        try:
-                            self.instances.append(
-                                BenchmarkInstance(
-                                    llm_input=self.preprocess(code),
-                                    llm_input_path=file,
-                                    checker_input=self.preprocess(code),
-                                )
-                            )
-                            input_files.append(file)
-                        except InvalidBenchmarkException as e:
-                            print(e)
-                            continue
-            with open(datetime.datetime.now().strftime("benchmark_input_files_%Y_%m_%d_%H_%M_%S.txt"), "w") as f:
-                f.write("\n".join(input_files))
+                    if not os.path.exists(file):
+                        raise InvalidBenchmarkException(f"File {file} not found")
+                    try:
+                        code = None
+                        with open(file) as f:
+                            code = f.read()
+                        self.preprocess(code, self.features)
+                        self.input_file_paths.append(file)
+                    except InvalidBenchmarkException as e:
+                        print(f"Error: {e.message}. File: {file}.")
+
+            with open(
+                datetime.now().strftime("benchmark_input_%Y_%m_%d_%H_%M_%S") + ".txt",
+                "w",
+            ) as f:
+                f.write("\n".join(self.input_file_paths))
             return
 
-        if self.llm_input_path == "" or not os.path.exists(self.llm_input_path):
+        elif os.path.exists(self.llm_input_path):
             raise Exception("LLM input directory path not found")
+
+        if not os.path.exists(
+            os.path.join(os.path.dirname(__file__), self.llm_input_path)
+        ):
+            raise Exception("LLM input directory path not found")
+
         llm_input_files = os.listdir(
             os.path.join(os.path.dirname(__file__), self.llm_input_path)
         )
-        llm_input_files = sorted(llm_input_files, key=lambda x: int(x.split(".")[0]))
 
-        if self.checker_input_path != "" and os.path.exists(self.checker_input_path):
-            checker_input_files = os.listdir(
-                os.path.join(os.path.dirname(__file__), self.checker_input_path)
-            )
-            checker_input_files = sorted(
-                sorted(checker_input_files), key=lambda x: int(x.split(".")[0])
-            )
-
-            if len(llm_input_files) != len(checker_input_files):
-                raise Exception(
-                    "Number of LLM input files and checker input files do not match"
-                )
-            for x, y in zip(llm_input_files, checker_input_files):
-                llm_input = None
-                checker_input = None
-                with open(os.path.join(self.llm_input_path, x)) as f:
-                    llm_input = f.read()
-                with open(os.path.join(self.checker_input_path, y)) as f:
-                    checker_input = f.read()
-                self.instances.append(
-                    BenchmarkInstance(
-                        llm_input=llm_input,
-                        checker_input=checker_input,
-                        llm_input_path=os.path.join(self.llm_input_path, x),
-                        checker_input_path=os.path.join(self.checker_input_path, y),
-                    )
-                )
-
-        else:
+        for file in llm_input_files:
+            if not os.path.exists(os.path.join(self.llm_input_path, file)):
+                raise InvalidBenchmarkException(f"File {file} not found")
             try:
-                for file in llm_input_files:
-                    with open(os.path.join(self.llm_input_path, file)) as f:
-                        llm_input = f.read()
-                        checker_input = self.raw_input_to_checker_input(llm_input)
-                        self.instances.append(
-                            BenchmarkInstance(
-                                llm_input=llm_input,
-                                checker_input=checker_input,
-                                llm_input_path=os.path.join(self.llm_input_path, file),
-                                checker_input_path=None,
-                            )
-                        )
-            except Exception as e:
-                print(e)
-                raise Exception(
-                    "Error loading instances. Neither checker_input dir nor raw_input_to_checker_input function provided."
+                code = None
+                with open(os.path.join(self.llm_input_path, file)) as f:
+                    code = f.read()
+                self.preprocess(
+                    code,
+                    self.features,
                 )
+                self.input_file_paths.append(os.path.join(self.llm_input_path, file))
+            except InvalidBenchmarkException as e:
+                print(f"Error: {e.message}. File: {file}. ")
+            self.input_file_paths.append(os.path.join(self.llm_input_path, file))
 
-    def combine_llm_outputs(self, checker_input, llm_outputs, mode):
+    def get_code(self, file_path):
+        code = None
+        with open(file_path) as f:
+            code = f.read()
+            try:
+                code = self.preprocess(code, self.features)
+            except InvalidBenchmarkException as e:
+                print(f"Error: {e.message}. File: {file_path}.")
+        return code
+
+    def combine_llm_outputs(self, checker_input, llm_outputs, features=None):
         """
-        Takes in un-annotated checker input (processed-benchmarks) 
-        and annotated llm outputs and combines them.
+        WARNING: Combines invariants from all completions.
+        Takes an un-annotated checker input (processed-benchmarks)
+        and annotated llm outputs, takes the annotation from llm outputs
+        and adds it to the checker input them.
         """
         if not any("insert invariant" in line for line in checker_input.splitlines()):
             print(f"Ignoring since no insert invariant keyword")
@@ -142,8 +105,6 @@ class Benchmark:
 
         return output
 
-    def raw_input_to_checker_input(self, code):
-        raise NotImplementedError
 
 class InvalidBenchmarkException(Exception):
     def __init__(self, message):

@@ -12,8 +12,6 @@ from benchmark import Benchmark, InvalidBenchmarkException
 from checker import Checker
 from tree_sitter import Language, Parser
 
-err_json = False
-
 
 class FramaCChecker(Checker):
     def __init__(self):
@@ -37,29 +35,22 @@ class FramaCChecker(Checker):
         error_message = f"Annotation error on line {line_num}: {error_message}"
         return error_message
 
-    def check(self, input, mode, verbose=False):
+    def check(self, input, check_variant, verbose=False):
         temp_file = datetime.datetime.now().strftime(
             "/tmp/temp_eval_%Y_%m_%d_%H_%M_%S_"
         ) + str(random.randint(0, 1000000))
         temp_c_file = temp_file + "_.c"
         temp_kernel_log_file = temp_file + "_kernel_logs.txt"
         temp_output_dump_file = temp_file + "_output_dump.json"
-        temp_output_dump_file2 = temp_file + "_output_dump2.json"
 
         with open(temp_c_file, "w") as f:
             f.write(input)
 
         if verbose:
             print("==============================")
-        cmd = (
-            "frama-c -wp -wp-verbose 100 -wp-debug 100 -wp-timeout 10 -wp-prover=alt-ergo,z3,cvc4 {temp_c_file} -wp-report-json {temp_output_dump_file} \
-                -kernel-warn-key annot-error=active -kernel-log a:{temp_kernel_log_file} -then -report -report-classify \
-                -report-output {temp_output_dump_file2}"
-            if err_json
-            else f"frama-c -wp -wp-verbose 100 -wp-debug 100 -wp-timeout 3 \
+        cmd = f"frama-c -wp -wp-verbose 100 -wp-debug 100 -wp-timeout 3 \
                 -wp-prover=alt-ergo,z3,cvc4 {temp_c_file} -kernel-warn-key annot-error=active \
                 -kernel-log a:{temp_kernel_log_file} -then -no-unicode -report -report-csv {temp_output_dump_file}"
-        )
         p = subprocess.Popen(cmd.split(), stdout=subprocess.PIPE)
         output, err = p.communicate()
 
@@ -81,59 +72,56 @@ class FramaCChecker(Checker):
                     continue
             if error_line is not None:
                 error_message = self.get_annotation_error_from_kernel_logs(error_line)
-                if " unexpected token ''" in error_message:
+                if "unexpected token ''" in error_message:
                     error_message = "No invariants found."
                 return False, error_message
 
         # Parse the output dump
-        if mode == "invariant" and not os.path.exists(temp_output_dump_file):
+        if not check_variant and not os.path.exists(temp_output_dump_file):
             return False, "No output dump found"
 
         csv_output = None
         success = True
-        if err_json:
-            # TODO: handle the json output, but it seems buggy
-            with open(temp_output_dump_file, "r") as errfile:
-                outmsg = json.load(errfile)
-                print(outmsg)
-        else:
-            with open(temp_output_dump_file, "r", encoding="utf-8") as f:
-                csv_output = [row for row in csv.DictReader(f, delimiter="\t")]
-                success = all(
-                    row["status"] == "Valid"
+
+        with open(temp_output_dump_file, "r", encoding="utf-8") as f:
+            csv_output = [row for row in csv.DictReader(f, delimiter="\t")]
+            success = all(
+                row["status"] == "Valid"
+                for row in csv_output
+                if row["property kind"] == "loop invariant"
+                or row["property kind"] == "user assertion"
+            )
+
+            user_assertion = "\n".join(
+                [
+                    f"Post-condition {row['property']} on line {row['line']}: {row['status']}"
+                    for row in csv_output
+                    if row["property kind"] == "user assertion"
+                ]
+            )
+
+            csv_output = "\n".join(
+                [
+                    f"Invariant {row['property']} on line {row['line']}: {row['status']}"
                     for row in csv_output
                     if row["property kind"] == "loop invariant"
-                    or row["property kind"] == "user assertion"
-                )
+                ]
+            )
+            csv_output = csv_output + "\n" + user_assertion + "\n"
 
-                user_assertion = "\n".join(
-                    [
-                        f"Post-condition {row['property']} on line {row['line']}: {row['status']}"
-                        for row in csv_output
-                        if row["property kind"] == "user assertion"
-                    ]
-                )
+        if check_variant:
+            msg = str(output, "UTF-8").split("\n")
+            result = list(filter(lambda x: "Loop variant" in x, msg))
+            if len(result) < 1:
+                print("No variant found (wrong mode?)")
+                return False, "No variant found (wrong mode?)"
 
-                csv_output = "\n".join(
-                    [
-                        f"Invariant {row['property']} on line {row['line']}: {row['status']}"
-                        for row in csv_output
-                        if row["property kind"] == "loop invariant"
-                    ]
-                )
-                csv_output = csv_output + "\n" + user_assertion + "\n"
-            if mode == "variant":
-                msg = str(output, "UTF-8").split("\n")
-                result = list(filter(lambda x: "Loop variant" in x, msg))
-                if len(result) < 1:
-                    print("No variant found (wrong mode?)")
-                    sys.exit(-1)
-                if "Valid" in result[0]:
-                    csv_output += "Loop variant is Valid"
-                    success = success and True
-                else:
-                    csv_output += "Loop variant is Invalid"
-                    success = False
+            if "Valid" in result[0]:
+                csv_output += "Loop variant is Valid"
+                success = success and True
+            else:
+                csv_output += "Loop variant is Invalid"
+                success = False
 
         os.remove(temp_c_file)
         os.remove(temp_kernel_log_file)
@@ -189,26 +177,28 @@ class FramaCChecker(Checker):
         return len(self.get_invariants(code.splitlines()))
 
     def get_variants(self, lines):
-        invariants = []
+        variants = []
         for line in lines:
             if self.is_variant(line):
                 inv = re.findall(r"(loop variant .+;)", line)[0]
-                if inv not in invariants:
-                    invariants.append(inv)
-        return invariants
+                if inv not in variants:
+                    variants.append(inv)
+        return variants
 
-    def prune_annotations_and_check(self, input_code, mode, verbose=False):
+    def prune_annotations_and_check(self, input_code, features, verbose=False):
         print("Pruning annotations...")
-        getf = None
-        invariant_line_mapping = {}
+
+        annotation_line_mapping = {}
         lines = input_code.splitlines()
         for no, line in enumerate(lines):
-            if self.is_invariant(line) or self.is_invariant(line):
-                invariant_line_mapping[no] = line
-        if len(invariant_line_mapping) == 0:
+            if self.is_invariant(line) or self.is_variant(line):
+                annotation_line_mapping[no] = line
+
+        if len(annotation_line_mapping) == 0:
             raise Exception("No invariants/variants found")
 
-        inv_line_list = list(invariant_line_mapping.keys())
+        inv_line_list = list(annotation_line_mapping.keys())
+
         (invariant_line_start, invariant_line_end) = (
             inv_line_list[0],
             inv_line_list[-1],
@@ -232,7 +222,7 @@ class FramaCChecker(Checker):
             ):
                 print("No invariants/variants found")
                 continue
-            status, checker_message = self.check(input_code, mode, verbose)
+            status, checker_message = self.check(input_code, ("termination" in features), verbose)
 
             if verbose:
                 print(checker_message)
@@ -263,7 +253,6 @@ class FramaCChecker(Checker):
                 # TODO: What about TIMEOUT?
                 # If any invariant causes a Timeout, it's marked as "Unknown"
                 # because the prover could not prove it. So removing it for now.
-                # Remove all "Unknown" invariants
                 unknown_inv_lines = self.get_unknown_inv_no_from_error_msg(
                     checker_message
                 )
@@ -310,54 +299,72 @@ class FramaCChecker(Checker):
 
 
 class FramaCBenchmark(Benchmark):
-    def __init__(
-        self, llm_input_dir=None, checker_input_dir=None, multiple_loops=False
-    ):
-        super().__init__(llm_input_dir, checker_input_dir, multiple_loops)
-        self.multiple_loops = multiple_loops
+    def __init__(self, llm_input_dir="", llm_input_file="", features=None):
+        super().__init__(llm_input_dir, llm_input_file, features)
         lib_path = os.path.join(os.path.dirname(__file__), "tree_sitter_lib/build/")
         self.language = Language(lib_path + "c-tree-sitter.so", "c")
         self.parser = Parser()
         self.parser.set_language(self.language)
+        self.features = features
 
-    def combine_llm_outputs(self, checker_input, llm_outputs, mode):
+    def combine_llm_outputs(self, checker_input, llm_outputs, features):
         invariants = {}
-        for llm_output in llm_outputs:
+        variant = None
+        if "multiple_methods" in features:
+            raise Exception("multiple_methods not supported yet")
+
+        elif "multiple_loops_one_method" == features:
+            print("Combining invariants from {} outputs".format(len(llm_outputs)))
+            
+            invariants = {}
+            for llm_output in llm_outputs:
+                lines = llm_output.splitlines()
+                for line in lines:
+                    label = re.findall(r"Loop([A-Z]):", line)
+                    if len(label) > 0:
+                        label = label[0]
+                        if label not in invariants:
+                            invariants[label] = []
+
+                        invariant = re.findall(r"(loop invariant .+;)", line)
+                        if len(invariant) > 0:
+                            invariants[label].append(invariant[0])
+            output = ""
+            multi_loop = re.findall(r"/\* Loop([A-Z]) \*/", checker_input)
+            if len(multi_loop) > 0:
+                for loop_label in multi_loop:
+                    new_checker_input = re.sub(
+                        r"/\* Loop" + loop_label + r" \*/",
+                        "/*@\n" + "\n".join(invariants[loop_label]) + "\n*/\n",
+                        new_checker_input,
+                    )
+                output = new_checker_input
+
+            return output
+
+        elif "termination_one_loop_one_method" == features:
+            if len(llm_outputs) > 1:
+                raise Exception(
+                    "multiple completions for termination not supported yet"
+                )
+
+            invariants = {}
+            variant = None
+            llm_output = llm_outputs[0]
             lines = llm_output.splitlines()
             for line in lines:
-                label = re.findall(r"Loop([A-Z]):", line)
-                if len(label) > 0:
-                    label = label[0]
                 invariant = re.findall(r"(loop invariant .+;)", line)
-                if len(invariant) == 0 and mode == "variant":
-                    invariant = re.findall(r"(loop variant .+;)", line)
+                variant = re.findall(r"(loop variant .+;)", line)
                 if len(invariant) > 0:
-                    if len(label) == 0:
-                        invariants[invariant[0]] = []
-                    else:
-                        if not label in invariants:
-                            invariants[label] = []
-                        invariants[label].append(invariant[0])
+                    invariants[invariant[0]] = True
+                if len(variant) > 0:
+                    variant = variant[0]
 
-        lines = checker_input.splitlines()
-        loc = None
-        new_lines = []
-        found = True
-        new_checker_input = deepcopy(checker_input)
-        output = ""
-        multi_loop = re.findall(r"/\* Loop([A-Z]) \*/", checker_input)
-        if len(multi_loop) > 0:
-            for loop_label in multi_loop:
-                new_checker_input = re.sub(
-                    r"/\* Loop" + loop_label + r" \*/",
-                    "/*@\n" + "\n".join(invariants[loop_label]) + "\n*/\n",
-                    new_checker_input,
-                )
-            output = new_checker_input
-        else:
             loop = self.get_loops(self.get_main_definition(checker_input))
             if len(loop) != 1:
-                raise Exception("No singular loop found")
+                raise Exception(
+                    "No singular loop found while adding annotations. Multiple loops not supported yet."
+                )
             loop = loop[0]
             output = (
                 checker_input[: loop.start_byte]
@@ -367,154 +374,81 @@ class FramaCBenchmark(Benchmark):
                 + checker_input[loop.start_byte :]
             )
 
-        return output
+            return output
 
-    def raw_input_to_checker_input(self, code):
-        lines = code.splitlines()
-        new_code = ""
-        int_main = False
-        void_main = False
-        inside_main = False
-        for line in lines:
-            # Replace return with return 0 if main returns int
-            if "int main" in line:
-                int_main = True
-            if len(re.findall(r"return\s*;", line)) > 0 and int_main:
-                line = line.replace("return", "return 0;")
-            if "void main" in line:
-                void_main = True
-            if len(re.findall(r"return\s+[a-zA-Z0-9_]+;", line)) > 0 and void_main:
-                line = line.replace("return", "return;")
-            if len(re.findall(r"main\s*\(", line)):
-                inside_main = True
+        elif "one_loop_one_method" in features:
+            invariants = {}
+            variant = None
+            for llm_output in llm_outputs:
+                lines = llm_output.splitlines()
+                for line in lines:
+                    invariant = re.findall(r"(loop invariant .+;)", line)
+                    if len(invariant) > 0:
+                        invariants[invariant[0]] = True
 
-            # Remove existing annotation-like comments
-            if len(re.findall(r"/\*@[^\b\*/]*\*/", line)) > 0:
-                line = re.sub(r"/\*@[^\b\*/]*\*/", "", line)
-
-            # Remove pre-processor directives
-            if re.match(r"#\s+\d+\s+\"[^\"]*\"[\s\d]*", line):
-                continue
-
-            # Remove all local assert header files
-            if len(re.findall(r"#include\s+\".*\"", line)) > 0:
-                continue
-
-            if (
-                len(
-                    re.findall(
-                        r"(extern\s)?\s*[int|char|_Bool|void]\s+__VERIFIER_[^\(]*(.*);",
-                        line,
-                    )
-                )
-                > 0
-            ):
-                continue
-
-            # Convert ERROR: to assert(\false)
-            if "ERROR:" in line and inside_main:
-                error_text = re.findall(r"ERROR\s*:(.*)", line)[0]
-                if len(error_text) > 0:
-                    line = re.sub(r"ERROR\s*:", "ERROR: {; //@ assert(\\false);\n}", line)
-
-            # Remove local nondet functions
-            elif "__VERIFIER_nondet_" in line:
-                if "__VERIFIER_nondet_int" in line:
-                    line = line.replace("__VERIFIER_nondet_int", "unknown_int")
-                if "__VERIFIER_nondet_uint" in line:
-                    line = line.replace("__VERIFIER_nondet_uint", "unknown_uint")
-                if "__VERIFIER_nondet_bool" in line:
-                    line = line.replace("__VERIFIER_nondet_bool", "unknown_bool")
-                if "__VERIFIER_nondet_char" in line:
-                    line = line.replace("__VERIFIER_nondet_char", "unknown_char")
-                if "__VERIFIER_nondet_ushort" in line:
-                    line = line.replace("__VERIFIER_nondet_ushort", "unknown_ushort")
-            elif "nondet" in line:
-                line = line.replace("nondet", "unknown")
-
-            # Remove local assume function
-            elif "__VERIFIER_assume" in line:
-                assuming_conditions = re.findall(
-                    r"(__VERIFIER_assume\s*\((.+)\);)", line
-                )
-                for condition in assuming_conditions:
-                    line = line.replace(condition[0], "assume(" + condition[1] + ");\n")
-
-            # Remove local assert function
-            elif "__VERIFIER_assert" in line:
-                asserting_conditions = re.findall(
-                    r"^(?!\s*//).*(__VERIFIER_assert\((.+)\);)", line
-                )
-                for condition in asserting_conditions:
-                    line = line.replace(
-                        condition[0], "{; //@ assert(" + condition[1] + ");\n}\n"
-                    )
-
-            elif (
-                len(re.findall(r"[^s]assert\s*\([^{}]*\);", line)) > 0
-                and len(re.findall(r"extern\s+\w+\s+assert\s*\([^{}]*\);", line)) == 0
-                and len(
-                    re.findall(
-                        r"\bvoid\s+reach_error\(\)\s+\{\s+assert\(0\);\s+\}", line
-                    )
-                )
-                == 0
-                and len(re.findall(r"//\s*assert\s*\([^{}]*\);", line)) == 0
-            ):
-                assertion = line.strip()
-                line = line.replace(assertion, "{; //@ " + assertion + "\n}\n")
-
-            elif len(re.findall(r"sassert\s*\(.*\);", line)) > 0:
-                line = line.replace("sassert", "assert")
-                assertion = line.strip()
-                line = line.replace(assertion, "{; //@ " + assertion + "\n}\n")
-
-            if "tmpl(" in line:
-                line = "// " + line
-
-            if len(re.findall(r"__VERIFIER_error\s*\(\);", line)) > 0:
-                line = re.sub(r"__VERIFIER_error\s*\(\);", ";", line)
-
-            new_code += line + "\n"
-        new_code = (
-            (
-                "#define assume(e) if(!(e)) return;"
-                if void_main
-                else "#define assume(e) if(!(e)) return 0;"
+            loop = self.get_loops(self.get_main_definition(checker_input))
+            if len(loop) != 1:
+                raise Exception("No singular loop found while adding annotations")
+            loop = loop[0]
+            output = (
+                checker_input[: loop.start_byte]
+                + "/*@\n"
+                + "\n".join(list(invariants.keys()))
+                + "\n*/\n"
+                + checker_input[loop.start_byte :]
             )
-            + ("\n#define LARGE_INT 1000000" if "LARGE_INT" in code else "")
-            + """
 
-extern int unknown(void);
-extern int unknown_int(void);
-extern unsigned int unknown_uint(void);
-extern _Bool unknown_bool(void);
-extern char unknown_char(void);
-extern unsigned short unknown_ushort(void);
-"""
-            + "".join(new_code)
-        )
-        return new_code
+            return output
 
-    def add_loop_ids(self, code):
-        lines = code.splitlines()
-        new_code = []
-        labels = string.ascii_uppercase
-        loop_list = []
-        i = 0
-        new_code = []
-        for line in lines:
-            if "while" in line or "for" in line or "do" in line:
-                label = "Loop" + labels[i]
-                new_line = "/*" + label + "*/" + line
-                loop_list.append(label)
-                new_code.append(new_line)
-                i += 1
-            else:
-                new_code.append(line)
+        else:
+            raise Exception("Unknown feature set")
 
-        new_codes = "\n".join(new_code)
-        return new_codes, label
+        # for llm_output in llm_outputs:
+        #     lines = llm_output.splitlines()
+        #     for line in lines:
+        #         label = re.findall(r"Loop([A-Z]):", line)
+        #         if len(label) > 0:
+        #             label = label[0]
+        #         invariant = re.findall(r"(loop invariant .+;)", line)
+        #         if len(invariant) == 0 and mode == "variant":
+        #             invariant = re.findall(r"(loop variant .+;)", line)
+        #         if len(invariant) > 0:
+        #             if len(label) == 0:
+        #                 invariants[invariant[0]] = []
+        #             else:
+        #                 if not label in invariants:
+        #                     invariants[label] = []
+        #                 invariants[label].append(invariant[0])
+
+        # lines = checker_input.splitlines()
+        # loc = None
+        # new_lines = []
+        # found = True
+        # new_checker_input = deepcopy(checker_input)
+        # output = ""
+        # multi_loop = re.findall(r"/\* Loop([A-Z]) \*/", checker_input)
+        # if len(multi_loop) > 0:
+        #     for loop_label in multi_loop:
+        #         new_checker_input = re.sub(
+        #             r"/\* Loop" + loop_label + r" \*/",
+        #             "/*@\n" + "\n".join(invariants[loop_label]) + "\n*/\n",
+        #             new_checker_input,
+        #         )
+        #     output = new_checker_input
+        # else:
+        #     loop = self.get_loops(self.get_main_definition(checker_input))
+        #     if len(loop) != 1:
+        #         raise Exception("No singular loop found")
+        #     loop = loop[0]
+        #     output = (
+        #         checker_input[: loop.start_byte]
+        #         + "/*@\n"
+        #         + "\n".join(list(invariants.keys()))
+        #         + "\n*/\n"
+        #         + checker_input[loop.start_byte :]
+        #     )
+
+        # return output
 
     def remove_comments(self, code):
         comment_query = self.language.query(
@@ -910,7 +844,7 @@ extern unsigned short unknown_ushort(void);
         code = (
             (
                 "#define assume(e) if(!(e)) return;\n"
-                if main_definition_type.text.decode('utf-8') == "void"
+                if main_definition_type.text.decode("utf-8") == "void"
                 else "#define assume(e) if(!(e)) return 0;\n"
             )
             + ("#define LARGE_INT 1000000\n" if "LARGE_INT" in code else "")
@@ -986,6 +920,21 @@ extern unsigned short unknown_ushort(void);
                 loops.append(node)
             nodes += node.children
         return loops
+    
+    def get_total_loop_count(self, code):
+        ast = self.parser.parse(bytes(code, "utf-8"))
+        nodes = [ast.root_node]
+        loops = []
+        while len(nodes) > 0:
+            node = nodes.pop()
+            if node.type == "while_statement" or node.type == "for_statement":
+                loops.append(node)
+            elif node.type == "do_statement" and any(
+                [c.type == "while" for c in node.children]
+            ):
+                loops.append(node)
+            nodes += node.children
+        return len(loops)
 
     def add_loop_labels(self, code):
         labels = string.ascii_uppercase
@@ -1017,7 +966,7 @@ extern unsigned short unknown_ushort(void);
         loops = self.get_loops(main_definition)
         return len(loops) > 1
 
-    def preprocess(self, code):
+    def preprocess(self, code, features):
         code = self.remove_comments(code)
         code = self.remove_local_includes(code)
         code = self.remove_preprocess_lines(code)
@@ -1028,15 +977,23 @@ extern unsigned short unknown_ushort(void);
         code = self.add_boiler_plate(code)
         code = self.add_frama_c_asserts(code)
         code = self.remove_tmpl(code)
-        if self.is_interprocedural(code):
-            raise InvalidBenchmarkException("Interprocedural analysis not supported")
+        code = self.clean_newlines(code)
         if self.has_ill_formed_asserts(code):
             raise InvalidBenchmarkException("Ill-formed asserts")
-        if self.multiple_loops:
+        
+        if self.get_total_loop_count(code) < 1:
+            raise InvalidBenchmarkException("No loop found")
+
+        # Filter out benchmarks with multiple methods or loops based on features
+        if (not "multiple_methods" in features) and self.is_interprocedural(code):
+            raise InvalidBenchmarkException("Found multiple methods")
+        if (not "multiple_loops" in features) and self.is_multi_loop(code):
+            raise InvalidBenchmarkException("Found multiple loops")
+
+        # add benchmark specific annotations
+        if "multiple_loops" in features:
             code = self.add_loop_labels(code)
-        elif self.is_multi_loop(code):
-            raise InvalidBenchmarkException("Multiple loops")
-        code = self.clean_newlines(code)
+
         return code
 
 

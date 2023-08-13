@@ -83,7 +83,7 @@ class LLM:
                 line_nos.append(i)
         if len(line_nos) < 2:
             return (
-                ("ERROR: Output does not contain at least 1 code block") + "\n" + output
+                ("ERROR: Output does not contain at least 1 code block\nOutput:\n") + output
             )
         return "\n".join(lines[line_nos[0] + 1 : line_nos[1]])
 

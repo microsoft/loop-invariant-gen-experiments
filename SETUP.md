@@ -1,5 +1,13 @@
 # Instructions for setup
 
+Make sure your python version is >= 3.11
+If you don't have python 3.11 but have conda installed, try:
+
+```bash
+conda install -c conda-forge python=3.11 
+# then switch the python version and restart shell
+```
+
 ## Install Frama-C
 
 ```bash
