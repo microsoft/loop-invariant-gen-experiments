@@ -22,6 +22,7 @@ class LoopyPipeline:
         repair_errors_input: str = "",
         nudge: bool = True,
         features: str = "one_loop_one_method",
+        arg_params: dict = None,
     ):
         self.benchmark = benchmark
         self.checker = checker
@@ -34,6 +35,7 @@ class LoopyPipeline:
         self.repair_errors_input = repair_errors_input
         self.system_message = None
         self.features = features
+        self.arg_params = arg_params
 
     def load_config(self, config_file):
         config = yaml.load(open(config_file, "r"), Loader=yaml.FullLoader)
@@ -314,7 +316,7 @@ class LoopyPipeline:
         stats["skipped_count"] = len(stats["skipped"])
 
         log_file.write(
-            json.dumps({"logs": log_json, "stats": stats}, indent=4, ensure_ascii=False)
+            json.dumps({"params" : self.arg_params, "logs": log_json, "stats": stats}, indent=4, ensure_ascii=False)
         )
         log_file.close()
 
