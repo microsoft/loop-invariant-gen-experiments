@@ -156,13 +156,14 @@ class LoopyPipeline:
 
                     if not success:
                         try:
-                            success, pruned_code = self.checker.prune_annotations_and_check(checker_input, ("termination" in self.features))
+                            success, pruned_code = self.checker.prune_annotations_and_check(checker_input, self.features)
                             success, checker_message = self.checker.check(pruned_code, ("termination" in self.features))
                             completion["success_after_prune"] = success
                             completion["pruned_code"] = pruned_code
                             completion["checker_message_after_prune"] = checker_message
                         except Exception as e:
                             print(e)
+                            print(traceback.format_exc())
                             completion["success_after_prune"] = False
                             completion["pruned_code"] = checker_input
                             completion["checker_message_after_prune"] = e.args[0]
