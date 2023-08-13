@@ -155,9 +155,19 @@ class LoopyPipeline:
                     completion["checker_message"] = checker_message
 
                     if not success:
-                        success, pruned_code = self.checker.prune_annotations_and_check(checker_input, ("termination" in self.features))
-                        completion["success_after_prune"] = success
-                        completion["pruned_code"] = pruned_code
+                        try:
+                            success, pruned_code = self.checker.prune_annotations_and_check(checker_input, ("termination" in self.features))
+                            success, checker_message = self.checker.check(pruned_code, ("termination" in self.features))
+                            completion["success_after_prune"] = success
+                            completion["pruned_code"] = pruned_code
+                            completion["checker_message_after_prune"] = checker_message
+                        except Exception as e:
+                            print(e)
+                            completion["success_after_prune"] = False
+                            completion["pruned_code"] = checker_input
+                            completion["checker_message_after_prune"] = e.args[0]
+                            success = False
+                            continue
 
                     completions.append(completion)
 
@@ -181,16 +191,20 @@ class LoopyPipeline:
                 instance_log_json["checker_message"] = checker_message
 
                 if not success:
-                    success, pruned_code = self.checker.prune_annotations_and_check(
-                        checker_input, self.features
-                    )
-                    success, checker_message = self.checker.check(
-                        pruned_code, self.features
-                    )
-
-                    instance_log_json["code_after_union_and_prune"] = pruned_code
-                    instance_log_json["checker_output_after_union_and_prune"] = success
-                    instance_log_json["checker_message_after_union_and_prune"] = checker_message
+                    try:
+                        success, pruned_code = self.checker.prune_annotations_and_check(
+                            checker_input, self.features
+                        )
+                        success, checker_message = self.checker.check(pruned_code, ("termination" in self.features))
+                        instance_log_json["code_after_union_and_prune"] = pruned_code
+                        instance_log_json["checker_output_after_union_and_prune"] = success
+                        instance_log_json["checker_message_after_union_and_prune"] = checker_message
+                    except Exception as e:
+                        print(e)
+                        instance_log_json["checker_output_after_union_and_prune"] = False
+                        instance_log_json["code_after_union_and_prune"] = checker_input                    
+                        instance_log_json["checker_message_after_union_and_prune"] = e.args[0]
+                        success = False
 
                 if not success and self.nudge:
                     nudge_outputs, nudge_conversation = self.llm.nudge(
