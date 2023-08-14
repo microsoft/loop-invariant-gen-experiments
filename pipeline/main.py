@@ -16,7 +16,7 @@ def parse_args(args):
         default="config.yaml",
         type=str,
     )
-    
+
     # Checker to use
     parser.add_argument(
         "--checker",
@@ -145,10 +145,8 @@ def parse_args(args):
             "one_loop_one_method",
             "multiple_loops_one_method",
             # "multiple_loops_multiple_methods",
-
             "termination_one_loop_one_method",
             # "termination_multiple_loops_one_method",
-            
             "all",
         ],
         default="one_loop_one_method",
@@ -222,7 +220,7 @@ def main(args):
                 "final.json", "final_rechecked.json"
             ),
         )
-        
+
     elif args.find_best_k:
         p.find_best_k()
 
@@ -231,10 +229,12 @@ def main(args):
             p.log_path = datetime.datetime.now().strftime(
                 f"logs/repair_loopy_%Y_%m_%d_%H_%M_%S/"
             )
-        p.run(
-            max_benchmarks=args.max_benchmarks,
-            start_index=args.start_index,
-        )
+            p.heal(max_benchmarks=args.max_benchmarks, start_index=args.start_index)
+        else:
+            p.run(
+                max_benchmarks=args.max_benchmarks,
+                start_index=args.start_index,
+            )
 
 
 if __name__ == "__main__":
