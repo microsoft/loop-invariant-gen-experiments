@@ -625,7 +625,7 @@ class LoopyPipeline:
 
         log_json = []
 
-        stats = {"success": [], "failure": [], "total": 0}
+        stats = {"success": [], "failure": [], "skipped": [], "total": 0}
         log_file = open(output_log_path, "w", encoding="utf-8")
         benchmark_subset = existing_log_json["logs"][
             start_index : start_index + max_benchmarks
@@ -830,11 +830,14 @@ class LoopyPipeline:
                 else:
                     continue
 
-        if stats["total"] != 0:
-            stats["success_rate"] = len(stats["success"]) / stats["total"]
-        else:
-            stats["success_rate"] = 0
+        stats["success_rate"] = (
+            len(stats["success"]) / stats["total"] if stats["total"] != 0 else 0
+        )
 
+        stats["success_count"] = len(stats["success"])
+        stats["failure_count"] = len(stats["failure"])
+        stats["skipped_count"] = len(stats["skipped"])
+        
         log_file.write(
             json.dumps({"params": self.arg_params, "logs": log_json, "stats": stats}, indent=4, ensure_ascii=False)
         )
