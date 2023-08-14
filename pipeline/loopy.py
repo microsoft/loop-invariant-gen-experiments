@@ -635,6 +635,7 @@ class LoopyPipeline:
             if "completions" not in instance.keys():
                 stats["skipped"].append(i)
                 log_json.append(instance)
+                continue
             if not any(
                 [
                     (c["checker_message"] == "No invariants found.")
