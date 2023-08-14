@@ -663,10 +663,12 @@ class LoopyPipeline:
             try:
                 success = False
                 if not "benchmark_code" in instance:
+                    log_json.append(instance)
                     continue
                 checker_input_without_invariants = instance["benchmark_code"]
 
                 if not "invariants" in instance:
+                    log_json.append(instance)
                     continue
 
                 completions = []
