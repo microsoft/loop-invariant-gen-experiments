@@ -632,12 +632,8 @@ class LoopyPipeline:
         ]
         total = len(benchmark_subset)
         for i, instance in enumerate(benchmark_subset):
-            for c in instance["completions"]:
-                if not c["checker_message"] == ("No invariants found."):
-                    print(
-                        "Skipping benchmark: {i}/{n}".format(i=start_index + i, n=total)
-                    )
-                    continue
+            if not any([(c["checker_message"] == "No invariants found.") for c in instance["completions"]]):
+                continue
 
             print("Rechecking benchmark: {i}/{n}".format(i=start_index + i, n=total))
             instance_log_json = deepcopy(instance)
