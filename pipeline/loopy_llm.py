@@ -1,4 +1,5 @@
 import os
+import re
 from copy import deepcopy
 
 from jinja2 import Environment, FileSystemLoader
@@ -83,9 +84,21 @@ class LLM:
                 line_nos.append(i)
         if len(line_nos) < 2:
             return (
-                ("ERROR: Output does not contain at least 1 code block\nOutput:\n") + output
-            )
-        return "\n".join(lines[line_nos[0] + 1 : line_nos[1]])
+                "ERROR: Output does not contain at least 1 code block\nOutput:\n"
+            ) + output
+        annotation = ""
+        line_nos = line_nos if len(line_nos) % 2 == 0 else line_nos[:-1]
+        for i in range(0, len(line_nos), 2):
+            snippet = "\n".join(lines[line_nos[i] + 1 : line_nos[i + 1]])
+            loop_invariants = re.findall(r"loop invariant: (.*);", snippet)
+            loop_variants = re.findall(r"loop variant: (.*);", snippet)
+            if len(loop_invariants) > 0 or len(loop_variants) > 0:
+                annotation = snippet
+        return (
+            annotation
+            if len(annotation) > 0
+            else "\n".join(lines[line_nos[0] + 1 : line_nos[1]])
+        )
 
     def run__(self, input, configs, input_tree=None, output_full_tree=False):
         responses = None
@@ -96,7 +109,9 @@ class LLM:
                 Node(
                     {
                         "role": "system",
-                        "content": "You are a helpful AI software assistant that reasons about how code behaves." if self.system_message is None else self.system_message,
+                        "content": "You are a helpful AI software assistant that reasons about how code behaves."
+                        if self.system_message is None
+                        else self.system_message,
                     }
                 )
             )
@@ -155,9 +170,16 @@ class LLM:
 
     def run(self, input, input_tree=None, output_full_tree=False):
         return self.run__(input, self.prompt_configs, input_tree, output_full_tree)
-    
+
     def nudge(self, input_tree=None, output_full_tree=False):
-        return self.run__(input={}, configs=[self.nudge_prompt_config], input_tree=input_tree, output_full_tree=output_full_tree)
+        return self.run__(
+            input={},
+            configs=[self.nudge_prompt_config],
+            input_tree=input_tree,
+            output_full_tree=output_full_tree,
+        )
 
     def heal(self, input, input_tree=None, output_full_tree=False):
-        return self.run__(input, self.healing_prompt_configs, input_tree, output_full_tree)
+        return self.run__(
+            input, self.healing_prompt_configs, input_tree, output_full_tree
+        )
