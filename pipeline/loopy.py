@@ -482,7 +482,7 @@ class LoopyPipeline:
                             checker_input, self.features
                         )
                         success, prune_checker_message = self.checker.check(
-                            pruned_code, self.features
+                            pruned_code, ("termination" in self.features)
                         )
                         healing_json["code_after_combine_and_prune"] = pruned_code
                         healing_json["checker_output_after_combine_and_prune"] = success
@@ -506,7 +506,7 @@ class LoopyPipeline:
                         )
                         checker_input = nudge_checker_input
                         success, nudge_checker_message = self.checker.check(
-                            nudge_checker_input, self.mode
+                            nudge_checker_input, ("termination" in self.features)
                         )
 
                         instance_log_json[
@@ -526,10 +526,10 @@ class LoopyPipeline:
                                 success,
                                 pruned_code,
                             ) = self.checker.prune_annotations_and_check(
-                                checker_input, self.mode
+                                checker_input, self.features
                             )
                             success, checker_message = self.checker.check(
-                                pruned_code, self.mode
+                                pruned_code, ("termination" in self.features)
                             )
 
                             instance_log_json[
