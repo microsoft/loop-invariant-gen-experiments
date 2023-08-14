@@ -656,23 +656,27 @@ class LoopyPipeline:
                         stats["success"].append(i)
                     else:
                         stats["failure"].append(i)
+                    stats["total"] += 1
+                    print("Skipping benchmark: {i}/{n}".format(i=start_index + i + 1, n=total))
                 continue
 
-            print("Rechecking benchmark: {i}/{n}".format(i=start_index + i, n=total))
+            print("Rechecking benchmark: {i}/{n}".format(i=start_index + i + 1, n=total))
             instance_log_json = deepcopy(instance)
             try:
                 success = False
                 if not "benchmark_code" in instance:
                     log_json.append(instance)
+                    print("Skipping benchmark: {i}/{n}".format(i=start_index + i + 1, n=total))
                     continue
                 checker_input_without_invariants = instance["benchmark_code"]
 
-                if not "invariants" in instance:
+                if not "llm_conversation" in instance:
                     log_json.append(instance)
+                    print("Skipping benchmark: {i}/{n}".format(i=start_index + i + 1, n=total))
                     continue
+                llm_outputs = [ self.llm.extract_code(x["content"]) for x in instance["llm_conversation"][-1] ]
 
                 completions = []
-                llm_outputs = instance["invariants"]
                 for j, llm_output in enumerate(llm_outputs):
                     print(f"Checking completion {j + 1}/{len(llm_outputs)}")
                     completion = {}
