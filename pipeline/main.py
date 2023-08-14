@@ -155,7 +155,7 @@ def parse_args(args):
         type=str,
     )
     parser.add_argument(
-        "--find_best_num_completions",
+        "--find-best-k",
         help="Find the best number of completions",
         action="store_true",
     )
@@ -222,6 +222,10 @@ def main(args):
                 "final.json", "final_rechecked.json"
             ),
         )
+        
+    elif args.find_best_k:
+        p.find_best_k()
+
     else:
         if args.repair_input:
             p.log_path = datetime.datetime.now().strftime(

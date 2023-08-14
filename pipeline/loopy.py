@@ -1,10 +1,11 @@
-from copy import deepcopy
 import json
 import os
+import random
+import re
 import traceback
+from copy import deepcopy
 
 import yaml
-
 from benchmark import Benchmark
 from checker import Checker
 from loopy_llm import LLM, PromptConfig
@@ -844,5 +845,111 @@ class LoopyPipeline:
         )
         log_file.close()
 
+    def get_unique_invariants(self, snippet):
+        invariants = {}
+        invs = re.findall(r"(loop invariant .+;)", snippet)
+        for inv in invs:
+            invariants[inv] = 1
+        return list(invariants.keys())
+
     def find_best_k_value(self):
-        pass
+        if self.llm is None:
+            raise Exception(
+                "LLM not initialized. Call load_config first, to load input and prompt files."
+            )
+        
+        num_benchmarks = 10
+        log_json = []
+
+        if not os.path.exists(os.path.dirname(self.log_path)):
+            os.makedirs(os.path.dirname(self.log_path))
+        log_file = open(self.log_path + "final.json", "w", encoding="utf-8")
+
+        sliced_benchmarks = random.sample(self.benchmark.input_file_paths, num_benchmarks)
+        for i, benchmark_path in enumerate(sliced_benchmarks):
+            instance_log_json = { "file" : benchmark_path }
+            try:
+                benchmark_code = self.benchmark.get_code(benchmark_path)
+                instance_log_json["benchmark_code"] = benchmark_code
+                for i in range(15):
+                    print(f"Running LLM for benchmark {benchmark_path} with k={i}")
+                    for pc in self.llm.prompt_configs:
+                        pc.num_completions = i
+
+                    llm_outputs, conversations = self.llm.run(
+                        { "code": benchmark_code },
+                        output_full_tree=True,
+                    )
+                    instance_log_json[f"llm_output_k_{i}"] = llm_outputs
+                    instance_log_json[f"conversations_k_{i}"] = conversations.get_full_tree()
+
+                    unique_invariants = {}
+                    k_unique_invariants = []
+                    for llm_output in llm_outputs:
+                        if not llm_output.startswith(
+                            "ERROR: Output does not contain at least 1 code block"
+                        ):
+                            unique_invs_in_completion = self.get_unique_invariants(llm_output)
+                            k_unique_invariants.append(unique_invs_in_completion)
+
+                            for inv in unique_invs_in_completion:
+                                unique_invariants[inv] = 1
+                    
+                    instance_log_json[f"unique_invariants_individual_completion_{i}"] = k_unique_invariants
+                    instance_log_json[f"unique_invariants_k_{i}"] = list(unique_invariants.keys())
+                    instance_log_json[f"num_unique_invariants_k_{i}"] = len(unique_invariants.keys())
+
+                with open(
+                    os.path.join(
+                        self.log_path,
+                        benchmark_path.replace(".c", ".json")
+                        .replace("../", "")
+                        .replace("/", "__"),
+                    ),
+                    "w",
+                    encoding="utf-8",
+                ) as f:
+                    f.write(
+                        json.dumps(
+                            {
+                                "logs": instance_log_json
+                            },
+                            indent=4,
+                            ensure_ascii=False,
+                        )
+                    )
+                log_json.append(instance_log_json)
+
+            except (Exception, KeyboardInterrupt) as e:
+                print(traceback.format_exc())
+                instance_log_json["error"] = str(e)
+                with open(
+                    os.path.join(
+                        self.log_path,
+                        benchmark_path.replace(".c", ".json")
+                        .replace("../", "")
+                        .replace("/", "__"),
+                    ),
+                    "w",
+                    encoding="utf-8",
+                ) as f:
+                    f.write(
+                        json.dumps(
+                            {
+                                "logs": instance_log_json
+                            },
+                            indent=4,
+                            ensure_ascii=False,
+                        )
+                    )
+                log_json.append(instance_log_json)
+                if isinstance(e, KeyboardInterrupt):
+                    break
+                else:
+                    continue
+
+        log_file.write(
+            json.dumps({"params": self.arg_params, "logs": log_json}, indent=4, ensure_ascii=False)
+        )
+        log_file.close()
+
