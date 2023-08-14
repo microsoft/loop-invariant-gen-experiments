@@ -94,6 +94,7 @@ class LLM:
             loop_variants = re.findall(r"loop variant: (.*);", snippet)
             if len(loop_invariants) > 0 or len(loop_variants) > 0:
                 annotation = snippet
+                break
         return (
             annotation
             if len(annotation) > 0
@@ -109,7 +110,7 @@ class LLM:
                 Node(
                     {
                         "role": "system",
-                        "content": "You are a helpful AI software assistant that reasons about how code behaves."
+                        "content": ""
                         if self.system_message is None
                         else self.system_message,
                     }

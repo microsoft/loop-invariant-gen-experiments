@@ -218,7 +218,7 @@ def main(args):
             max_benchmarks=args.max_benchmarks,
             start_index=args.start_index,
             input_log_path=args.recheck_input,
-            output_log_path=args.recheck_logs.replace(
+            output_log_path=args.recheck_input.replace(
                 "final.json", "final_rechecked.json"
             ),
         )
