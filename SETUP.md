@@ -58,7 +58,7 @@ why3 config detect
 
 ```bash
 # Ensure python version >= 3.11
-pip install pyyaml jinja2 openai tiktoken tree_sitter
+pip install -r pipeline/requirements.txt
 ```
 
 ## Build the tree-sitter-c library
