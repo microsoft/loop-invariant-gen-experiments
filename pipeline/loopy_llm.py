@@ -87,9 +87,10 @@ class LLM:
                 "ERROR: Output does not contain at least 1 code block\nOutput:\n"
             ) + output
         annotation = ""
-        line_nos = line_nos if len(line_nos) % 2 == 0 else line_nos[:-1]
+        line_nos = (line_nos if len(line_nos) % 2 == 0 else line_nos[:-1])
         for i in range(0, len(line_nos), 2):
             snippet = "\n".join(lines[line_nos[i] + 1 : line_nos[i + 1]])
+            print(snippet)
             loop_invariants = re.findall(r"loop invariant: (.*);", snippet)
             loop_variants = re.findall(r"loop variant: (.*);", snippet)
             if len(loop_invariants) > 0 or len(loop_variants) > 0:
