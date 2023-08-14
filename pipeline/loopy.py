@@ -632,7 +632,25 @@ class LoopyPipeline:
         ]
         total = len(benchmark_subset)
         for i, instance in enumerate(benchmark_subset):
-            if not any([(c["checker_message"] == "No invariants found.") for c in instance["completions"]]):
+            if not any(
+                [
+                    (c["checker_message"] == "No invariants found.")
+                    for c in instance["completions"]
+                ]
+            ):
+                if "checker_output" not in instance.keys():
+                    stats["skipped"].append(i)
+                else:
+                    success = (
+                        instance["checker_output"]
+                        if "checker_output_after_combine_and_prune"
+                        not in instance.keys()
+                        else instance["checker_output_after_combine_and_prune"]
+                    )
+                    if success:
+                        stats["success"].append(i)
+                    else:
+                        stats["failure"].append(i)
                 continue
 
             print("Rechecking benchmark: {i}/{n}".format(i=start_index + i, n=total))
