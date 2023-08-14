@@ -443,7 +443,7 @@ class LoopyPipeline:
                         ]
                     )
                     analysis = (
-                        "the invariants were not inductive"
+                        ("the invariants were not inductive" if not "Annotation error " in inductive_invs else "there was an annotation error")
                         if len(inductive_invs) == 0
                         else "the following subset of the invariants are inductive but they are not strong enough to prove the post-condition:\n"
                         + inductive_invs
