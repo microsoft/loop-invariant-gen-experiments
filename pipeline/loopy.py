@@ -129,21 +129,31 @@ class LoopyPipeline:
         for i, instance in enumerate(sliced_benchmarks):
             print(f"Running benchmark: {start_index + i + 1}/{len(sliced_benchmarks)}")
 
-            instance_log_json = {"file": instance, "benchmark_code" : self.benchmark.get_code(instance) }
+            instance_log_json = {
+                "file": instance,
+                "benchmark_code": self.benchmark.get_code(instance),
+            }
             try:
                 llm_outputs, conversations = self.llm.run(
                     {"code": self.benchmark.get_code(instance)},
                     output_full_tree=True,
                 )
-                
+
                 completions = []
                 for j, llm_output in enumerate(llm_outputs):
                     print(f"Checking completion {j + 1}/{len(llm_outputs)}")
                     completion = {}
-                    if llm_output.startswith("ERROR: Output does not contain at least 1 code block"):
+                    if llm_output.startswith(
+                        "ERROR: Output does not contain at least 1 code block"
+                    ):
                         completion["success"] = False
-                        completion["llm_output"] = llm_output.replace("ERROR: Output does not contain at least 1 code block\nOutput:\n", "")
-                        completion["error"] = "Output does not contain at least 1 code block"
+                        completion["llm_output"] = llm_output.replace(
+                            "ERROR: Output does not contain at least 1 code block\nOutput:\n",
+                            "",
+                        )
+                        completion[
+                            "error"
+                        ] = "Output does not contain at least 1 code block"
                         continue
 
                     checker_input = self.benchmark.combine_llm_outputs(
@@ -153,15 +163,24 @@ class LoopyPipeline:
                     )
                     completion["invariants"] = llm_output
                     completion["code_with_invariants"] = checker_input
-                    success, checker_message = self.checker.check(checker_input, ("termination" in self.features))
+                    success, checker_message = self.checker.check(
+                        checker_input, ("termination" in self.features)
+                    )
                     completion["success"] = success
                     completion["checker_message"] = checker_message
 
                     if not success:
                         print(f"Pruning completion {j + 1}/{len(llm_outputs)}")
                         try:
-                            success, pruned_code = self.checker.prune_annotations_and_check(checker_input, self.features)
-                            success, checker_message = self.checker.check(pruned_code, ("termination" in self.features))
+                            (
+                                success,
+                                pruned_code,
+                            ) = self.checker.prune_annotations_and_check(
+                                checker_input, self.features
+                            )
+                            success, checker_message = self.checker.check(
+                                pruned_code, ("termination" in self.features)
+                            )
                             completion["success_after_prune"] = success
                             completion["pruned_code"] = pruned_code
                             completion["checker_message_after_prune"] = checker_message
@@ -171,7 +190,7 @@ class LoopyPipeline:
                             completion["success_after_prune"] = False
                             completion["pruned_code"] = checker_input
                             completion["checker_message_after_prune"] = e.args[0]
-                            success = False 
+                            success = False
 
                     completions.append(completion)
 
@@ -183,11 +202,15 @@ class LoopyPipeline:
                     [
                         llm_output
                         for llm_output in llm_outputs
-                        if not llm_output.startswith("ERROR: Output does not contain at least 1 code block")
+                        if not llm_output.startswith(
+                            "ERROR: Output does not contain at least 1 code block"
+                        )
                     ],
                     self.features,
                 )
-                success, checker_message = self.checker.check(checker_input, ("termination" in self.features))
+                success, checker_message = self.checker.check(
+                    checker_input, ("termination" in self.features)
+                )
 
                 instance_log_json["llm_conversation"] = conversations.get_full_tree()
                 instance_log_json["invariants"] = llm_outputs
@@ -201,15 +224,27 @@ class LoopyPipeline:
                         success, pruned_code = self.checker.prune_annotations_and_check(
                             checker_input, self.features
                         )
-                        success, checker_message = self.checker.check(pruned_code, ("termination" in self.features))
+                        success, checker_message = self.checker.check(
+                            pruned_code, ("termination" in self.features)
+                        )
                         instance_log_json["code_after_combine_and_prune"] = pruned_code
-                        instance_log_json["checker_output_after_combine_and_prune"] = success
-                        instance_log_json["checker_message_after_combine_and_prune"] = checker_message
+                        instance_log_json[
+                            "checker_output_after_combine_and_prune"
+                        ] = success
+                        instance_log_json[
+                            "checker_message_after_combine_and_prune"
+                        ] = checker_message
                     except Exception as e:
                         print(e)
-                        instance_log_json["checker_output_after_combine_and_prune"] = False
-                        instance_log_json["code_after_combine_and_prune"] = checker_input                    
-                        instance_log_json["checker_message_after_combine_and_prune"] = e.args[0]
+                        instance_log_json[
+                            "checker_output_after_combine_and_prune"
+                        ] = False
+                        instance_log_json[
+                            "code_after_combine_and_prune"
+                        ] = checker_input
+                        instance_log_json[
+                            "checker_message_after_combine_and_prune"
+                        ] = e.args[0]
                         success = False
 
                 if not success and self.nudge:
@@ -218,7 +253,9 @@ class LoopyPipeline:
                         output_full_tree=True,
                     )
                     nudge_checker_input = self.benchmark.combine_llm_outputs(
-                        self.benchmark.get_code(instance), nudge_outputs + llm_outputs, self.mode
+                        self.benchmark.get_code(instance),
+                        nudge_outputs + llm_outputs,
+                        self.mode,
                     )
                     checker_input = nudge_checker_input
                     success, nudge_checker_message = self.checker.check(
@@ -257,7 +294,9 @@ class LoopyPipeline:
                     stats["failure"].append(i)
                 stats["total"] += 1
 
-                stats["success_rate"] = len(stats["success"]) / stats["total"] if stats["total"] != 0 else 0
+                stats["success_rate"] = (
+                    len(stats["success"]) / stats["total"] if stats["total"] != 0 else 0
+                )
 
                 with open(
                     os.path.join(
@@ -310,13 +349,19 @@ class LoopyPipeline:
                 else:
                     continue
 
-        stats["success_rate"] = len(stats["success"]) / stats["total"] if stats["total"] != 0 else 0
+        stats["success_rate"] = (
+            len(stats["success"]) / stats["total"] if stats["total"] != 0 else 0
+        )
         stats["success_count"] = len(stats["success"])
         stats["failure_count"] = len(stats["failure"])
         stats["skipped_count"] = len(stats["skipped"])
 
         log_file.write(
-            json.dumps({"params" : self.arg_params, "logs": log_json, "stats": stats}, indent=4, ensure_ascii=False)
+            json.dumps(
+                {"params": self.arg_params, "logs": log_json, "stats": stats},
+                indent=4,
+                ensure_ascii=False,
+            )
         )
         log_file.close()
 
@@ -332,18 +377,17 @@ class LoopyPipeline:
         with open(self.heal_errors_input, "r", encoding="utf-8") as f:
             error_logs = json.load(f)
 
-        error_logs = error_logs["logs"]
+        error_logs = error_logs["logs"][start_index : start_index + max_benchmarks]
 
         log_json = []
         stats = {"success": [], "failure": [], "total": 0}
         if not os.path.exists(os.path.dirname(self.log_path)):
             os.makedirs(os.path.dirname(self.log_path))
         log_file = open(self.log_path + "final.json", "w", encoding="utf-8")
-        for i, instance in enumerate(
-            error_logs[start_index : start_index + max_benchmarks]
-        ):
+        for i, instance in enumerate(error_logs):
             if "checker_output" in instance.keys() and (
-                instance["checker_output"] or instance["checker_output_after_prune"]
+                instance["checker_output"]
+                or instance["checker_output_after_combine_and_prune"]
             ):
                 stats["success"].append(i)
                 stats["total"] += 1
@@ -353,6 +397,7 @@ class LoopyPipeline:
                     )
                 )
                 continue
+
             if "checker_output_after_nudge" in instance.keys() and (
                 instance["checker_output_after_nudge"]
                 or instance["checker_output_after_nudge_and_prune"]
@@ -380,9 +425,9 @@ class LoopyPipeline:
                     checker_error_message = instance[
                         "checker_message_after_nudge_and_prune"
                     ]
-                elif "code_after_prune" in instance.keys():
-                    failed_checker_input = instance["code_after_prune"]
-                    checker_error_message = instance["checker_message_after_prune"]
+                elif "code_with_combined_invariants" in instance.keys():
+                    failed_checker_input = instance["code_with_combined_invariants"]
+                    checker_error_message = instance["checker_message"]
                 else:
                     # This benchmark was not run previously. So we will skip it.
                     continue
@@ -412,44 +457,43 @@ class LoopyPipeline:
                     )
 
                     checker_input = self.benchmark.combine_llm_outputs(
-                        instance["checker_input_without_invariants"],
+                        instance["benchmark_code"],
                         llm_outputs,
-                        self.mode,
+                        self.features,
                     )
                     success, checker_message = self.checker.check(
-                        checker_input, self.mode
+                        checker_input, ("termination" in self.features)
                     )
 
                     healing_json["conversation"] = conversations.get_full_tree()
                     healing_json["invariants"] = llm_outputs
-                    healing_json["checker_input_without_invariants"] = instance[
-                        "checker_input_without_invariants"
-                    ]
-                    healing_json["checker_input_with_old_invariants"] = instance[
-                        "checker_input_with_invariants"
+                    healing_json["benchmark_code"] = instance["benchmark_code"]
+                    healing_json["code_with_old_invariants"] = instance[
+                        "code_with_combined_invariants"
                     ]
                     healing_json["input_error_message"] = instance["checker_message"]
-                    healing_json["checker_input_with_new_invariants"] = checker_input
+                    healing_json["code_with_new_invariants"] = checker_input
                     healing_json["checker_output"] = success
                     healing_json["checker_message"] = checker_message
 
                     if not success:
                         success, pruned_code = self.checker.prune_annotations_and_check(
-                            checker_input, self.mode
+                            checker_input, self.features
                         )
                         success, prune_checker_message = self.checker.check(
-                            pruned_code, self.mode
+                            pruned_code, self.features
                         )
-                        healing_json["code_after_prune"] = pruned_code
-                        healing_json["checker_output_after_prune"] = success
+                        healing_json["code_after_combine_and_prune"] = pruned_code
+                        healing_json["checker_output_after_combine_and_prune"] = success
                         healing_json[
-                            "checker_message_after_prune"
+                            "checker_message_after_combine_and_prune"
                         ] = prune_checker_message
 
                         failed_checker_input = checker_input
                         checker_error_message = checker_message
 
                     if not success and self.nudge:
+                        # WARNING: This code breaks
                         nudge_outputs, nudge_conversation = self.llm.nudge(
                             input_tree=deepcopy(conversations),
                             output_full_tree=True,
@@ -508,6 +552,11 @@ class LoopyPipeline:
                 else:
                     stats["failure"].append(i)
                 stats["total"] += 1
+
+                stats["success_rate"] = (
+                    len(stats["success"]) / stats["total"] if stats["total"] != 0 else 0
+                )
+
                 with open(
                     os.path.join(
                         self.log_path,
@@ -538,15 +587,14 @@ class LoopyPipeline:
                 else:
                     continue
 
-        if stats["total"] != 0:
-            stats["success_rate"] = len(stats["success"]) / stats["total"]
-        else:
-            stats["success_rate"] = 0
+        stats["success_rate"] = (
+            len(stats["success"]) / stats["total"] if stats["total"] != 0 else 0
+        )
 
         log_file.write(
             json.dumps(
                 {
-                    "heal_input": self.heal_errors_input,
+                    "params": self.arg_params,
                     "logs": log_json,
                     "stats": stats,
                 },
@@ -586,7 +634,9 @@ class LoopyPipeline:
         for i, instance in enumerate(benchmark_subset):
             for c in instance["completions"]:
                 if not c["checker_message"] == ("No invariants found."):
-                    print("Skipping benchmark: {i}/{n}".format(i=start_index + i, n=total))
+                    print(
+                        "Skipping benchmark: {i}/{n}".format(i=start_index + i, n=total)
+                    )
                     continue
 
             print("Rechecking benchmark: {i}/{n}".format(i=start_index + i, n=total))
@@ -599,16 +649,23 @@ class LoopyPipeline:
 
                 if not "invariants" in instance:
                     continue
-                
+
                 completions = []
                 llm_outputs = instance["invariants"]
                 for j, llm_output in enumerate(llm_outputs):
                     print(f"Checking completion {j + 1}/{len(llm_outputs)}")
                     completion = {}
-                    if llm_output.startswith("ERROR: Output does not contain at least 1 code block"):
+                    if llm_output.startswith(
+                        "ERROR: Output does not contain at least 1 code block"
+                    ):
                         completion["success"] = False
-                        completion["llm_output"] = llm_output.replace("ERROR: Output does not contain at least 1 code block\nOutput:\n", "")
-                        completion["error"] = "Output does not contain at least 1 code block"
+                        completion["llm_output"] = llm_output.replace(
+                            "ERROR: Output does not contain at least 1 code block\nOutput:\n",
+                            "",
+                        )
+                        completion[
+                            "error"
+                        ] = "Output does not contain at least 1 code block"
                         continue
 
                     checker_input = self.benchmark.combine_llm_outputs(
@@ -618,15 +675,24 @@ class LoopyPipeline:
                     )
                     completion["invariants"] = llm_output
                     completion["code_with_invariants"] = checker_input
-                    success, checker_message = self.checker.check(checker_input, ("termination" in self.features))
+                    success, checker_message = self.checker.check(
+                        checker_input, ("termination" in self.features)
+                    )
                     completion["success"] = success
                     completion["checker_message"] = checker_message
 
                     if not success:
                         print(f"Pruning completion {j + 1}/{len(llm_outputs)}")
                         try:
-                            success, pruned_code = self.checker.prune_annotations_and_check(checker_input, self.features)
-                            success, checker_message = self.checker.check(pruned_code, ("termination" in self.features))
+                            (
+                                success,
+                                pruned_code,
+                            ) = self.checker.prune_annotations_and_check(
+                                checker_input, self.features
+                            )
+                            success, checker_message = self.checker.check(
+                                pruned_code, ("termination" in self.features)
+                            )
                             completion["success_after_prune"] = success
                             completion["pruned_code"] = pruned_code
                             completion["checker_message_after_prune"] = checker_message
@@ -636,7 +702,7 @@ class LoopyPipeline:
                             completion["success_after_prune"] = False
                             completion["pruned_code"] = checker_input
                             completion["checker_message_after_prune"] = e.args[0]
-                            success = False 
+                            success = False
 
                     completions.append(completion)
 
@@ -648,16 +714,19 @@ class LoopyPipeline:
                     [
                         llm_output
                         for llm_output in llm_outputs
-                        if not llm_output.startswith("ERROR: Output does not contain at least 1 code block")
+                        if not llm_output.startswith(
+                            "ERROR: Output does not contain at least 1 code block"
+                        )
                     ],
                     self.features,
                 )
-                success, checker_message = self.checker.check(checker_input, ("termination" in self.features))
+                success, checker_message = self.checker.check(
+                    checker_input, ("termination" in self.features)
+                )
 
                 instance_log_json["code_with_combined_invariants"] = checker_input
                 instance_log_json["checker_output"] = success
                 instance_log_json["checker_message"] = checker_message
-
 
                 if not success:
                     print("Pruning combined completion")
@@ -665,15 +734,27 @@ class LoopyPipeline:
                         success, pruned_code = self.checker.prune_annotations_and_check(
                             checker_input, self.features
                         )
-                        success, checker_message = self.checker.check(pruned_code, ("termination" in self.features))
+                        success, checker_message = self.checker.check(
+                            pruned_code, ("termination" in self.features)
+                        )
                         instance_log_json["code_after_combine_and_prune"] = pruned_code
-                        instance_log_json["checker_output_after_combine_and_prune"] = success
-                        instance_log_json["checker_message_after_combine_and_prune"] = checker_message
+                        instance_log_json[
+                            "checker_output_after_combine_and_prune"
+                        ] = success
+                        instance_log_json[
+                            "checker_message_after_combine_and_prune"
+                        ] = checker_message
                     except Exception as e:
                         print(e)
-                        instance_log_json["checker_output_after_combine_and_prune"] = False
-                        instance_log_json["code_after_combine_and_prune"] = checker_input                    
-                        instance_log_json["checker_message_after_combine_and_prune"] = e.args[0]
+                        instance_log_json[
+                            "checker_output_after_combine_and_prune"
+                        ] = False
+                        instance_log_json[
+                            "code_after_combine_and_prune"
+                        ] = checker_input
+                        instance_log_json[
+                            "checker_message_after_combine_and_prune"
+                        ] = e.args[0]
                         success = False
 
                 if not success and "invariants_after_nudge" in instance:
