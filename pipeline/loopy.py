@@ -31,7 +31,7 @@ class LoopyPipeline:
         self.debug = debug
         self.log_path = log_path
 
-        self.num_healing_retries = num_repair_retries
+        self.num_repair_retries = num_repair_retries
         self.nudge = nudge
         self.repair_errors_input = repair_errors_input
         self.system_message = None
@@ -105,7 +105,7 @@ class LoopyPipeline:
         self.benchmark.check_input()
 
         if "healing_retries" in config:
-            self.num_healing_retries = config["healing_retries"]
+            self.num_repair_retries = config["healing_retries"]
 
         return self
 
@@ -375,7 +375,7 @@ class LoopyPipeline:
             )
 
         error_logs = None
-        with open(self.heal_errors_input, "r", encoding="utf-8") as f:
+        with open(self.repair_errors_input, "r", encoding="utf-8") as f:
             error_logs = json.load(f)
 
         error_logs = error_logs["logs"][start_index : start_index + max_benchmarks]
@@ -433,7 +433,7 @@ class LoopyPipeline:
                     # This benchmark was not run previously. So we will skip it.
                     continue
 
-                while not success and num_retries < self.num_healing_retries:
+                while not success and num_retries < self.num_repair_retries:
                     healing_json = {}
                     inductive_invs = "\n".join(
                         [
@@ -852,7 +852,7 @@ class LoopyPipeline:
             invariants[inv] = 1
         return list(invariants.keys())
 
-    def find_best_k_value(self):
+    def find_best_k(self):
         if self.llm is None:
             raise Exception(
                 "LLM not initialized. Call load_config first, to load input and prompt files."
