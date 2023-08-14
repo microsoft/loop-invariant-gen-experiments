@@ -632,6 +632,9 @@ class LoopyPipeline:
         ]
         total = len(benchmark_subset)
         for i, instance in enumerate(benchmark_subset):
+            if "completions" not in instance.keys():
+                stats["skipped"].append(i)
+                log_json.append(instance)
             if not any(
                 [
                     (c["checker_message"] == "No invariants found.")
@@ -640,6 +643,7 @@ class LoopyPipeline:
             ):
                 if "checker_output" not in instance.keys():
                     stats["skipped"].append(i)
+                    log_json.append(instance)
                 else:
                     success = (
                         instance["checker_output"]
@@ -647,6 +651,7 @@ class LoopyPipeline:
                         not in instance.keys()
                         else instance["checker_output_after_combine_and_prune"]
                     )
+                    log_json.append(instance)
                     if success:
                         stats["success"].append(i)
                     else:
@@ -683,7 +688,7 @@ class LoopyPipeline:
                         continue
 
                     checker_input = self.benchmark.combine_llm_outputs(
-                        self.benchmark.get_code(instance),
+                        instance["benchmark_code"],
                         [llm_output if not llm_output.startswith("ERROR") else ""],
                         self.features,
                     )
@@ -724,7 +729,7 @@ class LoopyPipeline:
 
                 print(f"Checking combined completion")
                 checker_input = self.benchmark.combine_llm_outputs(
-                    self.benchmark.get_code(instance),
+                    instance["benchmark_code"],
                     [
                         llm_output
                         for llm_output in llm_outputs
@@ -825,7 +830,7 @@ class LoopyPipeline:
             stats["success_rate"] = 0
 
         log_file.write(
-            json.dumps({"logs": log_json, "stats": stats}, indent=4, ensure_ascii=False)
+            json.dumps({"params": self.arg_params, "logs": log_json, "stats": stats}, indent=4, ensure_ascii=False)
         )
         log_file.close()
 
