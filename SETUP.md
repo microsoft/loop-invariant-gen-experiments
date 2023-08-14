@@ -28,8 +28,10 @@ opam install frama-c
 ## Install CVC4
 
 ```bash
-wget http://cvc4.cs.stanford.edu/downloads/builds/{x86_64-linux, win64}-opt/cvc4-1.6-{x86_64-linux, win64}-opt/
-mv cvc4-1.6-{x86_64-linux, win64}-opt cvc4
+# The string in "{}" should be your platform. There are two options: x86_64-linux and win64.
+wget http://cvc4.cs.stanford.edu/downloads/builds/{x86_64-linux,win64}-opt/cvc4-1.6-{x86_64-linux, win64}-opt/
+mv cvc4-1.6-{x86_64-linux,win64}-opt cvc4 
+# add cvc4 to PATH
 ```
 
 ## Install Alt-Ergo
@@ -43,7 +45,7 @@ opam install alt-ergo
 ```bash
 wget wget https://github.com/Z3Prover/z3/releases/download/z3-4.12.2/z3-4.12.2-x64-glibc-2.31.zip
 unzip z3-4.12.2-x64-glibc-2.31.zip
-ln -s z3-4.12.2-x64-glibc-2.31/bin/z3
+# add "z3-4.12.2-x64-glibc-2.31/bin/z3" to PATH or create a symlink
 ```
 
 ## Tell Why3 about the solvers
