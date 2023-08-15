@@ -560,6 +560,19 @@ class LoopyPipeline:
                     instance_log_json["healing_conversations"].append(healing_json)
                     num_retries += 1
 
+                if not success:
+                    success, pruned_code = self.checker.prune_annotations_and_check(
+                        checker_input, self.features
+                    )
+                    success, prune_checker_message = self.checker.check(
+                        pruned_code, ("termination" in self.features)
+                    )
+                    healing_json["code_after_heal_and_prune"] = pruned_code
+                    healing_json["checker_output_after_heal_and_prune"] = success
+                    healing_json[
+                        "checker_message_after_heal_and_prune"
+                    ] = prune_checker_message
+
                 if success:
                     stats["success"].append(i)
                 else:
