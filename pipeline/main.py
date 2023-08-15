@@ -197,7 +197,7 @@ def main(args):
         num_repair_retries=args.repair_retries,
         nudge=args.secondary_nudge,
         features=args.benchmark_features,
-        arg_params=args,
+        arg_params=vars(args),
     )
     if args.config_file:
         p = p.load_config(args.config_file)
