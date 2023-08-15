@@ -34,7 +34,7 @@ class LoopyPipeline:
         self.num_repair_retries = num_repair_retries
         self.nudge = nudge
         self.repair_errors_input = repair_errors_input
-        self.system_message = None
+        self.system_message = ""
         self.features = features
         self.arg_params = arg_params
 
