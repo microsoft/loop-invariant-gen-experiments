@@ -489,7 +489,7 @@ class LoopyPipeline:
                     healing_json["checker_output"] = success
                     healing_json["checker_message"] = checker_message
 
-                    # if not success:
+                    if not success:
                     #     success, pruned_code = self.checker.prune_annotations_and_check(
                     #         checker_input, self.features
                     #     )
@@ -502,8 +502,8 @@ class LoopyPipeline:
                     #         "checker_message_after_combine_and_prune"
                     #     ] = prune_checker_message
 
-                    #     failed_checker_input = checker_input
-                    #     checker_error_message = checker_message
+                        failed_checker_input = checker_input
+                        checker_error_message = checker_message
 
                     # if not success and self.nudge:
                     #     # WARNING: This code breaks
