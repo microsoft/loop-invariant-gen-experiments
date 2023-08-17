@@ -388,7 +388,7 @@ class LoopyPipeline:
         for i, instance in enumerate(error_logs):
             if "checker_output" in instance.keys() and (
                 instance["checker_output"]
-                # or instance["checker_output_after_combine_and_prune"]
+                or instance["checker_output_after_combine_and_prune"]
             ):
                 stats["success"].append(i)
                 stats["total"] += 1
@@ -490,17 +490,17 @@ class LoopyPipeline:
                     healing_json["checker_message"] = checker_message
 
                     if not success:
-                    #     success, pruned_code = self.checker.prune_annotations_and_check(
-                    #         checker_input, self.features
-                    #     )
-                    #     success, prune_checker_message = self.checker.check(
-                    #         pruned_code, ("termination" in self.features)
-                    #     )
-                    #     healing_json["code_after_combine_and_prune"] = pruned_code
-                    #     healing_json["checker_output_after_combine_and_prune"] = success
-                    #     healing_json[
-                    #         "checker_message_after_combine_and_prune"
-                    #     ] = prune_checker_message
+                        success, pruned_code = self.checker.prune_annotations_and_check(
+                            checker_input, self.features
+                        )
+                        success, prune_checker_message = self.checker.check(
+                            pruned_code, ("termination" in self.features)
+                        )
+                        healing_json["code_after_combine_and_prune"] = pruned_code
+                        healing_json["checker_output_after_combine_and_prune"] = success
+                        healing_json[
+                            "checker_message_after_combine_and_prune"
+                        ] = prune_checker_message
 
                         failed_checker_input = checker_input
                         checker_error_message = checker_message
