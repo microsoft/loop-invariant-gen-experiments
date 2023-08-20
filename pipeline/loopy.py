@@ -24,6 +24,7 @@ class LoopyPipeline:
         nudge: bool = True,
         features: str = "one_loop_one_method",
         arg_params: dict = None,
+        ground_truth: bool = False,
     ):
         self.benchmark = benchmark
         self.checker = checker
@@ -37,6 +38,7 @@ class LoopyPipeline:
         self.system_message = ""
         self.features = features
         self.arg_params = arg_params
+        self.ground_truth = ground_truth
 
     def load_config(self, config_file):
         config = yaml.load(open(config_file, "r"), Loader=yaml.FullLoader)
@@ -135,10 +137,16 @@ class LoopyPipeline:
                 "benchmark_code": self.benchmark.get_code(instance),
             }
             try:
-                llm_outputs, conversations = self.llm.run(
-                    {"code": self.benchmark.get_code(instance)},
-                    output_full_tree=True,
-                )
+                llm_outputs = None
+                conversations = None
+                if self.ground_truth:
+                    llm_outputs = ["loop invariant \\true;"]
+                    conversations = ["This was a ground truth experiment."]
+                else:
+                    llm_outputs, conversations = self.llm.run(
+                        {"code": self.benchmark.get_code(instance)},
+                        output_full_tree=True,
+                    )
 
                 completions = []
                 for j, llm_output in enumerate(llm_outputs):

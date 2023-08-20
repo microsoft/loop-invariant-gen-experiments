@@ -165,6 +165,12 @@ def parse_args(args):
         action="store_true",
     )
 
+    parser.add_argument(
+        "--ground-truth",
+        help="Run Frama-C with \\true as the invariant",
+        action="store_true",
+    )
+
     return parser.parse_args(args)
 
 
@@ -198,6 +204,7 @@ def main(args):
         nudge=args.secondary_nudge,
         features=args.benchmark_features,
         arg_params=vars(args),
+        ground_truth=args.ground_truth,
     )
     if args.config_file:
         p = p.load_config(args.config_file)
