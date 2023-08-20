@@ -43,7 +43,7 @@ class FramaCChecker(Checker):
         temp_c_file = temp_file + "_.c"
         temp_wp_json_report_file = temp_file + "_wp_report.json"
         temp_kernel_log_file = temp_file + "_kernel_logs.txt"
-        temp_output_dump_file = temp_file + "_output_dump.json"
+        temp_output_dump_file = temp_file + "_output_dump.csv"
 
         with open(temp_c_file, "w") as f:
             f.write(input)
@@ -84,7 +84,7 @@ class FramaCChecker(Checker):
         if use_json_output:
             if not os.path.exists(temp_wp_json_report_file):
                 return False, "No JSON report found"
-            
+
             with open(temp_wp_json_report_file, "r", encoding="utf-8") as f:
                 output = f.read()
                 output = output.replace("0.,", "0.0,")
@@ -102,9 +102,7 @@ class FramaCChecker(Checker):
                         inv_id = inv_id[0]
                         if inv_id[0] not in loop_invariant_status:
                             loop_invariant_status[inv_id[0]] = {}
-                        loop_invariant_status[inv_id[0]][inv_id[1]] = (
-                            item["proved"] == 1
-                        )
+                        loop_invariant_status[inv_id[0]][inv_id[1]] = item["passed"]
 
                 assert all(
                     [
@@ -125,15 +123,30 @@ class FramaCChecker(Checker):
                 )
 
                 for inv in loop_invariant_status.keys():
-                    if loop_invariant_status[inv]["preserved"] and loop_invariant_status[inv]["established"]:
+                    if (
+                        loop_invariant_status[inv]["preserved"]
+                        and loop_invariant_status[inv]["established"]
+                    ):
                         checker_output.append(f"loop invariant {inv} is inductive.")
-                    elif not loop_invariant_status[inv]["preserved"] and loop_invariant_status[inv]["established"]:
-                        checker_output.append(f"loop invariant {inv} is established but not preserved.")
-                    elif loop_invariant_status[inv]["preserved"] and not loop_invariant_status[inv]["established"]:
-                        checker_output.append(f"loop invariant {inv} is preserved but not established.")
+                    elif (
+                        not loop_invariant_status[inv]["preserved"]
+                        and loop_invariant_status[inv]["established"]
+                    ):
+                        checker_output.append(
+                            f"loop invariant {inv} is established but not preserved."
+                        )
+                    elif (
+                        loop_invariant_status[inv]["preserved"]
+                        and not loop_invariant_status[inv]["established"]
+                    ):
+                        checker_output.append(
+                            f"loop invariant {inv} is preserved but not established."
+                        )
                     else:
-                        checker_output.append(f"loop invariant {inv} is neither preserved nor established.")
-                
+                        checker_output.append(
+                            f"loop invariant {inv} is neither preserved nor established."
+                        )
+
                 checker_output = "\n".join(checker_output)
 
         else:
@@ -158,17 +171,22 @@ class FramaCChecker(Checker):
                         if row["property kind"] == "loop invariant"
                     ]
                 )
-        
+
         with open(temp_output_dump_file, "r", encoding="utf-8") as f:
-                assertion_output = [row for row in csv.DictReader(f, delimiter="\t")]
-                
-                user_assertion = "\n".join(
-                    [
-                        f"Assertion {row['property']}: " + (f"Unproven" if row['status'] == "Unknown" else f"{row['status']}")
-                        for row in assertion_output
-                        if row["property kind"] == "user assertion"
-                    ]
-                )
+            assertion_output = [row for row in csv.DictReader(f, delimiter="\t")]
+
+            user_assertion = "\n".join(
+                [
+                    f"Assertion {row['property']}: "
+                    + (
+                        f"Unproven"
+                        if row["status"] == "Unknown"
+                        else f"{row['status']}"
+                    )
+                    for row in assertion_output
+                    if row["property kind"] == "user assertion"
+                ]
+            )
 
         checker_output = checker_output + "\n" + user_assertion + "\n"
 
@@ -249,7 +267,9 @@ class FramaCChecker(Checker):
                     variants.append(inv)
         return variants
 
-    def prune_annotations_and_check(self, input_code, features, verbose=False, use_json_output=False):
+    def prune_annotations_and_check(
+        self, input_code, features, verbose=False, use_json_output=False
+    ):
         print("Pruning annotations...")
 
         annotation_line_mapping = {}
@@ -287,7 +307,10 @@ class FramaCChecker(Checker):
                 print("No invariants/variants found")
                 continue
             status, checker_message = self.check(
-                input_code, ("termination" in features), verbose, use_json_output=use_json_output
+                input_code,
+                ("termination" in features),
+                verbose,
+                use_json_output=use_json_output,
             )
 
             if verbose:
@@ -451,7 +474,7 @@ class FramaCBenchmark(Benchmark):
                 for line in lines:
                     invariant = re.findall(r"loop invariant (.+);", line)
                     if len(invariant) > 0:
-                        invariant = f"loop invariant i{inv_count + 1}: {invariant[0]};" # add loop invariant label
+                        invariant = f"loop invariant i{inv_count + 1}: {invariant[0]};"  # add loop invariant label
                         invariants[invariant] = True
                         inv_count += 1
 
