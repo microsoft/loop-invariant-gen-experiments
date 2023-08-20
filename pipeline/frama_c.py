@@ -444,12 +444,15 @@ class FramaCBenchmark(Benchmark):
         elif "one_loop_one_method" in features:
             invariants = {}
             variant = None
+            inv_count = 0
             for llm_output in llm_outputs:
                 lines = llm_output.splitlines()
                 for line in lines:
-                    invariant = re.findall(r"(loop invariant .+;)", line)
+                    invariant = re.findall(r"loop invariant (.+);", line)
                     if len(invariant) > 0:
+                        invariant = f"loop invariant {inv_count + 1}: {invariant[0]};" # add loop invariant label
                         invariants[invariant[0]] = True
+                        inv_count += 1
 
             loop = self.get_loops(self.get_main_definition(checker_input))
             if len(loop) != 1:

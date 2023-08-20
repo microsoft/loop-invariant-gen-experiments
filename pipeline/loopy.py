@@ -441,10 +441,7 @@ class LoopyPipeline:
                     ]
                 elif "code_with_combined_invariants" in instance.keys():
                     failed_checker_input = instance["code_with_combined_invariants"]
-                    # rerun the checker to get the error message
-                    _, checker_error_message = self.checker.check(
-                        failed_checker_input, ("termination" in self.features), use_json_output=self.use_json_output
-                    )
+                    checker_error_message = instance["checker_message"]
                 else:
                     # This benchmark was not run previously. So we will skip it.
                     continue
@@ -813,37 +810,37 @@ class LoopyPipeline:
                         ] = e.args[0]
                         success = False
 
-                if not success and "invariants_after_nudge" in instance:
-                    checker_input_with_invariants_after_nudge = (
-                        self.benchmark.combine_llm_outputs(
-                            checker_input_without_invariants,
-                            instance["invariants"] + instance["invariants_after_nudge"],
-                            self.mode,
-                        )
-                    )
-                    instance_log_json[
-                        "checker_input_after_nudge"
-                    ] = checker_input_with_invariants_after_nudge
-                    success, checker_message = self.checker.check(
-                        checker_input_with_invariants_after_nudge, self.mode, use_json_output=self.use_json_output
-                    )
-                    instance_log_json["checker_output_after_nudge"] = success
-                    instance_log_json["checker_message_after_nudge"] = checker_message
+                # if not success and "invariants_after_nudge" in instance:
+                #     checker_input_with_invariants_after_nudge = (
+                #         self.benchmark.combine_llm_outputs(
+                #             checker_input_without_invariants,
+                #             instance["invariants"] + instance["invariants_after_nudge"],
+                #             self.mode,
+                #         )
+                #     )
+                #     instance_log_json[
+                #         "checker_input_after_nudge"
+                #     ] = checker_input_with_invariants_after_nudge
+                #     success, checker_message = self.checker.check(
+                #         checker_input_with_invariants_after_nudge, self.mode, use_json_output=self.use_json_output
+                #     )
+                #     instance_log_json["checker_output_after_nudge"] = success
+                #     instance_log_json["checker_message_after_nudge"] = checker_message
 
-                    if not success:
-                        success, pruned_code = self.checker.prune_annotations_and_check(
-                            checker_input_with_invariants_after_nudge, self.mode, use_json_output=self.use_json_output
-                        )
-                        success, prune_checker_message = self.checker.check(
-                            pruned_code, self.mode, use_json_output=self.use_json_output
-                        )
-                        instance_log_json["code_after_nudge_and_prune"] = pruned_code
-                        instance_log_json[
-                            "checker_output_after_nudge_and_prune"
-                        ] = success
-                        instance_log_json[
-                            "checker_message_after_nudge_and_prune"
-                        ] = prune_checker_message
+                #     if not success:
+                #         success, pruned_code = self.checker.prune_annotations_and_check(
+                #             checker_input_with_invariants_after_nudge, self.mode, use_json_output=self.use_json_output
+                #         )
+                #         success, prune_checker_message = self.checker.check(
+                #             pruned_code, self.mode, use_json_output=self.use_json_output
+                #         )
+                #         instance_log_json["code_after_nudge_and_prune"] = pruned_code
+                #         instance_log_json[
+                #             "checker_output_after_nudge_and_prune"
+                #         ] = success
+                #         instance_log_json[
+                #             "checker_message_after_nudge_and_prune"
+                #         ] = prune_checker_message
 
                 if success:
                     stats["success"].append(i)
