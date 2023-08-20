@@ -445,7 +445,7 @@ class LoopyPipeline:
                         instance["invariants"],
                         self.features,
                     )
-                    checker_error_message = self.checker.check(
+                    success, checker_error_message = self.checker.check(
                         failed_checker_input, ("termination" in self.features), use_json_output=self.use_json_output
                     )
                 else:
