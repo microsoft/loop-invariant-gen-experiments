@@ -141,7 +141,6 @@ class LoopyPipeline:
                 conversations = None
                 if self.ground_truth:
                     llm_outputs = ["loop invariant \\true;"]
-                    conversations = ["This was a ground truth experiment."]
                 else:
                     llm_outputs, conversations = self.llm.run(
                         {"code": self.benchmark.get_code(instance)},
@@ -222,7 +221,10 @@ class LoopyPipeline:
                     checker_input, ("termination" in self.features)
                 )
 
-                instance_log_json["llm_conversation"] = conversations.get_full_tree()
+                if not self.ground_truth:
+                    instance_log_json["llm_conversation"] = conversations.get_full_tree()
+                else:
+                    instance_log_json["llm_conversation"] = "This was a ground truth experiment."
                 instance_log_json["invariants"] = llm_outputs
                 instance_log_json["code_with_combined_invariants"] = checker_input
                 instance_log_json["checker_output"] = success
