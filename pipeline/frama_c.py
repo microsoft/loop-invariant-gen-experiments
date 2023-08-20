@@ -144,7 +144,7 @@ class FramaCChecker(Checker):
                         )
                     else:
                         checker_output.append(
-                            f"loop invariant {inv} is neither preserved nor established."
+                            f"loop invariant {inv} is neither established nor preserved."
                         )
 
                 checker_output = "\n".join(checker_output)
@@ -174,6 +174,12 @@ class FramaCChecker(Checker):
 
         with open(temp_output_dump_file, "r", encoding="utf-8") as f:
             assertion_output = [row for row in csv.DictReader(f, delimiter="\t")]
+            
+            success = success and all(
+                row["status"] == "Valid"
+                for row in assertion_output
+                if row["property kind"] == "user assertion"
+            )
 
             user_assertion = "\n".join(
                 [
