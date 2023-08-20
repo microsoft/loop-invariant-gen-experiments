@@ -87,6 +87,7 @@ class FramaCChecker(Checker):
             
             with open(temp_wp_json_report_file, "r", encoding="utf-8") as f:
                 output = f.read()
+                output = output.replace("0.,", "0.0,")
                 output = json.loads(output)
                 loop_invariant_status = {}
                 for item in output:
