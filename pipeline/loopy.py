@@ -25,6 +25,7 @@ class LoopyPipeline:
         features: str = "one_loop_one_method",
         arg_params: dict = None,
         ground_truth: bool = False,
+        use_json_output: bool = False,
     ):
         self.benchmark = benchmark
         self.checker = checker
@@ -39,6 +40,7 @@ class LoopyPipeline:
         self.features = features
         self.arg_params = arg_params
         self.ground_truth = ground_truth
+        self.use_json_output = use_json_output
 
     def load_config(self, config_file):
         config = yaml.load(open(config_file, "r"), Loader=yaml.FullLoader)
@@ -173,7 +175,7 @@ class LoopyPipeline:
                         completion["invariants"] = llm_output
                         completion["code_with_invariants"] = checker_input
                         success, checker_message = self.checker.check(
-                            checker_input, ("termination" in self.features)
+                            checker_input, ("termination" in self.features), use_json_output=self.use_json_output
                         )
                         completion["success"] = success
                         completion["checker_message"] = checker_message
@@ -185,10 +187,10 @@ class LoopyPipeline:
                                     success,
                                     pruned_code,
                                 ) = self.checker.prune_annotations_and_check(
-                                    checker_input, self.features
+                                    checker_input, self.features, use_json_output=self.use_json_output
                                 )
                                 success, checker_message = self.checker.check(
-                                    pruned_code, ("termination" in self.features)
+                                    pruned_code, ("termination" in self.features), use_json_output=self.use_json_output
                                 )
                                 completion["success_after_prune"] = success
                                 completion["pruned_code"] = pruned_code
@@ -218,7 +220,7 @@ class LoopyPipeline:
                     self.features,
                 )
                 success, checker_message = self.checker.check(
-                    checker_input, ("termination" in self.features)
+                    checker_input, ("termination" in self.features), use_json_output=self.use_json_output
                 )
 
                 if not self.ground_truth:
@@ -234,10 +236,10 @@ class LoopyPipeline:
                     print("Pruning combined completion")
                     try:
                         success, pruned_code = self.checker.prune_annotations_and_check(
-                            checker_input, self.features
+                            checker_input, self.features, use_json_output=self.use_json_output
                         )
                         success, checker_message = self.checker.check(
-                            pruned_code, ("termination" in self.features)
+                            pruned_code, ("termination" in self.features), use_json_output=self.use_json_output
                         )
                         instance_log_json["code_after_combine_and_prune"] = pruned_code
                         instance_log_json[
@@ -271,7 +273,7 @@ class LoopyPipeline:
                     )
                     checker_input = nudge_checker_input
                     success, nudge_checker_message = self.checker.check(
-                        nudge_checker_input, self.mode
+                        nudge_checker_input, self.mode, use_json_output=self.use_json_output
                     )
 
                     instance_log_json[
@@ -286,10 +288,10 @@ class LoopyPipeline:
 
                     if not success:
                         success, pruned_code = self.checker.prune_annotations_and_check(
-                            checker_input, self.mode
+                            checker_input, self.mode, use_json_output=self.use_json_output
                         )
                         success, checker_message = self.checker.check(
-                            pruned_code, self.mode
+                            pruned_code, self.mode, use_json_output=self.use_json_output
                         )
 
                         instance_log_json["code_after_nudge_and_prune"] = pruned_code
@@ -486,7 +488,7 @@ class LoopyPipeline:
                         self.features,
                     )
                     success, checker_message = self.checker.check(
-                        checker_input, ("termination" in self.features)
+                        checker_input, ("termination" in self.features), use_json_output=self.use_json_output
                     )
 
                     healing_json["conversation"] = conversations.get_full_tree()
@@ -502,10 +504,10 @@ class LoopyPipeline:
 
                     if not success:
                         success, pruned_code = self.checker.prune_annotations_and_check(
-                            checker_input, self.features
+                            checker_input, self.features, use_json_output=self.use_json_output
                         )
                         success, prune_checker_message = self.checker.check(
-                            pruned_code, ("termination" in self.features)
+                            pruned_code, ("termination" in self.features), use_json_output=self.use_json_output
                         )
                         healing_json["code_after_combine_and_prune"] = pruned_code
                         healing_json["checker_output_after_combine_and_prune"] = success
@@ -573,10 +575,10 @@ class LoopyPipeline:
 
                 if not success:
                     success, pruned_code = self.checker.prune_annotations_and_check(
-                        checker_input, self.features
+                        checker_input, self.features, use_json_output=self.use_json_output
                     )
                     success, prune_checker_message = self.checker.check(
-                        pruned_code, ("termination" in self.features)
+                        pruned_code, ("termination" in self.features), use_json_output=self.use_json_output
                     )
                     healing_json["code_after_heal_and_prune"] = pruned_code
                     healing_json["checker_output_after_heal_and_prune"] = success
@@ -739,7 +741,7 @@ class LoopyPipeline:
                     completion["invariants"] = llm_output
                     completion["code_with_invariants"] = checker_input
                     success, checker_message = self.checker.check(
-                        checker_input, ("termination" in self.features)
+                        checker_input, ("termination" in self.features), use_json_output=self.use_json_output
                     )
                     completion["success"] = success
                     completion["checker_message"] = checker_message
@@ -751,10 +753,10 @@ class LoopyPipeline:
                                 success,
                                 pruned_code,
                             ) = self.checker.prune_annotations_and_check(
-                                checker_input, self.features
+                                checker_input, self.features, use_json_output=self.use_json_output
                             )
                             success, checker_message = self.checker.check(
-                                pruned_code, ("termination" in self.features)
+                                pruned_code, ("termination" in self.features), use_json_output=self.use_json_output
                             )
                             completion["success_after_prune"] = success
                             completion["pruned_code"] = pruned_code
@@ -784,7 +786,7 @@ class LoopyPipeline:
                     self.features,
                 )
                 success, checker_message = self.checker.check(
-                    checker_input, ("termination" in self.features)
+                    checker_input, ("termination" in self.features), use_json_output=self.use_json_output
                 )
 
                 instance_log_json["code_with_combined_invariants"] = checker_input
@@ -795,10 +797,10 @@ class LoopyPipeline:
                     print("Pruning combined completion")
                     try:
                         success, pruned_code = self.checker.prune_annotations_and_check(
-                            checker_input, self.features
+                            checker_input, self.features, use_json_output=self.use_json_output
                         )
                         success, checker_message = self.checker.check(
-                            pruned_code, ("termination" in self.features)
+                            pruned_code, ("termination" in self.features), use_json_output=self.use_json_output
                         )
                         instance_log_json["code_after_combine_and_prune"] = pruned_code
                         instance_log_json[
@@ -832,17 +834,17 @@ class LoopyPipeline:
                         "checker_input_after_nudge"
                     ] = checker_input_with_invariants_after_nudge
                     success, checker_message = self.checker.check(
-                        checker_input_with_invariants_after_nudge, self.mode
+                        checker_input_with_invariants_after_nudge, self.mode, use_json_output=self.use_json_output
                     )
                     instance_log_json["checker_output_after_nudge"] = success
                     instance_log_json["checker_message_after_nudge"] = checker_message
 
                     if not success:
                         success, pruned_code = self.checker.prune_annotations_and_check(
-                            checker_input_with_invariants_after_nudge, self.mode
+                            checker_input_with_invariants_after_nudge, self.mode, use_json_output=self.use_json_output
                         )
                         success, prune_checker_message = self.checker.check(
-                            pruned_code, self.mode
+                            pruned_code, self.mode, use_json_output=self.use_json_output
                         )
                         instance_log_json["code_after_nudge_and_prune"] = pruned_code
                         instance_log_json[

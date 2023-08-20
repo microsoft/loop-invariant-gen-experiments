@@ -1,5 +1,6 @@
 import csv
 import datetime
+import json
 import os
 import random
 import re
@@ -35,11 +36,12 @@ class FramaCChecker(Checker):
         error_message = f"Annotation error on line {line_num}: {error_message}"
         return error_message
 
-    def check(self, input, check_variant, verbose=False):
+    def check(self, input, check_variant, verbose=False, use_json_output=False):
         temp_file = datetime.datetime.now().strftime(
             "/tmp/temp_eval_%Y_%m_%d_%H_%M_%S_"
         ) + str(random.randint(0, 1000000))
         temp_c_file = temp_file + "_.c"
+        temp_wp_json_report_file = temp_file + "_wp_report.json"
         temp_kernel_log_file = temp_file + "_kernel_logs.txt"
         temp_output_dump_file = temp_file + "_output_dump.json"
 
@@ -49,7 +51,7 @@ class FramaCChecker(Checker):
         if verbose:
             print("==============================")
         cmd = f"frama-c -wp -wp-verbose 100 -wp-debug 100 -wp-timeout 3 \
-                -wp-prover=alt-ergo,z3,cvc4 {temp_c_file} -kernel-warn-key annot-error=active \
+                -wp-prover=alt-ergo,z3,cvc4 {temp_c_file} -wp-report-json {temp_wp_json_report_file} -kernel-warn-key annot-error=active \
                 -kernel-log a:{temp_kernel_log_file} -then -no-unicode -report -report-csv {temp_output_dump_file}"
         p = subprocess.Popen(cmd.split(), stdout=subprocess.PIPE)
         output, err = p.communicate()
@@ -76,12 +78,71 @@ class FramaCChecker(Checker):
                     error_message = "No invariants found."
                 return False, error_message
 
+        if use_json_output:
+            if not os.path.exists(temp_wp_json_report_file):
+                return False, "No JSON report found"
+            with open(temp_wp_json_report_file, "r", encoding="utf-8") as f:
+                output = f.read()
+                output = json.loads(output)
+                loop_invariant_status = {}
+                for item in output:
+                    if "_loop_invariant_" in item["goal"]:
+                        inv_id = re.findall(
+                            r"_loop_invariant_(i\d+)_(preserved|established)",
+                            item["goal"],
+                        )
+                        if len(inv_id) == 0:
+                            # item is an assertion
+                            continue
+                        inv_id = inv_id[0]
+                        if inv_id[0] not in loop_invariant_status:
+                            loop_invariant_status[inv_id[0]] = {}
+                        loop_invariant_status[inv_id[0]][inv_id[1]] = (
+                            item["proved"] == 1
+                        )
+
+                assert all(
+                    [
+                        (
+                            len(loop_invariant_status[inv_id]) == 2
+                            and "preserved" in loop_invariant_status[inv_id].keys()
+                            and "established" in loop_invariant_status[inv_id].keys()
+                        )
+                        for inv_id in loop_invariant_status
+                    ]
+                )
+                success = all(
+                    [
+                        loop_invariant_status[inv_id]["preserved"]
+                        and loop_invariant_status[inv_id]["established"]
+                        for inv_id in loop_invariant_status
+                    ]
+                )
+
+                checker_output = []
+                for inv in loop_invariant_status.keys():
+                    if loop_invariant_status[inv]["preserved"] and loop_invariant_status[inv]["established"]:
+                        checker_output.append(f"loop invariant {inv} is inductive.")
+                    elif not loop_invariant_status[inv]["preserved"] and loop_invariant_status[inv]["established"]:
+                        checker_output.append(f"loop invariant {inv} is established but not preserved.")
+                    elif loop_invariant_status[inv]["preserved"] and not loop_invariant_status[inv]["established"]:
+                        checker_output.append(f"loop invariant {inv} is preserved but not established.")
+                    else:
+                        checker_output.append(f"loop invariant {inv} is neither preserved nor established.")
+
+
+                os.remove(temp_c_file)
+                os.remove(temp_wp_json_report_file)
+                os.remove(temp_kernel_log_file)
+                os.remove(temp_output_dump_file)
+                return success, "\n".join(checker_output)
+
         # Parse the output dump
         if not check_variant and not os.path.exists(temp_output_dump_file):
             return False, "No output dump found"
 
         csv_output = None
-        success = True
+        success = False
 
         with open(temp_output_dump_file, "r", encoding="utf-8") as f:
             csv_output = [row for row in csv.DictReader(f, delimiter="\t")]
@@ -185,7 +246,7 @@ class FramaCChecker(Checker):
                     variants.append(inv)
         return variants
 
-    def prune_annotations_and_check(self, input_code, features, verbose=False):
+    def prune_annotations_and_check(self, input_code, features, verbose=False, use_json_output=False):
         print("Pruning annotations...")
 
         annotation_line_mapping = {}
@@ -222,7 +283,9 @@ class FramaCChecker(Checker):
             ):
                 print("No invariants/variants found")
                 continue
-            status, checker_message = self.check(input_code, ("termination" in features), verbose)
+            status, checker_message = self.check(
+                input_code, ("termination" in features), verbose, use_json_output=use_json_output
+            )
 
             if verbose:
                 print(checker_message)
@@ -315,7 +378,7 @@ class FramaCBenchmark(Benchmark):
 
         elif "multiple_loops_one_method" == features:
             print("Combining invariants from {} outputs".format(len(llm_outputs)))
-            
+
             invariants = {}
             for llm_output in llm_outputs:
                 lines = llm_output.splitlines()
@@ -920,7 +983,7 @@ class FramaCBenchmark(Benchmark):
                 loops.append(node)
             nodes += node.children
         return loops
-    
+
     def get_total_loop_count(self, code):
         ast = self.parser.parse(bytes(code, "utf-8"))
         nodes = [ast.root_node]
@@ -980,7 +1043,7 @@ class FramaCBenchmark(Benchmark):
         code = self.clean_newlines(code)
         if self.has_ill_formed_asserts(code):
             raise InvalidBenchmarkException("Ill-formed asserts")
-        
+
         if self.get_total_loop_count(code) < 1:
             raise InvalidBenchmarkException("No loop found")
 

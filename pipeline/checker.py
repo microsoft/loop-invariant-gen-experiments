@@ -6,7 +6,7 @@ class Checker:
     def __init__(self, name="boogie"):
         self.name = name
 
-    def check(self, code, features, verbose=False):
+    def check(self, code, features, verbose=False, use_json_output=False):
         with open("/tmp/temp_eval.bpl", "w") as f:
             f.write(code)
 
@@ -44,7 +44,7 @@ class Checker:
                 incorrect_invariants.append(lines[int(line_number)].strip())
         return "\n".join(incorrect_invariants)
 
-    def prune_annotations_and_check(self, input_code, features):
+    def prune_annotations_and_check(self, input_code, features, use_json_output=False):
         print("Pruning annotations")
         while True:
             status, error_string = self.check(input_code)
