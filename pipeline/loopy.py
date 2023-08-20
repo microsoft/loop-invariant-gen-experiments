@@ -663,30 +663,30 @@ class LoopyPipeline:
                 stats["skipped"].append(i)
                 log_json.append(instance)
                 continue
-            if not any(
-                [
-                    (c["checker_message"] == "No invariants found.")
-                    for c in instance["completions"]
-                ]
-            ):
-                if "checker_output" not in instance.keys():
-                    stats["skipped"].append(i)
-                    log_json.append(instance)
-                else:
-                    success = (
-                        instance["checker_output"]
-                        if "checker_output_after_combine_and_prune"
-                        not in instance.keys()
-                        else instance["checker_output_after_combine_and_prune"]
-                    )
-                    log_json.append(instance)
-                    if success:
-                        stats["success"].append(i)
-                    else:
-                        stats["failure"].append(i)
-                    stats["total"] += 1
-                    print("Skipping benchmark: {i}/{n}".format(i=start_index + i + 1, n=total))
-                continue
+            # if not any(
+            #     [
+            #         (c["checker_message"] == "No invariants found.")
+            #         for c in instance["completions"]
+            #     ]
+            # ):
+            #     if "checker_output" not in instance.keys():
+            #         stats["skipped"].append(i)
+            #         log_json.append(instance)
+            #     else:
+            #         success = (
+            #             instance["checker_output"]
+            #             if "checker_output_after_combine_and_prune"
+            #             not in instance.keys()
+            #             else instance["checker_output_after_combine_and_prune"]
+            #         )
+            #         log_json.append(instance)
+            #         if success:
+            #             stats["success"].append(i)
+            #         else:
+            #             stats["failure"].append(i)
+            #         stats["total"] += 1
+            #         print("Skipping benchmark: {i}/{n}".format(i=start_index + i + 1, n=total))
+            #     continue
 
             print("Rechecking benchmark: {i}/{n}".format(i=start_index + i + 1, n=total))
             instance_log_json = deepcopy(instance)
