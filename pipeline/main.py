@@ -211,7 +211,7 @@ def main(args):
         features=args.benchmark_features,
         arg_params=vars(args),
         ground_truth=args.ground_truth,
-        json_output=args.json_output,
+        use_json_output=args.json_output,
     )
     if args.config_file:
         p = p.load_config(args.config_file)
