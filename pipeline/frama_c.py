@@ -267,6 +267,23 @@ class FramaCChecker(Checker):
                     variants.append(inv)
         return variants
 
+    def get_non_inductive_invariant_line_nos(self, checker_message, checker_input):
+        lines = checker_message.splitlines()
+        non_inductive_invariants = []
+        for line in lines:
+            if "is inductive." in line:
+                continue
+            else:
+                inv_id = re.findall(r"loop invariant (i\d+) ", line)[0]
+                non_inductive_invariants.append(inv_id)
+
+        non_inductive_invariant_line_nos = []
+        for i, line in enumerate(checker_input.splitlines()):
+            if any([f"loop invariant {inv}" in line for inv in non_inductive_invariants]):
+                non_inductive_invariant_line_nos.append(i)
+
+        return non_inductive_invariant_line_nos
+
     def prune_annotations_and_check(
         self, input_code, features, verbose=False, use_json_output=False
     ):
@@ -338,6 +355,16 @@ class FramaCChecker(Checker):
                 code_lines[annotation_error_line_no] = ""
                 input_code = "\n".join(code_lines)
                 code_queue.append(input_code)
+            
+            elif use_json_output:
+                non_inductive_invariant_line_nos = self.get_non_inductive_invariant_line_nos(checker_message, input_code)
+                if len(non_inductive_invariant_line_nos) > 0:
+                    for line_no in non_inductive_invariant_line_nos:
+                        if verbose:
+                            print("Removing (non-inductive): ", code_lines[line_no])
+                        code_lines[line_no] = ""
+                    code_queue.append("\n".join(code_lines))
+            
             else:
                 # TODO: What about TIMEOUT?
                 # If any invariant causes a Timeout, it's marked as "Unknown"

@@ -440,8 +440,14 @@ class LoopyPipeline:
                         "checker_message_after_nudge_and_prune"
                     ]
                 elif "code_with_combined_invariants" in instance.keys():
-                    failed_checker_input = instance["code_with_combined_invariants"]
-                    checker_error_message = instance["checker_message"]
+                    failed_checker_input = self.benchmark.combine_llm_outputs(
+                        instance["benchmark_code"],
+                        instance["invariants"],
+                        self.features,
+                    )
+                    checker_error_message = self.checker.check(
+                        failed_checker_input, ("termination" in self.features), use_json_output=self.use_json_output
+                    )
                 else:
                     # This benchmark was not run previously. So we will skip it.
                     continue
