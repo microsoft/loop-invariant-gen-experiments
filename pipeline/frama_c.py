@@ -122,7 +122,7 @@ class FramaCChecker(Checker):
                     ]
                 )
 
-                for inv in loop_invariant_status.keys():
+                for inv in sorted(loop_invariant_status.keys(), key=lambda x: int(x[1:])):
                     if (
                         loop_invariant_status[inv]["preserved"]
                         and loop_invariant_status[inv]["established"]
