@@ -78,9 +78,13 @@ class FramaCChecker(Checker):
                     error_message = "No invariants found."
                 return False, error_message
 
+        checker_output = []
+        success = False
+
         if use_json_output:
             if not os.path.exists(temp_wp_json_report_file):
                 return False, "No JSON report found"
+            
             with open(temp_wp_json_report_file, "r", encoding="utf-8") as f:
                 output = f.read()
                 output = json.loads(output)
@@ -119,7 +123,6 @@ class FramaCChecker(Checker):
                     ]
                 )
 
-                checker_output = []
                 for inv in loop_invariant_status.keys():
                     if loop_invariant_status[inv]["preserved"] and loop_invariant_status[inv]["established"]:
                         checker_output.append(f"loop invariant {inv} is inductive.")
@@ -129,46 +132,44 @@ class FramaCChecker(Checker):
                         checker_output.append(f"loop invariant {inv} is preserved but not established.")
                     else:
                         checker_output.append(f"loop invariant {inv} is neither preserved nor established.")
+                
+                checker_output = "\n".join(checker_output)
 
+        else:
+            # Parse the output dump
+            if not check_variant and not os.path.exists(temp_output_dump_file):
+                return False, "No CSV output dump found from Frama-C"
 
-                os.remove(temp_c_file)
-                os.remove(temp_wp_json_report_file)
-                os.remove(temp_kernel_log_file)
-                os.remove(temp_output_dump_file)
-                return success, "\n".join(checker_output)
+            with open(temp_output_dump_file, "r", encoding="utf-8") as f:
+                checker_output = [row for row in csv.DictReader(f, delimiter="\t")]
 
-        # Parse the output dump
-        if not check_variant and not os.path.exists(temp_output_dump_file):
-            return False, "No output dump found"
-
-        csv_output = None
-        success = False
-
-        with open(temp_output_dump_file, "r", encoding="utf-8") as f:
-            csv_output = [row for row in csv.DictReader(f, delimiter="\t")]
-            success = all(
-                row["status"] == "Valid"
-                for row in csv_output
-                if row["property kind"] == "loop invariant"
-                or row["property kind"] == "user assertion"
-            )
-
-            user_assertion = "\n".join(
-                [
-                    f"Post-condition {row['property']} on line {row['line']}: {row['status']}"
-                    for row in csv_output
-                    if row["property kind"] == "user assertion"
-                ]
-            )
-
-            csv_output = "\n".join(
-                [
-                    f"Invariant {row['property']} on line {row['line']}: {row['status']}"
-                    for row in csv_output
+                success = all(
+                    row["status"] == "Valid"
+                    for row in checker_output
                     if row["property kind"] == "loop invariant"
-                ]
-            )
-            csv_output = csv_output + "\n" + user_assertion + "\n"
+                    or row["property kind"] == "user assertion"
+                )
+
+                checker_output = "\n".join(
+                    [
+                        f"Invariant {row['property']} on line {row['line']}: {row['status']}"
+                        for row in checker_output
+                        if row["property kind"] == "loop invariant"
+                    ]
+                )
+        
+        with open(temp_output_dump_file, "r", encoding="utf-8") as f:
+                assertion_output = [row for row in csv.DictReader(f, delimiter="\t")]
+                
+                user_assertion = "\n".join(
+                    [
+                        f"Assertion {row['property']}: " + (f"Unproven" if row['status'] == "Unknown" else f"{row['status']}")
+                        for row in assertion_output
+                        if row["property kind"] == "user assertion"
+                    ]
+                )
+
+        checker_output = checker_output + "\n" + user_assertion + "\n"
 
         if check_variant:
             msg = str(output, "UTF-8").split("\n")
@@ -185,9 +186,10 @@ class FramaCChecker(Checker):
                 success = False
 
         os.remove(temp_c_file)
+        os.remove(temp_wp_json_report_file)
         os.remove(temp_kernel_log_file)
         os.remove(temp_output_dump_file)
-        return success, csv_output
+        return success, checker_output
 
     def get_line_no_from_error_msg(self, checker_output):
         pattern = r"Annotation error on line (\d+): "

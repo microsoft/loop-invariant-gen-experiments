@@ -411,18 +411,6 @@ class LoopyPipeline:
                     )
                 )
                 continue
-            
-            # if "checker_output_after_combine_and_prune" in instance.keys() and (
-            #     not instance["checker_output_after_combine_and_prune"]
-            # ):
-            #     stats["failure"].append(i)
-            #     stats["total"] += 1
-            #     print(
-            #         "Skipping failed benchmark: {i}/{n}".format(
-            #             i=i, n=len(error_logs)
-            #         )
-            #     )
-            #     continue
 
             if "checker_output_after_nudge" in instance.keys() and (
                 instance["checker_output_after_nudge"]
@@ -453,7 +441,10 @@ class LoopyPipeline:
                     ]
                 elif "code_with_combined_invariants" in instance.keys():
                     failed_checker_input = instance["code_with_combined_invariants"]
-                    checker_error_message = instance["checker_message"]
+                    # rerun the checker to get the error message
+                    _, checker_error_message = self.checker.check(
+                        pruned_code, ("termination" in self.features), use_json_output=self.use_json_output
+                    )
                 else:
                     # This benchmark was not run previously. So we will skip it.
                     continue
