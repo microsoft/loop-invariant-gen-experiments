@@ -149,59 +149,60 @@ class LoopyPipeline:
                     )
 
                 completions = []
-                for j, llm_output in enumerate(llm_outputs):
-                    print(f"Checking completion {j + 1}/{len(llm_outputs)}")
-                    completion = {}
-                    if llm_output.startswith(
-                        "ERROR: Output does not contain at least 1 code block"
-                    ):
-                        completion["success"] = False
-                        completion["llm_output"] = llm_output.replace(
-                            "ERROR: Output does not contain at least 1 code block\nOutput:\n",
-                            "",
+                if not self.ground_truth:
+                    for j, llm_output in enumerate(llm_outputs):
+                        print(f"Checking completion {j + 1}/{len(llm_outputs)}")
+                        completion = {}
+                        if llm_output.startswith(
+                            "ERROR: Output does not contain at least 1 code block"
+                        ):
+                            completion["success"] = False
+                            completion["llm_output"] = llm_output.replace(
+                                "ERROR: Output does not contain at least 1 code block\nOutput:\n",
+                                "",
+                            )
+                            completion[
+                                "error"
+                            ] = "Output does not contain at least 1 code block"
+                            continue
+
+                        checker_input = self.benchmark.combine_llm_outputs(
+                            self.benchmark.get_code(instance),
+                            [llm_output if not llm_output.startswith("ERROR") else ""],
+                            self.features,
                         )
-                        completion[
-                            "error"
-                        ] = "Output does not contain at least 1 code block"
-                        continue
+                        completion["invariants"] = llm_output
+                        completion["code_with_invariants"] = checker_input
+                        success, checker_message = self.checker.check(
+                            checker_input, ("termination" in self.features)
+                        )
+                        completion["success"] = success
+                        completion["checker_message"] = checker_message
 
-                    checker_input = self.benchmark.combine_llm_outputs(
-                        self.benchmark.get_code(instance),
-                        [llm_output if not llm_output.startswith("ERROR") else ""],
-                        self.features,
-                    )
-                    completion["invariants"] = llm_output
-                    completion["code_with_invariants"] = checker_input
-                    success, checker_message = self.checker.check(
-                        checker_input, ("termination" in self.features)
-                    )
-                    completion["success"] = success
-                    completion["checker_message"] = checker_message
+                        if not success:
+                            print(f"Pruning completion {j + 1}/{len(llm_outputs)}")
+                            try:
+                                (
+                                    success,
+                                    pruned_code,
+                                ) = self.checker.prune_annotations_and_check(
+                                    checker_input, self.features
+                                )
+                                success, checker_message = self.checker.check(
+                                    pruned_code, ("termination" in self.features)
+                                )
+                                completion["success_after_prune"] = success
+                                completion["pruned_code"] = pruned_code
+                                completion["checker_message_after_prune"] = checker_message
+                            except Exception as e:
+                                print(e)
+                                print(traceback.format_exc())
+                                completion["success_after_prune"] = False
+                                completion["pruned_code"] = checker_input
+                                completion["checker_message_after_prune"] = e.args[0]
+                                success = False
 
-                    if not success:
-                        print(f"Pruning completion {j + 1}/{len(llm_outputs)}")
-                        try:
-                            (
-                                success,
-                                pruned_code,
-                            ) = self.checker.prune_annotations_and_check(
-                                checker_input, self.features
-                            )
-                            success, checker_message = self.checker.check(
-                                pruned_code, ("termination" in self.features)
-                            )
-                            completion["success_after_prune"] = success
-                            completion["pruned_code"] = pruned_code
-                            completion["checker_message_after_prune"] = checker_message
-                        except Exception as e:
-                            print(e)
-                            print(traceback.format_exc())
-                            completion["success_after_prune"] = False
-                            completion["pruned_code"] = checker_input
-                            completion["checker_message_after_prune"] = e.args[0]
-                            success = False
-
-                    completions.append(completion)
+                        completions.append(completion)
 
                 instance_log_json["completions"] = completions
 
