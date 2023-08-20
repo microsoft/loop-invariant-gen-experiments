@@ -274,8 +274,9 @@ class FramaCChecker(Checker):
             if "is inductive." in line:
                 continue
             else:
-                inv_id = re.findall(r"loop invariant (i\d+) ", line)[0]
-                non_inductive_invariants.append(inv_id)
+                inv_id = re.findall(r"loop invariant (i\d+) ", line)
+                if len(inv_id) == 1:
+                    non_inductive_invariants.append(inv_id[0])
 
         non_inductive_invariant_line_nos = []
         for i, line in enumerate(checker_input.splitlines()):
