@@ -443,7 +443,7 @@ class LoopyPipeline:
                     failed_checker_input = instance["code_with_combined_invariants"]
                     # rerun the checker to get the error message
                     _, checker_error_message = self.checker.check(
-                        pruned_code, ("termination" in self.features), use_json_output=self.use_json_output
+                        failed_checker_input, ("termination" in self.features), use_json_output=self.use_json_output
                     )
                 else:
                     # This benchmark was not run previously. So we will skip it.
