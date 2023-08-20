@@ -175,7 +175,9 @@ class LoopyPipeline:
                         completion["invariants"] = llm_output
                         completion["code_with_invariants"] = checker_input
                         success, checker_message = self.checker.check(
-                            checker_input, ("termination" in self.features), use_json_output=self.use_json_output
+                            checker_input,
+                            ("termination" in self.features),
+                            use_json_output=self.use_json_output,
                         )
                         completion["success"] = success
                         completion["checker_message"] = checker_message
@@ -187,14 +189,20 @@ class LoopyPipeline:
                                     success,
                                     pruned_code,
                                 ) = self.checker.prune_annotations_and_check(
-                                    checker_input, self.features, use_json_output=self.use_json_output
+                                    checker_input,
+                                    self.features,
+                                    use_json_output=self.use_json_output,
                                 )
                                 success, checker_message = self.checker.check(
-                                    pruned_code, ("termination" in self.features), use_json_output=self.use_json_output
+                                    pruned_code,
+                                    ("termination" in self.features),
+                                    use_json_output=self.use_json_output,
                                 )
                                 completion["success_after_prune"] = success
                                 completion["pruned_code"] = pruned_code
-                                completion["checker_message_after_prune"] = checker_message
+                                completion[
+                                    "checker_message_after_prune"
+                                ] = checker_message
                             except Exception as e:
                                 print(e)
                                 print(traceback.format_exc())
@@ -220,13 +228,19 @@ class LoopyPipeline:
                     self.features,
                 )
                 success, checker_message = self.checker.check(
-                    checker_input, ("termination" in self.features), use_json_output=self.use_json_output
+                    checker_input,
+                    ("termination" in self.features),
+                    use_json_output=self.use_json_output,
                 )
 
                 if not self.ground_truth:
-                    instance_log_json["llm_conversation"] = conversations.get_full_tree()
+                    instance_log_json[
+                        "llm_conversation"
+                    ] = conversations.get_full_tree()
                 else:
-                    instance_log_json["llm_conversation"] = "This was a ground truth experiment."
+                    instance_log_json[
+                        "llm_conversation"
+                    ] = "This was a ground truth experiment."
                 instance_log_json["invariants"] = llm_outputs
                 instance_log_json["code_with_combined_invariants"] = checker_input
                 instance_log_json["checker_output"] = success
@@ -236,10 +250,14 @@ class LoopyPipeline:
                     print("Pruning combined completion")
                     try:
                         success, pruned_code = self.checker.prune_annotations_and_check(
-                            checker_input, self.features, use_json_output=self.use_json_output
+                            checker_input,
+                            self.features,
+                            use_json_output=self.use_json_output,
                         )
                         success, checker_message = self.checker.check(
-                            pruned_code, ("termination" in self.features), use_json_output=self.use_json_output
+                            pruned_code,
+                            ("termination" in self.features),
+                            use_json_output=self.use_json_output,
                         )
                         instance_log_json["code_after_combine_and_prune"] = pruned_code
                         instance_log_json[
@@ -273,7 +291,9 @@ class LoopyPipeline:
                     )
                     checker_input = nudge_checker_input
                     success, nudge_checker_message = self.checker.check(
-                        nudge_checker_input, self.mode, use_json_output=self.use_json_output
+                        nudge_checker_input,
+                        self.mode,
+                        use_json_output=self.use_json_output,
                     )
 
                     instance_log_json[
@@ -288,7 +308,9 @@ class LoopyPipeline:
 
                     if not success:
                         success, pruned_code = self.checker.prune_annotations_and_check(
-                            checker_input, self.mode, use_json_output=self.use_json_output
+                            checker_input,
+                            self.mode,
+                            use_json_output=self.use_json_output,
                         )
                         success, checker_message = self.checker.check(
                             pruned_code, self.mode, use_json_output=self.use_json_output
@@ -446,7 +468,9 @@ class LoopyPipeline:
                         self.features,
                     )
                     success, checker_error_message = self.checker.check(
-                        failed_checker_input, ("termination" in self.features), use_json_output=self.use_json_output
+                        failed_checker_input,
+                        ("termination" in self.features),
+                        use_json_output=self.use_json_output,
                     )
                 else:
                     # This benchmark was not run previously. So we will skip it.
@@ -462,7 +486,11 @@ class LoopyPipeline:
                         ]
                     )
                     analysis = (
-                        ("the invariants were not inductive" if not "Annotation error " in inductive_invs else "there was an annotation error")
+                        (
+                            "the invariants were not inductive"
+                            if not "Annotation error " in inductive_invs
+                            else "there was an annotation error"
+                        )
                         if len(inductive_invs) == 0
                         else "the following subset of the invariants are inductive but they are not strong enough to prove the post-condition:\n"
                         + inductive_invs
@@ -482,7 +510,9 @@ class LoopyPipeline:
                         self.features,
                     )
                     success, checker_message = self.checker.check(
-                        checker_input, ("termination" in self.features), use_json_output=self.use_json_output
+                        checker_input,
+                        ("termination" in self.features),
+                        use_json_output=self.use_json_output,
                     )
 
                     healing_json["conversation"] = conversations.get_full_tree()
@@ -498,10 +528,14 @@ class LoopyPipeline:
 
                     if not success:
                         success, pruned_code = self.checker.prune_annotations_and_check(
-                            checker_input, self.features, use_json_output=self.use_json_output
+                            checker_input,
+                            self.features,
+                            use_json_output=self.use_json_output,
                         )
                         success, prune_checker_message = self.checker.check(
-                            pruned_code, ("termination" in self.features), use_json_output=self.use_json_output
+                            pruned_code,
+                            ("termination" in self.features),
+                            use_json_output=self.use_json_output,
                         )
                         healing_json["code_after_combine_and_prune"] = pruned_code
                         healing_json["checker_output_after_combine_and_prune"] = success
@@ -569,10 +603,14 @@ class LoopyPipeline:
 
                 if not success:
                     success, pruned_code = self.checker.prune_annotations_and_check(
-                        checker_input, self.features, use_json_output=self.use_json_output
+                        checker_input,
+                        self.features,
+                        use_json_output=self.use_json_output,
                     )
                     success, prune_checker_message = self.checker.check(
-                        pruned_code, ("termination" in self.features), use_json_output=self.use_json_output
+                        pruned_code,
+                        ("termination" in self.features),
+                        use_json_output=self.use_json_output,
                     )
                     healing_json["code_after_heal_and_prune"] = pruned_code
                     healing_json["checker_output_after_heal_and_prune"] = success
@@ -593,7 +631,10 @@ class LoopyPipeline:
                 with open(
                     os.path.join(
                         self.log_path,
-                        instance["file"].replace(".c", ".json").replace("../", "").replace("/", "__"),
+                        instance["file"]
+                        .replace(".c", ".json")
+                        .replace("../", "")
+                        .replace("/", "__"),
                     ),
                     "w",
                     encoding="utf-8",
@@ -694,21 +735,34 @@ class LoopyPipeline:
             #         print("Skipping benchmark: {i}/{n}".format(i=start_index + i + 1, n=total))
             #     continue
 
-            print("Rechecking benchmark: {i}/{n}".format(i=start_index + i + 1, n=total))
+            print(
+                "Rechecking benchmark: {i}/{n}".format(i=start_index + i + 1, n=total)
+            )
             instance_log_json = deepcopy(instance)
             try:
                 success = False
                 if not "benchmark_code" in instance:
                     log_json.append(instance)
-                    print("Skipping benchmark: {i}/{n}".format(i=start_index + i + 1, n=total))
+                    print(
+                        "Skipping benchmark: {i}/{n}".format(
+                            i=start_index + i + 1, n=total
+                        )
+                    )
                     continue
                 checker_input_without_invariants = instance["benchmark_code"]
 
                 if not "llm_conversation" in instance:
                     log_json.append(instance)
-                    print("Skipping benchmark: {i}/{n}".format(i=start_index + i + 1, n=total))
+                    print(
+                        "Skipping benchmark: {i}/{n}".format(
+                            i=start_index + i + 1, n=total
+                        )
+                    )
                     continue
-                llm_outputs = [ self.llm.extract_code(x["content"]) for x in instance["llm_conversation"][-1] ]
+                llm_outputs = [
+                    self.llm.extract_code(x["content"])
+                    for x in instance["llm_conversation"][-1]
+                ]
 
                 completions = []
                 for j, llm_output in enumerate(llm_outputs):
@@ -735,7 +789,9 @@ class LoopyPipeline:
                     completion["invariants"] = llm_output
                     completion["code_with_invariants"] = checker_input
                     success, checker_message = self.checker.check(
-                        checker_input, ("termination" in self.features), use_json_output=self.use_json_output
+                        checker_input,
+                        ("termination" in self.features),
+                        use_json_output=self.use_json_output,
                     )
                     completion["success"] = success
                     completion["checker_message"] = checker_message
@@ -747,10 +803,14 @@ class LoopyPipeline:
                                 success,
                                 pruned_code,
                             ) = self.checker.prune_annotations_and_check(
-                                checker_input, self.features, use_json_output=self.use_json_output
+                                checker_input,
+                                self.features,
+                                use_json_output=self.use_json_output,
                             )
                             success, checker_message = self.checker.check(
-                                pruned_code, ("termination" in self.features), use_json_output=self.use_json_output
+                                pruned_code,
+                                ("termination" in self.features),
+                                use_json_output=self.use_json_output,
                             )
                             completion["success_after_prune"] = success
                             completion["pruned_code"] = pruned_code
@@ -780,7 +840,9 @@ class LoopyPipeline:
                     self.features,
                 )
                 success, checker_message = self.checker.check(
-                    checker_input, ("termination" in self.features), use_json_output=self.use_json_output
+                    checker_input,
+                    ("termination" in self.features),
+                    use_json_output=self.use_json_output,
                 )
 
                 instance_log_json["code_with_combined_invariants"] = checker_input
@@ -791,10 +853,14 @@ class LoopyPipeline:
                     print("Pruning combined completion")
                     try:
                         success, pruned_code = self.checker.prune_annotations_and_check(
-                            checker_input, self.features, use_json_output=self.use_json_output
+                            checker_input,
+                            self.features,
+                            use_json_output=self.use_json_output,
                         )
                         success, checker_message = self.checker.check(
-                            pruned_code, ("termination" in self.features), use_json_output=self.use_json_output
+                            pruned_code,
+                            ("termination" in self.features),
+                            use_json_output=self.use_json_output,
                         )
                         instance_log_json["code_after_combine_and_prune"] = pruned_code
                         instance_log_json[
@@ -871,9 +937,13 @@ class LoopyPipeline:
         stats["success_count"] = len(stats["success"])
         stats["failure_count"] = len(stats["failure"])
         stats["skipped_count"] = len(stats["skipped"])
-        
+
         log_file.write(
-            json.dumps({"params": self.arg_params, "logs": log_json, "stats": stats}, indent=4, ensure_ascii=False)
+            json.dumps(
+                {"params": self.arg_params, "logs": log_json, "stats": stats},
+                indent=4,
+                ensure_ascii=False,
+            )
         )
         log_file.close()
 
@@ -889,7 +959,7 @@ class LoopyPipeline:
             raise Exception(
                 "LLM not initialized. Call load_config first, to load input and prompt files."
             )
-        
+
         num_benchmarks = 10
         log_json = []
 
@@ -897,9 +967,11 @@ class LoopyPipeline:
             os.makedirs(os.path.dirname(self.log_path))
         log_file = open(self.log_path + "final.json", "w", encoding="utf-8")
 
-        sliced_benchmarks = random.sample(self.benchmark.input_file_paths, num_benchmarks)
+        sliced_benchmarks = random.sample(
+            self.benchmark.input_file_paths, num_benchmarks
+        )
         for i, benchmark_path in enumerate(sliced_benchmarks):
-            instance_log_json = { "file" : benchmark_path }
+            instance_log_json = {"file": benchmark_path}
             try:
                 benchmark_code = self.benchmark.get_code(benchmark_path)
                 instance_log_json["benchmark_code"] = benchmark_code
@@ -909,11 +981,13 @@ class LoopyPipeline:
                         pc.num_completions = i
 
                     llm_outputs, conversations = self.llm.run(
-                        { "code": benchmark_code },
+                        {"code": benchmark_code},
                         output_full_tree=True,
                     )
                     instance_log_json[f"llm_output_k_{i}"] = llm_outputs
-                    instance_log_json[f"conversations_k_{i}"] = conversations.get_full_tree()
+                    instance_log_json[
+                        f"conversations_k_{i}"
+                    ] = conversations.get_full_tree()
 
                     unique_invariants = {}
                     k_unique_invariants = []
@@ -921,15 +995,23 @@ class LoopyPipeline:
                         if not llm_output.startswith(
                             "ERROR: Output does not contain at least 1 code block"
                         ):
-                            unique_invs_in_completion = self.get_unique_invariants(llm_output)
+                            unique_invs_in_completion = self.get_unique_invariants(
+                                llm_output
+                            )
                             k_unique_invariants.append(unique_invs_in_completion)
 
                             for inv in unique_invs_in_completion:
                                 unique_invariants[inv] = 1
-                    
-                    instance_log_json[f"unique_invariants_individual_completion_{i}"] = k_unique_invariants
-                    instance_log_json[f"unique_invariants_k_{i}"] = list(unique_invariants.keys())
-                    instance_log_json[f"num_unique_invariants_k_{i}"] = len(unique_invariants.keys())
+
+                    instance_log_json[
+                        f"unique_invariants_individual_completion_{i}"
+                    ] = k_unique_invariants
+                    instance_log_json[f"unique_invariants_k_{i}"] = list(
+                        unique_invariants.keys()
+                    )
+                    instance_log_json[f"num_unique_invariants_k_{i}"] = len(
+                        unique_invariants.keys()
+                    )
 
                 with open(
                     os.path.join(
@@ -943,9 +1025,7 @@ class LoopyPipeline:
                 ) as f:
                     f.write(
                         json.dumps(
-                            {
-                                "logs": instance_log_json
-                            },
+                            {"logs": instance_log_json},
                             indent=4,
                             ensure_ascii=False,
                         )
@@ -967,9 +1047,7 @@ class LoopyPipeline:
                 ) as f:
                     f.write(
                         json.dumps(
-                            {
-                                "logs": instance_log_json
-                            },
+                            {"logs": instance_log_json},
                             indent=4,
                             ensure_ascii=False,
                         )
@@ -981,7 +1059,10 @@ class LoopyPipeline:
                     continue
 
         log_file.write(
-            json.dumps({"params": self.arg_params, "logs": log_json}, indent=4, ensure_ascii=False)
+            json.dumps(
+                {"params": self.arg_params, "logs": log_json},
+                indent=4,
+                ensure_ascii=False,
+            )
         )
         log_file.close()
-
