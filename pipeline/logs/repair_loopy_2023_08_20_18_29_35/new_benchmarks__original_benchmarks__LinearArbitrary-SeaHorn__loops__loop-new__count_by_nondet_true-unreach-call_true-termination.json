@@ -1,0 +1,332 @@
+{
+    "logs": {
+        "file": "../new_benchmarks/original_benchmarks/LinearArbitrary-SeaHorn/loops/loop-new/count_by_nondet_true-unreach-call_true-termination.c",
+        "healing_conversations": [
+            {
+                "conversation": [
+                    [
+                        {
+                            "role": "system",
+                            "content": "You are a helpful AI software assistant that reasons about how code behaves. Given a program, you can find loop invariants, which can then be used to verify some property in the program. \nFrama-C is a software verification tool for C programs. The input to Frama-C is a C program file with ACSL (ANSI/ISO C Specification Language) annotations.\nFor the given program, find the necessary loop invariants of the while loop to help Frama-C verify the post-condition.\n\nInstructions:\n- Make a note of the pre-conditions or variable assignments in the program.\n- Analyze the loop body and make a note of the loop condition. \n- Output loop invariants that are true \n(i) before the loop execution, \n(ii) in every iteration of the loop and \n(iii) after the loop termination, \nsuch that the loop invariants imply the post condition.\n- If a loop invariant is a conjunction, split it into its parts.\n- Output all the loop invariants in one code block. For example:\n```\n/*@ \n    loop invariant i1;\n    loop invariant i2;\n*/\n```\nRules:\n- **Do not use variables or functions that are not declared in the program.** \n- **Do not make any assumptions about functions whose definitions are not given.**\n- **All undefined variables contain garbage values. Do not use variables that have garbage values.**\n- **Do not use keywords that are not supported in ACSL annotations for loops.**\n- **Variables that are not explicitly initialized, could have garbage values. Do not make any assumptions about such values.**\n- **Do not use the \\at(x, Pre) notation for any variable x.**\n- **Do not use non-deterministic function calls.**\n"
+                        }
+                    ],
+                    [
+                        {
+                            "role": "user",
+                            "content": "\n\nConsider the following program with loop invariants annotated with the respective loop(s):\n```\n#define assume(e) if(!(e)) return 0;\n#define LARGE_INT 1000000\nextern int unknown(void);\nextern int unknown_int(void);\n\nint main() {\n    int i = 0;\n    int k = 0;\n    /*@\nloop invariant i1: 0 <= i && i <= LARGE_INT;\nloop invariant i2: 0 <= k && k <= LARGE_INT;\nloop invariant i3: k * (LARGE_INT - 1) <= LARGE_INT * LARGE_INT;\nloop invariant i4: 0 <= i <= LARGE_INT;\nloop invariant i5: 0 <= k <= LARGE_INT;\nloop invariant i6: k * (LARGE_INT - 1) >= (LARGE_INT - i);\nloop invariant i7: 0 <= i;\nloop invariant i8: 0 <= k;\nloop invariant i9: i <= LARGE_INT;\nloop invariant i10: k <= LARGE_INT;\nloop invariant i11: i == \\at(i, Pre) + k * \\at(j, Pre);\nloop invariant i12: 0 <= i <= LARGE_INT;\nloop invariant i13: 0 <= k <= LARGE_INT;\nloop invariant i14: i == k * \\sum(0, k-1, \\lambda int t; \\at(j, LoopEntry(t)));\nloop invariant i15: 0 <= i <= LARGE_INT;\nloop invariant i16: 0 <= k <= LARGE_INT;\nloop invariant i17: k * (LARGE_INT - 1) <= LARGE_INT * (LARGE_INT - 1) - i;\n*/\nwhile(i < LARGE_INT) {\n        int j = unknown_int();\n        if (!(1 <= j && j < LARGE_INT)) return 0;\n        i = i + j;\n        k ++;\n    }\n    {;//@ assert(k <= LARGE_INT);\n}\n    return 0;\n}\n```\n\nThe verifier returns the following message.\n```\nAnnotation error on line 23: unexpected token '('\n```\nIf an invariant is established, it means that the verifier was able to prove that the invariant holds before the loop.\nIf an invariant is preserved, it means that the verifier was able to prove that the invariant holds after the loop, assuming that it holds before the loop.\nIf an assertion is partially proven, it means that the verifier was able to prove that the assertion holds under some assumptions.\n\nTo fix the error, try the following:\nIf there is a syntax error, fix the syntax error.\nIf an invariant is established but not preserved, consider adding a clause to the invariant to make it stronger.\nIf an invariant is neither established nor preserved, consider removing it, or replacing it with a different inductive invariant.\nIf neither of the above is possible, add a new loop invariant to strengthen the existing ones.\nUse \\at(x, LoopEntry), instead of \\at(x, Pre) to refer to the value of a variable x just before the beginning of loop execution.\nUse \\at(x, LoopCurrent) to refer to the value of a variable x at the beginning of the current iteration of the loop.\n\nThere could be errors in the loop annotation(s), other than the ones mentioned in the above error message from the verifier.\nPlease fix all the above-mentioned errors, and provide the corrected loop invariants for the program that is sufficient to verify the post-condition in the program.\nUse the ACSL syntax to specify the invariants."
+                        }
+                    ],
+                    [
+                        {
+                            "role": "assistant",
+                            "content": "Given the error message and instructions, here is the corrected loop invariants for the program:\n\n```\n/*@ \n    loop invariant 0 <= i && i <= LARGE_INT;\n    loop invariant 0 <= k && k <= LARGE_INT;\n    loop invariant k * (LARGE_INT - 1) <= LARGE_INT * LARGE_INT;\n    loop invariant k * (LARGE_INT - 1) >= (LARGE_INT - i);\n    loop invariant i == \\at(i, LoopEntry) + k * \\at(j, LoopEntry);\n    loop invariant k * (LARGE_INT - 1) <= LARGE_INT * (LARGE_INT - 1) - i;\n*/\n```\n\nThese invariants should be sufficient to help Frama-C verify the post-condition in the program."
+                        }
+                    ]
+                ],
+                "invariants": [
+                    "/*@ \n    loop invariant 0 <= i && i <= LARGE_INT;\n    loop invariant 0 <= k && k <= LARGE_INT;\n    loop invariant k * (LARGE_INT - 1) <= LARGE_INT * LARGE_INT;\n    loop invariant k * (LARGE_INT - 1) >= (LARGE_INT - i);\n    loop invariant i == \\at(i, LoopEntry) + k * \\at(j, LoopEntry);\n    loop invariant k * (LARGE_INT - 1) <= LARGE_INT * (LARGE_INT - 1) - i;\n*/"
+                ],
+                "benchmark_code": "#define assume(e) if(!(e)) return 0;\n#define LARGE_INT 1000000\nextern int unknown(void);\nextern int unknown_int(void);\n\nint main() {\n    int i = 0;\n    int k = 0;\n    while(i < LARGE_INT) {\n        int j = unknown_int();\n        if (!(1 <= j && j < LARGE_INT)) return 0;\n        i = i + j;\n        k ++;\n    }\n    {;//@ assert(k <= LARGE_INT);\n}\n    return 0;\n}",
+                "code_with_old_invariants": "#define assume(e) if(!(e)) return 0;\n#define LARGE_INT 1000000\nextern int unknown(void);\nextern int unknown_int(void);\n\nint main() {\n    int i = 0;\n    int k = 0;\n    /*@\nloop invariant 0 <= i && i <= LARGE_INT;\nloop invariant 0 <= k && k <= LARGE_INT;\nloop invariant k * (LARGE_INT - 1) <= LARGE_INT * LARGE_INT;\nloop invariant 0 <= i <= LARGE_INT;\nloop invariant 0 <= k <= LARGE_INT;\nloop invariant k * (LARGE_INT - 1) >= (LARGE_INT - i);\nloop invariant 0 <= i;\nloop invariant 0 <= k;\nloop invariant i <= LARGE_INT;\nloop invariant k <= LARGE_INT;\nloop invariant i == \\at(i, Pre) + k * \\at(j, Pre);\nloop invariant i == k * \\sum(0, k-1, \\lambda int t; \\at(j, LoopEntry(t)));\nloop invariant k * (LARGE_INT - 1) <= LARGE_INT * (LARGE_INT - 1) - i;\n*/\nwhile(i < LARGE_INT) {\n        int j = unknown_int();\n        if (!(1 <= j && j < LARGE_INT)) return 0;\n        i = i + j;\n        k ++;\n    }\n    {;//@ assert(k <= LARGE_INT);\n}\n    return 0;\n}",
+                "input_error_message": "Annotation error on line 21: unexpected token '('",
+                "code_with_new_invariants": "#define assume(e) if(!(e)) return 0;\n#define LARGE_INT 1000000\nextern int unknown(void);\nextern int unknown_int(void);\n\nint main() {\n    int i = 0;\n    int k = 0;\n    /*@\nloop invariant i1: 0 <= i && i <= LARGE_INT;\nloop invariant i2: 0 <= k && k <= LARGE_INT;\nloop invariant i3: k * (LARGE_INT - 1) <= LARGE_INT * LARGE_INT;\nloop invariant i4: k * (LARGE_INT - 1) >= (LARGE_INT - i);\nloop invariant i5: i == \\at(i, LoopEntry) + k * \\at(j, LoopEntry);\nloop invariant i6: k * (LARGE_INT - 1) <= LARGE_INT * (LARGE_INT - 1) - i;\n*/\nwhile(i < LARGE_INT) {\n        int j = unknown_int();\n        if (!(1 <= j && j < LARGE_INT)) return 0;\n        i = i + j;\n        k ++;\n    }\n    {;//@ assert(k <= LARGE_INT);\n}\n    return 0;\n}",
+                "checker_output": false,
+                "checker_message": "Annotation error on line 14: unbound logic variable j. Ignoring loop annotation",
+                "code_after_combine_and_prune": "#define assume(e) if(!(e)) return 0;\n#define LARGE_INT 1000000\nextern int unknown(void);\nextern int unknown_int(void);\n\nint main() {\n    int i = 0;\n    int k = 0;\n    /*@\n\n\n\n\n\n\n*/\nwhile(i < LARGE_INT) {\n        int j = unknown_int();\n        if (!(1 <= j && j < LARGE_INT)) return 0;\n        i = i + j;\n        k ++;\n    }\n    {;//@ assert(k <= LARGE_INT);\n}\n    return 0;\n}",
+                "checker_output_after_combine_and_prune": false,
+                "checker_message_after_combine_and_prune": "No invariants found."
+            },
+            {
+                "conversation": [
+                    [
+                        {
+                            "role": "system",
+                            "content": "You are a helpful AI software assistant that reasons about how code behaves. Given a program, you can find loop invariants, which can then be used to verify some property in the program. \nFrama-C is a software verification tool for C programs. The input to Frama-C is a C program file with ACSL (ANSI/ISO C Specification Language) annotations.\nFor the given program, find the necessary loop invariants of the while loop to help Frama-C verify the post-condition.\n\nInstructions:\n- Make a note of the pre-conditions or variable assignments in the program.\n- Analyze the loop body and make a note of the loop condition. \n- Output loop invariants that are true \n(i) before the loop execution, \n(ii) in every iteration of the loop and \n(iii) after the loop termination, \nsuch that the loop invariants imply the post condition.\n- If a loop invariant is a conjunction, split it into its parts.\n- Output all the loop invariants in one code block. For example:\n```\n/*@ \n    loop invariant i1;\n    loop invariant i2;\n*/\n```\nRules:\n- **Do not use variables or functions that are not declared in the program.** \n- **Do not make any assumptions about functions whose definitions are not given.**\n- **All undefined variables contain garbage values. Do not use variables that have garbage values.**\n- **Do not use keywords that are not supported in ACSL annotations for loops.**\n- **Variables that are not explicitly initialized, could have garbage values. Do not make any assumptions about such values.**\n- **Do not use the \\at(x, Pre) notation for any variable x.**\n- **Do not use non-deterministic function calls.**\n"
+                        }
+                    ],
+                    [
+                        {
+                            "role": "user",
+                            "content": "\n\nConsider the following program with loop invariants annotated with the respective loop(s):\n```\n#define assume(e) if(!(e)) return 0;\n#define LARGE_INT 1000000\nextern int unknown(void);\nextern int unknown_int(void);\n\nint main() {\n    int i = 0;\n    int k = 0;\n    /*@\nloop invariant i1: 0 <= i && i <= LARGE_INT;\nloop invariant i2: 0 <= k && k <= LARGE_INT;\nloop invariant i3: k * (LARGE_INT - 1) <= LARGE_INT * LARGE_INT;\nloop invariant i4: k * (LARGE_INT - 1) >= (LARGE_INT - i);\nloop invariant i5: i == \\at(i, LoopEntry) + k * \\at(j, LoopEntry);\nloop invariant i6: k * (LARGE_INT - 1) <= LARGE_INT * (LARGE_INT - 1) - i;\n*/\nwhile(i < LARGE_INT) {\n        int j = unknown_int();\n        if (!(1 <= j && j < LARGE_INT)) return 0;\n        i = i + j;\n        k ++;\n    }\n    {;//@ assert(k <= LARGE_INT);\n}\n    return 0;\n}\n```\n\nThe verifier returns the following message.\n```\nAnnotation error on line 14: unbound logic variable j. Ignoring loop annotation\n```\nIf an invariant is established, it means that the verifier was able to prove that the invariant holds before the loop.\nIf an invariant is preserved, it means that the verifier was able to prove that the invariant holds after the loop, assuming that it holds before the loop.\nIf an assertion is partially proven, it means that the verifier was able to prove that the assertion holds under some assumptions.\n\nTo fix the error, try the following:\nIf there is a syntax error, fix the syntax error.\nIf an invariant is established but not preserved, consider adding a clause to the invariant to make it stronger.\nIf an invariant is neither established nor preserved, consider removing it, or replacing it with a different inductive invariant.\nIf neither of the above is possible, add a new loop invariant to strengthen the existing ones.\nUse \\at(x, LoopEntry), instead of \\at(x, Pre) to refer to the value of a variable x just before the beginning of loop execution.\nUse \\at(x, LoopCurrent) to refer to the value of a variable x at the beginning of the current iteration of the loop.\n\nThere could be errors in the loop annotation(s), other than the ones mentioned in the above error message from the verifier.\nPlease fix all the above-mentioned errors, and provide the corrected loop invariants for the program that is sufficient to verify the post-condition in the program.\nUse the ACSL syntax to specify the invariants."
+                        }
+                    ],
+                    [
+                        {
+                            "role": "assistant",
+                            "content": "Here's the corrected loop invariants for the given program:\n\n```c\n/*@ \n    loop invariant 0 <= i && i <= LARGE_INT;\n    loop invariant 0 <= k && k <= LARGE_INT;\n    loop invariant k * (LARGE_INT - 1) <= LARGE_INT * LARGE_INT;\n    loop invariant k * (LARGE_INT - 1) >= (LARGE_INT - i);\n    loop invariant k * (LARGE_INT - 1) <= LARGE_INT * (LARGE_INT - 1) - i;\n*/\n```\n\nI have removed the loop invariant i5 since it used the unbound logic variable 'j'. The remaining invariants should be sufficient to verify the post-condition in the program."
+                        }
+                    ]
+                ],
+                "invariants": [
+                    "/*@ \n    loop invariant 0 <= i && i <= LARGE_INT;\n    loop invariant 0 <= k && k <= LARGE_INT;\n    loop invariant k * (LARGE_INT - 1) <= LARGE_INT * LARGE_INT;\n    loop invariant k * (LARGE_INT - 1) >= (LARGE_INT - i);\n    loop invariant k * (LARGE_INT - 1) <= LARGE_INT * (LARGE_INT - 1) - i;\n*/"
+                ],
+                "benchmark_code": "#define assume(e) if(!(e)) return 0;\n#define LARGE_INT 1000000\nextern int unknown(void);\nextern int unknown_int(void);\n\nint main() {\n    int i = 0;\n    int k = 0;\n    while(i < LARGE_INT) {\n        int j = unknown_int();\n        if (!(1 <= j && j < LARGE_INT)) return 0;\n        i = i + j;\n        k ++;\n    }\n    {;//@ assert(k <= LARGE_INT);\n}\n    return 0;\n}",
+                "code_with_old_invariants": "#define assume(e) if(!(e)) return 0;\n#define LARGE_INT 1000000\nextern int unknown(void);\nextern int unknown_int(void);\n\nint main() {\n    int i = 0;\n    int k = 0;\n    /*@\nloop invariant 0 <= i && i <= LARGE_INT;\nloop invariant 0 <= k && k <= LARGE_INT;\nloop invariant k * (LARGE_INT - 1) <= LARGE_INT * LARGE_INT;\nloop invariant 0 <= i <= LARGE_INT;\nloop invariant 0 <= k <= LARGE_INT;\nloop invariant k * (LARGE_INT - 1) >= (LARGE_INT - i);\nloop invariant 0 <= i;\nloop invariant 0 <= k;\nloop invariant i <= LARGE_INT;\nloop invariant k <= LARGE_INT;\nloop invariant i == \\at(i, Pre) + k * \\at(j, Pre);\nloop invariant i == k * \\sum(0, k-1, \\lambda int t; \\at(j, LoopEntry(t)));\nloop invariant k * (LARGE_INT - 1) <= LARGE_INT * (LARGE_INT - 1) - i;\n*/\nwhile(i < LARGE_INT) {\n        int j = unknown_int();\n        if (!(1 <= j && j < LARGE_INT)) return 0;\n        i = i + j;\n        k ++;\n    }\n    {;//@ assert(k <= LARGE_INT);\n}\n    return 0;\n}",
+                "input_error_message": "Annotation error on line 21: unexpected token '('",
+                "code_with_new_invariants": "#define assume(e) if(!(e)) return 0;\n#define LARGE_INT 1000000\nextern int unknown(void);\nextern int unknown_int(void);\n\nint main() {\n    int i = 0;\n    int k = 0;\n    /*@\nloop invariant i1: 0 <= i && i <= LARGE_INT;\nloop invariant i2: 0 <= k && k <= LARGE_INT;\nloop invariant i3: k * (LARGE_INT - 1) <= LARGE_INT * LARGE_INT;\nloop invariant i4: k * (LARGE_INT - 1) >= (LARGE_INT - i);\nloop invariant i5: k * (LARGE_INT - 1) <= LARGE_INT * (LARGE_INT - 1) - i;\n*/\nwhile(i < LARGE_INT) {\n        int j = unknown_int();\n        if (!(1 <= j && j < LARGE_INT)) return 0;\n        i = i + j;\n        k ++;\n    }\n    {;//@ assert(k <= LARGE_INT);\n}\n    return 0;\n}",
+                "checker_output": false,
+                "checker_message": "loop invariant i1 is inductive.\nloop invariant i2 is inductive.\nloop invariant i3 is inductive.\nloop invariant i4 is preserved but not established.\nloop invariant i5 is inductive.\nAssertion k <= 1000000: Partially proven\n",
+                "code_after_combine_and_prune": "#define assume(e) if(!(e)) return 0;\n#define LARGE_INT 1000000\nextern int unknown(void);\nextern int unknown_int(void);\n\nint main() {\n    int i = 0;\n    int k = 0;\n    /*@\n\n\n\n\n\n*/\nwhile(i < LARGE_INT) {\n        int j = unknown_int();\n        if (!(1 <= j && j < LARGE_INT)) return 0;\n        i = i + j;\n        k ++;\n    }\n    {;//@ assert(k <= LARGE_INT);\n}\n    return 0;\n}",
+                "checker_output_after_combine_and_prune": false,
+                "checker_message_after_combine_and_prune": "No invariants found."
+            },
+            {
+                "conversation": [
+                    [
+                        {
+                            "role": "system",
+                            "content": "You are a helpful AI software assistant that reasons about how code behaves. Given a program, you can find loop invariants, which can then be used to verify some property in the program. \nFrama-C is a software verification tool for C programs. The input to Frama-C is a C program file with ACSL (ANSI/ISO C Specification Language) annotations.\nFor the given program, find the necessary loop invariants of the while loop to help Frama-C verify the post-condition.\n\nInstructions:\n- Make a note of the pre-conditions or variable assignments in the program.\n- Analyze the loop body and make a note of the loop condition. \n- Output loop invariants that are true \n(i) before the loop execution, \n(ii) in every iteration of the loop and \n(iii) after the loop termination, \nsuch that the loop invariants imply the post condition.\n- If a loop invariant is a conjunction, split it into its parts.\n- Output all the loop invariants in one code block. For example:\n```\n/*@ \n    loop invariant i1;\n    loop invariant i2;\n*/\n```\nRules:\n- **Do not use variables or functions that are not declared in the program.** \n- **Do not make any assumptions about functions whose definitions are not given.**\n- **All undefined variables contain garbage values. Do not use variables that have garbage values.**\n- **Do not use keywords that are not supported in ACSL annotations for loops.**\n- **Variables that are not explicitly initialized, could have garbage values. Do not make any assumptions about such values.**\n- **Do not use the \\at(x, Pre) notation for any variable x.**\n- **Do not use non-deterministic function calls.**\n"
+                        }
+                    ],
+                    [
+                        {
+                            "role": "user",
+                            "content": "\n\nConsider the following program with loop invariants annotated with the respective loop(s):\n```\n#define assume(e) if(!(e)) return 0;\n#define LARGE_INT 1000000\nextern int unknown(void);\nextern int unknown_int(void);\n\nint main() {\n    int i = 0;\n    int k = 0;\n    /*@\nloop invariant i1: 0 <= i && i <= LARGE_INT;\nloop invariant i2: 0 <= k && k <= LARGE_INT;\nloop invariant i3: k * (LARGE_INT - 1) <= LARGE_INT * LARGE_INT;\nloop invariant i4: k * (LARGE_INT - 1) >= (LARGE_INT - i);\nloop invariant i5: k * (LARGE_INT - 1) <= LARGE_INT * (LARGE_INT - 1) - i;\n*/\nwhile(i < LARGE_INT) {\n        int j = unknown_int();\n        if (!(1 <= j && j < LARGE_INT)) return 0;\n        i = i + j;\n        k ++;\n    }\n    {;//@ assert(k <= LARGE_INT);\n}\n    return 0;\n}\n```\n\nThe verifier returns the following message.\n```\nloop invariant i1 is inductive.\nloop invariant i2 is inductive.\nloop invariant i3 is inductive.\nloop invariant i4 is preserved but not established.\nloop invariant i5 is inductive.\nAssertion k <= 1000000: Partially proven\n\n```\nIf an invariant is established, it means that the verifier was able to prove that the invariant holds before the loop.\nIf an invariant is preserved, it means that the verifier was able to prove that the invariant holds after the loop, assuming that it holds before the loop.\nIf an assertion is partially proven, it means that the verifier was able to prove that the assertion holds under some assumptions.\n\nTo fix the error, try the following:\nIf there is a syntax error, fix the syntax error.\nIf an invariant is established but not preserved, consider adding a clause to the invariant to make it stronger.\nIf an invariant is neither established nor preserved, consider removing it, or replacing it with a different inductive invariant.\nIf neither of the above is possible, add a new loop invariant to strengthen the existing ones.\nUse \\at(x, LoopEntry), instead of \\at(x, Pre) to refer to the value of a variable x just before the beginning of loop execution.\nUse \\at(x, LoopCurrent) to refer to the value of a variable x at the beginning of the current iteration of the loop.\n\nThere could be errors in the loop annotation(s), other than the ones mentioned in the above error message from the verifier.\nPlease fix all the above-mentioned errors, and provide the corrected loop invariants for the program that is sufficient to verify the post-condition in the program.\nUse the ACSL syntax to specify the invariants."
+                        }
+                    ],
+                    [
+                        {
+                            "role": "assistant",
+                            "content": "Based on the provided verifier message and the given instructions, we can modify the loop invariants to make them inductive and ensure the post-condition is verified. Here's the corrected set of loop invariants for the program:\n\n```\n/*@ \n  loop invariant i1: 0 <= i && i <= LARGE_INT;\n  loop invariant i2: 0 <= k && k <= LARGE_INT;\n  loop invariant i3: k * (LARGE_INT - 1) <= LARGE_INT * LARGE_INT;\n  loop invariant i4: k * (LARGE_INT - 1) >= (LARGE_INT - 1) * (LARGE_INT - i);\n  loop invariant i5: k * (LARGE_INT - 1) <= LARGE_INT * (LARGE_INT - 1) - i;\n*/\n```"
+                        }
+                    ]
+                ],
+                "invariants": [
+                    "/*@ \n  loop invariant i1: 0 <= i && i <= LARGE_INT;\n  loop invariant i2: 0 <= k && k <= LARGE_INT;\n  loop invariant i3: k * (LARGE_INT - 1) <= LARGE_INT * LARGE_INT;\n  loop invariant i4: k * (LARGE_INT - 1) >= (LARGE_INT - 1) * (LARGE_INT - i);\n  loop invariant i5: k * (LARGE_INT - 1) <= LARGE_INT * (LARGE_INT - 1) - i;\n*/"
+                ],
+                "benchmark_code": "#define assume(e) if(!(e)) return 0;\n#define LARGE_INT 1000000\nextern int unknown(void);\nextern int unknown_int(void);\n\nint main() {\n    int i = 0;\n    int k = 0;\n    while(i < LARGE_INT) {\n        int j = unknown_int();\n        if (!(1 <= j && j < LARGE_INT)) return 0;\n        i = i + j;\n        k ++;\n    }\n    {;//@ assert(k <= LARGE_INT);\n}\n    return 0;\n}",
+                "code_with_old_invariants": "#define assume(e) if(!(e)) return 0;\n#define LARGE_INT 1000000\nextern int unknown(void);\nextern int unknown_int(void);\n\nint main() {\n    int i = 0;\n    int k = 0;\n    /*@\nloop invariant 0 <= i && i <= LARGE_INT;\nloop invariant 0 <= k && k <= LARGE_INT;\nloop invariant k * (LARGE_INT - 1) <= LARGE_INT * LARGE_INT;\nloop invariant 0 <= i <= LARGE_INT;\nloop invariant 0 <= k <= LARGE_INT;\nloop invariant k * (LARGE_INT - 1) >= (LARGE_INT - i);\nloop invariant 0 <= i;\nloop invariant 0 <= k;\nloop invariant i <= LARGE_INT;\nloop invariant k <= LARGE_INT;\nloop invariant i == \\at(i, Pre) + k * \\at(j, Pre);\nloop invariant i == k * \\sum(0, k-1, \\lambda int t; \\at(j, LoopEntry(t)));\nloop invariant k * (LARGE_INT - 1) <= LARGE_INT * (LARGE_INT - 1) - i;\n*/\nwhile(i < LARGE_INT) {\n        int j = unknown_int();\n        if (!(1 <= j && j < LARGE_INT)) return 0;\n        i = i + j;\n        k ++;\n    }\n    {;//@ assert(k <= LARGE_INT);\n}\n    return 0;\n}",
+                "input_error_message": "Annotation error on line 21: unexpected token '('",
+                "code_with_new_invariants": "#define assume(e) if(!(e)) return 0;\n#define LARGE_INT 1000000\nextern int unknown(void);\nextern int unknown_int(void);\n\nint main() {\n    int i = 0;\n    int k = 0;\n    /*@\nloop invariant i1: i1: 0 <= i && i <= LARGE_INT;\nloop invariant i2: i2: 0 <= k && k <= LARGE_INT;\nloop invariant i3: i3: k * (LARGE_INT - 1) <= LARGE_INT * LARGE_INT;\nloop invariant i4: i4: k * (LARGE_INT - 1) >= (LARGE_INT - 1) * (LARGE_INT - i);\nloop invariant i5: i5: k * (LARGE_INT - 1) <= LARGE_INT * (LARGE_INT - 1) - i;\n*/\nwhile(i < LARGE_INT) {\n        int j = unknown_int();\n        if (!(1 <= j && j < LARGE_INT)) return 0;\n        i = i + j;\n        k ++;\n    }\n    {;//@ assert(k <= LARGE_INT);\n}\n    return 0;\n}",
+                "checker_output": false,
+                "checker_message": "\nAssertion k <= 1000000: Partially proven\n",
+                "code_after_combine_and_prune": "#define assume(e) if(!(e)) return 0;\n#define LARGE_INT 1000000\nextern int unknown(void);\nextern int unknown_int(void);\n\nint main() {\n    int i = 0;\n    int k = 0;\n    /*@\nloop invariant i1: i1: 0 <= i && i <= LARGE_INT;\nloop invariant i2: i2: 0 <= k && k <= LARGE_INT;\nloop invariant i3: i3: k * (LARGE_INT - 1) <= LARGE_INT * LARGE_INT;\nloop invariant i4: i4: k * (LARGE_INT - 1) >= (LARGE_INT - 1) * (LARGE_INT - i);\nloop invariant i5: i5: k * (LARGE_INT - 1) <= LARGE_INT * (LARGE_INT - 1) - i;\n*/\nwhile(i < LARGE_INT) {\n        int j = unknown_int();\n        if (!(1 <= j && j < LARGE_INT)) return 0;\n        i = i + j;\n        k ++;\n    }\n    {;//@ assert(k <= LARGE_INT);\n}\n    return 0;\n}",
+                "checker_output_after_combine_and_prune": false,
+                "checker_message_after_combine_and_prune": "\nAssertion k <= 1000000: Partially proven\n"
+            },
+            {
+                "conversation": [
+                    [
+                        {
+                            "role": "system",
+                            "content": "You are a helpful AI software assistant that reasons about how code behaves. Given a program, you can find loop invariants, which can then be used to verify some property in the program. \nFrama-C is a software verification tool for C programs. The input to Frama-C is a C program file with ACSL (ANSI/ISO C Specification Language) annotations.\nFor the given program, find the necessary loop invariants of the while loop to help Frama-C verify the post-condition.\n\nInstructions:\n- Make a note of the pre-conditions or variable assignments in the program.\n- Analyze the loop body and make a note of the loop condition. \n- Output loop invariants that are true \n(i) before the loop execution, \n(ii) in every iteration of the loop and \n(iii) after the loop termination, \nsuch that the loop invariants imply the post condition.\n- If a loop invariant is a conjunction, split it into its parts.\n- Output all the loop invariants in one code block. For example:\n```\n/*@ \n    loop invariant i1;\n    loop invariant i2;\n*/\n```\nRules:\n- **Do not use variables or functions that are not declared in the program.** \n- **Do not make any assumptions about functions whose definitions are not given.**\n- **All undefined variables contain garbage values. Do not use variables that have garbage values.**\n- **Do not use keywords that are not supported in ACSL annotations for loops.**\n- **Variables that are not explicitly initialized, could have garbage values. Do not make any assumptions about such values.**\n- **Do not use the \\at(x, Pre) notation for any variable x.**\n- **Do not use non-deterministic function calls.**\n"
+                        }
+                    ],
+                    [
+                        {
+                            "role": "user",
+                            "content": "\n\nConsider the following program with loop invariants annotated with the respective loop(s):\n```\n#define assume(e) if(!(e)) return 0;\n#define LARGE_INT 1000000\nextern int unknown(void);\nextern int unknown_int(void);\n\nint main() {\n    int i = 0;\n    int k = 0;\n    /*@\nloop invariant i1: i1: 0 <= i && i <= LARGE_INT;\nloop invariant i2: i2: 0 <= k && k <= LARGE_INT;\nloop invariant i3: i3: k * (LARGE_INT - 1) <= LARGE_INT * LARGE_INT;\nloop invariant i4: i4: k * (LARGE_INT - 1) >= (LARGE_INT - 1) * (LARGE_INT - i);\nloop invariant i5: i5: k * (LARGE_INT - 1) <= LARGE_INT * (LARGE_INT - 1) - i;\n*/\nwhile(i < LARGE_INT) {\n        int j = unknown_int();\n        if (!(1 <= j && j < LARGE_INT)) return 0;\n        i = i + j;\n        k ++;\n    }\n    {;//@ assert(k <= LARGE_INT);\n}\n    return 0;\n}\n```\n\nThe verifier returns the following message.\n```\n\nAssertion k <= 1000000: Partially proven\n\n```\nIf an invariant is established, it means that the verifier was able to prove that the invariant holds before the loop.\nIf an invariant is preserved, it means that the verifier was able to prove that the invariant holds after the loop, assuming that it holds before the loop.\nIf an assertion is partially proven, it means that the verifier was able to prove that the assertion holds under some assumptions.\n\nTo fix the error, try the following:\nIf there is a syntax error, fix the syntax error.\nIf an invariant is established but not preserved, consider adding a clause to the invariant to make it stronger.\nIf an invariant is neither established nor preserved, consider removing it, or replacing it with a different inductive invariant.\nIf neither of the above is possible, add a new loop invariant to strengthen the existing ones.\nUse \\at(x, LoopEntry), instead of \\at(x, Pre) to refer to the value of a variable x just before the beginning of loop execution.\nUse \\at(x, LoopCurrent) to refer to the value of a variable x at the beginning of the current iteration of the loop.\n\nThere could be errors in the loop annotation(s), other than the ones mentioned in the above error message from the verifier.\nPlease fix all the above-mentioned errors, and provide the corrected loop invariants for the program that is sufficient to verify the post-condition in the program.\nUse the ACSL syntax to specify the invariants."
+                        }
+                    ],
+                    [
+                        {
+                            "role": "assistant",
+                            "content": "```\n/*@ \n    loop invariant 0 <= i && i <= LARGE_INT;\n    loop invariant 0 <= k && k <= LARGE_INT;\n    loop invariant k * (LARGE_INT - 1) <= LARGE_INT * LARGE_INT;\n    loop invariant k * (LARGE_INT - 1) >= (LARGE_INT - 1) * (LARGE_INT - i);\n    loop invariant k * (LARGE_INT - 1) <= LARGE_INT * (LARGE_INT - 1) - i;\n*/\n```"
+                        }
+                    ]
+                ],
+                "invariants": [
+                    "/*@ \n    loop invariant 0 <= i && i <= LARGE_INT;\n    loop invariant 0 <= k && k <= LARGE_INT;\n    loop invariant k * (LARGE_INT - 1) <= LARGE_INT * LARGE_INT;\n    loop invariant k * (LARGE_INT - 1) >= (LARGE_INT - 1) * (LARGE_INT - i);\n    loop invariant k * (LARGE_INT - 1) <= LARGE_INT * (LARGE_INT - 1) - i;\n*/"
+                ],
+                "benchmark_code": "#define assume(e) if(!(e)) return 0;\n#define LARGE_INT 1000000\nextern int unknown(void);\nextern int unknown_int(void);\n\nint main() {\n    int i = 0;\n    int k = 0;\n    while(i < LARGE_INT) {\n        int j = unknown_int();\n        if (!(1 <= j && j < LARGE_INT)) return 0;\n        i = i + j;\n        k ++;\n    }\n    {;//@ assert(k <= LARGE_INT);\n}\n    return 0;\n}",
+                "code_with_old_invariants": "#define assume(e) if(!(e)) return 0;\n#define LARGE_INT 1000000\nextern int unknown(void);\nextern int unknown_int(void);\n\nint main() {\n    int i = 0;\n    int k = 0;\n    /*@\nloop invariant 0 <= i && i <= LARGE_INT;\nloop invariant 0 <= k && k <= LARGE_INT;\nloop invariant k * (LARGE_INT - 1) <= LARGE_INT * LARGE_INT;\nloop invariant 0 <= i <= LARGE_INT;\nloop invariant 0 <= k <= LARGE_INT;\nloop invariant k * (LARGE_INT - 1) >= (LARGE_INT - i);\nloop invariant 0 <= i;\nloop invariant 0 <= k;\nloop invariant i <= LARGE_INT;\nloop invariant k <= LARGE_INT;\nloop invariant i == \\at(i, Pre) + k * \\at(j, Pre);\nloop invariant i == k * \\sum(0, k-1, \\lambda int t; \\at(j, LoopEntry(t)));\nloop invariant k * (LARGE_INT - 1) <= LARGE_INT * (LARGE_INT - 1) - i;\n*/\nwhile(i < LARGE_INT) {\n        int j = unknown_int();\n        if (!(1 <= j && j < LARGE_INT)) return 0;\n        i = i + j;\n        k ++;\n    }\n    {;//@ assert(k <= LARGE_INT);\n}\n    return 0;\n}",
+                "input_error_message": "Annotation error on line 21: unexpected token '('",
+                "code_with_new_invariants": "#define assume(e) if(!(e)) return 0;\n#define LARGE_INT 1000000\nextern int unknown(void);\nextern int unknown_int(void);\n\nint main() {\n    int i = 0;\n    int k = 0;\n    /*@\nloop invariant i1: 0 <= i && i <= LARGE_INT;\nloop invariant i2: 0 <= k && k <= LARGE_INT;\nloop invariant i3: k * (LARGE_INT - 1) <= LARGE_INT * LARGE_INT;\nloop invariant i4: k * (LARGE_INT - 1) >= (LARGE_INT - 1) * (LARGE_INT - i);\nloop invariant i5: k * (LARGE_INT - 1) <= LARGE_INT * (LARGE_INT - 1) - i;\n*/\nwhile(i < LARGE_INT) {\n        int j = unknown_int();\n        if (!(1 <= j && j < LARGE_INT)) return 0;\n        i = i + j;\n        k ++;\n    }\n    {;//@ assert(k <= LARGE_INT);\n}\n    return 0;\n}",
+                "checker_output": false,
+                "checker_message": "loop invariant i1 is inductive.\nloop invariant i2 is inductive.\nloop invariant i3 is inductive.\nloop invariant i4 is preserved but not established.\nloop invariant i5 is inductive.\nAssertion k <= 1000000: Partially proven\n",
+                "code_after_combine_and_prune": "#define assume(e) if(!(e)) return 0;\n#define LARGE_INT 1000000\nextern int unknown(void);\nextern int unknown_int(void);\n\nint main() {\n    int i = 0;\n    int k = 0;\n    /*@\n\n\n\n\n\n*/\nwhile(i < LARGE_INT) {\n        int j = unknown_int();\n        if (!(1 <= j && j < LARGE_INT)) return 0;\n        i = i + j;\n        k ++;\n    }\n    {;//@ assert(k <= LARGE_INT);\n}\n    return 0;\n}",
+                "checker_output_after_combine_and_prune": false,
+                "checker_message_after_combine_and_prune": "No invariants found."
+            },
+            {
+                "conversation": [
+                    [
+                        {
+                            "role": "system",
+                            "content": "You are a helpful AI software assistant that reasons about how code behaves. Given a program, you can find loop invariants, which can then be used to verify some property in the program. \nFrama-C is a software verification tool for C programs. The input to Frama-C is a C program file with ACSL (ANSI/ISO C Specification Language) annotations.\nFor the given program, find the necessary loop invariants of the while loop to help Frama-C verify the post-condition.\n\nInstructions:\n- Make a note of the pre-conditions or variable assignments in the program.\n- Analyze the loop body and make a note of the loop condition. \n- Output loop invariants that are true \n(i) before the loop execution, \n(ii) in every iteration of the loop and \n(iii) after the loop termination, \nsuch that the loop invariants imply the post condition.\n- If a loop invariant is a conjunction, split it into its parts.\n- Output all the loop invariants in one code block. For example:\n```\n/*@ \n    loop invariant i1;\n    loop invariant i2;\n*/\n```\nRules:\n- **Do not use variables or functions that are not declared in the program.** \n- **Do not make any assumptions about functions whose definitions are not given.**\n- **All undefined variables contain garbage values. Do not use variables that have garbage values.**\n- **Do not use keywords that are not supported in ACSL annotations for loops.**\n- **Variables that are not explicitly initialized, could have garbage values. Do not make any assumptions about such values.**\n- **Do not use the \\at(x, Pre) notation for any variable x.**\n- **Do not use non-deterministic function calls.**\n"
+                        }
+                    ],
+                    [
+                        {
+                            "role": "user",
+                            "content": "\n\nConsider the following program with loop invariants annotated with the respective loop(s):\n```\n#define assume(e) if(!(e)) return 0;\n#define LARGE_INT 1000000\nextern int unknown(void);\nextern int unknown_int(void);\n\nint main() {\n    int i = 0;\n    int k = 0;\n    /*@\nloop invariant i1: 0 <= i && i <= LARGE_INT;\nloop invariant i2: 0 <= k && k <= LARGE_INT;\nloop invariant i3: k * (LARGE_INT - 1) <= LARGE_INT * LARGE_INT;\nloop invariant i4: k * (LARGE_INT - 1) >= (LARGE_INT - 1) * (LARGE_INT - i);\nloop invariant i5: k * (LARGE_INT - 1) <= LARGE_INT * (LARGE_INT - 1) - i;\n*/\nwhile(i < LARGE_INT) {\n        int j = unknown_int();\n        if (!(1 <= j && j < LARGE_INT)) return 0;\n        i = i + j;\n        k ++;\n    }\n    {;//@ assert(k <= LARGE_INT);\n}\n    return 0;\n}\n```\n\nThe verifier returns the following message.\n```\nloop invariant i1 is inductive.\nloop invariant i2 is inductive.\nloop invariant i3 is inductive.\nloop invariant i4 is preserved but not established.\nloop invariant i5 is inductive.\nAssertion k <= 1000000: Partially proven\n\n```\nIf an invariant is established, it means that the verifier was able to prove that the invariant holds before the loop.\nIf an invariant is preserved, it means that the verifier was able to prove that the invariant holds after the loop, assuming that it holds before the loop.\nIf an assertion is partially proven, it means that the verifier was able to prove that the assertion holds under some assumptions.\n\nTo fix the error, try the following:\nIf there is a syntax error, fix the syntax error.\nIf an invariant is established but not preserved, consider adding a clause to the invariant to make it stronger.\nIf an invariant is neither established nor preserved, consider removing it, or replacing it with a different inductive invariant.\nIf neither of the above is possible, add a new loop invariant to strengthen the existing ones.\nUse \\at(x, LoopEntry), instead of \\at(x, Pre) to refer to the value of a variable x just before the beginning of loop execution.\nUse \\at(x, LoopCurrent) to refer to the value of a variable x at the beginning of the current iteration of the loop.\n\nThere could be errors in the loop annotation(s), other than the ones mentioned in the above error message from the verifier.\nPlease fix all the above-mentioned errors, and provide the corrected loop invariants for the program that is sufficient to verify the post-condition in the program.\nUse the ACSL syntax to specify the invariants."
+                        }
+                    ],
+                    [
+                        {
+                            "role": "assistant",
+                            "content": "The error message tells us that loop invariant i4 is preserved but not established, which means that it is true in every iteration of the loop, but it does not hold before the loop. Therefore, we need to adjust it. Also, let's replace the `LARGE_INT` with `N` for readability.\n\n```\n#define assume(e) if(!(e)) return 0;\n#define N 1000000\nextern int unknown(void);\nextern int unknown_int(void);\n\nint main() {\n    int i = 0;\n    int k = 0;\n    /*@\nloop invariant i1: 0 <= i && i <= N;\nloop invariant i2: 0 <= k && k <= N;\nloop invariant i3: k * (N - 1) <= N * N;\nloop invariant i4: k * (N - 1) <= N * (N - 1) - i + N - 1;\nloop invariant i5: k * (N - 1) <= N * (N - 1) - i;\n*/\nwhile(i < N) {\n        int j = unknown_int();\n        if (!(1 <= j && j < N)) return 0;\n        i = i + j;\n        k ++;\n    }\n    {;//@ assert(k <= N);\n}\n    return 0;\n}\n```\n\nWith these changes to the loop invariants, Frama-C should be able to verify the post-condition."
+                        }
+                    ]
+                ],
+                "invariants": [
+                    "#define assume(e) if(!(e)) return 0;\n#define N 1000000\nextern int unknown(void);\nextern int unknown_int(void);\n\nint main() {\n    int i = 0;\n    int k = 0;\n    /*@\nloop invariant i1: 0 <= i && i <= N;\nloop invariant i2: 0 <= k && k <= N;\nloop invariant i3: k * (N - 1) <= N * N;\nloop invariant i4: k * (N - 1) <= N * (N - 1) - i + N - 1;\nloop invariant i5: k * (N - 1) <= N * (N - 1) - i;\n*/\nwhile(i < N) {\n        int j = unknown_int();\n        if (!(1 <= j && j < N)) return 0;\n        i = i + j;\n        k ++;\n    }\n    {;//@ assert(k <= N);\n}\n    return 0;\n}"
+                ],
+                "benchmark_code": "#define assume(e) if(!(e)) return 0;\n#define LARGE_INT 1000000\nextern int unknown(void);\nextern int unknown_int(void);\n\nint main() {\n    int i = 0;\n    int k = 0;\n    while(i < LARGE_INT) {\n        int j = unknown_int();\n        if (!(1 <= j && j < LARGE_INT)) return 0;\n        i = i + j;\n        k ++;\n    }\n    {;//@ assert(k <= LARGE_INT);\n}\n    return 0;\n}",
+                "code_with_old_invariants": "#define assume(e) if(!(e)) return 0;\n#define LARGE_INT 1000000\nextern int unknown(void);\nextern int unknown_int(void);\n\nint main() {\n    int i = 0;\n    int k = 0;\n    /*@\nloop invariant 0 <= i && i <= LARGE_INT;\nloop invariant 0 <= k && k <= LARGE_INT;\nloop invariant k * (LARGE_INT - 1) <= LARGE_INT * LARGE_INT;\nloop invariant 0 <= i <= LARGE_INT;\nloop invariant 0 <= k <= LARGE_INT;\nloop invariant k * (LARGE_INT - 1) >= (LARGE_INT - i);\nloop invariant 0 <= i;\nloop invariant 0 <= k;\nloop invariant i <= LARGE_INT;\nloop invariant k <= LARGE_INT;\nloop invariant i == \\at(i, Pre) + k * \\at(j, Pre);\nloop invariant i == k * \\sum(0, k-1, \\lambda int t; \\at(j, LoopEntry(t)));\nloop invariant k * (LARGE_INT - 1) <= LARGE_INT * (LARGE_INT - 1) - i;\n*/\nwhile(i < LARGE_INT) {\n        int j = unknown_int();\n        if (!(1 <= j && j < LARGE_INT)) return 0;\n        i = i + j;\n        k ++;\n    }\n    {;//@ assert(k <= LARGE_INT);\n}\n    return 0;\n}",
+                "input_error_message": "Annotation error on line 21: unexpected token '('",
+                "code_with_new_invariants": "#define assume(e) if(!(e)) return 0;\n#define LARGE_INT 1000000\nextern int unknown(void);\nextern int unknown_int(void);\n\nint main() {\n    int i = 0;\n    int k = 0;\n    /*@\nloop invariant i1: i1: 0 <= i && i <= N;\nloop invariant i2: i2: 0 <= k && k <= N;\nloop invariant i3: i3: k * (N - 1) <= N * N;\nloop invariant i4: i4: k * (N - 1) <= N * (N - 1) - i + N - 1;\nloop invariant i5: i5: k * (N - 1) <= N * (N - 1) - i;\n*/\nwhile(i < LARGE_INT) {\n        int j = unknown_int();\n        if (!(1 <= j && j < LARGE_INT)) return 0;\n        i = i + j;\n        k ++;\n    }\n    {;//@ assert(k <= LARGE_INT);\n}\n    return 0;\n}",
+                "checker_output": false,
+                "checker_message": "Annotation error on line 10: unbound logic variable N. Ignoring loop annotation",
+                "code_after_combine_and_prune": "#define assume(e) if(!(e)) return 0;\n#define LARGE_INT 1000000\nextern int unknown(void);\nextern int unknown_int(void);\n\nint main() {\n    int i = 0;\n    int k = 0;\n    /*@\n\n\n\n\n\n*/\nwhile(i < LARGE_INT) {\n        int j = unknown_int();\n        if (!(1 <= j && j < LARGE_INT)) return 0;\n        i = i + j;\n        k ++;\n    }\n    {;//@ assert(k <= LARGE_INT);\n}\n    return 0;\n}",
+                "checker_output_after_combine_and_prune": false,
+                "checker_message_after_combine_and_prune": "No invariants found.",
+                "code_after_heal_and_prune": "#define assume(e) if(!(e)) return 0;\n#define LARGE_INT 1000000\nextern int unknown(void);\nextern int unknown_int(void);\n\nint main() {\n    int i = 0;\n    int k = 0;\n    /*@\n\n\n\n\n\n*/\nwhile(i < LARGE_INT) {\n        int j = unknown_int();\n        if (!(1 <= j && j < LARGE_INT)) return 0;\n        i = i + j;\n        k ++;\n    }\n    {;//@ assert(k <= LARGE_INT);\n}\n    return 0;\n}",
+                "checker_output_after_heal_and_prune": false,
+                "checker_message_after_heal_and_prune": "No invariants found."
+            }
+        ]
+    },
+    "stats": {
+        "success": [
+            1,
+            3,
+            7,
+            10,
+            12,
+            13,
+            14,
+            20,
+            24,
+            26,
+            28,
+            29,
+            35,
+            36,
+            38,
+            39,
+            40,
+            41,
+            44,
+            45,
+            46,
+            48,
+            49,
+            50,
+            51,
+            53,
+            55,
+            56,
+            59,
+            61,
+            62,
+            63,
+            64,
+            66,
+            67,
+            68,
+            69,
+            71,
+            73,
+            75,
+            76,
+            79,
+            83,
+            89,
+            91,
+            94,
+            96,
+            97,
+            98,
+            99,
+            100,
+            101,
+            102,
+            107,
+            108,
+            109,
+            112,
+            113,
+            114,
+            115,
+            116,
+            117,
+            118,
+            119,
+            122,
+            127,
+            128,
+            130,
+            131,
+            134,
+            135,
+            138,
+            139,
+            140,
+            141,
+            142,
+            143,
+            144
+        ],
+        "failure": [
+            0,
+            2,
+            4,
+            5,
+            6,
+            8,
+            9,
+            11,
+            15,
+            16,
+            17,
+            18,
+            19,
+            21,
+            22,
+            23,
+            25,
+            27,
+            30,
+            31,
+            32,
+            33,
+            34,
+            37,
+            42,
+            43,
+            47,
+            52,
+            54,
+            57,
+            58,
+            60,
+            65,
+            70,
+            72,
+            74,
+            80,
+            81,
+            82,
+            84,
+            85,
+            86,
+            87,
+            88,
+            90,
+            92,
+            93,
+            95,
+            103,
+            104,
+            105,
+            106,
+            110,
+            111,
+            120,
+            121,
+            123,
+            124,
+            125,
+            126,
+            129,
+            132,
+            133,
+            136,
+            137,
+            145
+        ],
+        "total": 144,
+        "success_rate": 0.5416666666666666
+    }
+}
