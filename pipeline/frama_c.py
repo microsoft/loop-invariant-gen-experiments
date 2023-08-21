@@ -507,7 +507,10 @@ class FramaCBenchmark(Benchmark):
                 lines = llm_output.splitlines()
                 for line in lines:
                     invariant = re.findall(r"loop invariant (.+);", line)
+                    inv_id = re.findall(r"loop invariant (i\d+:)", line)
                     if len(invariant) > 0:
+                        if len(inv_id) > 0:
+                            invariant = invariant[0].replace(inv_id[0], "")
                         invariant = f"loop invariant i{inv_count + 1}: {invariant[0]};"  # add loop invariant label
                         invariants[invariant] = True
                         inv_count += 1
