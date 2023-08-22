@@ -287,12 +287,12 @@ class LoopyPipeline:
                     nudge_checker_input = self.benchmark.combine_llm_outputs(
                         self.benchmark.get_code(instance),
                         nudge_outputs + llm_outputs,
-                        self.mode,
+                        self.features,
                     )
                     checker_input = nudge_checker_input
                     success, nudge_checker_message = self.checker.check(
                         nudge_checker_input,
-                        self.mode,
+                        ("termination" in self.features),
                         use_json_output=self.use_json_output,
                     )
 
@@ -309,11 +309,11 @@ class LoopyPipeline:
                     if not success:
                         success, pruned_code = self.checker.prune_annotations_and_check(
                             checker_input,
-                            self.mode,
+                            self.features,
                             use_json_output=self.use_json_output,
                         )
                         success, checker_message = self.checker.check(
-                            pruned_code, self.mode, use_json_output=self.use_json_output
+                            pruned_code, ("termination" in self.features), use_json_output=self.use_json_output
                         )
 
                         instance_log_json["code_after_nudge_and_prune"] = pruned_code
