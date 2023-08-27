@@ -50,6 +50,7 @@ def main(args):
 
         benchmark_json["benchmark_code"] = benchmark_code
         benchmark_json["invariants"] = invariants_from_completions
+        benchmark_json["pass_k"] = []
         for k in range(1, args.k + 1):
             print(f"Processing k={k} for benchmark no.:{i+1} File: {benchmark['file']}")
             pass_k_json = {
