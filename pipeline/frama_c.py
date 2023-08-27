@@ -172,6 +172,9 @@ class FramaCChecker(Checker):
                     ]
                 )
 
+        if not check_variant and not os.path.exists(temp_output_dump_file):
+            return False, "No CSV output dump found from Frama-C"
+        
         with open(temp_output_dump_file, "r", encoding="utf-8") as f:
             assertion_output = [row for row in csv.DictReader(f, delimiter="\t")]
             
