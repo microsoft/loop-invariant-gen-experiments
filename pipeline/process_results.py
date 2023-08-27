@@ -76,6 +76,9 @@ def main(args):
     checker = FramaCChecker()
     framac_benchmark = FramaCBenchmark(features=features)
     logger = Logger()
+    output_log_dir = args.input_log.replace("final.json", "_processed")
+    if not os.path.exists(output_log_dir):
+        os.makedirs(output_log_dir)
     for i, benchmark in enumerate(expt_log):
         logger.log_info(f"Processing benchmark no.:{i+1} File: {benchmark['file']}")
         benchmark_json = {}
@@ -106,7 +109,6 @@ def main(args):
                 "pruning_exceptions": [],
             }
             pass_at_k_candidates = get_combinations(invariants_from_completions, k)
-
 
             max_j = (len(pass_at_k_candidates) // max_cores) + 1
             for j in range(0, max_j):
@@ -187,6 +189,17 @@ def main(args):
                 )
 
             benchmark_json["pass_k"].append(pass_k_json)
+            with open(
+                os.path.join(
+                    output_log_dir,
+                    benchmark["file"]
+                    .replace(".c", ".json")
+                    .replace("../", "")
+                    .replace("/", "__"),
+                ),
+                "w",
+            ) as f:
+                json.dump(pass_k_json, f, indent=4, ensure_ascii=False)
 
         output_json["logs"].append(benchmark_json)
 
