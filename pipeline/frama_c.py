@@ -172,6 +172,9 @@ class FramaCChecker(Checker):
                     ]
                 )
 
+        if not check_variant and not os.path.exists(temp_output_dump_file):
+            return False, "No CSV output dump found from Frama-C"
+        
         with open(temp_output_dump_file, "r", encoding="utf-8") as f:
             assertion_output = [row for row in csv.DictReader(f, delimiter="\t")]
             
@@ -254,11 +257,13 @@ class FramaCChecker(Checker):
 
     def get_invariants(self, lines):
         invariants = []
+        invariant_expressions = []
         for line in lines:
             if self.is_invariant(line):
-                inv = re.findall(r"(loop invariant .+;)", line)[0]
-                if inv not in invariants:
-                    invariants.append(inv)
+                inv = re.findall(r"(loop invariant (i\d+: )?(.+);)", line)[0]
+                if inv[2] not in invariant_expressions:
+                    invariants.append(inv[0])
+                    invariant_expressions.append(inv[2])
         return invariants
 
     def get_invariants_count(self, code):
@@ -1166,3 +1171,4 @@ def parse_log(logfile, cfile):
             )
 
         return failed_checker_input, checker_error_message, analysis
+
