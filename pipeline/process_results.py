@@ -145,6 +145,7 @@ def main(args):
                             f"Checking failed for {len(pass_at_k_candidates_batch)} parallel benchmarks, k={k} for benchmark no.: {i+1} File: {benchmark['file']}"
                         )
                 except Exception as e:
+                    logger.log_error(str(e))
                     pass_k_json["checking_exceptions"].append("\n" + str(e))
 
             for m in range(0, (len(pass_at_k_candidates) // max_cores) + 1):
@@ -176,6 +177,7 @@ def main(args):
                             f"Prune and check failed for {len(pass_at_k_candidates_batch)} parallel benchmarks, k={k} for benchmark no.: {i+1} File: {benchmark['file']}"
                         )
                 except Exception as e:
+                    logger.log_error(str(e))
                     pass_k_json["pruning_exceptions"].append("\n" + str(e))
 
             benchmark_json["pass_k"].append(pass_k_json)
