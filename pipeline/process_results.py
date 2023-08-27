@@ -7,6 +7,7 @@ import multiprocessing
 
 from frama_c import FramaCBenchmark, FramaCChecker
 
+max_cores = 48
 
 def get_combinations(input, k):
     temp = list(itertools.combinations(input, k))
@@ -24,11 +25,31 @@ def prune_wrapper(checker_input):
     return (success, pruned_code)
 
 
+def check_wrapper(checker_input):
+    checker = FramaCChecker()
+    success, message = checker.check(checker_input, check_variant=("termination" in "one_loop_oe_method"), use_json_output=True)
+    return (success, checker_input)
+
+
 def prune_parallel(inputs):
-    assert len(input) <= 32
+    assert len(input) <= max_cores
 
     with multiprocessing.Pool(processes=len(inputs)) as pool:
         results = pool.imap_unordered(prune_wrapper, inputs)
+
+        for result in results:
+            if result[0] == True:
+                pool.terminate()
+                pool.close()
+                pool.join()
+                return result
+    return (False, None)
+
+def check_parallel(inputs):
+    assert len(input) <= max_cores
+
+    with multiprocessing.Pool(processes=len(inputs)) as pool:
+        results = pool.imap_unordered(check_wrapper, inputs)
 
         for result in results:
             if result[0] == True:
@@ -89,31 +110,35 @@ def main(args):
             }
             pass_at_k_candidates = get_combinations(invariants_from_completions, k)
 
-            for pass_at_k_candidate in pass_at_k_candidates:
-                checker_input = framac_benchmark.combine_llm_outputs(
-                    benchmark_code, pass_at_k_candidate, features
-                )
+            for i in range(0, (len(pass_at_k_candidates) // max_cores) + 1):
+                pass_at_k_candidates_batch = pass_at_k_candidates[i * max_cores : (i + 1) * max_cores]
+                checker_inputs = [
+                    framac_benchmark.combine_llm_outputs(
+                        benchmark_code, pass_at_k_candidate, features
+                    )
+                    for pass_at_k_candidate in pass_at_k_candidates_batch
+                ]
                 try:
                     print(
-                        f"Checking k={k} for benchmark no.:{i+1} File: {benchmark['file']}"
+                        f"Checking no. candidates in parallel: {len(pass_at_k_candidates_batch)}, k={k} for benchmark no.: {i+1} File: {benchmark['file']}"
                     )
-                    success, checker_message = checker.check(
-                        checker_input,
-                        check_variant=("termination" in features),
-                        use_json_output=True,
-                    )
+                    success, success_input = check_parallel(checker_inputs)
                     if success:
                         pass_k_json["pass_at_k"] = True
-                        pass_k_json["pass_at_k_success_candidate"] = pass_at_k_candidate
+                        pass_k_json[
+                            "pass_at_k_success_candidate"
+                        ] = success_input
                         print(
-                            f"Found pass at k={k} for benchmark no.:{i+1} File: {benchmark['file']}"
+                            f"Found check at k={k} for benchmark no.:{i+1} File: {benchmark['file']}"
                         )
                         break
+                    else:
+                        print(f"Checking failed for {len(pass_at_k_candidates_batch)} parallel benchmarks, k={k} for benchmark no.: {i+1} File: {benchmark['file']}")
                 except Exception as e:
                     pass_k_json["checking_exceptions"].append("\n" + str(e))
 
-            for i in range(0, (len(pass_at_k_candidates) // 32) + 1):
-                pass_at_k_candidates_batch = pass_at_k_candidates[i * 32 : (i + 1) * 32]
+            for i in range(0, (len(pass_at_k_candidates) // max_cores) + 1):
+                pass_at_k_candidates_batch = pass_at_k_candidates[i * max_cores : (i + 1) * max_cores]
                 checker_inputs = [
                     framac_benchmark.combine_llm_outputs(
                         benchmark_code, pass_at_k_candidate, features
