@@ -31,7 +31,7 @@ def prune_parallel(inputs):
         results = pool.imap_unordered(prune_wrapper, inputs)
 
         for result in results:
-            if result[0]:
+            if result[0] == True:
                 pool.terminate()
                 pool.close()
                 pool.join()
@@ -112,7 +112,7 @@ def main(args):
                 except Exception as e:
                     pass_k_json["checking_exceptions"].append("\n" + str(e))
 
-            for i in range(0, len(pass_at_k_candidates) // 32):
+            for i in range(0, (len(pass_at_k_candidates) // 32) + 1):
                 pass_at_k_candidates_batch = pass_at_k_candidates[i * 32 : (i + 1) * 32]
                 checker_inputs = [
                     framac_benchmark.combine_llm_outputs(
@@ -134,6 +134,8 @@ def main(args):
                             f"Found pass and prune at k={k} for benchmark no.:{i+1} File: {benchmark['file']}"
                         )
                         break
+                    else:
+                        print(f"Prune and check failed for {len(pass_at_k_candidates_batch)} parallel benchmarks, k={k} for benchmark no.: {i+1} File: {benchmark['file']}")
                 except Exception as e:
                     pass_k_json["pruning_exceptions"].append("\n" + str(e))
 
