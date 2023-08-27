@@ -129,20 +129,20 @@ def main(args):
                     for pass_at_k_candidate in pass_at_k_candidates_batch
                 ]
                 try:
-                    logger.log_action(
-                        f"Checking {len(pass_at_k_candidates_batch)} sets in parallel, k={k}, for benchmark num. {i+1}, File: {benchmark['file']}"
+                    logger.log_action("Checking",
+                        f"{len(pass_at_k_candidates_batch)} candidates in parallel, k={k}, for benchmark num. {i+1}, File: {benchmark['file']}"
                     )
                     success, success_input = check_parallel(checker_inputs)
                     if success:
                         pass_k_json["pass_at_k"] = True
                         pass_k_json["pass_at_k_success_candidate"] = success_input
                         logger.log_success(
-                            f"Pass@k succeeded for k={k} for benchmark no.:{i+1} File: {benchmark['file']}"
+                            f"Pass@k succeeded for k={k}, for benchmark num. {i+1}, File: {benchmark['file']}"
                         )
                         break
                     else:
                         logger.log_warning(
-                            f"Checking failed for {len(pass_at_k_candidates_batch)} parallel benchmarks, k={k} for benchmark no.: {i+1} File: {benchmark['file']}"
+                            f"Checking failed for k={k}, {len(pass_at_k_candidates_batch)} parallel benchmarks, for benchmark num. {i+1}, File: {benchmark['file']}"
                         )
                 except Exception as e:
                     logger.log_error(str(e))
@@ -159,8 +159,8 @@ def main(args):
                     for pass_at_k_candidate in pass_at_k_candidates_batch
                 ]
                 try:
-                    logger.log_action(
-                        f"Pruning no. candidates in parallel: {len(pass_at_k_candidates_batch)}, k={k} for benchmark no.: {i+1} File: {benchmark['file']}"
+                    logger.log_action("Pruning",
+                        f"{len(pass_at_k_candidates_batch)} candidates in parallel, k={k}, for benchmark num. {i+1}, File: {benchmark['file']}"
                     )
                     success, pruned_code = prune_parallel(checker_inputs)
                     if success:
@@ -169,12 +169,12 @@ def main(args):
                             "pass_at_k_combine_prune_success_candidate"
                         ] = pruned_code
                         logger.log_success(
-                            f"Found pass and prune at k={k} for benchmark no.:{i+1} File: {benchmark['file']}"
+                            f"Pass@k + Pruning succeeded for k={k}, for benchmark num. {i+1}, File: {benchmark['file']}"
                         )
                         break
                     else:
                         logger.log_warning(
-                            f"Prune and check failed for {len(pass_at_k_candidates_batch)} parallel benchmarks, k={k} for benchmark no.: {i+1} File: {benchmark['file']}"
+                            f"Pass@k + Pruning failed for k={k}, {len(pass_at_k_candidates_batch)} parallel benchmarks, for benchmark num. {i+1}, File: {benchmark['file']}"
                         )
                 except Exception as e:
                     logger.log_error(str(e))
