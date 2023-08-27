@@ -76,7 +76,7 @@ def main(args):
     checker = FramaCChecker()
     framac_benchmark = FramaCBenchmark(features=features)
     logger = Logger()
-    output_log_dir = args.input_log.replace("final.json", "_processed")
+    output_log_dir = args.input_log.replace("/final.json", "_processed")
     if not os.path.exists(output_log_dir):
         os.makedirs(output_log_dir)
     for i, benchmark in enumerate(expt_log):
@@ -193,7 +193,7 @@ def main(args):
                 os.path.join(
                     output_log_dir,
                     benchmark["file"]
-                    .replace(".c", ".json")
+                    .replace(".c", f"_{k}.json")
                     .replace("../", "")
                     .replace("/", "__"),
                 ),
@@ -203,7 +203,7 @@ def main(args):
 
         output_json["logs"].append(benchmark_json)
 
-    with open(args.input_log.replace(".json", "_processed.json"), "w") as f:
+    with open(os.path.join(output_log_dir, "final.json"), "w") as f:
         json.dump(output_json, f, indent=4, ensure_ascii=False)
 
 
