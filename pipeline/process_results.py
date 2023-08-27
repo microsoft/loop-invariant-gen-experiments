@@ -37,26 +37,11 @@ def check_wrapper(checker_input):
     return (success, checker_input)
 
 
-def prune_parallel(inputs):
-    assert len(input) <= max_cores
+def run_parallel(inputs, func):
+    assert len(inputs) <= max_cores
 
     with multiprocessing.Pool(processes=len(inputs)) as pool:
-        results = pool.imap_unordered(prune_wrapper, inputs)
-
-        for result in results:
-            if result[0] == True:
-                pool.terminate()
-                pool.close()
-                pool.join()
-                return result
-    return (False, None)
-
-
-def check_parallel(inputs):
-    assert len(input) <= max_cores
-
-    with multiprocessing.Pool(processes=len(inputs)) as pool:
-        results = pool.imap_unordered(check_wrapper, inputs)
+        results = pool.imap_unordered(func, inputs)
 
         for result in results:
             if result[0] == True:
@@ -97,7 +82,9 @@ def main(args):
         benchmark_code = benchmark["benchmark_code"]
         invariants_from_completions = benchmark["invariants"]
         if len(invariants_from_completions) < args.k:
-            logger.log_error(f"Not enough invariant sets for benchmark: {benchmark['file']}")
+            logger.log_error(
+                f"Not enough invariant sets for benchmark: {benchmark['file']}"
+            )
             benchmark_json["skip_reason"] = "Not enough invariant sets for benchmark"
             output_json["logs"].append(benchmark_json)
             continue
@@ -106,7 +93,9 @@ def main(args):
         benchmark_json["invariants"] = invariants_from_completions
         benchmark_json["pass_k"] = []
         for k in range(1, args.k + 1):
-            logger.log_info(f"Processing k={k} for benchmark no.:{i+1} File: {benchmark['file']}")
+            logger.log_info(
+                f"Processing k={k} for benchmark no.:{i+1} File: {benchmark['file']}"
+            )
             pass_k_json = {
                 "k": k,
                 "pass_at_k": False,
@@ -129,10 +118,11 @@ def main(args):
                     for pass_at_k_candidate in pass_at_k_candidates_batch
                 ]
                 try:
-                    logger.log_action("Checking",
-                        f"{len(pass_at_k_candidates_batch)} candidates in parallel, k={k}, for benchmark num. {i+1}, File: {benchmark['file']}"
+                    logger.log_action(
+                        "Checking",
+                        f"{len(pass_at_k_candidates_batch)} candidates in parallel, k={k}, for benchmark num. {i+1}, File: {benchmark['file']}",
                     )
-                    success, success_input = check_parallel(checker_inputs)
+                    success, success_input = run_parallel(checker_inputs, check_wrapper)
                     if success:
                         pass_k_json["pass_at_k"] = True
                         pass_k_json["pass_at_k_success_candidate"] = success_input
@@ -159,10 +149,11 @@ def main(args):
                     for pass_at_k_candidate in pass_at_k_candidates_batch
                 ]
                 try:
-                    logger.log_action("Pruning",
-                        f"{len(pass_at_k_candidates_batch)} candidates in parallel, k={k}, for benchmark num. {i+1}, File: {benchmark['file']}"
+                    logger.log_action(
+                        "Pruning",
+                        f"{len(pass_at_k_candidates_batch)} candidates in parallel, k={k}, for benchmark num. {i+1}, File: {benchmark['file']}",
                     )
-                    success, pruned_code = prune_parallel(checker_inputs)
+                    success, pruned_code = run_parallel(checker_inputs, prune_wrapper)
                     if success:
                         pass_k_json["pass_at_k_combine_prune"] = True
                         pass_k_json[
