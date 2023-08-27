@@ -122,7 +122,9 @@ class FramaCChecker(Checker):
                     ]
                 )
 
-                for inv in sorted(loop_invariant_status.keys(), key=lambda x: int(x[1:])):
+                for inv in sorted(
+                    loop_invariant_status.keys(), key=lambda x: int(x[1:])
+                ):
                     if (
                         loop_invariant_status[inv]["preserved"]
                         and loop_invariant_status[inv]["established"]
@@ -174,10 +176,10 @@ class FramaCChecker(Checker):
 
         if not check_variant and not os.path.exists(temp_output_dump_file):
             return False, "No CSV output dump found from Frama-C"
-        
+
         with open(temp_output_dump_file, "r", encoding="utf-8") as f:
             assertion_output = [row for row in csv.DictReader(f, delimiter="\t")]
-            
+
             success = success and all(
                 row["status"] == "Valid"
                 for row in assertion_output
@@ -285,13 +287,15 @@ class FramaCChecker(Checker):
             if "is inductive." in line:
                 continue
             else:
-                inv_id = re.findall(r"loop invariant (i\d+) ", line)
+                inv_id = re.findall(r"loop invariant (i\d+) is", line)
                 if len(inv_id) == 1:
                     non_inductive_invariants.append(inv_id[0])
 
         non_inductive_invariant_line_nos = []
         for i, line in enumerate(checker_input.splitlines()):
-            if any([f"loop invariant {inv}" in line for inv in non_inductive_invariants]):
+            if any(
+                [f"loop invariant {inv}:" in line for inv in non_inductive_invariants]
+            ):
                 non_inductive_invariant_line_nos.append(i)
 
         return non_inductive_invariant_line_nos
@@ -367,16 +371,20 @@ class FramaCChecker(Checker):
                 code_lines[annotation_error_line_no] = ""
                 input_code = "\n".join(code_lines)
                 code_queue.append(input_code)
-            
+
             elif use_json_output:
-                non_inductive_invariant_line_nos = self.get_non_inductive_invariant_line_nos(checker_message, input_code)
+                non_inductive_invariant_line_nos = (
+                    self.get_non_inductive_invariant_line_nos(
+                        checker_message, input_code
+                    )
+                )
                 if len(non_inductive_invariant_line_nos) > 0:
                     for line_no in non_inductive_invariant_line_nos:
                         if verbose:
                             print("Removing (non-inductive): ", code_lines[line_no])
                         code_lines[line_no] = ""
                     code_queue.append("\n".join(code_lines))
-            
+
             else:
                 # TODO: What about TIMEOUT?
                 # If any invariant causes a Timeout, it's marked as "Unknown"
@@ -536,53 +544,6 @@ class FramaCBenchmark(Benchmark):
 
         else:
             raise Exception("Unknown feature set")
-
-        # for llm_output in llm_outputs:
-        #     lines = llm_output.splitlines()
-        #     for line in lines:
-        #         label = re.findall(r"Loop([A-Z]):", line)
-        #         if len(label) > 0:
-        #             label = label[0]
-        #         invariant = re.findall(r"(loop invariant .+;)", line)
-        #         if len(invariant) == 0 and mode == "variant":
-        #             invariant = re.findall(r"(loop variant .+;)", line)
-        #         if len(invariant) > 0:
-        #             if len(label) == 0:
-        #                 invariants[invariant[0]] = []
-        #             else:
-        #                 if not label in invariants:
-        #                     invariants[label] = []
-        #                 invariants[label].append(invariant[0])
-
-        # lines = checker_input.splitlines()
-        # loc = None
-        # new_lines = []
-        # found = True
-        # new_checker_input = deepcopy(checker_input)
-        # output = ""
-        # multi_loop = re.findall(r"/\* Loop([A-Z]) \*/", checker_input)
-        # if len(multi_loop) > 0:
-        #     for loop_label in multi_loop:
-        #         new_checker_input = re.sub(
-        #             r"/\* Loop" + loop_label + r" \*/",
-        #             "/*@\n" + "\n".join(invariants[loop_label]) + "\n*/\n",
-        #             new_checker_input,
-        #         )
-        #     output = new_checker_input
-        # else:
-        #     loop = self.get_loops(self.get_main_definition(checker_input))
-        #     if len(loop) != 1:
-        #         raise Exception("No singular loop found")
-        #     loop = loop[0]
-        #     output = (
-        #         checker_input[: loop.start_byte]
-        #         + "/*@\n"
-        #         + "\n".join(list(invariants.keys()))
-        #         + "\n*/\n"
-        #         + checker_input[loop.start_byte :]
-        #     )
-
-        # return output
 
     def remove_comments(self, code):
         comment_query = self.language.query(
@@ -1171,4 +1132,3 @@ def parse_log(logfile, cfile):
             )
 
         return failed_checker_input, checker_error_message, analysis
-
