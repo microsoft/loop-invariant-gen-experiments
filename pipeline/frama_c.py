@@ -254,11 +254,13 @@ class FramaCChecker(Checker):
 
     def get_invariants(self, lines):
         invariants = []
+        invariant_expressions = []
         for line in lines:
             if self.is_invariant(line):
-                inv = re.findall(r"(loop invariant .+;)", line)[0]
-                if inv not in invariants:
-                    invariants.append(inv)
+                inv = re.findall(r"(loop invariant (i\d+: )?(.+);)", line)[0]
+                if inv[2] not in invariant_expressions:
+                    invariants.append(inv[0])
+                    invariant_expressions.append(inv[2])
         return invariants
 
     def get_invariants_count(self, code):
@@ -1166,3 +1168,77 @@ def parse_log(logfile, cfile):
             )
 
         return failed_checker_input, checker_error_message, analysis
+
+
+code = """
+#define assume(e) if(!(e)) return;
+extern int unknown(void);
+
+int unknown1(){
+    int x; return x;
+}
+
+int unknown2();
+int unknown3();
+int unknown4();
+
+void main()
+{
+    int flag = unknown1();
+    int x = 0;
+    int y = 0;
+
+    int j = 0;
+    int i = 0;
+
+    /*@
+loop invariant i1: x >= 0;
+loop invariant i2: y >= 0;
+loop invariant i3: i >= 0;
+loop invariant i4: j >= 0;
+loop invariant i5: i == x*(x + 1)/2;
+loop invariant i6: (flag ==> j == y*(y + 1)/2 + y) && (!flag ==> j == y*(y + 1)/2);
+loop invariant i7: x == y;
+loop invariant i8: i >= x * (x - 1) / 2;
+loop invariant i9: j >= y * (y - 1) / 2;
+loop invariant i10: flag ==> (j >= (y * (y - 1) / 2) + y);
+loop invariant i11: x >= 0;
+loop invariant i12: y >= 0;
+loop invariant i13: i >= 0;
+loop invariant i14: j >= 0;
+loop invariant i15: x == y;
+loop invariant i16: i >= x * (x - 1) / 2;
+loop invariant i17: j >= y * (y - 1) / 2;
+loop invariant i18: flag ==> (j >= i);
+loop invariant i19: x >= 0;
+loop invariant i20: y >= 0;
+loop invariant i21: i >= 0;
+loop invariant i22: j >= 0;
+loop invariant i23: i == x*(x-1)/2;
+loop invariant i24: j == y*(y-1)/2 + (flag ? y : 0);
+loop invariant i25: x >= 0;
+loop invariant i26: y >= 0;
+loop invariant i27: i >= 0;
+loop invariant i28: j >= 0;
+loop invariant i29: i == (x * (x - 1)) / 2;
+loop invariant i30: j == (y * (y - 1)) / 2 + (flag ? y : 0);
+*/
+while(unknown1())
+    {
+      x++;
+      y++;
+      i+=x;
+      j+=y;
+      if(flag)  j+=1;
+          j = j;
+    } 
+    if(j <= i - 1)
+    {
+      goto ERROR;
+          ERROR:{; //@ assert(\\false);
+};
+    }
+    
+}"""
+fc = FramaCChecker()
+success, message = fc.prune_annotations_and_check(code, "one_loop_one_method", use_json_output=True)
