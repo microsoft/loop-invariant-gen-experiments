@@ -37,7 +37,8 @@ def main(args):
     features = "one_loop_one_method"
     checker = FramaCChecker()
     framac_benchmark = FramaCBenchmark(features=features)
-    for benchmark in expt_log:
+    for i, benchmark in enumerate(expt_log):
+        print(f"Processing benchmark no.:{i+1} File: {benchmark['file']}")
         benchmark_json = {}
         benchmark_code = benchmark["benchmark_code"]
         invariants_from_completions = benchmark["invariants"]
@@ -50,6 +51,7 @@ def main(args):
         benchmark_json["benchmark_code"] = benchmark_code
         benchmark_json["invariants"] = invariants_from_completions
         for k in range(1, args.k + 1):
+            print(f"Processing k={k} for benchmark no.:{i+1} File: {benchmark['file']}")
             pass_k_json = {
                 "k" : k,
                 "pass_at_k" : False,
@@ -68,6 +70,7 @@ def main(args):
                     if success:
                         pass_k_json["pass_at_k"] = True
                         pass_k_json["pass_at_k_success_candidate"] = pass_at_k_candidate
+                        print(f"Found pass at k={k} for benchmark no.:{i+1} File: {benchmark['file']}")
                         break
                 except Exception as e:
                     pass_k_json["checking_exceptions"].append("\n" + str(e))
@@ -79,6 +82,7 @@ def main(args):
                     if success:
                         pass_k_json["pass_at_k_houdini"] = True
                         pass_k_json["pass_at_k_houdini_success_candidate"] = pruned_code
+                        print(f"Found pass and prune at k={k} for benchmark no.:{i+1} File: {benchmark['file']}")
                         break
                 except Exception as e:
                     pass_k_json["pruning_exceptions"].append("\n" + str(e))
