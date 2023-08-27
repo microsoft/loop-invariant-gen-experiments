@@ -147,9 +147,9 @@ def main(args):
                 except Exception as e:
                     pass_k_json["checking_exceptions"].append("\n" + str(e))
 
-            for i in range(0, (len(pass_at_k_candidates) // max_cores) + 1):
+            for m in range(0, (len(pass_at_k_candidates) // max_cores) + 1):
                 pass_at_k_candidates_batch = pass_at_k_candidates[
-                    i * max_cores : (i + 1) * max_cores
+                    m * max_cores : (m + 1) * max_cores
                 ]
                 checker_inputs = [
                     framac_benchmark.combine_llm_outputs(
