@@ -51,6 +51,7 @@ def run_parallel(inputs, func):
                 return result
     return (False, None)
 
+
 def check_parallel(input):
     (benchmark_code, pass_at_k_candidate) = input
     framac_benchmark = FramaCBenchmark(features="one_loop_one_method")
@@ -115,7 +116,10 @@ def main(args):
         }
         for i, benchmark in enumerate(expt_log):
             assert benchmark["file"] == expt_log_2[i + args.start_index]["file"]
-            assert benchmark["benchmark_code"] == expt_log_2[i + args.start_index]["benchmark_code"]
+            assert (
+                benchmark["benchmark_code"]
+                == expt_log_2[i + args.start_index]["benchmark_code"]
+            )
 
             logger.log_info(f"Processing benchmark no.:{i+1} File: {benchmark['file']}")
             benchmark_code = benchmark["benchmark_code"]
@@ -127,10 +131,13 @@ def main(args):
                 "pass_at_k_prune": False,
                 "pass_at_k_prune_success_candidate": None,
                 "checking_exceptions": [],
-                "pruning_exceptions": []
+                "pruning_exceptions": [],
             }
 
-            if "completions" not in benchmark or "completions" not in expt_log_2[i + args.start_index]:
+            if (
+                "completions" not in benchmark
+                or "completions" not in expt_log_2[i + args.start_index]
+            ):
                 logger.log_error(
                     f"Completions not found for benchmark: {benchmark['file']}"
                 )
@@ -139,7 +146,9 @@ def main(args):
                 continue
 
             invariants_1 = [b["invariants"] for b in benchmark["completions"]]
-            invariants_2 = [b["invariants"] for b in expt_log_2[i + args.start_index]["completions"]]
+            invariants_2 = [
+                b["invariants"] for b in expt_log_2[i + args.start_index]["completions"]
+            ]
             invariants_from_completions = invariants_1 + invariants_2
 
             if len(invariants_from_completions) < args.k:
@@ -165,7 +174,13 @@ def main(args):
                 )
                 try:
                     success, success_input = run_parallel(
-                        pass_at_k_candidates_batch, check_parallel
+                        list(
+                            zip(
+                                itertools.repeat(benchmark_code),
+                                pass_at_k_candidates_batch,
+                            )
+                        ),
+                        check_parallel,
                     )
                     if success:
                         benchmark_json["pass_at_k"] = True
@@ -253,7 +268,9 @@ def main(args):
     with open(
         os.path.join(output_log_dir, f"final_output.json"), "w"
     ) as final_output_json_file:
-        json.dump(final_output_json, final_output_json_file, indent=4, ensure_ascii=False)
+        json.dump(
+            final_output_json, final_output_json_file, indent=4, ensure_ascii=False
+        )
 
     # for i, benchmark in enumerate(expt_log):
     #     assert benchmark["file"] == expt_log_2[i]["file"]
