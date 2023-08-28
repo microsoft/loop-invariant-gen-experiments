@@ -142,9 +142,9 @@ def main(args):
             ]
             invariants_from_completions = invariants_1 + invariants_2
 
-            if len(invariants_from_completions) < k:
+            if len(invariants_from_completions) < args.k:
                 invariants_from_completions = invariants_from_completions + [
-                    "loop invariant \\false;" for _ in range(k - len(invariants_from_completions))
+                    "\nloop invariant \\false\n" for _ in range(args.k - len(invariants_from_completions))
                 ]
 
             pass_at_k_candidates = get_combinations(invariants_from_completions, k)
