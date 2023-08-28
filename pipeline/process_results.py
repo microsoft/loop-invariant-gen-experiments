@@ -142,15 +142,10 @@ def main(args):
             ]
             invariants_from_completions = invariants_1 + invariants_2
 
-            if len(invariants_from_completions) < args.k:
-                logger.log_error(
-                    f"Not enough invariant sets for benchmark: {benchmark['file']}"
-                )
-                benchmark_json[
-                    "skip_reason"
-                ] = "Not enough invariant sets for benchmark"
-                pass_k_json["logs"].append(benchmark_json)
-                continue
+            if len(invariants_from_completions) < k:
+                invariants_from_completions = invariants_from_completions + [
+                    "loop invariant \\false;" for _ in range(k - len(invariants_from_completions))
+                ]
 
             pass_at_k_candidates = get_combinations(invariants_from_completions, k)
 
