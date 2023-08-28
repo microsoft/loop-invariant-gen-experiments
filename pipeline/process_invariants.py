@@ -269,5 +269,10 @@ def main(args):
         json.dump({"logs": output_logs}, f, indent=4, ensure_ascii=False)
 
 
-if __name__ == "__main__":
-    main(sys.argv[1:])
+# if __name__ == "__main__":
+#     main(sys.argv[1:])
+
+parser = Lark(predicate_grammar, parser="lalr", start="pred")
+text = """!flag ==> (j == i)"""
+ast = parser.parse(text)
+print(ast.pretty())

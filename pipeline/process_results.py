@@ -51,6 +51,18 @@ def run_parallel(inputs, func):
                 return result
     return (False, None)
 
+def check_parallel(input):
+    (benchmark_code, pass_at_k_candidate) = input
+    framac_benchmark = FramaCBenchmark(features="one_loop_one_method")
+    for inv_set in pass_at_k_candidate:
+        checker_input = framac_benchmark.combine_llm_outputs(
+            benchmark_code, inv_set, "one_loop_one_method"
+        )
+        success, success_input = check_wrapper(checker_input)
+        if success:
+            return (True, success_input)
+    return (False, None)
+
 
 def parse_args(args):
     arg_parser = argparse.ArgumentParser()
@@ -147,18 +159,14 @@ def main(args):
                 pass_at_k_candidates_batch = pass_at_k_candidates[
                     j * max_cores : (j + 1) * max_cores
                 ]
-                checker_inputs = [
-                    framac_benchmark.combine_llm_outputs(
-                        benchmark_code, pass_at_k_candidate, features
-                    )
-                    for pass_at_k_candidate in pass_at_k_candidates_batch
-                ]
+                logger.log_action(
+                    "Checking",
+                    f"[Batch {j+1}/{max_j}]: {len(pass_at_k_candidates_batch)} candidates in parallel, k={k}, for benchmark num. {i+1}, File: {benchmark['file']}",
+                )
                 try:
-                    logger.log_action(
-                        "Checking",
-                        f"[Batch {j+1}/{max_j}]: {len(pass_at_k_candidates_batch)} candidates in parallel, k={k}, for benchmark num. {i+1}, File: {benchmark['file']}",
+                    success, success_input = run_parallel(
+                        pass_at_k_candidates_batch, check_parallel
                     )
-                    success, success_input = run_parallel(checker_inputs, check_wrapper)
                     if success:
                         benchmark_json["pass_at_k"] = True
                         benchmark_json["pass_at_k_success_candidate"] = success_input
@@ -169,7 +177,7 @@ def main(args):
                         )
                 except Exception as e:
                     logger.log_error(str(e))
-                    benchmark_json["checking_exceptions"].append("\n" + str(e))
+                    benchmark_json["checking_exceptions"].append(str(e))
 
             if not benchmark_json["pass_at_k"]:
                 logger.log_error(
