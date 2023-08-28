@@ -24,17 +24,7 @@ def prune_wrapper(checker_input):
     success, pruned_code = checker.prune_annotations_and_check(
         checker_input, features="one_loop_one_method", use_json_output=True
     )
-    return (success, pruned_code)
-
-
-def check_wrapper(checker_input):
-    checker = FramaCChecker()
-    success, message = checker.check(
-        checker_input,
-        check_variant=("termination" in "one_loop_oe_method"),
-        use_json_output=True,
-    )
-    return (success, checker_input)
+    return success
 
 
 def run_parallel(inputs, func):
@@ -44,25 +34,30 @@ def run_parallel(inputs, func):
         results = pool.imap_unordered(func, inputs)
 
         for result in results:
-            if result[0] == True:
+            if result == False:
                 pool.terminate()
                 pool.close()
                 pool.join()
-                return result
-    return (False, None)
+                return False
+    return True
 
 
-def check_parallel(input):
+def check_wrapper(input):
     (benchmark_code, pass_at_k_candidate) = input
     framac_benchmark = FramaCBenchmark(features="one_loop_one_method")
+    checker = FramaCChecker()
     for inv_set in pass_at_k_candidate:
         checker_input = framac_benchmark.combine_llm_outputs(
             benchmark_code, inv_set, "one_loop_one_method"
         )
-        success, success_input = check_wrapper(checker_input)
+        success, _ = checker.check(
+            checker_input,
+            check_variant=("termination" in "one_loop_one_method"),
+            use_json_output=True,
+        )
         if success:
-            return (True, success_input)
-    return (False, None)
+            return True
+    return False
 
 
 def parse_args(args):
@@ -110,8 +105,6 @@ def main(args):
             "pass_at_k_count": 0,
             "pass_at_k_prune": [],
             "pass_at_k_prune_count": 0,
-            "checking_exceptions": [],
-            "pruning_exceptions": [],
             "logs": [],
         }
         for i, benchmark in enumerate(expt_log):
@@ -127,9 +120,7 @@ def main(args):
                 "file": benchmark["file"],
                 "benchmark_code": benchmark_code,
                 "pass_at_k": False,
-                "pass_at_k_success_candidate": None,
                 "pass_at_k_prune": False,
-                "pass_at_k_prune_success_candidate": None,
                 "checking_exceptions": [],
                 "pruning_exceptions": [],
             }
@@ -173,37 +164,36 @@ def main(args):
                     f"[Batch {j+1}/{max_j}]: {len(pass_at_k_candidates_batch)} candidates in parallel, k={k}, for benchmark num. {i+1}, File: {benchmark['file']}",
                 )
                 try:
-                    success, success_input = run_parallel(
+                    success = run_parallel(
                         list(
                             zip(
                                 itertools.repeat(benchmark_code),
                                 pass_at_k_candidates_batch,
                             )
                         ),
-                        check_parallel,
+                        check_wrapper,
                     )
-                    if success:
-                        benchmark_json["pass_at_k"] = True
-                        benchmark_json["pass_at_k_success_candidate"] = success_input
+                    if not success:
+                        benchmark_json["pass_at_k"] = False
                         break
                     else:
-                        logger.log_warning(
-                            f"[Batch {j+1}/{max_j}]: Checking failed for k={k}, {len(pass_at_k_candidates_batch)} parallel benchmarks, for benchmark num. {i+1}, File: {benchmark['file']}"
+                        logger.log_info(
+                            f"[Batch {j+1}/{max_j}]: Checking succeeded for k={k}, {len(pass_at_k_candidates_batch)} parallel benchmarks, for benchmark num. {i+1}, File: {benchmark['file']}"
                         )
                 except Exception as e:
                     logger.log_error(str(e))
                     benchmark_json["checking_exceptions"].append(str(e))
 
-            if not benchmark_json["pass_at_k"]:
-                logger.log_error(
-                    f"Pass@k failed for k={k}, for benchmark num. {i+1}, File: {benchmark['file']}"
-                )
-            else:
+            if benchmark_json["pass_at_k"]:
                 logger.log_success(
                     f"Pass@k succeeded for k={k}, for benchmark num. {i+1}, File: {benchmark['file']}"
                 )
                 pass_k_json["pass_at_k"].append(benchmark_json["file"])
                 pass_k_json["pass_at_k_count"] += 1
+            else:
+                logger.log_error(
+                    f"Pass@k failed for k={k}, for benchmark num. {i+1}, File: {benchmark['file']}"
+                )
 
             max_m = (len(pass_at_k_candidates) // max_cores) + 1
             for m in range(0, max_m):
@@ -216,36 +206,33 @@ def main(args):
                     )
                     for pass_at_k_candidate in pass_at_k_candidates_batch
                 ]
+                logger.log_action(
+                    "Pruning",
+                    f"[Batch {m+1}/{max_m}]: {len(pass_at_k_candidates_batch)} candidates in parallel, k={k}, for benchmark num. {i+1}, File: {benchmark['file']}",
+                )
                 try:
-                    logger.log_action(
-                        "Pruning",
-                        f"[Batch {m+1}/{max_m}]: {len(pass_at_k_candidates_batch)} candidates in parallel, k={k}, for benchmark num. {i+1}, File: {benchmark['file']}",
-                    )
-                    success, pruned_code = run_parallel(checker_inputs, prune_wrapper)
-                    if success:
-                        benchmark_json["pass_at_k_prune"] = True
-                        benchmark_json[
-                            "pass_at_k_prune_success_candidate"
-                        ] = pruned_code
+                    success = run_parallel(checker_inputs, prune_wrapper)
+                    if not success:
+                        benchmark_json["pass_at_k_prune"] = False
                         break
                     else:
-                        logger.log_warning(
-                            f"[Batch {m+1}/{max_m}]: Pass@k + Pruning failed for k={k}, {len(pass_at_k_candidates_batch)} parallel benchmarks, for benchmark num. {i+1}, File: {benchmark['file']}"
+                        logger.log_info(
+                            f"[Batch {m+1}/{max_m}]: Pass@k + Pruning succeeded for k={k}, {len(pass_at_k_candidates_batch)} parallel benchmarks, for benchmark num. {i+1}, File: {benchmark['file']}"
                         )
                 except Exception as e:
                     logger.log_error(str(e))
                     benchmark_json["pruning_exceptions"].append("\n" + str(e))
 
-            if not benchmark_json["pass_at_k_prune"]:
-                logger.log_error(
-                    f"Pass@k + Pruning failed for k={k}, for benchmark num. {i+1}, File: {benchmark['file']}"
-                )
-            else:
+            if benchmark_json["pass_at_k_prune"]:
                 logger.log_success(
                     f"Pass@k + Pruning succeeded for k={k}, for benchmark num. {i+1}, File: {benchmark['file']}"
                 )
                 pass_k_json["pass_at_k_prune"].append(benchmark_json["file"])
                 pass_k_json["pass_at_k_prune_count"] += 1
+            else:
+                logger.log_error(
+                    f"Pass@k + Pruning failed for k={k}, for benchmark num. {i+1}, File: {benchmark['file']}"
+                )
 
             pass_k_json["logs"].append(benchmark_json)
 
@@ -271,140 +258,6 @@ def main(args):
         json.dump(
             final_output_json, final_output_json_file, indent=4, ensure_ascii=False
         )
-
-    # for i, benchmark in enumerate(expt_log):
-    #     assert benchmark["file"] == expt_log_2[i]["file"]
-    #     assert benchmark["benchmark_code"] == expt_log_2[i]["benchmark_code"]
-
-    #     logger.log_info(f"Processing benchmark no.:{i+1} File: {benchmark['file']}")
-    #     benchmark_json = {}
-    #     benchmark_code = benchmark["benchmark_code"]
-    #     rechecked_invariants = [b["invariants"] for b in benchmark["completions"]]
-    #     rechecked_invariants_2 = [b["invariants"] for b in expt_log_2[i]["completions"]]
-    #     invariants_from_completions = (
-    #         benchmark["invariants"] + expt_log_2[i]["invariants"]
-    #     )
-    #     if len(invariants_from_completions) < args.k:
-    #         logger.log_error(
-    #             f"Not enough invariant sets for benchmark: {benchmark['file']}"
-    #         )
-    #         benchmark_json["skip_reason"] = "Not enough invariant sets for benchmark"
-    #         output_json["logs"].append(benchmark_json)
-    #         continue
-
-    #     benchmark_json["benchmark_code"] = benchmark_code
-    #     benchmark_json["invariants"] = invariants_from_completions
-    #     benchmark_json["pass_k"] = []
-    #     for k in range(1, args.k + 1):
-    #         logger.log_info(
-    #             f"Processing k={k} for benchmark no.:{i+1} File: {benchmark['file']}"
-    #         )
-    #         pass_k_json = {
-    #             "k": k,
-    #             "pass_at_k": False,
-    #             "pass_at_k_success_candidate": None,
-    #             "pass_at_k_combine_prune": False,
-    #             "pass_at_k_combine_prune_success_candidate": None,
-    #             "checking_exceptions": [],
-    #             "pruning_exceptions": [],
-    #         }
-    #         pass_at_k_candidates = get_combinations(invariants_from_completions, k)
-
-    #         max_j = (len(pass_at_k_candidates) // max_cores) + 1
-    #         for j in range(0, max_j):
-    #             pass_at_k_candidates_batch = pass_at_k_candidates[
-    #                 j * max_cores : (j + 1) * max_cores
-    #             ]
-    #             checker_inputs = [
-    #                 framac_benchmark.combine_llm_outputs(
-    #                     benchmark_code, pass_at_k_candidate, features
-    #                 )
-    #                 for pass_at_k_candidate in pass_at_k_candidates_batch
-    #             ]
-    #             try:
-    #                 logger.log_action(
-    #                     "Checking",
-    #                     f"[Batch {j+1}/{max_j}]: {len(pass_at_k_candidates_batch)} candidates in parallel, k={k}, for benchmark num. {i+1}, File: {benchmark['file']}",
-    #                 )
-    #                 success, success_input = run_parallel(checker_inputs, check_wrapper)
-    #                 if success:
-    #                     pass_k_json["pass_at_k"] = True
-    #                     pass_k_json["pass_at_k_success_candidate"] = success_input
-    #                     break
-    #                 else:
-    #                     logger.log_warning(
-    #                         f"[Batch {j+1}/{max_j}]: Checking failed for k={k}, {len(pass_at_k_candidates_batch)} parallel benchmarks, for benchmark num. {i+1}, File: {benchmark['file']}"
-    #                     )
-    #             except Exception as e:
-    #                 logger.log_error(str(e))
-    #                 pass_k_json["checking_exceptions"].append("\n" + str(e))
-
-    #         if not pass_k_json["pass_at_k"]:
-    #             logger.log_error(
-    #                 f"Pass@k failed for k={k}, for benchmark num. {i+1}, File: {benchmark['file']}"
-    #             )
-    #         else:
-    #             logger.log_success(
-    #                 f"Pass@k succeeded for k={k}, for benchmark num. {i+1}, File: {benchmark['file']}"
-    #             )
-
-    #         max_m = (len(pass_at_k_candidates) // max_cores) + 1
-    #         for m in range(0, max_m):
-    #             pass_at_k_candidates_batch = pass_at_k_candidates[
-    #                 m * max_cores : (m + 1) * max_cores
-    #             ]
-    #             checker_inputs = [
-    #                 framac_benchmark.combine_llm_outputs(
-    #                     benchmark_code, pass_at_k_candidate, features
-    #                 )
-    #                 for pass_at_k_candidate in pass_at_k_candidates_batch
-    #             ]
-    #             try:
-    #                 logger.log_action(
-    #                     "Pruning",
-    #                     f"[Batch {m+1}/{max_m}]: {len(pass_at_k_candidates_batch)} candidates in parallel, k={k}, for benchmark num. {i+1}, File: {benchmark['file']}",
-    #                 )
-    #                 success, pruned_code = run_parallel(checker_inputs, prune_wrapper)
-    #                 if success:
-    #                     pass_k_json["pass_at_k_combine_prune"] = True
-    #                     pass_k_json[
-    #                         "pass_at_k_combine_prune_success_candidate"
-    #                     ] = pruned_code
-    #                     break
-    #                 else:
-    #                     logger.log_warning(
-    #                         f"[Batch {m+1}/{max_m}]: Pass@k + Pruning failed for k={k}, {len(pass_at_k_candidates_batch)} parallel benchmarks, for benchmark num. {i+1}, File: {benchmark['file']}"
-    #                     )
-    #             except Exception as e:
-    #                 logger.log_error(str(e))
-    #                 pass_k_json["pruning_exceptions"].append("\n" + str(e))
-
-    #         if not pass_k_json["pass_at_k_combine_prune"]:
-    #             logger.log_error(
-    #                 f"Pass@k + Pruning failed for k={k}, for benchmark num. {i+1}, File: {benchmark['file']}"
-    #             )
-    #         else:
-    #             logger.log_success(
-    #                 f"Pass@k + Pruning succeeded for k={k}, for benchmark num. {i+1}, File: {benchmark['file']}"
-    #             )
-
-    #         benchmark_json["pass_k"].append(pass_k_json)
-    #         with open(
-    #             os.path.join(
-    #                 output_log_dir,
-    #                 benchmark["file"]
-    #                 .replace(".c", f"_{k}.json")
-    #                 .replace("../", "")
-    #                 .replace("/", "__"),
-    #             ),
-    #             "w",
-    #         ) as f:
-    #             json.dump(pass_k_json, f, indent=4, ensure_ascii=False)
-
-    #     output_json["logs"].append(benchmark_json)
-
-    # with open(os.path.join(output_log_dir, "final.json"), "w") as f:
-    #     json.dump(output_json, f, indent=4, ensure_ascii=False)
 
 
 if __name__ == "__main__":
