@@ -8,7 +8,7 @@ import multiprocessing
 from frama_c import FramaCBenchmark, FramaCChecker
 from llm_utils import Logger
 
-max_cores = 48
+max_cores = 32
 
 
 def get_combinations(input, k):
@@ -56,22 +56,27 @@ def parse_args(args):
     arg_parser = argparse.ArgumentParser()
     arg_parser.add_argument("--k", type=int, required=True)
     arg_parser.add_argument("--input-log", type=str, required=True)
+    arg_parser.add_argument("--input-log-2", type=str, required=True)
     return arg_parser.parse_args(args)
 
 
 def main(args):
     args = parse_args(args)
     expt_log = None
-    if not os.path.exists(args.input_log):
+    if not os.path.exists(args.input_log) or not os.path.exists(args.input_log_2):
         print("Input log does not exist.")
         return
     with open(args.input_log, "r") as f:
         expt_log = json.load(f)
+    with open(args.input_log_2, "r") as f:
+        expt_log_2 = json.load(f)
     output_json = {"params": expt_log["params"], "logs": []}
     output_json["params"]["k"] = args.k
-    output_json["params"]["input_log"] = args.input_log
+    output_json["params"]["input_log_1"] = args.input_log
+    output_json["params"]["input_log_2"] = args.input_log_2
 
     expt_log = expt_log["logs"]
+    expt_log_2 = expt_log_2["logs"]
     features = "one_loop_one_method"
     checker = FramaCChecker()
     framac_benchmark = FramaCBenchmark(features=features)
@@ -80,10 +85,13 @@ def main(args):
     if not os.path.exists(output_log_dir):
         os.makedirs(output_log_dir)
     for i, benchmark in enumerate(expt_log):
+        assert benchmark["file"] == expt_log_2[i]["file"]
+        assert benchmark["benchmark_code"] == expt_log_2[i]["benchmark_code"]
+
         logger.log_info(f"Processing benchmark no.:{i+1} File: {benchmark['file']}")
         benchmark_json = {}
         benchmark_code = benchmark["benchmark_code"]
-        invariants_from_completions = benchmark["invariants"]
+        invariants_from_completions = benchmark["invariants"] + expt_log_2[i]["invariants"]
         if len(invariants_from_completions) < args.k:
             logger.log_error(
                 f"Not enough invariant sets for benchmark: {benchmark['file']}"
