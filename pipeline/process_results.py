@@ -208,7 +208,7 @@ def main(args):
                     logger.log_error(str(e))
                     benchmark_json["pruning_exceptions"].append("\n" + str(e))
 
-            if not benchmark_json["pass_at_k_combine_prune"]:
+            if not benchmark_json["pass_at_k_prune"]:
                 logger.log_error(
                     f"Pass@k + Pruning failed for k={k}, for benchmark num. {i+1}, File: {benchmark['file']}"
                 )
