@@ -113,6 +113,14 @@ def main(args):
                 "pass_at_k_prune_success_candidate": None,
             }
 
+            if "completions" not in benchmark or "completions" not in expt_log_2[i]:
+                logger.log_error(
+                    f"Completions not found for benchmark: {benchmark['file']}"
+                )
+                benchmark_json["skip_reason"] = "Completions not found"
+                pass_k_json["logs"].append(benchmark_json)
+                continue
+
             invariants_1 = [b["invariants"] for b in benchmark["completions"]]
             invariants_2 = [b["invariants"] for b in expt_log_2[i]["completions"]]
             invariants_from_completions = invariants_1 + invariants_2
