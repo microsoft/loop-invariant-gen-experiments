@@ -54,6 +54,7 @@ def run_parallel(inputs, func):
 
 def parse_args(args):
     arg_parser = argparse.ArgumentParser()
+    arg_parser.add_argument("--start-k", type=int, required=False, default=1)
     arg_parser.add_argument("--k", type=int, required=True)
     arg_parser.add_argument("--input-log", type=str, required=True)
     arg_parser.add_argument("--input-log-2", type=str, required=True)
@@ -86,7 +87,8 @@ def main(args):
         os.makedirs(output_log_dir)
 
     final_output_json = []
-    for k in range(1, args.k + 1):
+    start_k = 1 if args.start_k is None else args.start_k
+    for k in range(start_k, args.k + 1):
         logger.log_info(f"Processing k={k}")
         pass_k_json = {
             "k": k,
@@ -111,6 +113,8 @@ def main(args):
                 "pass_at_k_success_candidate": None,
                 "pass_at_k_prune": False,
                 "pass_at_k_prune_success_candidate": None,
+                "checking_exception": [],
+                "pruning_exceptions": []
             }
 
             if "completions" not in benchmark or "completions" not in expt_log_2[i]:
