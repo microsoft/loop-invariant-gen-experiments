@@ -102,8 +102,8 @@ def main(args):
         }
         expt_log = expt_log[args.start_index :]
         for i, benchmark in enumerate(expt_log):
-            assert benchmark["file"] == expt_log_2[i]["file"]
-            assert benchmark["benchmark_code"] == expt_log_2[i]["benchmark_code"]
+            assert benchmark["file"] == expt_log_2[i + args.start_index]["file"]
+            assert benchmark["benchmark_code"] == expt_log_2[i + args.start_index]["benchmark_code"]
 
             logger.log_info(f"Processing benchmark no.:{i+1} File: {benchmark['file']}")
             benchmark_code = benchmark["benchmark_code"]
@@ -118,7 +118,7 @@ def main(args):
                 "pruning_exceptions": []
             }
 
-            if "completions" not in benchmark or "completions" not in expt_log_2[i]:
+            if "completions" not in benchmark or "completions" not in expt_log_2[i + args.start_index]:
                 logger.log_error(
                     f"Completions not found for benchmark: {benchmark['file']}"
                 )
@@ -127,7 +127,7 @@ def main(args):
                 continue
 
             invariants_1 = [b["invariants"] for b in benchmark["completions"]]
-            invariants_2 = [b["invariants"] for b in expt_log_2[i]["completions"]]
+            invariants_2 = [b["invariants"] for b in expt_log_2[i + args.start_index]["completions"]]
             invariants_from_completions = invariants_1 + invariants_2
 
             if len(invariants_from_completions) < args.k:
