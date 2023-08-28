@@ -55,6 +55,7 @@ def run_parallel(inputs, func):
 def parse_args(args):
     arg_parser = argparse.ArgumentParser()
     arg_parser.add_argument("--start-k", type=int, required=False, default=1)
+    arg_parser.add_argument("--start-index", type=int, required=False, default=0)
     arg_parser.add_argument("--k", type=int, required=True)
     arg_parser.add_argument("--input-log", type=str, required=True)
     arg_parser.add_argument("--input-log-2", type=str, required=True)
@@ -87,8 +88,7 @@ def main(args):
         os.makedirs(output_log_dir)
 
     final_output_json = []
-    start_k = 1 if args.start_k is None else args.start_k
-    for k in range(start_k, args.k + 1):
+    for k in range(args.start_k, args.k + 1):
         logger.log_info(f"Processing k={k}")
         pass_k_json = {
             "k": k,
@@ -100,6 +100,7 @@ def main(args):
             "pruning_exceptions": [],
             "logs": [],
         }
+        expt_log = expt_log[args.start_index :]
         for i, benchmark in enumerate(expt_log):
             assert benchmark["file"] == expt_log_2[i]["file"]
             assert benchmark["benchmark_code"] == expt_log_2[i]["benchmark_code"]
