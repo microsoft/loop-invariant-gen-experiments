@@ -88,6 +88,7 @@ def main(args):
         os.makedirs(output_log_dir)
 
     final_output_json = []
+    expt_log = expt_log[args.start_index :]
     for k in range(args.start_k, args.k + 1):
         logger.log_info(f"Processing k={k}")
         pass_k_json = {
@@ -100,7 +101,6 @@ def main(args):
             "pruning_exceptions": [],
             "logs": [],
         }
-        expt_log = expt_log[args.start_index :]
         for i, benchmark in enumerate(expt_log):
             assert benchmark["file"] == expt_log_2[i + args.start_index]["file"]
             assert benchmark["benchmark_code"] == expt_log_2[i + args.start_index]["benchmark_code"]
