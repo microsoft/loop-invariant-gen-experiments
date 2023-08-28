@@ -119,8 +119,8 @@ def main(args):
             benchmark_json = {
                 "file": benchmark["file"],
                 "benchmark_code": benchmark_code,
-                "pass_at_k": False,
-                "pass_at_k_prune": False,
+                "pass_at_k": True,
+                "pass_at_k_prune": True,
                 "checking_exceptions": [],
                 "pruning_exceptions": [],
             }
