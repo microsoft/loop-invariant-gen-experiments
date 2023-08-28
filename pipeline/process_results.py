@@ -48,7 +48,7 @@ def check_wrapper(input):
     checker = FramaCChecker()
     for inv_set in pass_at_k_candidate:
         checker_input = framac_benchmark.combine_llm_outputs(
-            benchmark_code, inv_set, "one_loop_one_method"
+            benchmark_code, [inv_set], "one_loop_one_method"
         )
         success, _ = checker.check(
             checker_input,
