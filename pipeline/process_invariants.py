@@ -3,11 +3,13 @@ import os
 from lark import Lark, Transformer
 
 predicate_grammar = r"""
-    term: VAR | NUMBER | term bin_op term | LPAREN term RPAREN
+    term: VAR | NUMBER | unary_op term | term bin_op term | LPAREN term RPAREN | term TERNOP term COLON term
 
-    bin_op : "+" | "-" | "*" | "/" | "%" | "^^" | "<<" | ">>" | "&" | "|" | "-->" | "<-->" | "^"
+    !unary_op : "+" | "-" | "!" 
 
-    ?pred: TRUE | FALSE
+    !bin_op : "+" | "-" | "*" | "/" | "%" | "^^" | "<<" | ">>" | "&" | "|" | "-->" | "<-->" | "^" | rel_op
+
+    pred: TRUE | FALSE
         | LPAREN pred RPAREN
         | term (rel_op term)+
         | pred LAND pred
@@ -19,14 +21,7 @@ predicate_grammar = r"""
         | term TERNOP pred COLON pred
         | pred TERNOP pred COLON pred
 
-    rel_op : EQUALS | NOTEQUALS | LESSTHAN | GREATERTHAN | LESSTHANEQUALS | GREATERTHANEQUALS
-
-    EQUALS: "=="
-    NOTEQUALS: "!="
-    LESSTHAN: "<"
-    GREATERTHAN: ">"
-    LESSTHANEQUALS: "<="
-    GREATERTHANEQUALS: ">="
+    !rel_op : "==" | "!=" | "<" | ">" | "<=" | ">="
 
     VAR: /[a-zA-Z_][a-zA-Z0-9_]*/
     NUMBER: /[0-9]+/
@@ -51,81 +46,49 @@ predicate_grammar = r"""
     %ignore WS
 """
 
-parser = Lark(predicate_grammar, parser='lalr', start="pred")
-ast = parser.parse("x == 1 && y == 2")
-print(ast)
+parser = Lark(predicate_grammar, parser='lalr', start='pred')
+ast = parser.parse("j == (flag ? ((y * (y + 1)) / 2) + !y : (MAX * (y + 1)) / 2)")
 
 class PredicateTransformer(Transformer):
     def __init__(self):
         self.predicates = []
         self.terms = []
+        self.variables = {}
+        self.literals
 
     def pred(self, args):
-        print(args)
-        self.predicates.append(args)
+        string = ' '.join(args)
+        self.predicates.append(string)
+        return string
 
     def term(self, args):
-        self.terms.append(args)
-        print(args)
-        return ''.join(args)
+        string = ' '.join(args)
+        self.terms.append(string)
+        return string
 
     def VAR(self, args):
-        return args[0]
+        string = str(args)
+        self.variables[string] = True
+        return string
     
     def NUMBER(self, args):
         return args[0]
-    
-    def TRUE(self, args):
-        return "True"
-    
-    def FALSE(self, args):
-        return "False"
-    
-    def LPAREN(self, args):
-        return "("
-    
-    def RPAREN(self, args):
-        return ")"
-    
-    def LAND(self, args):
-        return "and"
-    
-    def LOR(self, args):
-        return "or"
-    
-    def LIMPL(self, args):
-        return "implies"
-    
-    def LBIIMPL(self, args):
-        return "iff"
-    
-    def LNOT(self, args):
-        return "not"
-    
-    def LXOR(self, args):
-        return "xor"
-    
-    def TERNOP(self, args):
-        return "if"
-    
-    def COLON(self, args):
-        return "else"
-    
-    def SEMICOLON(self, args):
-        return ";"
-    
-    def FORALL(self, args):
-        return "forall"
-    
-    def EXISTS(self, args):
-        return "exists"
-    
+
     def bin_op(self, args):
+        return args[0]
+    
+    def unary_op(self, args):
         return args[0]
     
     def rel_op(self, args):
         return args[0]
+    
+    def __default_token__(self, token):
+        return str(token)
 
 transformer = PredicateTransformer()
 transformer.transform(ast)
-print(transformer.predicates)
+# print(transformer.predicates)
+print(transformer.terms)
+print(len(transformer.terms))
+print(transformer.variables.keys())

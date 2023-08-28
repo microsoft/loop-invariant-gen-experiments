@@ -114,7 +114,7 @@ def main(args):
                 "pass_at_k_success_candidate": None,
                 "pass_at_k_prune": False,
                 "pass_at_k_prune_success_candidate": None,
-                "checking_exception": [],
+                "checking_exceptions": [],
                 "pruning_exceptions": []
             }
 
