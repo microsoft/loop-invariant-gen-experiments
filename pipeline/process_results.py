@@ -213,7 +213,7 @@ def main(args):
                         results = run_parallel(checker_inputs, prune_wrapper)
                         pass_k_prune += sum(results)
                         logger.log_info(
-                            f"[Batch {m+1}/{max_m}]: Pass@k + Pruning = {pass_k_prune} for k={k}, {len(candidates_batch)} parallel benchmarks, for benchmark num. {i+1}, File: {benchmark['file']}"
+                            f"[Batch {m+1}/{max_m}]: Pass@k + Pruning = {pass_k_prune / len(results)} for k={k}, {len(candidates_batch)} parallel benchmarks, for benchmark num. {i+1}, File: {benchmark['file']}"
                         )
                     except Exception as e:
                         benchmark_json["pass_at_k_prune"] = 0.0
