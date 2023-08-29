@@ -86,7 +86,7 @@ def main(args):
     with open(args.input_log_2, "r") as f:
         expt_log_2 = json.load(f)
     output_json = {"params": expt_log["params"], "logs": []}
-    output_json["params"]["k"] = args.k
+    output_json["params"]["k"] = args.max_k
     output_json["params"]["input_log_1"] = args.input_log
     output_json["params"]["input_log_2"] = args.input_log_2
 
@@ -154,9 +154,9 @@ def main(args):
                     for b in expt_log_2[i + args.start_index]["completions"]
                 ]
                 success_from_completions = completion_success_1 + completion_success_2
-                if len(success_from_completions) < args.k:
+                if len(success_from_completions) < args.max_k:
                     success_from_completions = success_from_completions + [
-                        False for _ in range(args.k - len(success_from_completions))
+                        False for _ in range(args.max_k - len(success_from_completions))
                     ]
 
                 random_permutations = [
@@ -183,10 +183,10 @@ def main(args):
                 ]
                 invariants_from_completions = invariants_1 + invariants_2
 
-                if len(invariants_from_completions) < args.k:
+                if len(invariants_from_completions) < args.max_k:
                     invariants_from_completions = invariants_from_completions + [
                         "\nloop invariant \\false;\n"
-                        for _ in range(args.k - len(invariants_from_completions))
+                        for _ in range(args.max_k - len(invariants_from_completions))
                     ]
 
                 random_permutations = [
