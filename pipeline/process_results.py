@@ -67,6 +67,7 @@ def parse_args(args):
     arg_parser.add_argument("--k", type=int, required=True)
     arg_parser.add_argument("--input-log", type=str, required=True)
     arg_parser.add_argument("--input-log-2", type=str, required=True)
+    arg_parser.add_argument("--check", action="store_true", required=False)
     return arg_parser.parse_args(args)
 
 
@@ -135,83 +136,89 @@ def main(args):
                 benchmark_json["skip_reason"] = "Completions not found"
                 pass_k_json["logs"].append(benchmark_json)
                 continue
-            completion_success_1 = [b["success"] for b in benchmark["completions"]]
-            completion_success_2 = [b["success"] for b in expt_log_2[i + args.start_index]["completions"]]
-            success_from_completions = completion_success_1 + completion_success_2
-            if len(success_from_completions) < args.k:
-                success_from_completions = success_from_completions + [
-                    False for _ in range(args.k - len(success_from_completions))
-                ]
-            success_candidates = get_combinations(success_from_completions, k)
-            if all([True in c for c in success_candidates]):
-                benchmark_json["pass_at_k"] = True
-            else:
-                benchmark_json["pass_at_k"] = False
 
-            if benchmark_json["pass_at_k"]:
-                logger.log_success(
-                    f"Pass@k succeeded for k={k}, for benchmark num. {i+1}, File: {benchmark['file']}"
-                )
-                pass_k_json["pass_at_k"].append(benchmark_json["file"])
-                pass_k_json["pass_at_k_count"] += 1
-            else:
-                logger.log_error(
-                    f"Pass@k failed for k={k}, for benchmark num. {i+1}, File: {benchmark['file']}"
-                )
+            if args.check:
+                benchmark_json.pop("pass-at_k_prune")
+                benchmark_json.pop("pruning_exceptions")
+                completion_success_1 = [b["success"] for b in benchmark["completions"]]
+                completion_success_2 = [b["success"] for b in expt_log_2[i + args.start_index]["completions"]]
+                success_from_completions = completion_success_1 + completion_success_2
+                if len(success_from_completions) < args.k:
+                    success_from_completions = success_from_completions + [
+                        False for _ in range(args.k - len(success_from_completions))
+                    ]
+                success_candidates = get_combinations(success_from_completions, k)
+                if all([True in c for c in success_candidates]):
+                    benchmark_json["pass_at_k"] = True
+                else:
+                    benchmark_json["pass_at_k"] = False
 
-            invariants_1 = [b["invariants"] for b in benchmark["completions"]]
-            invariants_2 = [
-                b["invariants"] for b in expt_log_2[i + args.start_index]["completions"]
-            ]
-            invariants_from_completions = invariants_1 + invariants_2
-
-            if len(invariants_from_completions) < args.k:
-                invariants_from_completions = invariants_from_completions + [
-                    "\nloop invariant \\false;\n"
-                    for _ in range(args.k - len(invariants_from_completions))
-                ]
-
-            pass_at_k_candidates = get_combinations(invariants_from_completions, k)
-
-            max_m = (len(pass_at_k_candidates) // max_cores) + 1
-            for m in range(0, max_m):
-                pass_at_k_candidates_batch = pass_at_k_candidates[
-                    m * max_cores : (m + 1) * max_cores
-                ]
-                checker_inputs = [
-                    framac_benchmark.combine_llm_outputs(
-                        benchmark_code, pass_at_k_candidate, features
+                if benchmark_json["pass_at_k"]:
+                    logger.log_success(
+                        f"Pass@k succeeded for k={k}, for benchmark num. {i+1}, File: {benchmark['file']}"
                     )
-                    for pass_at_k_candidate in pass_at_k_candidates_batch
-                ]
-                logger.log_action(
-                    "Pruning",
-                    f"[Batch {m+1}/{max_m}]: {len(pass_at_k_candidates_batch)} candidates in parallel, k={k}, for benchmark num. {i+1}, File: {benchmark['file']}",
-                )
-                try:
-                    success = run_parallel(checker_inputs, prune_wrapper)
-                    if not success:
-                        benchmark_json["pass_at_k_prune"] = False
-                        break
-                    else:
-                        logger.log_info(
-                            f"[Batch {m+1}/{max_m}]: Pass@k + Pruning succeeded for k={k}, {len(pass_at_k_candidates_batch)} parallel benchmarks, for benchmark num. {i+1}, File: {benchmark['file']}"
-                        )
-                except Exception as e:
-                    benchmark_json["pass_at_k_prune"] = False
-                    logger.log_error(str(e))
-                    benchmark_json["pruning_exceptions"].append("\n" + str(e))
-
-            if benchmark_json["pass_at_k_prune"]:
-                logger.log_success(
-                    f"Pass@k + Pruning succeeded for k={k}, for benchmark num. {i+1}, File: {benchmark['file']}"
-                )
-                pass_k_json["pass_at_k_prune"].append(benchmark_json["file"])
-                pass_k_json["pass_at_k_prune_count"] += 1
+                    pass_k_json["pass_at_k"].append(benchmark_json["file"])
+                    pass_k_json["pass_at_k_count"] += 1
+                else:
+                    logger.log_error(
+                        f"Pass@k failed for k={k}, for benchmark num. {i+1}, File: {benchmark['file']}"
+                    )
             else:
-                logger.log_error(
-                    f"Pass@k + Pruning failed for k={k}, for benchmark num. {i+1}, File: {benchmark['file']}"
-                )
+                benchmark_json.pop("pass_at_k")
+                benchmark_json.pop("checking_exceptions")
+                invariants_1 = [b["invariants"] for b in benchmark["completions"]]
+                invariants_2 = [
+                    b["invariants"] for b in expt_log_2[i + args.start_index]["completions"]
+                ]
+                invariants_from_completions = invariants_1 + invariants_2
+
+                if len(invariants_from_completions) < args.k:
+                    invariants_from_completions = invariants_from_completions + [
+                        "\nloop invariant \\false;\n"
+                        for _ in range(args.k - len(invariants_from_completions))
+                    ]
+
+                pass_at_k_candidates = get_combinations(invariants_from_completions, k)
+
+                max_m = (len(pass_at_k_candidates) // max_cores) + 1
+                for m in range(0, max_m):
+                    pass_at_k_candidates_batch = pass_at_k_candidates[
+                        m * max_cores : (m + 1) * max_cores
+                    ]
+                    checker_inputs = [
+                        framac_benchmark.combine_llm_outputs(
+                            benchmark_code, pass_at_k_candidate, features
+                        )
+                        for pass_at_k_candidate in pass_at_k_candidates_batch
+                    ]
+                    logger.log_action(
+                        "Pruning",
+                        f"[Batch {m+1}/{max_m}]: {len(pass_at_k_candidates_batch)} candidates in parallel, k={k}, for benchmark num. {i+1}, File: {benchmark['file']}",
+                    )
+                    try:
+                        success = run_parallel(checker_inputs, prune_wrapper)
+                        if not success:
+                            benchmark_json["pass_at_k_prune"] = False
+                            break
+                        else:
+                            logger.log_info(
+                                f"[Batch {m+1}/{max_m}]: Pass@k + Pruning succeeded for k={k}, {len(pass_at_k_candidates_batch)} parallel benchmarks, for benchmark num. {i+1}, File: {benchmark['file']}"
+                            )
+                    except Exception as e:
+                        benchmark_json["pass_at_k_prune"] = False
+                        logger.log_error(str(e))
+                        benchmark_json["pruning_exceptions"].append("\n" + str(e))
+
+                if benchmark_json["pass_at_k_prune"]:
+                    logger.log_success(
+                        f"Pass@k + Pruning succeeded for k={k}, for benchmark num. {i+1}, File: {benchmark['file']}"
+                    )
+                    pass_k_json["pass_at_k_prune"].append(benchmark_json["file"])
+                    pass_k_json["pass_at_k_prune_count"] += 1
+                else:
+                    logger.log_error(
+                        f"Pass@k + Pruning failed for k={k}, for benchmark num. {i+1}, File: {benchmark['file']}"
+                    )
 
             pass_k_json["logs"].append(benchmark_json)
 
