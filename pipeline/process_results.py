@@ -109,10 +109,8 @@ def main(args):
         logger.log_info(f"Processing k={k}")
         pass_k_json = {
             "k": k,
-            "pass_at_k": [],
-            "pass_at_k_count": 0,
-            "pass_at_k_prune": [],
-            "pass_at_k_prune_count": 0,
+            "pass_at_k": 0.0,
+            "pass_at_k_prune": 0.0,
             "logs": [],
         }
         for i, benchmark in enumerate(expt_log):
@@ -172,6 +170,7 @@ def main(args):
                 logger.log_info(
                     f"Pass@k={pass_at_k} for k={k}, for benchmark num. {i+1}, File: {benchmark['file']}"
                 )
+                pass_k_json["pass_at_k"] += pass_at_k
 
             else:
                 benchmark_json.pop("pass_at_k")
@@ -226,6 +225,7 @@ def main(args):
                 logger.log_info(
                     f"Pass@k + Pruning = {pass_k_prune} for k={k}, for benchmark num. {i+1}, File: {benchmark['file']}"
                 )
+                pass_k_json["pass_at_k"] += pass_k_prune
 
             pass_k_json["logs"].append(benchmark_json)
 
