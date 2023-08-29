@@ -1061,6 +1061,13 @@ class FramaCBenchmark(Benchmark):
         loops = self.get_loops(main_definition)
         return len(loops) > 1
 
+    def apply_patches(self, code):
+        # All last minute patches go here
+        while_true_loops = re.findall(r"while\s*\(true\)", code)
+        for l in while_true_loops:
+            code = code.replace(l, "while(1)")
+        return code
+
     def preprocess(self, code, features):
         code = self.remove_comments(code)
         code = self.remove_local_includes(code)
@@ -1069,6 +1076,7 @@ class FramaCBenchmark(Benchmark):
         code = self.remove_verifier_function_definitions(code)
         code = self.remove_verifier_function_declarations(code)
         code = self.replace_nondets_and_assert_assumes(code)
+        code = self.apply_patches(code)
         code = self.add_boiler_plate(code)
         code = self.add_frama_c_asserts(code)
         code = self.remove_tmpl(code)

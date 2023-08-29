@@ -135,49 +135,18 @@ def main(args):
                 benchmark_json["skip_reason"] = "Completions not found"
                 pass_k_json["logs"].append(benchmark_json)
                 continue
-
-            invariants_1 = [b["invariants"] for b in benchmark["completions"]]
-            invariants_2 = [
-                b["invariants"] for b in expt_log_2[i + args.start_index]["completions"]
-            ]
-            invariants_from_completions = invariants_1 + invariants_2
-
-            if len(invariants_from_completions) < args.k:
-                invariants_from_completions = invariants_from_completions + [
-                    "\nloop invariant \\false;\n" for _ in range(args.k - len(invariants_from_completions))
+            completion_success_1 = [b["success"] for b in benchmark["completions"]]
+            completion_success_2 = [b["success"] for b in expt_log_2[i + args.start_index]["completions"]]
+            success_from_completions = completion_success_1 + completion_success_2
+            if len(success_from_completions) < args.k:
+                success_from_completions = success_from_completions + [
+                    False for _ in range(args.k - len(success_from_completions))
                 ]
-
-            pass_at_k_candidates = get_combinations(invariants_from_completions, k)
-
-            max_j = (len(pass_at_k_candidates) // max_cores) + 1
-            for j in range(0, max_j):
-                pass_at_k_candidates_batch = pass_at_k_candidates[
-                    j * max_cores : (j + 1) * max_cores
-                ]
-                logger.log_action(
-                    "Checking",
-                    f"[Batch {j+1}/{max_j}]: {len(pass_at_k_candidates_batch)} candidates in parallel, k={k}, for benchmark num. {i+1}, File: {benchmark['file']}",
-                )
-                try:
-                    success = run_parallel(
-                        list(
-                            zip(
-                                itertools.repeat(benchmark_code),
-                                pass_at_k_candidates_batch,
-                            )
-                        ),
-                        check_wrapper,
-                    )
-                    if not success:
-                        benchmark_json["pass_at_k"] = False
-                        break
-                    else:
-                        logger.log_info(
-                            f"[Batch {j+1}/{max_j}]: Checking succeeded for k={k}, {len(pass_at_k_candidates_batch)} parallel benchmarks, for benchmark num. {i+1}, File: {benchmark['file']}"
-                        )
-                except Exception as e:
-                    logger.log_error(str(e))
-                    benchmark_json["checking_exceptions"].append(str(e))
+            success_candidates = get_combinations(success_from_completions, k)
+            if all([True in c for c in success_candidates]):
+                benchmark_json["pass_at_k"] = True
+            else:
+                benchmark_json["pass_at_k"] = False
 
             if benchmark_json["pass_at_k"]:
                 logger.log_success(
@@ -189,6 +158,20 @@ def main(args):
                 logger.log_error(
                     f"Pass@k failed for k={k}, for benchmark num. {i+1}, File: {benchmark['file']}"
                 )
+
+            invariants_1 = [b["invariants"] for b in benchmark["completions"]]
+            invariants_2 = [
+                b["invariants"] for b in expt_log_2[i + args.start_index]["completions"]
+            ]
+            invariants_from_completions = invariants_1 + invariants_2
+
+            if len(invariants_from_completions) < args.k:
+                invariants_from_completions = invariants_from_completions + [
+                    "\nloop invariant \\false;\n"
+                    for _ in range(args.k - len(invariants_from_completions))
+                ]
+
+            pass_at_k_candidates = get_combinations(invariants_from_completions, k)
 
             max_m = (len(pass_at_k_candidates) // max_cores) + 1
             for m in range(0, max_m):
@@ -215,6 +198,7 @@ def main(args):
                             f"[Batch {m+1}/{max_m}]: Pass@k + Pruning succeeded for k={k}, {len(pass_at_k_candidates_batch)} parallel benchmarks, for benchmark num. {i+1}, File: {benchmark['file']}"
                         )
                 except Exception as e:
+                    benchmark_json["pass_at_k_prune"] = False
                     logger.log_error(str(e))
                     benchmark_json["pruning_exceptions"].append("\n" + str(e))
 
