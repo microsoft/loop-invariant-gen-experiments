@@ -65,8 +65,9 @@ def check_wrapper(input):
 
 def parse_args(args):
     arg_parser = argparse.ArgumentParser()
-    arg_parser.add_argument("--max-k", type=int, required=True)
+    arg_parser.add_argument("--n", type=int, required=True)
     arg_parser.add_argument("--start-k", type=int, required=False, default=1)
+    arg_parser.add_argument("--end-k", type=int, required=False, default=1)
     arg_parser.add_argument("--start-index", type=int, required=False, default=0)
     arg_parser.add_argument("--input-log", type=str, required=True)
     arg_parser.add_argument("--input-log-2", type=str, required=True)
@@ -86,7 +87,9 @@ def main(args):
     with open(args.input_log_2, "r") as f:
         expt_log_2 = json.load(f)
     output_json = {"params": expt_log["params"], "logs": []}
-    output_json["params"]["k"] = args.max_k
+    output_json["params"]["n"] = args.n
+    output_json["params"]["start_k"] = args.start_k
+    output_json["params"]["end_k"] = args.end_k
     output_json["params"]["input_log_1"] = args.input_log
     output_json["params"]["input_log_2"] = args.input_log_2
 
@@ -105,7 +108,7 @@ def main(args):
 
     final_output_json = []
     expt_log = expt_log[args.start_index :]
-    for k in range(args.start_k, args.max_k + 1):
+    for k in range(args.start_k, args.end_k + 1):
         logger.log_info(f"Processing k={k}")
         pass_k_json = {
             "k": k,
@@ -154,9 +157,9 @@ def main(args):
                     for b in expt_log_2[i + args.start_index]["completions"]
                 ]
                 success_from_completions = completion_success_1 + completion_success_2
-                if len(success_from_completions) < args.max_k:
+                if len(success_from_completions) < args.n:
                     success_from_completions = success_from_completions + [
-                        False for _ in range(args.max_k - len(success_from_completions))
+                        False for _ in range(args.n - len(success_from_completions))
                     ]
 
                 random_permutations = [
@@ -183,10 +186,10 @@ def main(args):
                 ]
                 invariants_from_completions = invariants_1 + invariants_2
 
-                if len(invariants_from_completions) < args.max_k:
+                if len(invariants_from_completions) < args.n:
                     invariants_from_completions = invariants_from_completions + [
                         "\nloop invariant \\false;\n"
-                        for _ in range(args.max_k - len(invariants_from_completions))
+                        for _ in range(args.n - len(invariants_from_completions))
                     ]
 
                 random_permutations = [
@@ -244,14 +247,14 @@ def main(args):
 
     if args.check:
         with open(
-            os.path.join(output_log_dir, f"final_output_no_prune_k_from_{args.start_k}_to_{args.max_k}.json"), "w"
+            os.path.join(output_log_dir, f"final_output_no_prune_k_from_{args.start_k}_to_{args.end_k}.json"), "w"
         ) as final_output_json_file:
             json.dump(
                 final_output_json, final_output_json_file, indent=4, ensure_ascii=False
             )
     else:
         with open(
-            os.path.join(output_log_dir, f"final_output_combine_and_prune_k_from_{args.start_k}_to_{args.max_k}.json"), "w"
+            os.path.join(output_log_dir, f"final_output_combine_and_prune_k_from_{args.start_k}_to_{args.end_k}.json"), "w"
         ) as final_output_json_file:
             json.dump(
                 final_output_json, final_output_json_file, indent=4, ensure_ascii=False
