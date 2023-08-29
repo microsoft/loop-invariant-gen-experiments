@@ -222,28 +222,41 @@ def main(args):
 
             pass_k_json["logs"].append(benchmark_json)
 
-        logger.log_action(
-            "Pass@k",
-            f"Pass@k succeeded for {pass_k_json['pass_at_k_count']} benchmarks out of {len(expt_log)} benchmarks",
-        )
-        logger.log_action(
-            "Pass@k + Prune",
-            f"Pass@k + Prune succeeded for {pass_k_json['pass_at_k_prune_count']} benchmarks out of {len(expt_log)} benchmarks",
-        )
-
-        with open(
-            os.path.join(output_log_dir, f"pass_at_{k}.json"), "w"
-        ) as pass_k_json_file:
-            json.dump(pass_k_json, pass_k_json_file, indent=4, ensure_ascii=False)
+        if args.check:
+            logger.log_action(
+                "Pass@k",
+                f"Pass@k succeeded for {pass_k_json['pass_at_k_count']} benchmarks out of {len(expt_log)} benchmarks",
+            )
+            with open(
+                os.path.join(output_log_dir, f"pass_at_{k}_no_pruning.json"), "w"
+            ) as pass_k_json_file:
+                json.dump(pass_k_json, pass_k_json_file, indent=4, ensure_ascii=False)
+        else:
+            logger.log_action(
+                "Pass@k + Prune",
+                f"Pass@k + Prune succeeded for {pass_k_json['pass_at_k_prune_count']} benchmarks out of {len(expt_log)} benchmarks",
+            )
+            with open(
+                os.path.join(output_log_dir, f"pass_at_{k}.json"), "w"
+            ) as pass_k_json_file:
+                json.dump(pass_k_json, pass_k_json_file, indent=4, ensure_ascii=False)
 
         final_output_json.append(pass_k_json)
 
-    with open(
-        os.path.join(output_log_dir, f"final_output.json"), "w"
-    ) as final_output_json_file:
-        json.dump(
-            final_output_json, final_output_json_file, indent=4, ensure_ascii=False
-        )
+    if args.check:
+        with open(
+            os.path.join(output_log_dir, f"final_output_no_prune.json"), "w"
+        ) as final_output_json_file:
+            json.dump(
+                final_output_json, final_output_json_file, indent=4, ensure_ascii=False
+            )
+    else:
+        with open(
+            os.path.join(output_log_dir, f"final_output.json"), "w"
+        ) as final_output_json_file:
+            json.dump(
+                final_output_json, final_output_json_file, indent=4, ensure_ascii=False
+            )
 
 
 if __name__ == "__main__":
