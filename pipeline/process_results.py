@@ -65,7 +65,7 @@ def check_wrapper(input):
 
 def parse_args(args):
     arg_parser = argparse.ArgumentParser()
-    arg_parser.add_argument("--k", type=int, required=True)
+    arg_parser.add_argument("--max-k", type=int, required=True)
     arg_parser.add_argument("--start-k", type=int, required=False, default=1)
     arg_parser.add_argument("--start-index", type=int, required=False, default=0)
     arg_parser.add_argument("--input-log", type=str, required=True)
@@ -105,7 +105,7 @@ def main(args):
 
     final_output_json = []
     expt_log = expt_log[args.start_index :]
-    for k in range(args.start_k, args.k + 1):
+    for k in range(args.start_k, args.max_k + 1):
         logger.log_info(f"Processing k={k}")
         pass_k_json = {
             "k": k,
@@ -244,14 +244,14 @@ def main(args):
 
     if args.check:
         with open(
-            os.path.join(output_log_dir, f"final_output_no_prune.json"), "w"
+            os.path.join(output_log_dir, f"final_output_no_prune_k_from_{args.start_k}_to_{args.max_k}.json"), "w"
         ) as final_output_json_file:
             json.dump(
                 final_output_json, final_output_json_file, indent=4, ensure_ascii=False
             )
     else:
         with open(
-            os.path.join(output_log_dir, f"final_output_combine_and_prune.json"), "w"
+            os.path.join(output_log_dir, f"final_output_combine_and_prune_k_from_{args.start_k}_to_{args.max_k}.json"), "w"
         ) as final_output_json_file:
             json.dump(
                 final_output_json, final_output_json_file, indent=4, ensure_ascii=False
