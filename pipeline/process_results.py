@@ -92,7 +92,10 @@ def main(args):
     checker = FramaCChecker()
     framac_benchmark = FramaCBenchmark(features=features)
     logger = Logger()
-    output_log_dir = args.input_log.replace("/final.json", "_processed")
+    if "/final.json" in args.input_log:
+        output_log_dir = args.input_log.replace("/final.json", "_processed")
+    else:
+        output_log_dir = ''.join(args.input_log.split("/")[:-1]) + "_processed"
     if not os.path.exists(output_log_dir):
         os.makedirs(output_log_dir)
 
@@ -138,7 +141,7 @@ def main(args):
                 continue
 
             if args.check:
-                benchmark_json.pop("pass-at_k_prune")
+                benchmark_json.pop("pass_at_k_prune")
                 benchmark_json.pop("pruning_exceptions")
                 completion_success_1 = [b["success"] for b in benchmark["completions"]]
                 completion_success_2 = [b["success"] for b in expt_log_2[i + args.start_index]["completions"]]
