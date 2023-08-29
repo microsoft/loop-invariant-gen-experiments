@@ -236,7 +236,7 @@ def main(args):
                 json.dump(pass_k_json, pass_k_json_file, indent=4, ensure_ascii=False)
         else:
             with open(
-                os.path.join(output_log_dir, f"pass_at_{k}.json"), "w"
+                os.path.join(output_log_dir, f"pass_at_{k}_combine_and_prune.json"), "w"
             ) as pass_k_json_file:
                 json.dump(pass_k_json, pass_k_json_file, indent=4, ensure_ascii=False)
 
@@ -251,7 +251,7 @@ def main(args):
             )
     else:
         with open(
-            os.path.join(output_log_dir, f"final_output.json"), "w"
+            os.path.join(output_log_dir, f"final_output_combine_and_prune.json"), "w"
         ) as final_output_json_file:
             json.dump(
                 final_output_json, final_output_json_file, indent=4, ensure_ascii=False
