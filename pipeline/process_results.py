@@ -99,7 +99,7 @@ def main(args):
     if "/final.json" in args.input_log:
         output_log_dir = args.input_log.replace("/final.json", "_processed")
     else:
-        output_log_dir = "".join(args.input_log.split("/")[:-1]) + "_processed"
+        output_log_dir = "/".join(args.input_log.split("/")[:-1]) + "_processed"
     if not os.path.exists(output_log_dir):
         os.makedirs(output_log_dir)
 
