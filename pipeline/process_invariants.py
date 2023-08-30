@@ -25,12 +25,15 @@ expression_grammar = r"""
         | unary_op expression 
         | expression (bin_op expression)+ 
         | LPAREN expression RPAREN 
+        | VALID LPAREN expression RPAREN
+        | VARIABLE LSQUARE NUMBER RSQUARE
         | expression TERNOP expression COLON expression 
         | AT LPAREN VARIABLE COMMA location RPAREN
+        | FORALL TYPE VARIABLE SEMICOLON expression
 
     !location: "Pre" | "Here" | "Old" | "Post" | "LoopEntry" | "LoopCurrent"
 
-    !unary_op : "+" | "-" | "!"
+    !unary_op : "+" | "-" | "!" | "&"
 
     !bin_op : "+" | "-" | "*" | "/" | "%" | "^^" | "<<" | ">>" | "&" | "|" | "-->" | "<-->" | "^" | "==" | "!=" | "<" | ">" | "<=" | ">="
         | "&&" | "||" | "^^" | "==>" | "<==>"
@@ -40,8 +43,12 @@ expression_grammar = r"""
 
     TRUE : "\\true"
     FALSE: "\\false"
+    FORALL: "\\forall"
+    TYPE: "int" | "float" | "double" | "char" | "bool" | "void" | "integer" | "boolean"
     LPAREN: "("
     RPAREN: ")"
+    LSQUARE: "["
+    RSQUARE: "]"
     TERNOP: "?"
     COLON: ":"
 
@@ -62,6 +69,8 @@ class ExpTransformer(Transformer):
         self.num_binary_ops = 0
         self.num_ternary_ops = 0
         self.ordering_exps = 0
+        self.num_forall = 0
+        self.num_valid = 0
 
     def expression(self, args):
         if len(args) == 5 and args[1] == "?":
@@ -83,6 +92,14 @@ class ExpTransformer(Transformer):
     def unary_op(self, args):
         string = " ".join(args)
         return string
+    
+    def FORALL(self, args):
+        self.num_forall += 1
+        return args
+    
+    def VALID(self, args):
+        self.num_valid += 1
+        return args
 
     def VARIABLE(self, args):
         string = str(args)
