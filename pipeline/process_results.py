@@ -85,7 +85,7 @@ def parse_args(args):
     arg_parser.add_argument("--input-log", type=str, required=True)
     arg_parser.add_argument("--input-log-2", type=str, required=True)
     arg_parser.add_argument("--check", action="store_true", required=False)
-    arg_parser.add_argument("--pass-k-formula", action="store_true", required=False)
+    arg_parser.add_argument("--pass-at-k-formula", action="store_true", required=False)
     arg_parser.add_argument("--shuffle-times", type=int, required=False, default=10)
     return arg_parser.parse_args(args)
 
