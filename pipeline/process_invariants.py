@@ -20,6 +20,88 @@ Measuring:
 
 """
 
+expression_grammar = r"""
+    expression: VARIABLE 
+        | NUMBER 
+        | TRUE 
+        | FALSE
+        | unary_op expression 
+        | expression bin_op expression 
+        | LPAREN expression RPAREN 
+        | expression TERNOP expression COLON expression 
+        | expression order_op expression order_op expression 
+        | AT LPAREN VARIABLE COMMA location RPAREN
+
+    !location: "Pre" | "Here" | "Old" | "Post" | "LoopEntry" | "LoopCurrent"
+
+    !unary_op : "+" | "-" | "!"
+
+    !bin_op : "+" | "-" | "*" | "/" | "%" | "^^" | "<<" | ">>" | "&" | "|" | "-->" | "<-->" | "^" | eql_op | order_op
+
+    !eql_op : "==" | "!=" 
+
+    !order_op: "<" | ">" | "<=" | ">="
+
+    COMMA : ","
+    AT: "\\at"
+
+    TRUE : "\\true"
+    FALSE: "\\false"
+    LPAREN: "("
+    RPAREN: ")"
+    LAND: "&&"
+    LOR: "||"
+    LIMPL: "==>"
+    LBIIMPL: "<==>"
+    LNOT: "!"
+    LXOR: "^^"
+    TERNOP: "?"
+    COLON: ":"
+
+    %import common.NUMBER
+    %extend NUMBER: /0x\w+/
+    
+    %import common.CNAME -> VARIABLE
+
+    %import common.WS
+    %ignore WS
+"""
+
+class ExpTransformer(Transformer):
+    def __init__(self):
+        self.variables = {}
+        self.constants = {}
+        self.num_unary_ops = 0
+        self.num_binary_ops = 0
+        self.num_ternary_ops = 0
+        self.ordering_exps = 0
+
+    def expression(self, args):
+        if len(args) == 5 and args[1] == "?":
+            self.num_ternary_ops += 1
+        elif len(args) == 5 and args[1] in ["<", ">", "<=", ">="]:
+            self.ordering_exps += 1
+        elif len(args) == 3 and args[0] != "(" and args[2] != ")":
+            self.num_binary_ops += 1
+        elif len(args) == 2:
+            self.num_unary_ops += 1
+
+        string = " ".join(args)
+        return string
+
+    def VARIABLE(self, args):
+        string = str(args)
+        self.variables[string] = True
+        return string
+    
+    def NUMBER(self, args):
+        string = str(args)
+        self.constants[string] = True
+        return args
+    
+    def __default_token__(self, token):
+        return str(token)
+
 predicate_grammar = r"""
     term: VAR | NUMBER | unary_op term | term bin_op term | LPAREN term RPAREN | term TERNOP term COLON term | AT LPAREN VAR COMMA location RPAREN
 
@@ -183,7 +265,7 @@ class InvariantParser:
         return list(invariants.keys())
 
     def get_stats(self, text):
-        transformer = PredicateTransformer()
+        transformer = ExpTransformer()
         invariants = self.get_invariants(text)
         for inv in invariants:
             ast = self.parser.parse(inv)
@@ -269,10 +351,5 @@ def main(args):
         json.dump({"logs": output_logs}, f, indent=4, ensure_ascii=False)
 
 
-# if __name__ == "__main__":
-#     main(sys.argv[1:])
-
-parser = Lark(predicate_grammar, parser="lalr", start="pred")
-text = """!flag ==> (j == i)"""
-ast = parser.parse(text)
-print(ast.pretty())
+if __name__ == "__main__":
+    main(sys.argv[1:])

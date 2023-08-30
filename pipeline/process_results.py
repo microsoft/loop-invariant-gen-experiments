@@ -228,7 +228,7 @@ def main(args):
                 logger.log_info(
                     f"Pass@k + Pruning = {pass_k_prune} for k={k}, for benchmark num. {i+1}, File: {benchmark['file']}"
                 )
-                pass_k_json["pass_at_k"] += pass_k_prune
+                pass_k_json["pass_at_k_prune"] += pass_k_prune
 
             pass_k_json["logs"].append(benchmark_json)
 
