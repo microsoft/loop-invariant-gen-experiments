@@ -380,9 +380,5 @@ def main(args):
         json.dump({"logs": output_logs}, f, indent=4, ensure_ascii=False)
 
 
-# if __name__ == "__main__":
-#     main(sys.argv[1:])
-
-invariants = "@*/\n  loop invariant x1 >= 0;\n  loop invariant x2 >= 0;\n  loop invariant x3 >= 0;\n  loop invariant d1 == 1;\n  loop invariant d2 == 1;\n  loop invariant d3 == 1;\n  loop invariant \\valid(&c1);\n  loop invariant \\valid(&c2);\n/*@*/"
-ip = InvariantParser()
-print(ip.get_stats(invariants))
+if __name__ == "__main__":
+    main(sys.argv[1:])
