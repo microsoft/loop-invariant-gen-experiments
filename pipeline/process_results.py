@@ -7,6 +7,8 @@ import sys
 import multiprocessing
 import copy
 
+import numpy as np
+
 from frama_c import FramaCBenchmark, FramaCChecker
 from llm_utils import Logger
 
@@ -63,6 +65,17 @@ def check_wrapper(input):
     return False
 
 
+def pass_at_k_np(n, c, k):
+    """
+    :param n: total number of samples
+    :param c: number of correct samples
+    :param k: k in pass@$k$
+    """
+    if n - c < k:
+        return 1.0
+    return 1.0 - np.prod(1.0 - k / np.arange(n - c + 1, n + 1))
+
+
 def parse_args(args):
     arg_parser = argparse.ArgumentParser()
     arg_parser.add_argument("--n", type=int, required=True)
@@ -72,6 +85,7 @@ def parse_args(args):
     arg_parser.add_argument("--input-log", type=str, required=True)
     arg_parser.add_argument("--input-log-2", type=str, required=True)
     arg_parser.add_argument("--check", action="store_true", required=False)
+    arg_parser.add_argument("--pass-k-formula", action="store_true", required=False)
     arg_parser.add_argument("--shuffle-times", type=int, required=False, default=10)
     return arg_parser.parse_args(args)
 
@@ -162,12 +176,17 @@ def main(args):
                         False for _ in range(args.n - len(success_from_completions))
                     ]
 
-                random_permutations = [
-                    shuffle(success_from_completions) for _ in range(args.shuffle_times)
-                ]
-                candidates = [rp[:k] for rp in random_permutations]
-                success_candidates = [c for c in candidates if True in c]
-                pass_at_k = len(success_candidates) / len(candidates)
+                pass_at_k = 0.0
+                if args.pass_at_k_formula:
+                    pass_at_k = pass_at_k_np(args.n, sum(success_from_completions), k)
+                else:
+                    random_permutations = [
+                        shuffle(success_from_completions)
+                        for _ in range(args.shuffle_times)
+                    ]
+                    candidates = [rp[:k] for rp in random_permutations]
+                    success_candidates = [c for c in candidates if True in c]
+                    pass_at_k = len(success_candidates) / len(candidates)
 
                 benchmark_json["pass_at_k"] = pass_at_k
                 logger.log_info(
@@ -233,10 +252,13 @@ def main(args):
             pass_k_json["logs"].append(benchmark_json)
 
         if args.check:
-            with open(
-                os.path.join(output_log_dir, f"pass_at_{k}_no_pruning.json"), "w"
-            ) as pass_k_json_file:
-                json.dump(pass_k_json, pass_k_json_file, indent=4, ensure_ascii=False)
+            if not args.pass_at_k_formula:
+                with open(
+                    os.path.join(output_log_dir, f"pass_at_{k}_no_pruning.json"), "w"
+                ) as pass_k_json_file:
+                    json.dump(
+                        pass_k_json, pass_k_json_file, indent=4, ensure_ascii=False
+                    )
         else:
             with open(
                 os.path.join(output_log_dir, f"pass_at_{k}_combine_and_prune.json"), "w"
@@ -246,15 +268,36 @@ def main(args):
         final_output_json.append(pass_k_json)
 
     if args.check:
-        with open(
-            os.path.join(output_log_dir, f"final_output_no_prune_k_from_{args.start_k}_to_{args.end_k}.json"), "w"
-        ) as final_output_json_file:
-            json.dump(
-                final_output_json, final_output_json_file, indent=4, ensure_ascii=False
-            )
+        if args.pass_at_k_formula:
+            with open(
+                os.path.join(
+                    output_log_dir,
+                    f"final_output_no_prune_k_from_{args.start_k}_to_{args.end_k}_pass_at_k_formula.json",
+                ),
+                "w",
+            ) as final_output_json_file:
+                json.dump(final_output_json, final_output_json_file, indent=4)
+        else:
+            with open(
+                os.path.join(
+                    output_log_dir,
+                    f"final_output_no_prune_k_from_{args.start_k}_to_{args.end_k}.json",
+                ),
+                "w",
+            ) as final_output_json_file:
+                json.dump(
+                    final_output_json,
+                    final_output_json_file,
+                    indent=4,
+                    ensure_ascii=False,
+                )
     else:
         with open(
-            os.path.join(output_log_dir, f"final_output_combine_and_prune_k_from_{args.start_k}_to_{args.end_k}.json"), "w"
+            os.path.join(
+                output_log_dir,
+                f"final_output_combine_and_prune_k_from_{args.start_k}_to_{args.end_k}.json",
+            ),
+            "w",
         ) as final_output_json_file:
             json.dump(
                 final_output_json, final_output_json_file, indent=4, ensure_ascii=False
