@@ -26,7 +26,7 @@ expression_grammar = r"""
         | expression (bin_op expression)+ 
         | LPAREN expression RPAREN 
         | VALID LPAREN expression RPAREN
-        | VARIABLE LSQUARE NUMBER RSQUARE
+        | VARIABLE LSQUARE expression RSQUARE
         | expression TERNOP expression COLON expression 
         | AT LPAREN VARIABLE COMMA location RPAREN
         | FORALL TYPE VARIABLE SEMICOLON expression
@@ -44,6 +44,7 @@ expression_grammar = r"""
     TRUE : "\\true"
     FALSE: "\\false"
     FORALL: "\\forall"
+    VALID: "\\valid"
     TYPE: "int" | "float" | "double" | "char" | "bool" | "void" | "integer" | "boolean"
     LPAREN: "("
     RPAREN: ")"
@@ -51,6 +52,7 @@ expression_grammar = r"""
     RSQUARE: "]"
     TERNOP: "?"
     COLON: ":"
+    SEMICOLON: ";"
 
     %import common.NUMBER
     %extend NUMBER: /0x\w+/
@@ -121,6 +123,8 @@ class ExpTransformer(Transformer):
             "num_unary_ops": self.num_unary_ops,
             "num_binary_ops": self.num_binary_ops,
             "num_ternary_ops": self.num_ternary_ops,
+            "num_forall": self.num_forall,
+            "num_valid": self.num_valid
         }
         return res_json
     
@@ -376,5 +380,9 @@ def main(args):
         json.dump({"logs": output_logs}, f, indent=4, ensure_ascii=False)
 
 
-if __name__ == "__main__":
-    main(sys.argv[1:])
+# if __name__ == "__main__":
+#     main(sys.argv[1:])
+
+invariants = "@*/\n  loop invariant x1 >= 0;\n  loop invariant x2 >= 0;\n  loop invariant x3 >= 0;\n  loop invariant d1 == 1;\n  loop invariant d2 == 1;\n  loop invariant d3 == 1;\n  loop invariant \\valid(&c1);\n  loop invariant \\valid(&c2);\n/*@*/"
+ip = InvariantParser()
+print(ip.get_stats(invariants))
