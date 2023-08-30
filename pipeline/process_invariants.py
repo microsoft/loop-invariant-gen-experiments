@@ -387,9 +387,5 @@ def main(args):
         json.dump({"logs": output_logs}, f, indent=4, ensure_ascii=False)
 
 
-# if __name__ == "__main__":
-#     main(sys.argv[1:])
-
-invs = "/*@ \n    loop invariant x > 0 || y > 0 || z > 0;\n    loop invariant (x > 0 && x >= \\at(x, LoopEntry)) || (x <= 0 && x == \\at(x, LoopEntry));\n    loop invariant (y > 0 && y >= \\at(y, LoopEntry)) || (y <= 0 && y == \\at(y, LoopEntry));\n    loop invariant z >= \\at(z, LoopEntry);\n*/"
-ip = InvariantParser()
-print(ip.get_stats(invs))
+if __name__ == "__main__":
+    main(sys.argv[1:])
