@@ -25,17 +25,19 @@ expression_grammar = r"""
         | unary_op expression 
         | expression (bin_op expression)+ 
         | LPAREN expression RPAREN 
-        | VALID LPAREN expression RPAREN
+        | function LPAREN expression RPAREN
         | VARIABLE LSQUARE expression RSQUARE
         | expression TERNOP expression COLON expression 
         | AT LPAREN VARIABLE COMMA location RPAREN
         | FORALL TYPE VARIABLE SEMICOLON expression
 
-    !location: "Pre" | "Here" | "Old" | "Post" | "LoopEntry" | "LoopCurrent"
+    function: VALID | FLOOR
 
-    !unary_op : "+" | "-" | "!" | "&"
+    location: "Pre" | "Here" | "Old" | "Post" | "LoopEntry" | "LoopCurrent"
 
-    !bin_op : "+" | "-" | "*" | "/" | "%" | "^^" | "<<" | ">>" | "&" | "|" | "-->" | "<-->" | "^" | "==" | "!=" | "<" | ">" | "<=" | ">="
+    unary_op : "+" | "-" | "!" | "&"
+
+    bin_op : "+" | "-" | "*" | "/" | "%" | "^^" | "<<" | ">>" | "&" | "|" | "-->" | "<-->" | "^" | "==" | "!=" | "<" | ">" | "<=" | ">="
         | "&&" | "||" | "^^" | "==>" | "<==>"
 
     COMMA : ","
@@ -45,6 +47,7 @@ expression_grammar = r"""
     FALSE: "\\false"
     FORALL: "\\forall"
     VALID: "\\valid"
+    FLOOR: "\\floor"
     TYPE: "int" | "float" | "double" | "char" | "bool" | "void" | "integer" | "boolean"
     LPAREN: "("
     RPAREN: ")"
@@ -55,7 +58,7 @@ expression_grammar = r"""
     SEMICOLON: ";"
 
     %import common.NUMBER
-    %extend NUMBER: /0x\w+/
+    %extend NUMBER: /0x\w+/ | NUMBER "U" | NUMBER "L" | NUMBER "LL" | NUMBER "UL" | NUMBER "ULL" | NUMBER "F" | NUMBER "f" | NUMBER "D" | NUMBER "d"
     
     %import common.CNAME -> VARIABLE
 
@@ -73,6 +76,7 @@ class ExpTransformer(Transformer):
         self.ordering_exps = 0
         self.num_forall = 0
         self.num_valid = 0
+        self.num_at = 0
 
     def expression(self, args):
         if len(args) == 5 and args[1] == "?":
@@ -83,25 +87,27 @@ class ExpTransformer(Transformer):
             self.num_unary_ops += 1
         elif len(args) >= 3 and len(args) % 2 == 1 and args[0] != "(" and args[2] != ")":
             self.num_binary_ops += 1
-
-        string = " ".join(args)
-        return string
+        return "expression"
     
     def bin_op(self, args):
         string = " ".join(args)
-        return string
+        return "bin_op"
     
     def unary_op(self, args):
         string = " ".join(args)
-        return string
+        return "unary_op"
     
     def FORALL(self, args):
         self.num_forall += 1
-        return args
+        return "Forall "
     
     def VALID(self, args):
         self.num_valid += 1
-        return args
+        return "Valid "
+    
+    def AT(self, args):
+        self.num_at += 1
+        return "At "     
 
     def VARIABLE(self, args):
         string = str(args)
@@ -124,7 +130,8 @@ class ExpTransformer(Transformer):
             "num_binary_ops": self.num_binary_ops,
             "num_ternary_ops": self.num_ternary_ops,
             "num_forall": self.num_forall,
-            "num_valid": self.num_valid
+            "num_valid": self.num_valid,
+            "num_at": self.num_at,
         }
         return res_json
     
@@ -380,5 +387,9 @@ def main(args):
         json.dump({"logs": output_logs}, f, indent=4, ensure_ascii=False)
 
 
-if __name__ == "__main__":
-    main(sys.argv[1:])
+# if __name__ == "__main__":
+#     main(sys.argv[1:])
+
+invs = "/*@ \n    loop invariant x > 0 || y > 0 || z > 0;\n    loop invariant (x > 0 && x >= \\at(x, LoopEntry)) || (x <= 0 && x == \\at(x, LoopEntry));\n    loop invariant (y > 0 && y >= \\at(y, LoopEntry)) || (y <= 0 && y == \\at(y, LoopEntry));\n    loop invariant z >= \\at(z, LoopEntry);\n*/"
+ip = InvariantParser()
+print(ip.get_stats(invs))
