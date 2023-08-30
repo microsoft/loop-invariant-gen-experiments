@@ -1031,6 +1031,16 @@ class FramaCBenchmark(Benchmark):
             nodes += node.children
         return len(loops)
 
+    def uses_arrays(self, code):
+        ast = self.parser.parse(bytes(code, "utf-8"))
+        nodes = [ast.root_node]
+        while len(nodes) > 0:
+            node = nodes.pop()
+            if node.type == "array_declarator":
+                return True
+            nodes += node.children
+        return False
+
     def add_loop_labels(self, code):
         labels = string.ascii_uppercase
         ast = self.parser.parse(bytes(code, "utf-8"))
@@ -1093,6 +1103,9 @@ class FramaCBenchmark(Benchmark):
         if (not "multiple_loops" in features) and self.is_multi_loop(code):
             raise InvalidBenchmarkException("Found multiple loops")
 
+        if (not "arrays" in features) and self.uses_arrays(code):
+            raise InvalidBenchmarkException("Found arrays")
+        
         # add benchmark specific annotations
         if "multiple_loops" in features:
             code = self.add_loop_labels(code)
