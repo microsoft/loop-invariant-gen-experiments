@@ -9,14 +9,11 @@ from lark import Lark, Token, Transformer
 """
 Measuring:
 
-1. Number of clauses
-2. Biggest clause
-3. Average clause length
-4. Number of variables
-5. Number of constants
-6. Number of unary operators
-7. Number of binary operators
-8. Number of ternary operators
+1. Number of variables
+2. Number of constants
+3. Number of unary operators
+4. Number of binary operators
+5. Number of ternary operators
 
 """
 
@@ -26,21 +23,17 @@ expression_grammar = r"""
         | TRUE 
         | FALSE
         | unary_op expression 
-        | expression bin_op expression 
+        | expression (bin_op expression)+ 
         | LPAREN expression RPAREN 
         | expression TERNOP expression COLON expression 
-        | expression order_op expression order_op expression 
         | AT LPAREN VARIABLE COMMA location RPAREN
 
     !location: "Pre" | "Here" | "Old" | "Post" | "LoopEntry" | "LoopCurrent"
 
     !unary_op : "+" | "-" | "!"
 
-    !bin_op : "+" | "-" | "*" | "/" | "%" | "^^" | "<<" | ">>" | "&" | "|" | "-->" | "<-->" | "^" | eql_op | order_op
-
-    !eql_op : "==" | "!=" 
-
-    !order_op: "<" | ">" | "<=" | ">="
+    !bin_op : "+" | "-" | "*" | "/" | "%" | "^^" | "<<" | ">>" | "&" | "|" | "-->" | "<-->" | "^" | "==" | "!=" | "<" | ">" | "<=" | ">="
+        | "&&" | "||" | "^^" | "==>" | "<==>"
 
     COMMA : ","
     AT: "\\at"
@@ -49,12 +42,6 @@ expression_grammar = r"""
     FALSE: "\\false"
     LPAREN: "("
     RPAREN: ")"
-    LAND: "&&"
-    LOR: "||"
-    LIMPL: "==>"
-    LBIIMPL: "<==>"
-    LNOT: "!"
-    LXOR: "^^"
     TERNOP: "?"
     COLON: ":"
 
@@ -81,11 +68,19 @@ class ExpTransformer(Transformer):
             self.num_ternary_ops += 1
         elif len(args) == 5 and args[1] in ["<", ">", "<=", ">="]:
             self.ordering_exps += 1
-        elif len(args) == 3 and args[0] != "(" and args[2] != ")":
-            self.num_binary_ops += 1
         elif len(args) == 2:
             self.num_unary_ops += 1
+        elif len(args) >= 3 and len(args) % 2 == 1 and args[0] != "(" and args[2] != ")":
+            self.num_binary_ops += 1
 
+        string = " ".join(args)
+        return string
+    
+    def bin_op(self, args):
+        string = " ".join(args)
+        return string
+    
+    def unary_op(self, args):
         string = " ".join(args)
         return string
 
@@ -98,6 +93,19 @@ class ExpTransformer(Transformer):
         string = str(args)
         self.constants[string] = True
         return args
+    
+    def add_stats(self, ast):
+        self.transform(ast)
+
+    def get_stats(self):
+        res_json = {
+            "num_variables": len(self.variables),
+            "num_constants": len(self.constants),
+            "num_unary_ops": self.num_unary_ops,
+            "num_binary_ops": self.num_binary_ops,
+            "num_ternary_ops": self.num_ternary_ops,
+        }
+        return res_json
     
     def __default_token__(self, token):
         return str(token)
@@ -254,7 +262,7 @@ class PredicateTransformer(Transformer):
 
 class InvariantParser:
     def __init__(self):
-        self.parser = Lark(predicate_grammar, parser="lalr", start="pred")
+        self.parser = Lark(expression_grammar, parser="lalr", start="expression")
 
     def get_invariants(self, text):
         invariants = {}
