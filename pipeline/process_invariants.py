@@ -58,7 +58,7 @@ expression_grammar = r"""
     SEMICOLON: ";"
 
     %import common.NUMBER
-    %extend NUMBER: /0x\w+/ | NUMBER "U" | NUMBER "L" | NUMBER "LL" | NUMBER "UL" | NUMBER "ULL" | NUMBER "F" | NUMBER "f" | NUMBER "D" | NUMBER "d"
+    %extend NUMBER: /0x\w+/ | /[0-9]+/ "U" | /[0-9]+/ "u" | /[0-9]+/ "L" | /[0-9]+/ "l" | /[0-9]+/ "F" | /[0-9]+/ "f"
     
     %import common.CNAME -> VARIABLE
 
@@ -387,5 +387,9 @@ def main(args):
         json.dump({"logs": output_logs}, f, indent=4, ensure_ascii=False)
 
 
-if __name__ == "__main__":
-    main(sys.argv[1:])
+# if __name__ == "__main__":
+#     main(sys.argv[1:])
+
+invs = "/*@ \n    loop invariant x > 0 || y > 0 || z > 0;\n    loop invariant (x > 0 && x >= \\at(x, LoopEntry)) || (x <= 0 && x == \\at(x, LoopEntry));\n    loop invariant (y > 0 && y >= \\at(y, LoopEntry)) || (y <= 0 && y == \\at(y, LoopEntry));\n    loop invariant z >= \\at(z, LoopEntry);\n*/"
+ip = InvariantParser()
+print(ip.get_stats(invs))
