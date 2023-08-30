@@ -28,7 +28,7 @@ expression_grammar = r"""
         | function LPAREN expression RPAREN
         | VARIABLE LSQUARE expression RSQUARE
         | expression TERNOP expression COLON expression 
-        | AT LPAREN VARIABLE COMMA location RPAREN
+        | AT LPAREN expression COMMA location RPAREN
         | FORALL TYPE VARIABLE SEMICOLON expression
 
     function: VALID | FLOOR
