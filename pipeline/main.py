@@ -152,11 +152,6 @@ def parse_args(args):
         default="one_loop_one_method",
         type=str,
     )
-    parser.add_argument(
-        "--find-best-k",
-        help="Find the best number of completions",
-        action="store_true",
-    )
 
     parser.add_argument(
         "-d",
@@ -234,9 +229,6 @@ def main(args):
                 "final", "final_rechecked"
             ),
         )
-
-    elif args.find_best_k:
-        p.find_best_k()
 
     else:
         if args.repair_input:
