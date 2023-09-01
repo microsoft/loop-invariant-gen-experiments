@@ -546,58 +546,6 @@ class LoopyPipeline:
                         failed_checker_input = checker_input
                         checker_error_message = checker_message
 
-                    # if not success and self.nudge:
-                    #     # WARNING: This code breaks
-                    #     nudge_outputs, nudge_conversation = self.llm.nudge(
-                    #         input_tree=deepcopy(conversations),
-                    #         output_full_tree=True,
-                    #     )
-                    #     nudge_checker_input = self.benchmark.combine_llm_outputs(
-                    #         instance["checker_input_without_invariants"],
-                    #         nudge_outputs + llm_outputs,
-                    #         self.mode,
-                    #     )
-                    #     checker_input = nudge_checker_input
-                    #     success, nudge_checker_message = self.checker.check(
-                    #         nudge_checker_input, ("termination" in self.features)
-                    #     )
-
-                    #     instance_log_json[
-                    #         "nudge_conversation"
-                    #     ] = nudge_conversation.get_full_tree()
-                    #     instance_log_json["invariants_after_nudge"] = nudge_outputs
-                    #     instance_log_json[
-                    #         "checker_input_after_nudge"
-                    #     ] = nudge_checker_input
-                    #     instance_log_json["checker_output_after_nudge"] = success
-                    #     instance_log_json[
-                    #         "checker_message_after_nudge"
-                    #     ] = nudge_checker_message
-
-                    #     if not success:
-                    #         (
-                    #             success,
-                    #             pruned_code,
-                    #         ) = self.checker.prune_annotations_and_check(
-                    #             checker_input, self.features
-                    #         )
-                    #         success, checker_message = self.checker.check(
-                    #             pruned_code, ("termination" in self.features)
-                    #         )
-
-                    #         instance_log_json[
-                    #             "code_after_nudge_and_prune"
-                    #         ] = pruned_code
-                    #         instance_log_json[
-                    #             "checker_output_after_nudge_and_prune"
-                    #         ] = success
-                    #         instance_log_json[
-                    #             "checker_message_after_nudge_and_prune"
-                    #         ] = checker_message
-
-                    #         failed_checker_input = checker_input
-                    #         checker_error_message = checker_message
-
                     instance_log_json["healing_conversations"].append(healing_json)
                     num_retries += 1
 
