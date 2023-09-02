@@ -5,7 +5,7 @@ ENV TZ=Asia/Kolkata \
 
 RUN apt-get update \
     && apt-get install -y build-essential \
-    && apt-get install -y wget libgmp-dev pkg-config \
+    && apt-get install -y wget autoconf graphviz libgmp-dev pkg-config conf-cairo conf-gtk3 conf-gtksourceview3 libcairo2-dev libexpat1-dev libgtk-3-dev libgtksourceview-3.0-dev \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
