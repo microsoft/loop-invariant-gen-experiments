@@ -36,7 +36,12 @@ RUN wget https://github.com/Z3Prover/z3/releases/download/z3-4.12.2/z3-4.12.2-x6
 RUN unzip ~/solvers/z3-4.12.2-x64-glibc-2.31.zip -d ~/solvers
 ENV PATH=$PATH:~/solvers/z3-4.12.2-x64-glibc-2.31/bin
 
-RUN why3 config detect
+RUN opam exec -- why3 config detect
+
+ADD . /home/src/
 
 RUN git clone https://github.com/tree-sitter/tree-sitter-c.git src/tree_sitter_lib/vendor/tree-sitter-c
-RUN 'cd src; python build_parser.py'
+
+WORKDIR "/home/src/"
+
+RUN python build_parser.py
