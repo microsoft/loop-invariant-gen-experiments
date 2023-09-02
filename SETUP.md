@@ -16,11 +16,11 @@ Once the image is built, you can run it by running the following command **from 
 
 ```bash
 docker run -it \
-    --mount type=bind,source="$(pwd)"/data,target=/home/data/ \
-    --mount type=bind,source="$(pwd)"/config,target=/home/config/ \
-    --mount type=bind,source="$(pwd)"/experiments,target=/home/experiments/ \
-    --mount type=bind,source="$(pwd)"/templates,target=/home/templates/ \
-    --mount type=bind,source="$(pwd)"/logs,target=/home/logs/ \
+    --mount type=bind,source="$(pwd)"/data,target=/home/user/data/ \
+    --mount type=bind,source="$(pwd)"/config,target=/home/user/config/ \
+    --mount type=bind,source="$(pwd)"/experiments,target=/home/user/experiments/ \
+    --mount type=bind,source="$(pwd)"/templates,target=/home/user/templates/ \
+    --mount type=bind,source="$(pwd)"/logs,target=/home/user/logs/ \
     loopy /bin/bash
 ```
 
