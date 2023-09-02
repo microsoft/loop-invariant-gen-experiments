@@ -38,6 +38,8 @@ ENV PATH=$PATH:~/solvers/z3-4.12.2-x64-glibc-2.31/bin
 
 RUN opam exec -- why3 config detect
 
+RUN pip install -r requirements.txt
+
 ADD . /home/src/
 
 RUN git clone https://github.com/tree-sitter/tree-sitter-c.git src/tree_sitter_lib/vendor/tree-sitter-c
