@@ -1,78 +1,30 @@
 # Instructions for setup
 
-Make sure your python version is >= 3.11
-If you don't have python 3.11 but have conda installed, try:
+Easiest way is to use `src/Dockerfile` to build a docker image and run it.
+
+To do this, you need to have docker installed on your machine. To install docker, follow the instructions [here](https://docs.docker.com/install/).
+
+Once you have docker installed, you can build the docker image by running the following commands starting from the root directory of this repository:
 
 ```bash
-conda install -c conda-forge python=3.11 
-# then switch the python version and restart shell
+cd src/
+docker build -t loopy .
 ```
 
-## Install Frama-C
+Once the image is built, you can run it by running the following command from the root directory of this repository:
+(If you get a permission error, you may need to run the following command with `sudo`)
 
 ```bash
-# Install opam (OCaml package manager)
-sudo apt install opam # or dnf, pacman, etc.
-
-# Or you can download an opam binary, put it in the PATH
-# and run it directly (no sudo required)
-
-# Initialize opam (install an OCaml compiler)
-opam init --compiler 4.14.1 # may take a while
-eval $(opam env)
-
-# Install Frama-C (including dependencies)
-opam install frama-c
+docker run -it \
+    --mount type=bind,source="$(pwd)"/data,target=/home/data/ \
+    --mount type=bind,source="$(pwd)"/logs,target=/home/logs/ \
+    loopy /bin/bash
 ```
 
-## Install CVC4
+This will start a bash session inside the docker container. You can run the code by running the following command:
 
 ```bash
-# The string in "{}" should be your platform. There are two options: x86_64-linux and win64.
-wget http://cvc4.cs.stanford.edu/downloads/builds/{x86_64-linux,win64}-opt/cvc4-1.6-{x86_64-linux, win64}-opt/
-mv cvc4-1.6-{x86_64-linux,win64}-opt cvc4 
-# add cvc4 to PATH
+python3 main.py --checker <checker_name> --config-file <YAML_config_file> --model <model_name> --max-benchmarks <max_benchmarks>
 ```
 
-## Install Alt-Ergo
-
-```bash
-opam install alt-ergo
-```
-
-## Install Z3
-
-```bash
-wget wget https://github.com/Z3Prover/z3/releases/download/z3-4.12.2/z3-4.12.2-x64-glibc-2.31.zip
-unzip z3-4.12.2-x64-glibc-2.31.zip
-# add "z3-4.12.2-x64-glibc-2.31/bin/z3" to PATH or create a symlink
-```
-
-## Tell Why3 about the solvers
-
-```bash
-rm -f ~/.why3.conf
-
-why3 config detect
-```
-
-## Install python dependencies
-
-```bash
-# Ensure python version >= 3.11
-pip install -r pipeline/requirements.txt
-```
-
-## Build the tree-sitter-c library
-
-```bash
-cd pipeline/
-git clone https://github.com/tree-sitter/tree-sitter-c.git tree_sitter_lib/vendor/tree-sitter-c
-python3 build_parser.py
-```
-
-## Set the OpenAI API key
-
-```bash
-export OPENAI_API_KEY=<your key>
-```
+Use `python3 main.py --help` to see the list of available options.
