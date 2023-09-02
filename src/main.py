@@ -79,7 +79,7 @@ def parse_args(args):
     parser.add_argument(
         "--output-dir",
         help="Directory to write output logs to (Each file gets a separate file, and one final file with all logs)",
-        default=datetime.datetime.now().strftime("logs/loopy_%Y_%m_%d_%H_%M_%S/"),
+        default=datetime.datetime.now().strftime("../logs/loopy_%Y_%m_%d_%H_%M_%S/"),
         type=str,
     )
 
@@ -214,7 +214,7 @@ def main(args):
     if args.problem_ids:
         for problem_id in args.problem_ids:
             p.log_path = datetime.datetime.now().strftime(
-                f"logs/loopy_{problem_id}_%Y_%m_%d_%H_%M_%S/"
+                f"../logs/loopy_{problem_id}_%Y_%m_%d_%H_%M_%S/"
             )
             p.run(
                 max_benchmarks=1,
@@ -233,7 +233,7 @@ def main(args):
     else:
         if args.repair_input:
             p.log_path = datetime.datetime.now().strftime(
-                f"logs/repair_loopy_%Y_%m_%d_%H_%M_%S/"
+                f"../logs/repair_loopy_%Y_%m_%d_%H_%M_%S/"
             )
             p.heal(max_benchmarks=args.max_benchmarks, start_index=args.start_index)
         else:
