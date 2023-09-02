@@ -33,7 +33,7 @@ ENV PATH=$PATH:~/solvers
 RUN wget http://cvc4.cs.stanford.edu/downloads/builds/x86_64-linux-opt/cvc4-1.6-x86_64-linux-opt -P ~/solvers
 RUN mv ~/solvers/cvc4-1.6-x86_64-linux-opt ~/solvers/cvc4
 
-RUN wget wget https://github.com/Z3Prover/z3/releases/download/z3-4.12.2/z3-4.12.2-x64-glibc-2.31.zip -P ~/solvers
+RUN wget https://github.com/Z3Prover/z3/releases/download/z3-4.12.2/z3-4.12.2-x64-glibc-2.31.zip -P ~/solvers
 RUN unzip ~/solvers/z3-4.12.2-x64-glibc-2.31.zip -d ~/solvers
 ENV PATH=$PATH:~/solvers/z3-4.12.2-x64-glibc-2.31/bin
 
