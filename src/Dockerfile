@@ -21,9 +21,11 @@ ENV PATH=$CONDA_DIR/bin:$PATH
 
 RUN conda install -c conda-forge python=3.11
 
-RUN apt-get update && apt-get install -y opam
+RUN apt-get update && apt-get install -y opam \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 RUN opam init -y --disable-sandboxing --compiler 4.14.1
-RUN eval $(opam env)
+RUN "eval $(opam env)"
 RUN opam install -y frama-c alt-ergo
 
 RUN mkdir ~/solvers
@@ -40,10 +42,10 @@ RUN opam exec -- why3 config detect
 
 RUN pip install -r requirements.txt
 
-ADD . /home/src/
+COPY . /home/src/
 
 RUN git clone https://github.com/tree-sitter/tree-sitter-c.git src/tree_sitter_lib/vendor/tree-sitter-c
 
-WORKDIR "/home/src/"
+WORKDIR /home/src/
 
 RUN python build_parser.py
