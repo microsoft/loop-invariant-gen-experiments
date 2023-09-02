@@ -25,7 +25,7 @@ RUN apt-get update && apt-get install -y opam \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 RUN opam init -y --disable-sandboxing --compiler 4.14.1
-RUN "eval $(opam env)"
+RUN eval $(opam env)
 RUN opam install -y frama-c alt-ergo
 
 RUN mkdir ~/solvers
