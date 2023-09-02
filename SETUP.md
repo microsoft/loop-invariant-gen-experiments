@@ -8,7 +8,7 @@ Once you have docker installed, you can build the docker image by running the fo
 
 ```bash
 cd src/
-docker build -t loopy .
+docker build -t loopy --build-arg USER_ID=$(id -u) --build-arg GROUP_ID=$(id -g) .
 ```
 
 Once the image is built, you can run it by running the following command **from the root of this repository**:
