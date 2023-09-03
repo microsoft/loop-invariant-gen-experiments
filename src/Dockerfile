@@ -34,6 +34,12 @@ RUN conda install -c conda-forge python=3.11
 
 # Install Opam packages
 RUN opam init -y --disable-sandboxing --compiler 4.14.1
+ENV OPAM_SWITCH_PREFIX=/home/user/.opam/4.14.1
+ENV CAML_LD_LIBRARY_PATH=/home/user/.opam/4.14.1/lib/stublibs:/home/user/.opam/4.14.1/lib/ocaml/stublibs:/home/user/.opam/4.14.1/lib/ocaml  
+ENV OCAML_TOPLEVEL_PATH=/home/user/.opam/4.14.1/lib/toplevel
+ENV MANPATH=':/home/user/.opam/4.14.1/man'
+ENV PATH=/home/user/.opam/4.14.1/bin:$PATH
+
 RUN eval $(opam env)
 RUN opam install -y frama-c alt-ergo
 
