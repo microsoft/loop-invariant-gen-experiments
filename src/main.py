@@ -69,6 +69,13 @@ def parse_args(args):
         type=str,
     )
     input_group.add_argument(
+        "--repair-input-2",
+        help="Input file to repair invariants for",
+        default="",
+        required="--repair-retries" in args,  # cannot set retries without setting input
+        type=str,
+    )
+    input_group.add_argument(
         "--recheck-input",
         help="Recheck JSON logs from a previous run",
         type=str,
@@ -96,6 +103,13 @@ def parse_args(args):
         help="Number of retries for each repair run",
         type=int,
         default=5,
+        required=False,
+    )
+    parser.add_argument(
+        "--repair-from-k",
+        help="Start repairing from kth completion",
+        type=int,
+        default=0,
         required=False,
     )
 
@@ -201,6 +215,8 @@ def main(args):
         debug=args.debug,
         log_path=args.output_dir,
         repair_errors_input=args.repair_input,
+        repair_errors_input_2=args.repair_input_2,
+        repair_from_k=args.repair_from_k,
         num_repair_retries=args.repair_retries,
         nudge=args.secondary_nudge,
         features=args.benchmark_features,

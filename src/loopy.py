@@ -4,11 +4,72 @@ import random
 import re
 import traceback
 from copy import deepcopy
+from random import shuffle
 
 import yaml
+
 from benchmark import Benchmark
 from checker import Checker
 from loopy_llm import LLM, PromptConfig
+from llm_utils import Logger
+from process_results import run_parallel, prune_wrapper
+
+
+def combine_and_prune_with_k(
+    benchmark,
+    benchmark2,
+    n,
+    k,
+    shuffle_times=10,
+    max_cores=10,
+    combine_llm_output_lambda=None,
+    features="one_loop_one_method",
+):
+    logger = Logger()
+    invariants_1 = [b["invariants"] for b in benchmark["completions"]]
+    invariants_2 = [b["invariants"] for b in benchmark2["completions"]]
+    invariants_from_completions = invariants_1 + invariants_2
+
+    if len(invariants_from_completions) < n:
+        invariants_from_completions = invariants_from_completions + [
+            "\nloop invariant \\false;\n"
+            for _ in range(n - len(invariants_from_completions))
+        ]
+
+    random_permutations = [
+        shuffle(invariants_from_completions) for _ in range(shuffle_times)
+    ]
+    candidates = [rp[:k] for rp in random_permutations]
+
+    max_m = (len(candidates) // max_cores) + 1
+    pass_k_prune = 0.0
+    for m in range(0, max_m):
+        candidates_batch = candidates[m * max_cores : (m + 1) * max_cores]
+        checker_inputs = [
+            combine_llm_output_lambda(
+                benchmark["benchmark_code"], pass_at_k_candidate, features
+            )
+            for pass_at_k_candidate in candidates_batch
+        ]
+        logger.log_action(
+            "Combine and Pruning",
+            f"[Batch {m+1}/{max_m}]: {len(candidates_batch)} candidates in parallel, k={k}, File: {benchmark['file']}",
+        )
+        try:
+            results = run_parallel(checker_inputs, prune_wrapper)
+            pass_k_prune += sum(results)
+            logger.log_info(
+                f"[Batch {m+1}/{max_m}]: Combine and Prune with k = {pass_k_prune / len(results)} for k={k}, \
+                    {len(candidates_batch)} parallel benchmarks, File: {benchmark['file']}"
+            )
+        except Exception as e:
+            logger.log_error(str(e))
+
+    pass_k_prune = pass_k_prune / len(candidates)
+    if pass_k_prune == 0.0:
+        return 0.0, random.choice(candidates)
+    else:
+        return pass_k_prune, None
 
 
 class LoopyPipeline:
@@ -21,6 +82,8 @@ class LoopyPipeline:
         log_path: str = None,
         num_repair_retries: int = 5,
         repair_errors_input: str = "",
+        repair_errors_input_2: str = "",
+        repair_from_k: int = 1,
         nudge: bool = True,
         features: str = "one_loop_one_method",
         arg_params: dict = None,
@@ -36,6 +99,8 @@ class LoopyPipeline:
         self.num_repair_retries = num_repair_retries
         self.nudge = nudge
         self.repair_errors_input = repair_errors_input
+        self.repair_errors_input_2 = repair_errors_input_2
+        self.repair_from_k = repair_from_k
         self.system_message = ""
         self.features = features
         self.arg_params = arg_params
@@ -313,7 +378,9 @@ class LoopyPipeline:
                             use_json_output=self.use_json_output,
                         )
                         success, checker_message = self.checker.check(
-                            pruned_code, ("termination" in self.features), use_json_output=self.use_json_output
+                            pruned_code,
+                            ("termination" in self.features),
+                            use_json_output=self.use_json_output,
                         )
 
                         instance_log_json["code_after_nudge_and_prune"] = pruned_code
@@ -413,7 +480,17 @@ class LoopyPipeline:
         with open(self.repair_errors_input, "r", encoding="utf-8") as f:
             error_logs = json.load(f)
 
+        error_logs_2 = None
+        if self.repair_errors_input_2 != "":
+            with open(self.repair_errors_input_2, "r", encoding="utf-8") as f:
+                error_logs_2 = json.load(f)
+
         error_logs = error_logs["logs"][start_index : start_index + max_benchmarks]
+
+        if error_logs_2 is not None:
+            error_logs_2 = error_logs_2["logs"][
+                start_index : start_index + max_benchmarks
+            ]
 
         log_json = []
         stats = {"success": [], "failure": [], "total": 0}
@@ -421,30 +498,23 @@ class LoopyPipeline:
             os.makedirs(os.path.dirname(self.log_path))
         log_file = open(self.log_path + "final.json", "w", encoding="utf-8")
         for i, instance in enumerate(error_logs):
-            if "checker_output" in instance.keys() and (
-                instance["checker_output"]
-                or instance["checker_output_after_combine_and_prune"]
-            ):
-                stats["success"].append(i)
-                stats["total"] += 1
+            assert instance["file"] == error_logs_2[i]["file"]
+            prune_and_check_with_k, failing_invariants = combine_and_prune_with_k(
+                instance,
+                error_logs_2[i],
+                15,
+                self.repair_from_k,
+                combine_llm_output_lambda=self.benchmark.combine_llm_outputs,
+                features=self.features,
+            )
+            if prune_and_check_with_k > 0.0:
                 print(
                     "Skipping successful benchmark: {i}/{n}".format(
                         i=i, n=len(error_logs)
                     )
                 )
-                continue
-
-            if "checker_output_after_nudge" in instance.keys() and (
-                instance["checker_output_after_nudge"]
-                or instance["checker_output_after_nudge_and_prune"]
-            ):
                 stats["success"].append(i)
                 stats["total"] += 1
-                print(
-                    "Skipping successful benchmark: {i}/{n}".format(
-                        i=i, n=len(error_logs)
-                    )
-                )
                 continue
 
             print("Healing benchmark: {i}/{n}".format(i=i, n=len(error_logs)))
@@ -454,52 +524,26 @@ class LoopyPipeline:
                 num_retries = 0
                 instance_log_json["healing_conversations"] = []
 
-                failed_checker_input = None
-                checker_error_message = None
-                if "code_after_nudge_and_prune" in instance.keys():
-                    failed_checker_input = instance["code_after_nudge_and_prune"]
-                    checker_error_message = instance[
-                        "checker_message_after_nudge_and_prune"
-                    ]
-                elif "code_with_combined_invariants" in instance.keys():
-                    failed_checker_input = self.benchmark.combine_llm_outputs(
-                        instance["benchmark_code"],
-                        instance["invariants"],
-                        self.features,
-                    )
-                    success, checker_error_message = self.checker.check(
-                        failed_checker_input,
-                        ("termination" in self.features),
-                        use_json_output=self.use_json_output,
-                    )
-                else:
-                    # This benchmark was not run previously. So we will skip it.
-                    continue
+                failed_checker_input = self.benchmark.combine_llm_outputs(
+                    instance["benchmark_code"],
+                    failing_invariants,
+                    self.features,
+                )
+                success, checker_error_message = self.checker.check(
+                    failed_checker_input,
+                    ("termination" in self.features),
+                    use_json_output=self.use_json_output,
+                )
+
+                instance_log_json["code_with_failing_invariants"] = failed_checker_input
+                instance_log_json["checker_fail_error_message"] = checker_error_message
 
                 while not success and num_retries < self.num_repair_retries:
                     healing_json = {}
-                    inductive_invs = "\n".join(
-                        [
-                            x
-                            for x in checker_error_message.splitlines()
-                            if not "Post-condition" in x
-                        ]
-                    )
-                    analysis = (
-                        (
-                            "the invariants were not inductive"
-                            if not "Annotation error " in inductive_invs
-                            else "there was an annotation error"
-                        )
-                        if len(inductive_invs) == 0
-                        else "the following subset of the invariants are inductive but they are not strong enough to prove the post-condition:\n"
-                        + inductive_invs
-                    )
                     llm_outputs, conversations = self.llm.heal(
                         input={
                             "code": failed_checker_input,
                             "error": checker_error_message,
-                            "analysis": analysis,
                         },
                         output_full_tree=True,
                     )
