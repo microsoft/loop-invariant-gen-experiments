@@ -5,6 +5,7 @@ Easiest way is to use `src/Dockerfile` to build a docker image and run it.
 To do this, you need to have docker installed on your machine. To install docker, follow the instructions [here](https://docs.docker.com/install/).
 
 Once you have docker installed, you can build the docker image by running the following commands starting **from the root of this repository**:
+(If you get a permission error, you may need to run the following command with `sudo`)
 
 ```bash
 cd src/
