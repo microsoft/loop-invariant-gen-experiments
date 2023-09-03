@@ -4,7 +4,6 @@ import random
 import re
 import traceback
 from copy import deepcopy
-from random import shuffle
 
 import yaml
 
@@ -12,7 +11,7 @@ from benchmark import Benchmark
 from checker import Checker
 from loopy_llm import LLM, PromptConfig
 from llm_utils import Logger
-from process_results import run_parallel, prune_wrapper
+from process_results import run_parallel, prune_wrapper, shuffle
 
 
 def combine_and_prune_with_k(
