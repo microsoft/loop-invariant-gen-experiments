@@ -63,8 +63,8 @@ class FramaCChecker(Checker):
             kernel_logs = f.read()
             print(kernel_logs)
             kl_lines = kernel_logs.splitlines()
-            if len(kl_lines) > 2:
-                print("More than 2 lines in Frama-C kernel logs.")
+            if len(kl_lines) > 1:
+                print("More than 1 line in Frama-C kernel logs.")
             error_line = None
             for line in kl_lines:
                 if "[kernel:annot-error]" in line:
@@ -122,6 +122,8 @@ class FramaCChecker(Checker):
                     ]
                 )
 
+                invariants_with_ids = self.get_invariants_with_ids(input.splitlines())
+
                 for inv in sorted(
                     loop_invariant_status.keys(), key=lambda x: int(x[1:])
                 ):
@@ -129,24 +131,26 @@ class FramaCChecker(Checker):
                         loop_invariant_status[inv]["preserved"]
                         and loop_invariant_status[inv]["established"]
                     ):
-                        checker_output.append(f"loop invariant {inv} is inductive.")
+                        checker_output.append(
+                            f"loop invariant {invariants_with_ids[inv]} is inductive."
+                        )
                     elif (
                         not loop_invariant_status[inv]["preserved"]
                         and loop_invariant_status[inv]["established"]
                     ):
                         checker_output.append(
-                            f"loop invariant {inv} is established but not preserved."
+                            f"loop invariant {invariants_with_ids[inv]} is established but not preserved."
                         )
                     elif (
                         loop_invariant_status[inv]["preserved"]
                         and not loop_invariant_status[inv]["established"]
                     ):
                         checker_output.append(
-                            f"loop invariant {inv} is preserved but not established."
+                            f"loop invariant {invariants_with_ids[inv]} is preserved but not established."
                         )
                     else:
                         checker_output.append(
-                            f"loop invariant {inv} is neither established nor preserved."
+                            f"loop invariant {invariants_with_ids[inv]} is neither established nor preserved."
                         )
 
                 checker_output = "\n".join(checker_output)
@@ -268,6 +272,14 @@ class FramaCChecker(Checker):
                     invariant_expressions.append(inv[2])
         return invariants
 
+    def get_invariants_with_ids(self, lines):
+        invariants = {}
+        for line in lines:
+            if self.is_invariant(line):
+                inv = re.findall(r"loop invariant (\w+:)?(.+);", line)[0]
+                invariants[inv[0].rstrip(":")] = inv[1].strip()
+        return invariants
+
     def get_invariants_count(self, code):
         return len(self.get_invariants(code.splitlines()))
 
@@ -287,16 +299,17 @@ class FramaCChecker(Checker):
             if "is inductive." in line:
                 continue
             else:
-                inv_id = re.findall(r"loop invariant (i\d+) is", line)
-                if len(inv_id) == 1:
-                    non_inductive_invariants.append(inv_id[0])
+                inv_exp = re.findall(r"loop invariant (.+) is", line)
+                if len(inv_exp) == 1:
+                    non_inductive_invariants.append(inv_exp[0])
 
         non_inductive_invariant_line_nos = []
         for i, line in enumerate(checker_input.splitlines()):
-            if any(
-                [f"loop invariant {inv}:" in line for inv in non_inductive_invariants]
-            ):
-                non_inductive_invariant_line_nos.append(i)
+            if self.is_invariant(line):
+                for inv in non_inductive_invariants:
+                    if "loop invariant " in line and inv in line:
+                        non_inductive_invariant_line_nos.append(i)
+                        break
 
         return non_inductive_invariant_line_nos
 
