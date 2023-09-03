@@ -65,7 +65,7 @@ def parse_args(args):
         "--repair-input",
         help="Input file to repair invariants for",
         default="",
-        required="--repair-retries" in args,  # cannot set retries without setting input
+        required=False,  # cannot set retries without setting input
         type=str,
     )
     input_group.add_argument(

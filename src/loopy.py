@@ -20,7 +20,7 @@ def combine_and_prune_with_k(
     n,
     k,
     shuffle_times=10,
-    max_cores=10,
+    max_cores=16,
     combine_llm_output_lambda=None,
     features="one_loop_one_method",
 ):
@@ -470,6 +470,7 @@ class LoopyPipeline:
         return
 
     def heal(self, max_benchmarks=1, start_index=0):
+        logger = Logger()
         if self.llm is None:
             raise Exception(
                 "LLM not initialized. Call load_config first, to load input and prompt files."
@@ -507,7 +508,7 @@ class LoopyPipeline:
                 features=self.features,
             )
             if prune_and_check_with_k > 0.0:
-                print(
+                logger.log_success(
                     "Skipping successful benchmark: {i}/{n}".format(
                         i=i, n=len(error_logs)
                     )
@@ -516,7 +517,7 @@ class LoopyPipeline:
                 stats["total"] += 1
                 continue
 
-            print("Healing benchmark: {i}/{n}".format(i=i, n=len(error_logs)))
+            logger.log_info(f"Healing benchmark: {start_index + i + 1}/{len(error_logs)}")
             instance_log_json = {"file": instance["file"]}
             try:
                 success = False
@@ -701,30 +702,6 @@ class LoopyPipeline:
                 stats["skipped"].append(i)
                 log_json.append(instance)
                 continue
-            # if not any(
-            #     [
-            #         (c["checker_message"] == "No invariants found.")
-            #         for c in instance["completions"]
-            #     ]
-            # ):
-            #     if "checker_output" not in instance.keys():
-            #         stats["skipped"].append(i)
-            #         log_json.append(instance)
-            #     else:
-            #         success = (
-            #             instance["checker_output"]
-            #             if "checker_output_after_combine_and_prune"
-            #             not in instance.keys()
-            #             else instance["checker_output_after_combine_and_prune"]
-            #         )
-            #         log_json.append(instance)
-            #         if success:
-            #             stats["success"].append(i)
-            #         else:
-            #             stats["failure"].append(i)
-            #         stats["total"] += 1
-            #         print("Skipping benchmark: {i}/{n}".format(i=start_index + i + 1, n=total))
-            #     continue
 
             print(
                 "Rechecking benchmark: {i}/{n}".format(i=start_index + i + 1, n=total)
@@ -872,38 +849,6 @@ class LoopyPipeline:
                             "checker_message_after_combine_and_prune"
                         ] = e.args[0]
                         success = False
-
-                # if not success and "invariants_after_nudge" in instance:
-                #     checker_input_with_invariants_after_nudge = (
-                #         self.benchmark.combine_llm_outputs(
-                #             checker_input_without_invariants,
-                #             instance["invariants"] + instance["invariants_after_nudge"],
-                #             self.mode,
-                #         )
-                #     )
-                #     instance_log_json[
-                #         "checker_input_after_nudge"
-                #     ] = checker_input_with_invariants_after_nudge
-                #     success, checker_message = self.checker.check(
-                #         checker_input_with_invariants_after_nudge, self.mode, use_json_output=self.use_json_output
-                #     )
-                #     instance_log_json["checker_output_after_nudge"] = success
-                #     instance_log_json["checker_message_after_nudge"] = checker_message
-
-                #     if not success:
-                #         success, pruned_code = self.checker.prune_annotations_and_check(
-                #             checker_input_with_invariants_after_nudge, self.mode, use_json_output=self.use_json_output
-                #         )
-                #         success, prune_checker_message = self.checker.check(
-                #             pruned_code, self.mode, use_json_output=self.use_json_output
-                #         )
-                #         instance_log_json["code_after_nudge_and_prune"] = pruned_code
-                #         instance_log_json[
-                #             "checker_output_after_nudge_and_prune"
-                #         ] = success
-                #         instance_log_json[
-                #             "checker_message_after_nudge_and_prune"
-                #         ] = prune_checker_message
 
                 if success:
                     stats["success"].append(i)
