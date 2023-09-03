@@ -50,7 +50,7 @@ class FramaCChecker(Checker):
 
         if verbose:
             print("==============================")
-        cmd = f"opam exec -- frama-c -wp -wp-verbose 100 -wp-debug 100 -wp-timeout 3 \
+        cmd = f"frama-c -wp -wp-verbose 100 -wp-debug 100 -wp-timeout 3 \
                 -wp-prover=alt-ergo,z3,cvc4 {temp_c_file} -wp-report-json {temp_wp_json_report_file} -kernel-warn-key annot-error=active \
                 -kernel-log a:{temp_kernel_log_file} -then -no-unicode -report -report-csv {temp_output_dump_file}"
         p = subprocess.Popen(cmd.split(), stdout=subprocess.PIPE)
