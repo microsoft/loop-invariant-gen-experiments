@@ -11,16 +11,19 @@ cd src/
 docker build -t loopy --build-arg USER_ID=$(id -u) --build-arg GROUP_ID=$(id -g) .
 ```
 
-Once the image is built, you can run it by running the following command **from the root of this repository**:
+Once the image is built, you can run it using the following command **from the root of this repository**:
+**NOTE: If you don't need to interact with the OpenAI API, skip the -e CLI option**
+
 (If you get a permission error, you may need to run the following command with `sudo`)
 
 ```bash
-docker run -it \
+docker run -it --rm \
     --mount type=bind,source="$(pwd)"/data,target=/home/user/data/ \
     --mount type=bind,source="$(pwd)"/config,target=/home/user/config/ \
     --mount type=bind,source="$(pwd)"/experiments,target=/home/user/experiments/ \
     --mount type=bind,source="$(pwd)"/templates,target=/home/user/templates/ \
     --mount type=bind,source="$(pwd)"/logs,target=/home/user/logs/ \
+    -e OPENAI_API_KEY=<API_KEY> \
     loopy /bin/bash
 ```
 

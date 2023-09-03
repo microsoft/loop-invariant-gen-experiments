@@ -49,12 +49,12 @@ ENV PATH=$PATH:/home/user/solvers/z3-4.12.2-x64-glibc-2.31/bin
 
 RUN opam exec -- why3 config detect
 
-COPY . /home/user/src/
-
-# RUN git clone https://github.com/tree-sitter/tree-sitter-c.git /home/user/src/tree_sitter_lib/vendor/tree-sitter-c
-
+COPY --chown=user:user . /home/user/src/
 WORKDIR /home/user/src/
 
-# RUN pip install -r requirements.txt
+# Install Python packages
+RUN pip install -r requirements.txt
 
-# RUN python build_parser.py
+# Build tree-sitter parser
+RUN git clone https://github.com/tree-sitter/tree-sitter-c.git tree_sitter_lib/vendor/tree-sitter-c
+RUN python build_parser.py
