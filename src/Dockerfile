@@ -56,5 +56,6 @@ WORKDIR /home/user/src/
 RUN pip install -r requirements.txt
 
 # Build tree-sitter parser
+RUN rm -rf tree_sitter_lib/vendor/tree-sitter-c
 RUN git clone https://github.com/tree-sitter/tree-sitter-c.git tree_sitter_lib/vendor/tree-sitter-c
 RUN python build_parser.py
