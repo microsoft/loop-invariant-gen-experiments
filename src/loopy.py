@@ -58,8 +58,7 @@ def combine_and_prune_with_k(
             results = run_parallel(checker_inputs, prune_wrapper)
             pass_k_prune += sum(results)
             logger.log_info(
-                f"[Batch {m+1}/{max_m}]: Combine and Prune with k = {pass_k_prune / len(results)} for k={k}, \
-                    {len(candidates_batch)} parallel benchmarks, File: {benchmark['file']}"
+                f"[Batch {m+1}/{max_m}]: Combine and Prune with k = {pass_k_prune / len(results)} for k={k}, {len(candidates_batch)} parallel benchmarks, File: {benchmark['file']}"
             )
         except Exception as e:
             logger.log_error(str(e))
@@ -509,15 +508,15 @@ class LoopyPipeline:
             )
             if prune_and_check_with_k > 0.0:
                 logger.log_success(
-                    "Skipping successful benchmark: {i}/{n}".format(
-                        i=i, n=len(error_logs)
-                    )
+                    f"Skipping successful benchmark: {start_index + i + 1}/{len(error_logs)}"
                 )
                 stats["success"].append(i)
                 stats["total"] += 1
                 continue
 
-            logger.log_info(f"Healing benchmark: {start_index + i + 1}/{len(error_logs)}")
+            logger.log_info(
+                f"Healing benchmark: {start_index + i + 1}/{len(error_logs)}"
+            )
             instance_log_json = {"file": instance["file"]}
             try:
                 success = False
