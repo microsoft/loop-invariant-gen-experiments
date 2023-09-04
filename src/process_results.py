@@ -238,9 +238,11 @@ def main(args):
             if expt_log_1 is None or expt_log_21 is None:
                 candidates = [rp[:k] for rp in random_permutations]
             else:
-                candidates = [
-                    rp[: math.ceil(k / 2)] for rp in random_permutations_1
-                ] + [rp[: math.floor(k / 2)] for rp in random_permutations_2]
+                candidates = []
+                for i in range(args.shuffle_times):
+                    candidates.append(
+                        random_permutations_1[i][ : math.ceil(k/2)] + random_permutations_2[i][ : math.floor(k/2)]
+                    )
 
             candidates_success_map = [
                 [c["success"] for c in candidate] for candidate in candidates
