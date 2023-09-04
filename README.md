@@ -26,6 +26,7 @@ docker run -it --rm \
     --mount type=bind,source="$(pwd)"/experiments,target=/home/user/experiments/ \
     --mount type=bind,source="$(pwd)"/templates,target=/home/user/templates/ \
     --mount type=bind,source="$(pwd)"/logs,target=/home/user/logs/ \
+    --user "$(id -u):$(id -g)" \
     -e OPENAI_API_KEY=<API_KEY> \
     loopy /bin/bash
 ```
