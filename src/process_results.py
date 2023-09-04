@@ -159,14 +159,14 @@ def main(args):
             == expt_log_2[i + args.start_index]["benchmark_code"]
         )
 
-        if args.input_log1 is not None:
+        if args.input_log1 is not None and expt_log_1 is not None:
             assert benchmark["file"] == expt_log_1[i + args.start_index]["file"]
             assert (
                 benchmark["benchmark_code"]
                 == expt_log_1[i + args.start_index]["benchmark_code"]
             )
 
-        if args.input_log_21 is not None:
+        if args.input_log_21 is not None and expt_log_21 is not None:
             assert benchmark["file"] == expt_log_21[i + args.start_index]["file"]
             assert (
                 benchmark["benchmark_code"]
