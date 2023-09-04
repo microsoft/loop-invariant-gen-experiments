@@ -498,6 +498,16 @@ class LoopyPipeline:
         log_file = open(self.log_path + "final.json", "w", encoding="utf-8")
         for i, instance in enumerate(error_logs):
             assert instance["file"] == error_logs_2[i]["file"]
+            if (
+                "completions" not in instance.keys()
+                or "completions" not in error_logs_2[i].keys()
+            ):
+                logger.log_error(
+                    f"Skipping benchmark with empty logs: {start_index + i + 1}/{len(error_logs)}"
+                )
+                stats["total"] += 1
+                continue
+
             prune_and_check_with_k, failing_invariants = combine_and_prune_with_k(
                 instance,
                 error_logs_2[i],
