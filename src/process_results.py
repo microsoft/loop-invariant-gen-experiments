@@ -99,6 +99,9 @@ def parse_args(args):
 def main(args):
     args = parse_args(args)
     expt_log = None
+    expt_log_1 = None
+    expt_log_2 = None
+    expt_log_21 = None
     if not os.path.exists(args.input_log) or not os.path.exists(args.input_log_2):
         print("Input log does not exist.")
         return
