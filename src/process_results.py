@@ -153,24 +153,24 @@ def main(args):
         },
     }
     for i, benchmark in enumerate(expt_log):
-        assert benchmark["file"] == expt_log_2[i + args.start_index]["file"]
+        assert benchmark["file"] == expt_log_2[i]["file"]
         assert (
             benchmark["benchmark_code"]
-            == expt_log_2[i + args.start_index]["benchmark_code"]
+            == expt_log_2[i]["benchmark_code"]
         )
 
         if args.input_log1 is not None and expt_log_1 is not None:
-            assert benchmark["file"] == expt_log_1[i + args.start_index]["file"]
+            assert benchmark["file"] == expt_log_1[i]["file"]
             assert (
                 benchmark["benchmark_code"]
-                == expt_log_1[i + args.start_index]["benchmark_code"]
+                == expt_log_1[i]["benchmark_code"]
             )
 
         if args.input_log_21 is not None and expt_log_21 is not None:
-            assert benchmark["file"] == expt_log_21[i + args.start_index]["file"]
+            assert benchmark["file"] == expt_log_21[i]["file"]
             assert (
                 benchmark["benchmark_code"]
-                == expt_log_21[i + args.start_index]["benchmark_code"]
+                == expt_log_21[i]["benchmark_code"]
             )
 
         logger.log_info(f"Processing benchmark num. {i+1}, File: {benchmark['file']}")
@@ -187,14 +187,14 @@ def main(args):
 
         if (
             "completions" not in benchmark
-            or "completions" not in expt_log_2[i + args.start_index]
+            or "completions" not in expt_log_2[i]
             or (
                 expt_log_1 is not None
-                and "completions" not in expt_log_1[i + args.start_index]
+                and "completions" not in expt_log_1[i]
             )
             or (
                 expt_log_21 is not None
-                and "completions" not in expt_log_21[i + args.start_index]
+                and "completions" not in expt_log_21[i]
             )
         ):
             logger.log_error(
@@ -206,16 +206,16 @@ def main(args):
 
         all_completions = (
             benchmark["completions"]
-            + expt_log_2[i + args.start_index]["completions"]
+            + expt_log_2[i]["completions"]
             + (
                 []
                 if expt_log_1 is None
-                else expt_log_1[i + args.start_index]["completions"]
+                else expt_log_1[i]["completions"]
             )
             + (
                 []
                 if expt_log_21 is None
-                else expt_log_21[i + args.start_index]["completions"]
+                else expt_log_21[i]["completions"]
             )
         )
 
