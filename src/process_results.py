@@ -104,12 +104,12 @@ def main(args):
         return
     with open(args.input_log, "r") as f:
         expt_log = json.load(f)
-    if args.input_log1 is not None and not os.path.exists(args.input_log1):
+    if args.input_log1 is not None and os.path.exists(args.input_log1):
         with open(args.input_log1, "r") as f:
             expt_log_1 = json.load(f)
     with open(args.input_log_2, "r") as f:
         expt_log_2 = json.load(f)
-    if args.input_log_21 is not None and not os.path.exists(args.input_log_21):
+    if args.input_log_21 is not None and os.path.exists(args.input_log_21):
         with open(args.input_log_21, "r") as f:
             expt_log_21 = json.load(f)
     output_json = {"params": expt_log["params"], "logs": []}
