@@ -61,10 +61,10 @@ class FramaCChecker(Checker):
             return False, "No kernel logs found"
         with open(temp_kernel_log_file, "r", encoding="utf-8") as f:
             kernel_logs = f.read()
-            print(kernel_logs)
             kl_lines = kernel_logs.splitlines()
             if len(kl_lines) > 1:
                 print("More than 1 line in Frama-C kernel logs.")
+                print(kernel_logs)
             error_line = None
             for line in kl_lines:
                 if "[kernel:annot-error]" in line:
