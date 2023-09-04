@@ -133,11 +133,11 @@ def main(args):
     expt_log = expt_log["logs"]
     expt_log = expt_log[args.start_index :]
     expt_log_2 = expt_log_2["logs"]
-    expt_log_2 = expt_log_1[args.start_index :]
+    expt_log_2 = expt_log_2[args.start_index :]
 
     if args.input_log1 is not None:
         expt_log_1 = expt_log_1["logs"]
-        expt_log_1 = expt_log_2[args.start_index :]
+        expt_log_1 = expt_log_1[args.start_index :]
     if args.input_log_21 is not None:
         expt_log_21 = expt_log_21["logs"]
         expt_log_21 = expt_log_21[args.start_index :]
