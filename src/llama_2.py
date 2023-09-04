@@ -1,52 +1,68 @@
-from transformers.pipelines import ConversationalPipeline, Conversation
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# This software may be used and distributed according to the terms of the Llama 2 Community License Agreement.
 
-def predict(data, task, model, tokenizer, config, **kwargs):
-    import torch
-    import pandas as pd
+from typing import Optional
 
-    TEMPERATURE_KEY = "temperature"
-    MAX_GEN_LEN_KEY = "max_gen_len"
-    DO_SAMPLE_KEY = "do_sample"
-    MAX_NEW_TOKENS_KEY = "max_new_tokens"
-    MAX_LENGTH_KEY = "max_length"
-    TOP_P_KEY = "top_p"
-    B_SYS, E_SYS = "<<SYS>>\n", "\n<</SYS>>\n\n"
-    
-    if isinstance(data, pd.DataFrame):
-        data = data[data.columns[0]].tolist()
+import fire
 
-    addn_args = kwargs.get("addn_args", {})
-    max_gen_len = addn_args.pop(MAX_GEN_LEN_KEY, 256)
-    addn_args[MAX_NEW_TOKENS_KEY] = addn_args.get(MAX_NEW_TOKENS_KEY, max_gen_len)
-    addn_args[MAX_LENGTH_KEY] = addn_args.get(MAX_LENGTH_KEY, 2048)
-    addn_args[TEMPERATURE_KEY] = addn_args.get(TEMPERATURE_KEY, 0.6)
-    addn_args[TOP_P_KEY] = addn_args.get(TOP_P_KEY, 0.9)
-    addn_args[DO_SAMPLE_KEY] = addn_args.get(DO_SAMPLE_KEY, True)
+from llama import Llama
 
-    model.eval()
-    conv_arr = data
-    # validations
-    assert len(conv_arr) > 0
-    assert conv_arr[-1]["role"] == "user"
-    next_turn = "system" if conv_arr[0]["role"] == "system" else "user"
-    # Build conversation
-    conversation = Conversation()
-    conversation_agent = ConversationalPipeline(model=model, tokenizer=tokenizer)
-    for i, conv in enumerate(conv_arr):
-        if conv["role"] == "system":
-            assert next_turn == "system", "System prompts can only be set at the start of the conversation"
-            next_turn = "user"
-            conversation.add_user_input(B_SYS + conv_arr[0]["content"].strip() + E_SYS)
-            conversation.mark_processed()
-        if conv["role"] == "assistant":
-            assert next_turn == "assistant", "Invalid Turn. Expected user input"
-            next_turn = "user"
-            conversation.append_response(conv["content"].strip())
-        elif conv["role"] == "user":
-            assert next_turn == "user", "Invalid Turn. Expected assistant input"
-            next_turn = "assistant"
-            conversation.add_user_input(conv["content"].strip())
-            if i != len(conv_arr[0:]) - 1:
-                conversation.mark_processed()
-    result = conversation_agent(conversation, use_cache=True, **addn_args)
-    return {'output': result.generated_responses[-1]}
+
+def main(
+    ckpt_dir: str,
+    tokenizer_path: str,
+    temperature: float = 0.2,
+    top_p: float = 0.95,
+    max_seq_len: int = 512,
+    max_batch_size: int = 8,
+    max_gen_len: Optional[int] = None,
+):
+    generator = Llama.build(
+        ckpt_dir=ckpt_dir,
+        tokenizer_path=tokenizer_path,
+        max_seq_len=max_seq_len,
+        max_batch_size=max_batch_size,
+    )
+
+    instructions = [
+        [
+            {
+                "role": "user",
+                "content": "In Bash, how do I list all text files in the current directory (excluding subdirectories) that have been modified in the last month?",
+            }
+        ],
+        [
+            {
+                "role": "user",
+                "content": "What is the difference between inorder and preorder traversal? Give an example in Python.",
+            }
+        ],
+        [
+            {
+                "role": "system",
+                "content": "Provide answers in JavaScript",
+            },
+            {
+                "role": "user",
+                "content": "Write a function that computes the set of sums of all contiguous sublists of a given list.",
+            }
+        ],
+    ]
+    results = generator.chat_completion(
+        instructions,  # type: ignore
+        max_gen_len=max_gen_len,
+        temperature=temperature,
+        top_p=top_p,
+    )
+
+    for instruction, result in zip(instructions, results):
+        for msg in instruction:
+            print(f"{msg['role'].capitalize()}: {msg['content']}\n")
+        print(
+            f"> {result['generation']['role'].capitalize()}: {result['generation']['content']}"
+        )
+        print("\n==================================\n")
+
+
+if __name__ == "__main__":
+    fire.Fire(main)
