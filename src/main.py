@@ -30,7 +30,7 @@ def parse_args(args):
     parser.add_argument(
         "--model",
         help="Model to use",
-        choices=["gpt-4", "gpt-3.5-turbo", "gpt-4-32k", "codellama-34b-istruct"],
+        choices=["gpt-4", "gpt-3.5-turbo", "gpt-4-32k", "codellama-34b-instruct"],
         default="gpt-4",
         type=str,
     )
