@@ -14,9 +14,9 @@ class LLMLocalClient(LLMClient):
 
         env = os.environ.copy()
         env["OMP_NUM_THREADS"] = 4
-        cmd = f"torchrun --nproc_per_node 4 llama_2.py --inputs {dataset_path}"
-        # p = subprocess.Popen(cmd.split(), stdout=subprocess.PIPE, env=env)
-        # output, err = p.communicate()
-        # output = output.decode("utf-8")
 
-        print(cmd)
+        cmd = f"torchrun --nproc_per_node 4 llama_2.py --inputs {dataset_path}"
+        p = subprocess.Popen(cmd.split(), stdout=subprocess.PIPE, env=env)
+        output, err = p.communicate()
+        output = output.decode("utf-8")
+        print(output)
