@@ -229,6 +229,7 @@ def main(args):
 
     if args.provider == "local":
         p.run_local(max_benchmarks=args.max_benchmarks, start_index=args.start_index)
+        return
 
     if args.problem_ids:
         for problem_id in args.problem_ids:
