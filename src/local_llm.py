@@ -1,10 +1,10 @@
+from llm import LLMClient
 
-from types import List
 
+class LLMLocalClient(LLMClient):
+    def __init__(self, settings):
+        super().__init__(settings)
 
-class LLM:
-    def __init__(self) -> None:
-        pass
-
-    def chat(self, messages: list[dict[str, str]]) -> tuple[bool, list[str]]:
-        pass
+    def chat_batch(self, messages_list):
+        """This should be for the local LLM client."""
+        

@@ -1,56 +1,37 @@
-import json
-import os
 import re
 import time
-from typing import Any, List, Optional
+from typing import Any, List
 
 import openai
-import requests
 import tiktoken
-from llm_utils import Logger, Settings
+
+from llm_utils import BOLD, END, INFO, SUCCESS, UNDERLINE, Logger, Settings
+from llm import LLMClient
 
 
-class LLMClient:
-    """The LLM client."""
+class LLMAPIClient(LLMClient):
+    """The LLM API client."""
 
     def __init__(self, settings: Settings):
         """Configure this LLM client."""
         self.settings = settings
-        self._model = settings.model
-        self._max_tokens: int = settings.max_tokens
-        self._temperature: float = settings.temperature
-        self._num_completions: int = settings.num_completions
+        Logger.verbose = settings.verbose
+        Logger.debug = settings.debug
+
         # Values for implementing cool-down and retry logic.
         self._interval = 60 / settings.prompts_per_minute
         self._last_call_time = None
         self._max_retries: int = 5
-        # Statistics.
-        self.prompt_count: int = 0
-        Logger.verbose = settings.verbose
-        Logger.debug = settings.debug
-
-    def prompt(self, prompt: str, system_message: str) -> tuple[bool, List[str]]:
-        """Send the completion prompt and get the response from the model."""
-        self.prompt_count += 1
-        return self._send_chat_completion(
-            [
-                {"role": "system", "content": system_message},
-                {"role": "user", "content": prompt},
-            ]
-        )
 
     def chat(self, messages: list[dict[str, str]]) -> tuple[bool, List[str]]:
-        """Send the prompt and get the response from the model."""
-        self.prompt_count += 1
-        return self._send_chat_completion(messages)
-
-    def _send_chat_completion(
-        self, messages: list[dict[str, str]]
-    ) -> tuple[bool, List[str]]:
         """Send the chat completion prompt and get the response from the model."""
-        # Check if the prompt passes the token limit, and if yes, try to upgrade the model.
-        prompt = self._messages_to_string(messages)
-        model = self._check_and_upgrade_context_size(prompt, self._model)
+
+        api_client = None
+        if self.settings.provider == "azure-openai":
+            api_client = AzureOpenAI(self.settings.get_api_key())
+        else:
+            raise Exception(f"Provider '{self.settings.provider}' is not supported.")
+        api_client.enforce_token_limit(messages, self.settings.model)
 
         # Enforce a cool-down for rate-limiting.
         current_time = time.time()
@@ -60,57 +41,56 @@ class LLMClient:
         ):
             time.sleep(self._interval)
 
-        attempt: int = 0
+        attempt = 0
         while attempt < self._max_retries:
             try:
-                openai.api_key = self.settings.get_api_key()
-                openai.api_base = "https://gcrgpt4aoai6c.openai.azure.com/"
-                openai.api_type = "azure"
-                openai.api_version = "2023-03-15-preview"
-
                 # Make the request to the remote LLM API with retries.
                 Logger.log_model_request(
-                    model,
+                    self.settings.model,
                     "\n".join(
                         [
-                            "\033[1m\033[4m\033[92m"
+                            f"{BOLD}{UNDERLINE}{SUCCESS}"
                             + message["role"]
-                            + ":\033[0m "
+                            + f":{END} "
                             + message["content"]
                             for message in messages
                         ]
                     )
-                    + "\n\033[94m"
+                    + f"\n{INFO}"
                     + ("==" * 30)
-                    + "\033[0m",
+                    + f"{END}",
                 )
                 self._last_call_time = current_time
-                response: Any = openai.ChatCompletion.create(
-                    engine=self._get_deployment_name(model),
+
+                response: Any = api_client.get_completion(
+                    model=self.settings.model,
                     messages=messages,
-                    max_tokens=self._max_tokens,
-                    temperature=self._temperature,
-                    n=self._num_completions,
-                    top_p=0.95,
-                    frequency_penalty=0,
-                    presence_penalty=0,
-                    stop=None,
+                    max_tokens=self.settings.max_tokens,
+                    temperature=self.settings.temperature,
+                    num_completions=self.settings.num_completions,
+                    top_p=self.settings.top_p,
+                    frequency_penalty=self.settings.frequency_penalty,
+                    presence_penalty=self.settings.presence_penalty,
+                    stop=self.settings.stop,
                 )
+
                 completions = []
                 for completion in response["choices"]:
                     completions.append(completion["message"]["content"])
+
                 Logger.log_model_response(
-                    model,
+                    self.settings.model,
                     "\n".join(
                         [
-                            "\033[1m\033[4m\033[92mCompletion "
+                            f"{BOLD}{UNDERLINE}{SUCCESS}Completion "
                             + str(i + 1)
-                            + ":\033[0m\n"
+                            + f":{END}\n"
                             + str(completion)
                             for i, completion in enumerate(completions)
                         ]
                     ),
                 )
+
                 return True, completions
             except Exception as e:
                 attempt += 1
@@ -125,24 +105,64 @@ class LLMClient:
                 continue
         return False, ["Failed to prompt the LLM."]
 
-    def _check_and_upgrade_context_size(self, prompt: str, model: str) -> str:
-        """Checks if the context size passes the token limit and upgrades the model if possible."""
-        try:
-            self._enforce_token_limit(prompt, model)
-        except Exception as e:
-            is_upgradeable, new_model = self._upgrade_model_context_size(model)
-            if is_upgradeable:
-                Logger.log_info(
-                    f"Increasing context size by upgrading '{model}' to '{new_model}' for the next prompt."
-                )
-                model = new_model
-                self._enforce_token_limit(prompt, model)
-            else:
-                raise e
-        return model
 
-    def _enforce_token_limit(self, prompt: str, model: str):
+class Provider:
+    def __init__(self, name, api_key, base_url):
+        self.name = name
+        self.api_key = api_key
+        self.api_base = base_url
+
+    def get_completion(self, **kwargs):
+        raise NotImplementedError
+
+    def enforce_token_limit(self, prompt: list[dict[str, str]], model: str):
+        raise NotImplementedError
+
+
+class AzureOpenAI(Provider):
+    def __init__(self, api_key):
+        super().__init__(
+            "azure-openai", api_key, "https://gcrgpt4aoai6c.openai.azure.com/"
+        )
+
+        self.api_type = "azure"
+        self.api_version = "2023-03-15-preview"
+
+    def get_completion(self, **kwargs):
+        openai.api_key = self.api_key
+        openai.api_base = self.api_base
+        openai.api_type = self.api_type
+        openai.api_version = self.api_version
+
+        model = kwargs.get("model")
+        messages = kwargs.get("messages")
+        max_tokens = kwargs.get("max_tokens")
+        temperature = kwargs.get("temperature")
+        num_completions = kwargs.get("num_completions")
+        top_p = kwargs.get("top_p")
+        frequency_penalty = kwargs.get("frequency_penalty")
+        presence_penalty = kwargs.get("presence_penalty")
+        stop = kwargs.get("stop")
+
+        response = openai.ChatCompletion.create(
+            engine=self._get_deployment_name(model),
+            messages=messages,
+            max_tokens=max_tokens,
+            temperature=temperature,
+            n=num_completions,
+            top_p=top_p,
+            frequency_penalty=frequency_penalty,
+            presence_penalty=presence_penalty,
+            stop=stop,
+        )
+
+        return response
+
+    def enforce_token_limit(self, prompt: list[dict[str, str]], model: str):
         """Enforces the token limit on the prompt for the specified model."""
+
+        prompt = self._messages_to_string(prompt)
+
         tokens_count: int = self._count_token_size(prompt, model)
         threshold = 0
         if model == "text-davinci-003":
@@ -164,12 +184,6 @@ class LLMClient:
         num_tokens = len(encoding.encode(prompt))
         return num_tokens
 
-    def _upgrade_model_context_size(self, model: str) -> tuple[bool, str]:
-        """Tries to upgrade the mode to a larger available context size."""
-        if model == "gpt-4":
-            return True, "gpt-4-32k"
-        return False, model
-
     def _messages_to_string(self, messages: list[dict[str, str]]) -> str:
         """Concatenates the list of messages to a string."""
         prompt = ""
@@ -183,4 +197,4 @@ class LLMClient:
         elif model in ["text-davinci-003", "gpt-4", "gpt-4-32k"]:
             return model
         else:
-            raise Exception(f"Model '{model}' is not an OpenAI model.")
+            raise Exception(f"Model '{model}' is not an Azure OpenAI model.")

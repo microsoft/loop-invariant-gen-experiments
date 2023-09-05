@@ -4,10 +4,15 @@ import os
 class Settings:
     def __init__(
         self,
+        provider: str = "azure-openai",
         api_key: str = "",
         model: str = "gpt-4",
         max_tokens: int = 1000,
         temperature: float = 0.7,
+        top_p: float = 0.95,
+        frequency_penalty: float = 0.0,
+        presence_penalty: float = 0.0,
+        stop: str = None,
         num_completions: int = 1,
         max_retries: int = 5,
         prompts_per_minute: int = 5,
@@ -15,10 +20,15 @@ class Settings:
         debug: bool = False,
     ):
         """Initializes a new 'Settings' instance from the specified parameters."""
+        self.provider = provider
         self.api_key = api_key
         self.model = model
         self.max_tokens = max_tokens
         self.temperature = temperature
+        self.top_p = top_p
+        self.frequency_penalty = frequency_penalty
+        self.presence_penalty = presence_penalty
+        self.stop = stop
         self.num_completions = num_completions
         self.max_retries = max_retries
         self.prompts_per_minute = prompts_per_minute

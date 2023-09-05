@@ -189,93 +189,6 @@ class Llama:
             out_logprobs.append(probs)
         return (out_tokens, out_logprobs if logprobs else None)
 
-    def text_completion(
-        self,
-        prompts: List[str],
-        temperature: float = 0.6,
-        top_p: float = 0.9,
-        max_gen_len: Optional[int] = None,
-        logprobs: bool = False,
-        echo: bool = False,
-    ) -> List[CompletionPrediction]:
-        if max_gen_len is None:
-            max_gen_len = self.model.params.max_seq_len - 1
-        prompt_tokens = [self.tokenizer.encode(x, bos=True, eos=False) for x in prompts]
-        generation_tokens, generation_logprobs = self.generate(
-            prompt_tokens=prompt_tokens,
-            max_gen_len=max_gen_len,
-            temperature=temperature,
-            top_p=top_p,
-            logprobs=logprobs,
-            echo=echo,
-        )
-        if logprobs:
-            return [
-                {
-                    "generation": self.tokenizer.decode(t),
-                    "tokens": [self.tokenizer.decode(x) for x in t],
-                    "logprobs": logprobs_i,
-                }
-                for t, logprobs_i in zip(generation_tokens, generation_logprobs)
-            ]
-        return [{"generation": self.tokenizer.decode(t)} for t in generation_tokens]
-
-    def text_infilling(
-        self,
-        prefixes: List[str],
-        suffixes: List[str],
-        temperature: float = 0.6,
-        top_p: float = 0.9,
-        max_gen_len: Optional[int] = None,
-        logprobs: bool = False,
-        suffix_first: bool = False,
-    ) -> List[InfillingPrediction]:
-        assert self.tokenizer.eot_id is not None
-        if max_gen_len is None:
-            max_gen_len = self.model.params.max_seq_len - 1
-        prompt_tokens = [
-            infilling_prompt_tokens(
-                self.tokenizer, prefix, suffix, suffix_first=suffix_first
-            )
-            for prefix, suffix in zip(prefixes, suffixes)
-        ]
-        generation_tokens, generation_logprobs = self.generate(
-            prompt_tokens=prompt_tokens,
-            max_gen_len=max_gen_len,
-            temperature=temperature,
-            top_p=top_p,
-            logprobs=logprobs,
-            echo=False,
-            stop_token=self.tokenizer.eot_id,
-        )
-
-        generations = [self.tokenizer.decode_infilling(t) for t in generation_tokens]
-
-        if logprobs:
-            return [
-                {
-                    "generation": generation,
-                    "logprobs": logprobs_i,
-                    "tokens": t,
-                    "full_text": prefix + generation + suffix,
-                }
-                for prefix, suffix, generation, t, logprobs_i in zip(
-                    prefixes,
-                    suffixes,
-                    generations,
-                    generation_tokens,
-                    generation_logprobs,
-                )
-            ]
-        else:
-            return [
-                {
-                    "generation": generation,
-                    "full_text": prefix + generation + suffix,
-                }
-                for prefix, suffix, generation in zip(prefixes, suffixes, generations)
-            ]
-
     def chat_completion(
         self,
         dialogs: List[Dialog],
@@ -355,7 +268,7 @@ class Llama:
                     generation_tokens, generation_logprobs, unsafe_requests
                 )
             ]
-        return [
+        return ([
             {
                 "generation": {
                     "role": "assistant",
@@ -363,7 +276,7 @@ class Llama:
                 }
             }
             for t, unsafe in zip(generation_tokens, unsafe_requests)
-        ]
+        ], generation_tokens)
 
 
 def sample_top_p(probs, p):
@@ -375,35 +288,3 @@ def sample_top_p(probs, p):
     next_token = torch.multinomial(probs_sort, num_samples=1)
     next_token = torch.gather(probs_idx, -1, next_token)
     return next_token
-
-
-def infilling_prompt_tokens(
-    tokenizer: Tokenizer,
-    pre: str,
-    suf: str,
-    suffix_first: bool = False,
-) -> List[int]:
-    """
-    Format and encode an infilling problem.
-    If `suffix_first` is set, format in suffix-prefix-middle format.
-    """
-    assert tokenizer.prefix_id is not None
-    assert tokenizer.middle_id is not None
-    assert tokenizer.suffix_id is not None
-    if suffix_first:
-        # format as "<PRE> <SUF>{suf} <MID> {pre}"
-        return (
-            [tokenizer.bos_id, tokenizer.prefix_id, tokenizer.suffix_id]
-            + tokenizer.encode_infilling(suf)
-            + [tokenizer.middle_id]
-            + tokenizer.encode(pre, bos=False, eos=False)
-        )
-    else:
-        # format as "<PRE> {pre} <SUF>{suf} <MID>"
-        return (
-            [tokenizer.bos_id, tokenizer.prefix_id]
-            + tokenizer.encode(pre, bos=False, eos=False)
-            + [tokenizer.suffix_id]
-            + tokenizer.encode_infilling(suf)
-            + [tokenizer.middle_id]
-        )

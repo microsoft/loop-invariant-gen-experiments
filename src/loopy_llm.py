@@ -3,7 +3,8 @@ import re
 from copy import deepcopy
 
 from jinja2 import Environment, FileSystemLoader
-from llm_client import LLMClient
+
+from llm_api_client import LLMAPIClient
 from llm_utils import Settings
 from utils import ConvTree, Node
 
@@ -135,7 +136,7 @@ class LLM:
                     user_node_.add_child(assistant_node_)
                     node.add_child(user_node_)
             else:
-                llm_client = LLMClient(
+                llm_client = LLMAPIClient(
                     Settings(
                         model=self.model,
                         temperature=prompt_config.temperature,
