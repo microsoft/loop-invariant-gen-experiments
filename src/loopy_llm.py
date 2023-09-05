@@ -208,5 +208,7 @@ class LLM:
         with open(dataset_path, "w", encoding="utf-8") as f:
             json.dump(dataset_dump, f, indent=4, ensure_ascii=False)
 
+        print("Dataset dumped to {}".format(dataset_path))
+        
         llm_client = LLMLocalClient(Settings())
         llm_client.chat_batch(dataset_path)

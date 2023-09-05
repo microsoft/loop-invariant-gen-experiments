@@ -13,7 +13,7 @@ class LLMLocalClient(LLMClient):
         """This should be for the local LLM client."""
 
         env = os.environ.copy()
-        env["OMP_NUM_THREADS"] = 4
+        env["OMP_NUM_THREADS"] = "4"
 
         cmd = f"torchrun --nproc_per_node 4 llama_2.py --inputs {dataset_path}"
         p = subprocess.Popen(cmd.split(), stdout=subprocess.PIPE, env=env)
