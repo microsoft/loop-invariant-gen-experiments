@@ -268,15 +268,13 @@ class Llama:
                     generation_tokens, generation_logprobs, unsafe_requests
                 )
             ]
-        return ([
+        return [
             {
-                "generation": {
-                    "role": "assistant",
-                    "content": self.tokenizer.decode(t) if not unsafe else UNSAFE_ERROR,
-                }
+                "role": "assistant",
+                "content": self.tokenizer.decode(t) if not unsafe else UNSAFE_ERROR,
             }
             for t, unsafe in zip(generation_tokens, unsafe_requests)
-        ], generation_tokens)
+        ]
 
 
 def sample_top_p(probs, p):

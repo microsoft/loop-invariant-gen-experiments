@@ -30,7 +30,7 @@ def parse_args(args):
     parser.add_argument(
         "--model",
         help="Model to use",
-        choices=["gpt-4", "gpt-3.5-turbo", "gpt-4-32k", "llama-2"],
+        choices=["gpt-4", "gpt-3.5-turbo", "gpt-4-32k", "codellama-34b-istruct"],
         default="gpt-4",
         type=str,
     )
@@ -193,7 +193,7 @@ def main(args):
     args = parse_args(args[1:])
 
     # TODO: Add support for other models/hosts when available
-    if args.provider != "azure-open-ai":
+    if args.provider not in ["azure-open-ai", "local"]:
         raise Exception("Only models on Azure Open AI are supported for now")
 
     checker = (
@@ -227,6 +227,9 @@ def main(args):
     if args.config_file:
         p = p.load_config(args.config_file)
 
+    if args.provider == "local":
+        p.run_local(max_benchmarks=args.max_benchmarks, start_index=args.start_index)
+
     if args.problem_ids:
         for problem_id in args.problem_ids:
             p.log_path = datetime.datetime.now().strftime(
@@ -241,9 +244,7 @@ def main(args):
             max_benchmarks=args.max_benchmarks,
             start_index=args.start_index,
             input_log_path=args.recheck_input,
-            output_log_path=args.recheck_input.replace(
-                "final", "final_rechecked"
-            ),
+            output_log_path=args.recheck_input.replace("final", "final_rechecked"),
         )
 
     else:

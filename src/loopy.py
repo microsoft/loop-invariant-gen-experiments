@@ -892,7 +892,6 @@ class LoopyPipeline:
         )
         log_file.close()
 
-
     def run_local(self, max_benchmarks=1, start_index=0):
         if self.llm is None:
             raise Exception(
@@ -910,3 +909,5 @@ class LoopyPipeline:
         sliced_benchmarks = self.benchmark.input_file_paths[
             start_index : start_index + max_benchmarks
         ]
+
+        self.llm.run_local(sliced_benchmarks)
