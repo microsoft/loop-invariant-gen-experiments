@@ -46,6 +46,7 @@ ENV PATH=$PATH:/home/user/solvers
 
 RUN wget http://cvc4.cs.stanford.edu/downloads/builds/x86_64-linux-opt/cvc4-1.6-x86_64-linux-opt -P /home/user/solvers
 RUN mv /home/user/solvers/cvc4-1.6-x86_64-linux-opt /home/user/solvers/cvc4
+RUN chmod +x /home/user/solvers/cvc4
 
 RUN wget https://github.com/Z3Prover/z3/releases/download/z3-4.12.2/z3-4.12.2-x64-glibc-2.31.zip -P /home/user/solvers
 RUN unzip /home/user/solvers/z3-4.12.2-x64-glibc-2.31.zip -d /home/user/solvers

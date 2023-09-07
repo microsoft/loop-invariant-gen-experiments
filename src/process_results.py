@@ -1,11 +1,12 @@
 import argparse
+import copy
 import itertools
 import json
+import math
+import multiprocessing
 import os
 import random
 import sys
-import multiprocessing
-import copy
 
 import numpy as np
 
@@ -153,25 +154,16 @@ def main(args):
         },
     }
     for i, benchmark in enumerate(expt_log):
-        assert benchmark["file"] == expt_log_2[i + args.start_index]["file"]
-        assert (
-            benchmark["benchmark_code"]
-            == expt_log_2[i + args.start_index]["benchmark_code"]
-        )
+        assert benchmark["file"] == expt_log_2[i]["file"]
+        assert benchmark["benchmark_code"] == expt_log_2[i]["benchmark_code"]
 
-        if args.input_log1 is not None:
-            assert benchmark["file"] == expt_log_1[i + args.start_index]["file"]
-            assert (
-                benchmark["benchmark_code"]
-                == expt_log_1[i + args.start_index]["benchmark_code"]
-            )
+        if args.input_log1 is not None and expt_log_1 is not None:
+            assert benchmark["file"] == expt_log_1[i]["file"]
+            assert benchmark["benchmark_code"] == expt_log_1[i]["benchmark_code"]
 
-        if args.input_log_21 is not None:
-            assert benchmark["file"] == expt_log_21[i + args.start_index]["file"]
-            assert (
-                benchmark["benchmark_code"]
-                == expt_log_21[i + args.start_index]["benchmark_code"]
-            )
+        if args.input_log_21 is not None and expt_log_21 is not None:
+            assert benchmark["file"] == expt_log_21[i]["file"]
+            assert benchmark["benchmark_code"] == expt_log_21[i]["benchmark_code"]
 
         logger.log_info(f"Processing benchmark num. {i+1}, File: {benchmark['file']}")
 
@@ -187,15 +179,9 @@ def main(args):
 
         if (
             "completions" not in benchmark
-            or "completions" not in expt_log_2[i + args.start_index]
-            or (
-                expt_log_1 is not None
-                and "completions" not in expt_log_1[i + args.start_index]
-            )
-            or (
-                expt_log_21 is not None
-                and "completions" not in expt_log_21[i + args.start_index]
-            )
+            or "completions" not in expt_log_2[i]
+            or (expt_log_1 is not None and "completions" not in expt_log_1[i])
+            or (expt_log_21 is not None and "completions" not in expt_log_21[i])
         ):
             logger.log_error(
                 f"Completions not found for benchmark: {benchmark['file']}"
@@ -204,34 +190,59 @@ def main(args):
             final_log["logs"].append(benchmark_json)
             continue
 
-        all_completions = (
-            benchmark["completions"]
-            + expt_log_2[i + args.start_index]["completions"]
-            + (
-                []
-                if expt_log_1 is None
-                else expt_log_1[i + args.start_index]["completions"]
+        random_permutations = []
+        random_permutations_1 = []
+        random_permutations_2 = []
+        if expt_log_1 is not None and expt_log_21 is not None:
+            all_completions_1 = benchmark["completions"] + expt_log_1[i]["completions"]
+            all_completions_2 = (
+                expt_log_2[i]["completions"] + expt_log_21[i]["completions"]
             )
-            + (
-                []
-                if expt_log_21 is None
-                else expt_log_21[i + args.start_index]["completions"]
-            )
-        )
-
-        if len(all_completions) < args.n:
-            all_completions = all_completions + [
-                {"success": False, "invariants": "\nloop invariant \\false;\n"}
-                for _ in range(args.n - len(all_completions))
+            if len(all_completions_1) < args.n:
+                all_completions_1 = all_completions_1 + [
+                    {"success": False, "invariants": "\nloop invariant \\false;\n"}
+                    for _ in range(args.n - len(all_completions_1))
+                ]
+            if len(all_completions_2) < args.n:
+                all_completions_2 = all_completions_2 + [
+                    {"success": False, "invariants": "\nloop invariant \\false;\n"}
+                    for _ in range(args.n - len(all_completions_2))
+                ]
+            random_permutations_1 = [
+                shuffle(all_completions_1) for _ in range(args.shuffle_times)
             ]
+            random_permutations_2 = [
+                shuffle(all_completions_2) for _ in range(args.shuffle_times)
+            ]
+        else:
+            all_completions = (
+                benchmark["completions"]
+                + expt_log_2[i]["completions"]
+                + ([] if expt_log_1 is None else expt_log_1[i]["completions"])
+                + ([] if expt_log_21 is None else expt_log_21[i]["completions"])
+            )
 
-        random_permutations = [
-            shuffle(all_completions) for _ in range(args.shuffle_times)
-        ]
+            if len(all_completions) < args.n:
+                all_completions = all_completions + [
+                    {"success": False, "invariants": "\nloop invariant \\false;\n"}
+                    for _ in range(args.n - len(all_completions))
+                ]
+
+            random_permutations = [
+                shuffle(all_completions) for _ in range(args.shuffle_times)
+            ]
 
         pass_at_k = 0.0
         for k in range(args.start_k, args.end_k + 1):
-            candidates = [rp[:k] for rp in random_permutations]
+            candidates = []
+            if expt_log_1 is None or expt_log_21 is None:
+                candidates = [rp[:k] for rp in random_permutations]
+            else:
+                candidates = []
+                for i in range(args.shuffle_times):
+                    candidates.append(
+                        random_permutations_1[i][ : math.ceil(k/2)] + random_permutations_2[i][ : math.floor(k/2)]
+                    )
 
             candidates_success_map = [
                 [c["success"] for c in candidate] for candidate in candidates

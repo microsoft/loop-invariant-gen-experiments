@@ -1,52 +1,105 @@
-from transformers.pipelines import ConversationalPipeline, Conversation
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# This software may be used and distributed according to the terms of the Llama 2 Community License Agreement.
 
-def predict(data, task, model, tokenizer, config, **kwargs):
-    import torch
-    import pandas as pd
+import argparse
+import json
+import os
+import sys
+import time
+from copy import deepcopy as copy
 
-    TEMPERATURE_KEY = "temperature"
-    MAX_GEN_LEN_KEY = "max_gen_len"
-    DO_SAMPLE_KEY = "do_sample"
-    MAX_NEW_TOKENS_KEY = "max_new_tokens"
-    MAX_LENGTH_KEY = "max_length"
-    TOP_P_KEY = "top_p"
-    B_SYS, E_SYS = "<<SYS>>\n", "\n<</SYS>>\n\n"
-    
-    if isinstance(data, pd.DataFrame):
-        data = data[data.columns[0]].tolist()
+from llama import Llama
+from llm_utils import Logger
 
-    addn_args = kwargs.get("addn_args", {})
-    max_gen_len = addn_args.pop(MAX_GEN_LEN_KEY, 256)
-    addn_args[MAX_NEW_TOKENS_KEY] = addn_args.get(MAX_NEW_TOKENS_KEY, max_gen_len)
-    addn_args[MAX_LENGTH_KEY] = addn_args.get(MAX_LENGTH_KEY, 2048)
-    addn_args[TEMPERATURE_KEY] = addn_args.get(TEMPERATURE_KEY, 0.6)
-    addn_args[TOP_P_KEY] = addn_args.get(TOP_P_KEY, 0.9)
-    addn_args[DO_SAMPLE_KEY] = addn_args.get(DO_SAMPLE_KEY, True)
 
-    model.eval()
-    conv_arr = data
-    # validations
-    assert len(conv_arr) > 0
-    assert conv_arr[-1]["role"] == "user"
-    next_turn = "system" if conv_arr[0]["role"] == "system" else "user"
-    # Build conversation
-    conversation = Conversation()
-    conversation_agent = ConversationalPipeline(model=model, tokenizer=tokenizer)
-    for i, conv in enumerate(conv_arr):
-        if conv["role"] == "system":
-            assert next_turn == "system", "System prompts can only be set at the start of the conversation"
-            next_turn = "user"
-            conversation.add_user_input(B_SYS + conv_arr[0]["content"].strip() + E_SYS)
-            conversation.mark_processed()
-        if conv["role"] == "assistant":
-            assert next_turn == "assistant", "Invalid Turn. Expected user input"
-            next_turn = "user"
-            conversation.append_response(conv["content"].strip())
-        elif conv["role"] == "user":
-            assert next_turn == "user", "Invalid Turn. Expected assistant input"
-            next_turn = "assistant"
-            conversation.add_user_input(conv["content"].strip())
-            if i != len(conv_arr[0:]) - 1:
-                conversation.mark_processed()
-    result = conversation_agent(conversation, use_cache=True, **addn_args)
-    return {'output': result.generated_responses[-1]}
+def parse_args(args):
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--ckpt_dir",
+        type=str,
+        default="../../../models/code-llama-src/CodeLlama-34b-Instruct/",
+    )
+    parser.add_argument(
+        "--tokenizer_path",
+        type=str,
+        default="../../../models/code-llama-src/CodeLlama-34b-Instruct/tokenizer.model",
+    )
+    parser.add_argument("--inputs", type=str, default="input.json")
+
+    parser.add_argument("--temperature", type=float, default=0.7)
+    parser.add_argument("--top_p", type=float, default=0.95)
+    parser.add_argument("--max_seq_len", type=int, default=5000)
+    parser.add_argument("--max_batch_size", type=int, default=5)
+    parser.add_argument("--num_completions", type=int, default=15)
+    parser.add_argument("--max_gen_len", type=int, default=1000)
+
+    return parser.parse_args(args)
+
+
+def main(args):
+    benchmarks = []
+    output_log = []
+
+    if not os.path.exists(args.inputs):
+        raise ValueError(f"Inputs file {args.inputs} does not exist.")
+
+    with open(args.inputs, "r", encoding="utf-8") as f:
+        benchmarks = json.load(f)
+
+    generator = Llama.build(
+        ckpt_dir=args.ckpt_dir,
+        tokenizer_path=args.tokenizer_path,
+        max_seq_len=args.max_seq_len,
+        max_batch_size=args.max_batch_size,
+    )
+
+    output_log_dir = "../logs/" + args.inputs.replace(".json", "") + "_logs"
+    if not os.path.exists(output_log_dir):
+        os.makedirs(output_log_dir)
+
+    start_time = time.time()
+
+    for i, input in enumerate(benchmarks):
+        Logger.log_info(
+            f"Generating completions for benchmark {i + 1}/{len(benchmarks)}"
+        )
+        benchmark_log = copy(input)
+        benchmark_completions = []
+
+        batch = [input for _ in range(args.num_completions)]
+
+        for j in range(0, args.num_completions, args.max_batch_size):
+            Logger.log_info(
+                f"Generating batch {j + 1}/{args.num_completions // args.max_batch_size}"
+            )
+            batch_results = generator.chat_completion(
+                batch[j : j + args.max_batch_size],
+                max_gen_len=args.max_gen_len,
+                temperature=args.temperature,
+                top_p=args.top_p,
+            )
+            benchmark_completions.extend(batch_results)
+
+        benchmark_log.append(benchmark_completions)
+        benchmark_log_file = args.inputs.replace(".json", "") + f"_benchmark_{i}.json"
+        with open(
+            os.path.join(output_log_dir, benchmark_log_file), "w", encoding="utf-8"
+        ) as f:
+            json.dump(benchmark_log, f, indent=4, ensure_ascii=False)
+
+        output_log.append(benchmark_log)
+
+    end_time = time.time()
+
+    output_log_file = args.inputs.replace(".json", "") + "_results.json"
+    with open(
+        os.path.join(output_log_dir, output_log_file), "w", encoding="utf-8"
+    ) as f:
+        json.dump(output_log, f, indent=4, ensure_ascii=False)
+
+    print(f"Time taken: {end_time - start_time}")
+
+
+if __name__ == "__main__":
+    args = parse_args(sys.argv[1:])
+    main(args)

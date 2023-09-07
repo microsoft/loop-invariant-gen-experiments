@@ -9,9 +9,9 @@ import yaml
 
 from benchmark import Benchmark
 from checker import Checker
-from loopy_llm import LLM, PromptConfig
 from llm_utils import Logger
-from process_results import run_parallel, prune_wrapper, shuffle
+from loopy_llm import LLM, PromptConfig
+from process_results import prune_wrapper, run_parallel, shuffle
 
 
 def combine_and_prune_with_k(
@@ -891,3 +891,28 @@ class LoopyPipeline:
             )
         )
         log_file.close()
+
+    def run_local(self, max_benchmarks=1, start_index=0):
+        if self.llm is None:
+            raise Exception(
+                "LLM not initialized. Call load_config first, to load input and prompt files."
+            )
+
+        log_json = []
+        stats = {"success": [], "failure": [], "skipped": [], "total": 0}
+
+        # create logs dir
+        if not os.path.exists(os.path.dirname(self.log_path)):
+            os.makedirs(os.path.dirname(self.log_path))
+        log_file = open(self.log_path + "final.json", "w", encoding="utf-8")
+
+        sliced_benchmarks = self.benchmark.input_file_paths[
+            start_index : start_index + max_benchmarks
+        ]
+
+        sliced_benchmarks = [
+            {"code": self.benchmark.get_code(instance)}
+            for instance in sliced_benchmarks
+        ]
+
+        self.llm.run_local(sliced_benchmarks)

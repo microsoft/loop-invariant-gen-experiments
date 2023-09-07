@@ -1,9 +1,13 @@
+from datetime import datetime
+import json
 import os
 import re
 from copy import deepcopy
 
 from jinja2 import Environment, FileSystemLoader
-from llm_client import LLMClient
+
+from llm_api_client import LLMAPIClient
+from local_llm import LLMLocalClient
 from llm_utils import Settings
 from utils import ConvTree, Node
 
@@ -87,7 +91,7 @@ class LLM:
                 "ERROR: Output does not contain at least 1 code block\nOutput:\n"
             ) + output
         annotation = ""
-        line_nos = (line_nos if len(line_nos) % 2 == 0 else line_nos[:-1])
+        line_nos = line_nos if len(line_nos) % 2 == 0 else line_nos[:-1]
         for i in range(0, len(line_nos), 2):
             snippet = "\n".join(lines[line_nos[i] + 1 : line_nos[i + 1]])
             loop_invariants = re.findall(r"loop invariant (.*);", snippet)
@@ -135,7 +139,7 @@ class LLM:
                     user_node_.add_child(assistant_node_)
                     node.add_child(user_node_)
             else:
-                llm_client = LLMClient(
+                llm_client = LLMAPIClient(
                     Settings(
                         model=self.model,
                         temperature=prompt_config.temperature,
@@ -184,3 +188,27 @@ class LLM:
         return self.run__(
             input, self.healing_prompt_configs, input_tree, output_full_tree
         )
+
+    def run_local(self, inputs):
+        dataset_dump = []
+        for input in inputs:
+            system_message = {
+                "role": "system",
+                "content": "" if self.system_message is None else self.system_message,
+            }
+            user_message = {
+                "role": "user",
+                "content": self.prompt_configs[0].render(input),
+            }
+            dataset_dump.append([system_message, user_message])
+
+        dataset_path = datetime.now().strftime(
+            f"local_llm_dataset_%Y_%m_%d_%H_%M_%S.json"
+        )
+        with open(dataset_path, "w", encoding="utf-8") as f:
+            json.dump(dataset_dump, f, indent=4, ensure_ascii=False)
+
+        print("Dataset dumped to {}".format(dataset_path))
+        
+        llm_client = LLMLocalClient(Settings())
+        llm_client.chat_batch(dataset_path)
