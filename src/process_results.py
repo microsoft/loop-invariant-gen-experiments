@@ -83,7 +83,7 @@ def parse_args(args):
     arg_parser.add_argument("--start-k", type=int, required=False, default=1)
     arg_parser.add_argument("--end-k", type=int, required=False, default=1)
     arg_parser.add_argument("--start-index", type=int, required=False, default=0)
-    arg_parser.add_argument("--end-index", type=int, required=False, default=-2)
+    arg_parser.add_argument("--max-benchmarks", type=int, required=False, default=-1)
     arg_parser.add_argument("--input-log", type=str, required=True)
     arg_parser.add_argument("--input-log1", type=str, required=False)
     arg_parser.add_argument("--input-log-2", type=str, required=True)
@@ -130,20 +130,22 @@ def main(args):
     if not os.path.exists(output_log_dir):
         os.makedirs(output_log_dir)
 
-    args.end_index = None if args.end_index == -2 else args.end_index
+    args.max_benchmarks = (
+        len(expt_log["logs"]) if args.max_benchmarks == -1 else args.max_benchmarks
+    )
 
     final_output_json = []
     expt_log = expt_log["logs"]
-    expt_log = expt_log[args.start_index : args.end_index]
+    expt_log = expt_log[args.start_index : args.start_index + args.max_benchmarks]
     expt_log_2 = expt_log_2["logs"]
-    expt_log_2 = expt_log_2[args.start_index : args.end_index]
+    expt_log_2 = expt_log_2[args.start_index : args.start_index + args.max_benchmarks]
 
     if args.input_log1 is not None:
         expt_log_1 = expt_log_1["logs"]
-        expt_log_1 = expt_log_1[args.start_index : args.end_index]
+        expt_log_1 = expt_log_1[args.start_index : args.start_index + args.max_benchmarks]
     if args.input_log_21 is not None:
         expt_log_21 = expt_log_21["logs"]
-        expt_log_21 = expt_log_21[args.start_index : args.end_index]
+        expt_log_21 = expt_log_21[args.start_index : args.start_index + args.max_benchmarks]
 
     final_log = {
         "logs": [],
