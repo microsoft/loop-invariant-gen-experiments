@@ -118,7 +118,14 @@ class LoopyPipeline:
 
             for prompt_config in config["prompts"]:
                 prompt_configs.append(
-                    PromptConfig(dir=prompt_template_dir).from_file(prompt_config)
+                    PromptConfig(
+                        dir=prompt_template_dir,
+                        set_output=(
+                            None
+                            if not "set_output" in prompt_config
+                            else prompt_config["set_output"]
+                        ),
+                    ).from_file(prompt_config)
                 )
 
         healing_prompt_configs = []
