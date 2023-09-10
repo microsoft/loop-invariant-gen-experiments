@@ -122,7 +122,7 @@ class Provider:
 class AzureOpenAI(Provider):
     def __init__(self, api_key):
         super().__init__(
-            "azure-openai", api_key, "https://gcrgpt4aoai6c.openai.azure.com/"
+            "azure-openai", api_key, "https://msri-openai-ifaq.azure-api.net/"
         )
 
         self.api_type = "azure"
