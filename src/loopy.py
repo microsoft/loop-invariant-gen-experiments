@@ -931,13 +931,13 @@ class LoopyPipeline:
                 if not ("input" in outputs[0] and "output" in outputs[0]):
                     for i, output in enumerate(outputs):
                         outputs[i] = {
-                            "file": sliced_benchmarks[i],
+                            "file": sliced_benchmarks[i][0],
                             "input": output[:2],
-                            "output": output[2:],
+                            "output": output[2:][0],
                         }
 
         for i, instance in enumerate(sliced_benchmarks):
-            assert instance == outputs[i]["file"]
+            assert instance[0] == outputs[i]["file"]
             print(f"Checking benchmark: {start_index + i + 1}/{len(sliced_benchmarks)}")
 
             llm_outputs = [
@@ -946,7 +946,7 @@ class LoopyPipeline:
 
             instance_log_json = {
                 "file": instance,
-                "benchmark_code": self.benchmark.get_code(instance),
+                "benchmark_code": self.benchmark.get_code(instance[0]),
                 "llm_conversation": outputs[i]["input"] + outputs[i]["output"],
                 "invariants": llm_outputs,
             }
@@ -970,7 +970,7 @@ class LoopyPipeline:
                         continue
 
                     checker_input = self.benchmark.combine_llm_outputs(
-                        self.benchmark.get_code(instance),
+                        self.benchmark.get_code(instance[0]),
                         [llm_output if not llm_output.startswith("ERROR") else ""],
                         self.features,
                     )
@@ -1017,7 +1017,7 @@ class LoopyPipeline:
 
                 print(f"Checking combined completion")
                 checker_input = self.benchmark.combine_llm_outputs(
-                    self.benchmark.get_code(instance),
+                    self.benchmark.get_code(instance[0]),
                     [
                         llm_output
                         for llm_output in llm_outputs
@@ -1083,7 +1083,7 @@ class LoopyPipeline:
                 with open(
                     os.path.join(
                         self.log_path,
-                        instance.replace(".c", ".json")
+                        instance[0].replace(".c", ".json")
                         .replace("../", "")
                         .replace("/", "__"),
                     ),
@@ -1108,7 +1108,7 @@ class LoopyPipeline:
                 with open(
                     os.path.join(
                         self.log_path,
-                        instance.replace(".c", ".json")
+                        instance[0].replace(".c", ".json")
                         .replace("../", "")
                         .replace("/", "__"),
                     ),
