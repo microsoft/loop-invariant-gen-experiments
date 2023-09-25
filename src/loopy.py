@@ -927,6 +927,7 @@ class LoopyPipeline:
         else:
             with open(local_llm_output, "r", encoding="utf-8") as f:
                 outputs = json.load(f)
+                outputs = outputs[start_index : start_index + max_benchmarks]
                 if not ("input" in outputs[0] and "output" in outputs[0]):
                     for i, output in enumerate(outputs):
                         outputs[i] = {
