@@ -811,7 +811,7 @@ class FramaCBenchmark(Benchmark):
                 code[: assert_call.start_byte]
                 + re.sub(
                     r"^(__VERIFIER_|s)?assert\s*(?P<arg>\(.*\));(?P<rest>.*)",
-                    r"{;//@ assert\g<arg>;" + "\n" + r"\g<rest>}",
+                    r"{;\n//@ assert\g<arg>;" + "\n" + r"\g<rest>}",
                     assert_call.text.decode("utf-8"),
                 )
                 + code[assert_call.end_byte :]
@@ -1009,7 +1009,7 @@ class FramaCBenchmark(Benchmark):
         for e in errors:
             code = (
                 code[: e.end_byte + 1]  # +1 to account for the colon
-                + "{; //@ assert(\\false);\n}"
+                + "{; \n//@ assert(\\false);\n}"
                 + code[e.end_byte + 1 :]
             )
 
@@ -1135,45 +1135,3 @@ class FramaCBenchmark(Benchmark):
             code = self.add_loop_labels(code)
 
         return code
-
-
-def parse_log(logfile, cfile):
-    with open(logfile, "r", encoding="utf-8") as log_file:
-        selectentry = None
-        error_logs = json.load(log_file)
-        error_logs = error_logs["logs"]
-        for entry in error_logs:
-            if cfile == entry["file"]:
-                selectentry = entry
-                break
-
-        if selectentry is None:
-            print("File report not present in log", file=stderr)
-            sys.exit(-1)
-        else:
-            if (
-                selectentry["checker_output"]
-                or selectentry["checker_output_after_prune"]
-                or selectentry["checker_output_after_nudge"]
-                or selectentry["checker_output_after_nudge_and_prune"]
-            ):
-                print("File was already proved correct in log", file=stderr)
-                sys.exit(-1)
-
-        failed_checker_input = selectentry["checker_input_with_invariants"]
-        checker_error_message = selectentry["checker_message"]
-        checker_error_final = selectentry["checker_message_after_nudge_and_prune"]
-
-        invs = ""
-        for e in checker_error_final.split("\n"):
-            if not "Post-condition" in e:
-                invs += "\n" + e
-        if invs == "":
-            analysis = "the invariants were not inductive"
-        else:
-            analysis = (
-                "the following subset of the invariants are inductive but they are not strong enough to prove the postcondition."
-                + invs
-            )
-
-        return failed_checker_input, checker_error_message, analysis

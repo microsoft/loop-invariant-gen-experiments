@@ -198,9 +198,9 @@ class LLM:
             }
             user_message = {
                 "role": "user",
-                "content": self.prompt_configs[0].render(input),
+                "content": self.prompt_configs[0].render(input[1]),
             }
-            dataset_dump.append([system_message, user_message])
+            dataset_dump.append({"file": input[0], "input": [system_message, user_message]})
 
         dataset_path = datetime.now().strftime(
             f"local_llm_dataset_%Y_%m_%d_%H_%M_%S.json"
@@ -211,4 +211,9 @@ class LLM:
         print("Dataset dumped to {}".format(dataset_path))
         
         llm_client = LLMLocalClient(Settings())
-        llm_client.chat_batch(dataset_path)
+        output_file = llm_client.chat_batch(dataset_path)
+        print("Reading output dumped to {}".format(output_file))
+        output = None
+        with open(output_file, "r", encoding="utf-8") as f:
+            output = json.load(f)
+        return output

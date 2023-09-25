@@ -59,18 +59,21 @@ def main(args):
 
     start_time = time.time()
 
+    local_rank = int(os.environ.get("LOCAL_RANK", 0))
+
     for i, input in enumerate(benchmarks):
         Logger.log_info(
             f"Generating completions for benchmark {i + 1}/{len(benchmarks)}"
         )
         benchmark_log = copy(input)
+        benchmark_log["output"] = []
         benchmark_completions = []
 
-        batch = [input for _ in range(args.num_completions)]
+        batch = [input["input"] for _ in range(args.num_completions)]
 
         for j in range(0, args.num_completions, args.max_batch_size):
             Logger.log_info(
-                f"Generating batch {j + 1}/{args.num_completions // args.max_batch_size}"
+                f"Generating batch {(j // args.max_batch_size) + 1}/{args.num_completions // args.max_batch_size}"
             )
             batch_results = generator.chat_completion(
                 batch[j : j + args.max_batch_size],
@@ -80,8 +83,11 @@ def main(args):
             )
             benchmark_completions.extend(batch_results)
 
-        benchmark_log.append(benchmark_completions)
-        benchmark_log_file = args.inputs.replace(".json", "") + f"_benchmark_{i}.json"
+        benchmark_log["output"].append(benchmark_completions)
+        benchmark_log_file = os.path.join(
+            output_log_dir,
+            input[0].replace(".c", ".json").replace("../", "").replace("/", "__"),
+        )
         with open(
             os.path.join(output_log_dir, benchmark_log_file), "w", encoding="utf-8"
         ) as f:
@@ -91,13 +97,19 @@ def main(args):
 
     end_time = time.time()
 
-    output_log_file = args.inputs.replace(".json", "") + "_results.json"
+    output_log_file = os.path.join(
+        output_log_dir,
+        "final.json",
+    )
     with open(
         os.path.join(output_log_dir, output_log_file), "w", encoding="utf-8"
     ) as f:
         json.dump(output_log, f, indent=4, ensure_ascii=False)
 
     print(f"Time taken: {end_time - start_time}")
+    print(f"Output written to {output_log_file}.")
+
+    return
 
 
 if __name__ == "__main__":

@@ -37,7 +37,7 @@ expression_grammar = r"""
 
     unary_op : "+" | "-" | "!" | "&"
 
-    bin_op : "+" | "-" | "*" | "/" | "%" | "^^" | "<<" | ">>" | "&" | "|" | "-->" | "<-->" | "^" | "==" | "!=" | "<" | ">" | "<=" | ">="
+    !bin_op : "+" | "-" | "*" | "/" | "%" | "^^" | "<<" | ">>" | "&" | "|" | "-->" | "<-->" | "^" | "==" | "!=" | "<" | ">" | "<=" | ">="
         | "&&" | "||" | "^^" | "==>" | "<==>"
 
     COMMA : ","
@@ -66,6 +66,7 @@ expression_grammar = r"""
     %ignore WS
 """
 
+
 class ExpTransformer(Transformer):
     def __init__(self):
         self.variables = {}
@@ -77,48 +78,73 @@ class ExpTransformer(Transformer):
         self.num_forall = 0
         self.num_valid = 0
         self.num_at = 0
+        self.num_conjunctions = 0
+        self.num_disjunctions = 0
+        self.num_implications = 0
+        self.bi_implications = 0
 
     def expression(self, args):
+        if len(args) == 3:
+            if args[1] == "&&":
+                self.num_conjunctions += 1
+            elif args[1] == "||":
+                self.num_disjunctions += 1
+            elif args[1] == "==>":
+                self.num_implications += 1
+            elif args[1] == "<==>":
+                self.bi_implications += 1
+
         if len(args) == 5 and args[1] == "?":
             self.num_ternary_ops += 1
         elif len(args) == 5 and args[1] in ["<", ">", "<=", ">="]:
             self.ordering_exps += 1
         elif len(args) == 2:
             self.num_unary_ops += 1
-        elif len(args) >= 3 and len(args) % 2 == 1 and args[0] != "(" and args[2] != ")":
+        elif (
+            len(args) >= 3 and len(args) % 2 == 1 and args[0] != "(" and args[2] != ")"
+        ):
             self.num_binary_ops += 1
         return "expression"
-    
+
     def bin_op(self, args):
+        if args[0] == "&&":
+            self.num_conjunctions += 1
+        elif args[0] == "||":
+            self.num_disjunctions += 1
+        elif args[0] == "==>":
+            self.num_implications += 1
+        elif args[0] == "<==>":
+            self.bi_implications += 1
+
         string = " ".join(args)
         return "bin_op"
-    
+
     def unary_op(self, args):
         string = " ".join(args)
         return "unary_op"
-    
+
     def FORALL(self, args):
         self.num_forall += 1
         return "Forall "
-    
+
     def VALID(self, args):
         self.num_valid += 1
         return "Valid "
-    
+
     def AT(self, args):
         self.num_at += 1
-        return "At "     
+        return "At "
 
     def VARIABLE(self, args):
         string = str(args)
         self.variables[string] = True
         return string
-    
+
     def NUMBER(self, args):
         string = str(args)
         self.constants[string] = True
         return args
-    
+
     def add_stats(self, ast):
         self.transform(ast)
 
@@ -132,155 +158,9 @@ class ExpTransformer(Transformer):
             "num_forall": self.num_forall,
             "num_valid": self.num_valid,
             "num_at": self.num_at,
-        }
-        return res_json
-    
-    def __default_token__(self, token):
-        return str(token)
-
-predicate_grammar = r"""
-    term: VAR | NUMBER | unary_op term | term bin_op term | LPAREN term RPAREN | term TERNOP term COLON term | AT LPAREN VAR COMMA location RPAREN
-
-    !location: "Pre" | "Here" | "Old" | "Post" | "LoopEntry" | "LoopCurrent"
-
-    !unary_op : "+" | "-" | "!" 
-
-    !bin_op : "+" | "-" | "*" | "/" | "%" | "^^" | "<<" | ">>" | "&" | "|" | "-->" | "<-->" | "^" | rel_op
-
-    pred: TRUE | FALSE
-        | LPAREN pred RPAREN
-        | term (rel_op term)+
-        | pred LAND pred
-        | pred LOR pred
-        | pred LIMPL pred
-        | pred LBIIMPL pred
-        | LNOT pred
-        | pred LXOR pred
-        | term TERNOP pred COLON pred
-        | pred TERNOP pred COLON pred
-
-    !rel_op : "==" | "!=" | "<" | ">" | "<=" | ">="
-
-    VAR: /[a-zA-Z_][a-zA-Z0-9_]*/
-    NUMBER: /[0-9]+(\.[0-9]+)*/
-    COMMA : ","
-    AT: "\\at"
-
-    TRUE : "\\true"
-    FALSE: "\\false"
-    LPAREN: "("
-    RPAREN: ")"
-    LAND: "&&"
-    LOR: "||"
-    LIMPL: "==>"
-    LBIIMPL: "<==>"
-    LNOT: "!"
-    LXOR: "^^"
-    TERNOP: "?"
-    COLON: ":"
-    SEMICOLON: ";"
-    FORALL: "\\forall"
-    EXISTS: "\\exists"
-
-    %import common.WS
-    %ignore WS
-"""
-
-
-class PredicateTransformer(Transformer):
-    def __init__(self):
-        self.clauses = []
-        self.terms = []
-        self.variables = {}
-        self.constants = {}
-        self.num_unary = 0
-        self.num_binary = 0
-        self.num_ternary = 0
-
-    def pred(self, args):
-        if len(args) == 5 and args[1] == "?":
-            self.num_ternary += 1
-        if len(args) == 2 and args[0] == "!" and args[1] in self.clauses:
-            self.clauses.remove(args[1])
-        if (
-            len(args) == 3
-            and args[0] == "("
-            and args[2] == ")"
-            and args[1] in self.clauses
-        ):
-            self.clauses.remove(args[1])
-
-        string = " ".join(args)
-        if not any([clause in string for clause in self.clauses]):
-            self.clauses.append(string)
-        return string
-
-    def term(self, args):
-        if len(args) == 5 and args[1] == "?":
-            self.num_ternary += 1
-        string = " ".join(args)
-        self.terms.append(string)
-        return string
-
-    def VAR(self, args):
-        string = str(args)
-        self.variables[string] = True
-        return string
-
-    def NUMBER(self, args):
-        string = str(args)
-        self.constants[string] = True
-        return args
-
-    def bin_op(self, args):
-        self.num_binary += 1
-        return args[0]
-
-    def unary_op(self, args):
-        self.num_unary += 1
-        return args[0]
-
-    def rel_op(self, args):
-        return args[0]
-
-    def location(self, args):
-        return args[0]
-
-    def add_stats(self, ast):
-        self.transform(ast)
-
-    def compute_clause_size(self, clause):
-        parser = Lark(predicate_grammar, parser="lalr", start="pred")
-        ast = parser.parse(clause)
-
-        def rec_compute_clause_size(ast):
-            if isinstance(ast, Token):
-                return 1
-            else:
-                return sum([rec_compute_clause_size(child) for child in ast.children])
-
-        return rec_compute_clause_size(ast)
-
-    def get_stats(self):
-        clause_sizes = []
-        biggest_clause = ""
-        biggest_clause_size = 0
-        for clause in self.clauses:
-            clause_size = self.compute_clause_size(clause)
-            if clause_size > biggest_clause_size:
-                biggest_clause = clause
-                biggest_clause_size = clause_size
-            clause_sizes.append(clause_size)
-        res_json = {
-            "num_clauses": len(self.clauses),
-            "biggest_clause": biggest_clause,
-            "biggest_clause_size": biggest_clause_size,
-            "avg_clause_size": sum(clause_sizes) / len(self.clauses),
-            "num_variables": len(self.variables),
-            "num_constants": len(self.constants),
-            "num_unary_ops": self.num_unary,
-            "num_binary_ops": self.num_binary,
-            "num_ternary_ops": self.num_ternary,
+            "num_conjunctions": self.num_conjunctions,
+            "num_disjunctions": self.num_disjunctions,
+            "num_implications": self.num_implications,
         }
         return res_json
 
