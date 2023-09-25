@@ -97,7 +97,7 @@ class LLMAPIClient(LLMClient):
                 Logger.log_error(
                     f"Failed to send LLM prompt (attempt #{attempt}): {repr(e)}"
                 )
-                seconds = re.search(r"retry after (\d+) seconds", str(e))
+                seconds = re.search(r"Try again in (\d+) seconds", str(e))
                 if seconds:
                     time.sleep(int(seconds.group(1)))
                 else:
