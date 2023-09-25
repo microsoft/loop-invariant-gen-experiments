@@ -186,6 +186,13 @@ def parse_args(args):
         action="store_true",
     )
 
+    parser.add_argument(
+        "--local-llm-output",
+        help="Use a previously generated local LLM output",
+        type=str,
+        default="",
+    )
+
     return parser.parse_args(args)
 
 
@@ -228,7 +235,7 @@ def main(args):
         p = p.load_config(args.config_file)
 
     if args.provider == "local":
-        p.run_local(max_benchmarks=args.max_benchmarks, start_index=args.start_index)
+        p.run_local(max_benchmarks=args.max_benchmarks, start_index=args.start_index, local_llm_output=args.local_llm_output)
         return
 
     if args.problem_ids:

@@ -899,7 +899,7 @@ class LoopyPipeline:
         )
         log_file.close()
 
-    def run_local(self, max_benchmarks=1, start_index=0, llm_generations=""):
+    def run_local(self, max_benchmarks=1, start_index=0, local_llm_output=""):
         if self.llm is None:
             raise Exception(
                 "LLM not initialized. Call load_config first, to load input and prompt files."
@@ -922,10 +922,10 @@ class LoopyPipeline:
             for instance in sliced_benchmarks
         ]
 
-        if llm_generations == "":
+        if local_llm_output == "":
             outputs = self.llm.run_local(sliced_benchmarks)
         else:
-            with open(llm_generations, "r", encoding="utf-8") as f:
+            with open(local_llm_output, "r", encoding="utf-8") as f:
                 outputs = json.load(f)
                 if not ("input" in outputs[0] and "output" in outputs[0]):
                     for i, output in enumerate(outputs):
