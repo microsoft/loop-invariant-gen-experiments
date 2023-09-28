@@ -2,6 +2,10 @@ import json
 import os
 import subprocess
 import sys
+
+# add .. to path
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from frama_c import FramaCBenchmark
 from llm_utils import ACTION, BOLD, END, FAIL, INFO, SUCCESS, WARNING
 
