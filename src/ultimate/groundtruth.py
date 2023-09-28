@@ -95,7 +95,7 @@ def get_ground_truth(code):
 
 
 def main(file_name):
-    input_file = file_name
+    input_file = "../" + file_name
     if not os.path.isfile(input_file):
         print("Input file does not exist")
         return -1
