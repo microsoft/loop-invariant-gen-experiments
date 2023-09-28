@@ -62,9 +62,9 @@ class FramaCChecker(Checker):
         with open(temp_kernel_log_file, "r", encoding="utf-8") as f:
             kernel_logs = f.read()
             kl_lines = kernel_logs.splitlines()
-            if len(kl_lines) > 1:
-                print("More than 1 line in Frama-C kernel logs.")
-                print(kernel_logs)
+            # if len(kl_lines) > 1:
+                # print("More than 1 line in Frama-C kernel logs.")
+                # print(kernel_logs)
             error_line = None
             for line in kl_lines:
                 if "[kernel:annot-error]" in line:
@@ -381,6 +381,7 @@ class FramaCChecker(Checker):
                         "Removing (syntax error): ",
                         code_lines[annotation_error_line_no],
                     )
+                print("Removing line " + code_lines[annotation_error_line_no])
                 code_lines[annotation_error_line_no] = ""
                 input_code = "\n".join(code_lines)
                 code_queue.append(input_code)
@@ -392,10 +393,13 @@ class FramaCChecker(Checker):
                     )
                 )
                 if len(non_inductive_invariant_line_nos) > 0:
+                    print("======================================")
                     for line_no in non_inductive_invariant_line_nos:
                         if verbose:
                             print("Removing (non-inductive): ", code_lines[line_no])
+                        print("Removing non-inductive: " + code_lines[line_no])
                         code_lines[line_no] = ""
+                    print("======================================")
                     code_queue.append("\n".join(code_lines))
 
             else:
@@ -1135,3 +1139,50 @@ class FramaCBenchmark(Benchmark):
             code = self.add_loop_labels(code)
 
         return code
+
+code = """
+#define assume(e) if(!(e)) return 0;
+extern int unknown(void);
+extern int unknown_int(void);
+
+#include <assert.h>
+
+int main() {
+  int x = unknown_int();
+  int y = unknown_int();
+  if (!(x<y)) return 0;
+while (x<y) {
+    x=x+100;
+  }
+  {;//@ assert(x >= y && x <= y + 99);
+}
+  return 0;
+}"""
+
+invariants = [
+    
+        "/*@ \n    loop invariant x <= y;\n    loop invariant x >= \\old(x);\n    loop invariant (x - \\old(x)) % 100 == 0;\n*/",
+        "/*@ \n    loop invariant x < y + 100;\n    loop invariant x >= \\at(x, Pre);\n*/",
+        "/*@ \n    loop invariant x < y;\n    loop invariant x >= \\at(x, Pre);\n    loop invariant (x - \\at(x, Pre)) % 100 == 0;\n*/",
+        "/*@ \n    loop invariant x < y;\n    loop invariant x >= \\at(x, Pre);\n    loop invariant x <= y + 99;\n*/",
+        "/*@ \n    loop invariant x < y ==> x_old <= x <= x_old + 99;\n    loop invariant x < y ==> y == y_old;\n*/"
+            
+]
+
+fb = FramaCBenchmark()
+fc = FramaCChecker()
+
+for i in range(15):
+    new_code = fb.combine_llm_outputs(code, invariants, "one_loop_one_method")
+    success, message = fc.prune_annotations_and_check(new_code, "one_loop_one_method", use_json_output=True)
+    print(message)
+    if success:
+        with open("test3.c", "w") as f:
+            f.write(message)
+        print(new_code)
+        print("-----------------------------------------")
+        print(message)
+        print("-----------------------------------------")
+        print(success)
+        break
+    random.shuffle(invariants)

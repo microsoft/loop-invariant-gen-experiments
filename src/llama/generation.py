@@ -77,8 +77,8 @@ class Llama:
         # seed must be the same in all processes
         torch.manual_seed(1)
 
-        # if local_rank > 0:
-        #     sys.stdout = open(os.devnull, "w")
+        if local_rank > 0:
+            sys.stdout = open(os.devnull, "w")
 
         start_time = time.time()
         checkpoints = sorted(Path(ckpt_dir).glob("*.pth"))
