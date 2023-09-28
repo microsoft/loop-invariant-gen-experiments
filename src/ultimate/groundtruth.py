@@ -99,7 +99,7 @@ def get_ground_truth(code):
 
 
 def main(file_name):
-    input_file = "../" + file_name
+    input_file = file_name
     if not os.path.isfile(input_file):
         print("Input file does not exist")
         return -1
@@ -118,7 +118,7 @@ def main(file_name):
         print(
             f"{ACTION}{BOLD}[>]{END} {INFO}{BOLD}Processing benchmark {i+1}/{len(input_files)} | {benchmark} |{END}"
         )
-        new_input_file = benchmark # "../data/" + benchmark[0][3:]
+        new_input_file = "../" + benchmark # "../data/" + benchmark[0][3:]
         if not os.path.isfile(new_input_file):
             print(f"{FAIL}{BOLD}File {new_input_file} does not exist{END}")
             continue
