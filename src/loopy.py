@@ -1083,7 +1083,8 @@ class LoopyPipeline:
                 with open(
                     os.path.join(
                         self.log_path,
-                        instance[0].replace(".c", ".json")
+                        instance[0]
+                        .replace(".c", ".json")
                         .replace("../", "")
                         .replace("/", "__"),
                     ),
@@ -1108,7 +1109,8 @@ class LoopyPipeline:
                 with open(
                     os.path.join(
                         self.log_path,
-                        instance[0].replace(".c", ".json")
+                        instance[0]
+                        .replace(".c", ".json")
                         .replace("../", "")
                         .replace("/", "__"),
                     ),
@@ -1136,6 +1138,159 @@ class LoopyPipeline:
         )
         stats["success_count"] = len(stats["success"])
         stats["failure_count"] = len(stats["failure"])
+        stats["skipped_count"] = len(stats["skipped"])
+
+        log_file.write(
+            json.dumps(
+                {"params": self.arg_params, "logs": log_json, "stats": stats},
+                indent=4,
+                ensure_ascii=False,
+            )
+        )
+        log_file.close()
+
+        return
+
+    def run_classification(self, max_benchmarks=1, start_index=0, ground_truth_file=""):
+        if self.llm is None:
+            raise Exception(
+                "LLM not initialized. Call load_config first, to load input and prompt files."
+            )
+
+        log_json = []
+        stats = {"success": [], "failure": [], "partial": [], "skipped": [], "total": 0}
+
+        # create logs dir
+        if not os.path.exists(os.path.dirname(self.log_path)):
+            os.makedirs(os.path.dirname(self.log_path))
+        log_file = open(self.log_path + "final.json", "w", encoding="utf-8")
+
+        sliced_benchmarks = self.benchmark.input_file_paths[
+            start_index : start_index + max_benchmarks
+        ]
+
+        sliced_benchmarks = [
+            (instance, {"code": self.benchmark.get_code(instance)})
+            for instance in sliced_benchmarks
+        ]
+
+        if ground_truth_file == "":
+            raise Exception("Ground truth file not provided")
+
+        ground_truth = None
+        with open(ground_truth_file, "r", encoding="utf-8") as f:
+            ground_truth = json.load(f)
+            ground_truth = ground_truth[start_index : start_index + max_benchmarks]
+
+        for i, instance in enumerate(sliced_benchmarks):
+            assert instance[0] == ground_truth[i]["file"]
+            print(f"Running benchmark: {start_index + i + 1}/{len(sliced_benchmarks)}")
+
+            instance_log_json = {
+                "file": instance,
+                "benchmark_code": self.benchmark.get_code(instance[0]),
+                "ground_truth": ground_truth[i]["label"],
+            }
+
+            completions = []
+            try:
+                llm_outputs, _ = self.llm.run(
+                    {"code": self.benchmark.get_code(instance)},
+                    output_full_tree=False,
+                    label_only=True,
+                )
+
+                completions = []
+                for j, llm_output in enumerate(llm_outputs):
+                    print(f"Checking completion {j + 1}/{len(llm_outputs)}")
+                    completion = {}
+                    if llm_output is None:
+                        completion["success"] = False
+                        completion["llm_output"] = "None"
+                        completion["error"] = "Output does not contain a label"
+                        continue
+
+                    completion["label"] = llm_output
+                    completion["success"] = llm_output == instance_log_json["label"]
+
+                    completions.append(completion)
+
+                instance_log_json["completions"] = completions
+                instance_log_json["label"] = sum(
+                    [x["label"] == instance_log_json["label"] for x in completions]
+                ) / len(completions)
+
+                if instance_log_json["label"] == 1.0:
+                    stats["success"].append(i)
+                elif instance_log_json["label"] == 0.0:
+                    stats["failure"].append(i)
+                else:
+                    stats["partial"].append(i)
+
+                stats["total"] += 1
+                stats["success_rate"] = (
+                    len(stats["success"]) / stats["total"] if stats["total"] != 0 else 0
+                )
+
+                with open(
+                    os.path.join(
+                        self.log_path,
+                        instance.replace(".c", ".json")
+                        .replace("../", "")
+                        .replace("/", "__"),
+                    ),
+                    "w",
+                    encoding="utf-8",
+                ) as f:
+                    f.write(
+                        json.dumps(
+                            {
+                                "logs": instance_log_json,
+                                "stats": stats,
+                            },
+                            indent=4,
+                            ensure_ascii=False,
+                        )
+                    )
+
+                log_json.append(instance_log_json)
+
+            except (Exception, KeyboardInterrupt) as e:
+                print(traceback.format_exc())
+                instance_log_json["error"] = str(e)
+                stats["skipped"].append(i)
+                with open(
+                    os.path.join(
+                        self.log_path,
+                        instance.replace(".c", ".json")
+                        .replace("../", "")
+                        .replace("/", "__"),
+                    ),
+                    "w",
+                    encoding="utf-8",
+                ) as f:
+                    f.write(
+                        json.dumps(
+                            {
+                                "logs": instance_log_json,
+                                "stats": stats,
+                            },
+                            indent=4,
+                            ensure_ascii=False,
+                        )
+                    )
+                log_json.append(instance_log_json)
+                if isinstance(e, KeyboardInterrupt):
+                    break
+                else:
+                    continue
+
+        stats["success_rate"] = (
+            len(stats["success"]) / stats["total"] if stats["total"] != 0 else 0
+        )
+        stats["success_count"] = len(stats["success"])
+        stats["failure_count"] = len(stats["failure"])
+        stats["partial_count"] = len(stats["partial"])
         stats["skipped_count"] = len(stats["skipped"])
 
         log_file.write(

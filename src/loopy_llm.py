@@ -104,8 +104,16 @@ class LLM:
             if len(annotation) > 0
             else "\n".join(lines[line_nos[0] + 1 : line_nos[1]])
         )
+    
+    def extract_label(self, output):
+        label_start = output.find("<label>")
+        label_end = output.find("</label>")
+        if label_start == -1 or label_end == -1:
+            return None
 
-    def run__(self, input, configs, input_tree=None, output_full_tree=False):
+        return output[label_start + len("<label>") : label_end].strip().lower()
+
+    def run__(self, input, configs, input_tree=None, output_full_tree=False, label_only=False):
         responses = None
         if input_tree is not None:
             conversation = input_tree
@@ -169,12 +177,15 @@ class LLM:
         else:
             return_logs = conversation.get_full_tree()
         for response in latest:
-            return_code.append(self.extract_code(response.data["content"]))
+            if label_only:
+                return_code.append(self.extract_label(response.data["content"]))
+            else:
+                return_code.append(self.extract_code(response.data["content"]))
 
         return return_code, return_logs
 
-    def run(self, input, input_tree=None, output_full_tree=False):
-        return self.run__(input, self.prompt_configs, input_tree, output_full_tree)
+    def run(self, input, input_tree=None, output_full_tree=False, label_only=False):
+        return self.run__(input, self.prompt_configs, input_tree, output_full_tree, label_only=label_only)
 
     def nudge(self, input_tree=None, output_full_tree=False):
         return self.run__(
