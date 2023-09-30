@@ -193,6 +193,18 @@ def parse_args(args):
         default="",
     )
 
+    parser.add_argument(
+        "--classify",
+        help="Classify the benchmarks",
+        action="store_true",
+    )
+    parser.add_argument(
+        "--ground-truth-file",
+        help="File containing ground truth labels for the benchmarks",
+        type=str,
+        default="",
+    )
+
     return parser.parse_args(args)
 
 
@@ -236,6 +248,14 @@ def main(args):
 
     if args.provider == "local":
         p.run_local(max_benchmarks=args.max_benchmarks, start_index=args.start_index, local_llm_output=args.local_llm_output)
+        return
+    
+    if args.classify:
+        p.run_classification(
+            max_benchmarks=args.max_benchmarks,
+            start_index=args.start_index,
+            ground_truth_file=args.ground_truth_file,
+        )
         return
 
     if args.problem_ids:
