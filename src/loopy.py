@@ -1184,7 +1184,7 @@ class LoopyPipeline:
 
         for i, instance in enumerate(sliced_benchmarks):
             assert instance[0] == ground_truth[i]["file"]
-            print(f"Running benchmark: {start_index + i + 1}/{len(sliced_benchmarks)}")
+            print(f"Classifying benchmark: {start_index + i + 1}/{len(sliced_benchmarks)}")
 
             instance_log_json = {
                 "file": instance,
@@ -1195,7 +1195,7 @@ class LoopyPipeline:
             completions = []
             try:
                 llm_outputs, _ = self.llm.run(
-                    {"code": self.benchmark.get_code(instance)},
+                    instance[1],
                     output_full_tree=False,
                     label_only=True,
                 )
@@ -1244,7 +1244,7 @@ class LoopyPipeline:
                 with open(
                     os.path.join(
                         self.log_path,
-                        instance.replace(".c", ".json")
+                        instance[0].replace(".c", ".json")
                         .replace("../", "")
                         .replace("/", "__"),
                     ),
@@ -1271,7 +1271,7 @@ class LoopyPipeline:
                 with open(
                     os.path.join(
                         self.log_path,
-                        instance.replace(".c", ".json")
+                        instance[0].replace(".c", ".json")
                         .replace("../", "")
                         .replace("/", "__"),
                     ),
