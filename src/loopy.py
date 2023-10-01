@@ -1226,18 +1226,23 @@ class LoopyPipeline:
                     completions.append(completion)
 
                 instance_log_json["completions"] = completions
-                instance_log_json["label"] = sum(
+                instance_log_json["success"] = sum(
                     [x["success"] for x in completions]
                 ) / len(completions)
+                instance_log_json["label"] = instance_log_json["success"]
+
+                if instance_log_json['ground_truth'] == False:
+                    instance_log_json['label'] = 1 - instance_log_json['label']
+
                 instance_log_json["llm_conversation"] = llm_conversation
 
                 Logger.log_info(
                     f"Ground truth label: {1 if instance_log_json['ground_truth'] else 0}, Predicted label: {instance_log_json['label']}"
                 )
 
-                if instance_log_json["label"] == 1.0:
+                if instance_log_json["success"] == 1.0:
                     stats["success"].append(i)
-                elif instance_log_json["label"] == 0.0:
+                elif instance_log_json["success"] == 0.0:
                     stats["failure"].append(i)
                 else:
                     stats["partial"].append(i)
