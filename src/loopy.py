@@ -1189,7 +1189,7 @@ class LoopyPipeline:
             )
 
             instance_log_json = {
-                "file": instance,
+                "file": instance[0],
                 "benchmark_code": self.benchmark.get_code(instance[0]),
                 "ground_truth": ground_truth[i]["label"],
             }
@@ -1209,6 +1209,9 @@ class LoopyPipeline:
                         completion["success"] = False
                         completion["llm_output"] = "None"
                         completion["error"] = "Output does not contain a label"
+                        Logger.log_error(f"Completion {j + 1} does not have a label")
+                        completions.append(completion)
+                        
                         continue
 
                     completion["label"] = llm_output
