@@ -14,7 +14,7 @@ class Settings:
         presence_penalty: float = 0.0,
         stop: str = None,
         num_completions: int = 1,
-        max_retries: int = 5,
+        max_retries: int = 10,
         prompts_per_minute: int = 2,
         verbose: bool = False,
         debug: bool = False,
