@@ -1196,7 +1196,7 @@ class LoopyPipeline:
 
             completions = []
             try:
-                llm_outputs, _ = self.llm.run(
+                llm_outputs, llm_conversation = self.llm.run(
                     instance[1],
                     output_full_tree=False,
                     label_only=True,
@@ -1211,7 +1211,7 @@ class LoopyPipeline:
                         completion["error"] = "Output does not contain a label"
                         Logger.log_error(f"Completion {j + 1} does not have a label")
                         completions.append(completion)
-                        
+
                         continue
 
                     completion["label"] = llm_output
@@ -1229,6 +1229,7 @@ class LoopyPipeline:
                 instance_log_json["label"] = sum(
                     [x["success"] for x in completions]
                 ) / len(completions)
+                instance_log_json["llm_conversation"] = llm_conversation
 
                 Logger.log_info(
                     f"Ground truth label: {1 if instance_log_json['ground_truth'] else 0}, Predicted label: {instance_log_json['label']}"
