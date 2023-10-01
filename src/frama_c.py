@@ -393,13 +393,10 @@ class FramaCChecker(Checker):
                     )
                 )
                 if len(non_inductive_invariant_line_nos) > 0:
-                    print("======================================")
                     for line_no in non_inductive_invariant_line_nos:
                         if verbose:
                             print("Removing (non-inductive): ", code_lines[line_no])
-                        print("Removing non-inductive: " + code_lines[line_no])
                         code_lines[line_no] = ""
-                    print("======================================")
                     code_queue.append("\n".join(code_lines))
 
             else:
