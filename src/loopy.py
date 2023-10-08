@@ -685,7 +685,7 @@ class LoopyPipeline:
             )
         )
         log_file.close()
-
+    
         return
 
     def recheck_logs(
@@ -1231,8 +1231,8 @@ class LoopyPipeline:
                 ) / len(completions)
                 instance_log_json["label"] = instance_log_json["success"]
 
-                if instance_log_json['ground_truth'] == False:
-                    instance_log_json['label'] = 1 - instance_log_json['label']
+                if instance_log_json["ground_truth"] == False:
+                    instance_log_json["label"] = 1 - instance_log_json["label"]
 
                 instance_log_json["llm_conversation"] = llm_conversation
 
