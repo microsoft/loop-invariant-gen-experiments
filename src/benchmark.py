@@ -3,8 +3,7 @@ import os
 
 
 class Benchmark:
-    def __init__(self, llm_input_dir="", llm_input_file="", features=None):
-        self.llm_input_path = llm_input_dir
+    def __init__(self, llm_input_file="", features=None):
         self.llm_input_file = llm_input_file
         self.features = features
         self.input_file_paths = []
@@ -13,55 +12,31 @@ class Benchmark:
         raise NotImplementedError
 
     def check_input(self):
-        if self.llm_input_file != "":
-            with open(self.llm_input_file) as f:
-                files = f.read().splitlines()
-                for file in files:
-                    if not os.path.exists(file):
-                        raise InvalidBenchmarkException(f"File {file} not found")
-                    try:
-                        code = None
-                        with open(file) as f:
-                            code = f.read()
-                        self.preprocess(code, self.features)
-                        self.input_file_paths.append(file)
-                    except InvalidBenchmarkException as e:
-                        print(f"Error: {e.message}. File: {file}.")
+        if not os.path.exists(self.llm_input_file):
+            raise InvalidBenchmarkException(
+                f"Input file {self.llm_input_file} not found"
+            )
 
-            with open(
-                datetime.now().strftime("benchmark_input_%Y_%m_%d_%H_%M_%S") + ".txt",
-                "w",
-            ) as f:
-                f.write("\n".join(self.input_file_paths))
-            return
+        with open(self.llm_input_file) as f:
+            files = f.read().splitlines()
+            for file in files:
+                if not os.path.exists(file):
+                    raise InvalidBenchmarkException(f"Benchmark file {file} not found")
+                try:
+                    code = None
+                    with open(file) as f:
+                        code = f.read()
+                    self.preprocess(code, self.features)
+                    self.input_file_paths.append(file)
+                except InvalidBenchmarkException as e:
+                    print(f"Error: {e.message}. File: {file}.")
 
-        elif os.path.exists(self.llm_input_path):
-            raise Exception("LLM input directory path not found")
-
-        if not os.path.exists(
-            os.path.join(os.path.dirname(__file__), self.llm_input_path)
-        ):
-            raise Exception("LLM input directory path not found")
-
-        llm_input_files = os.listdir(
-            os.path.join(os.path.dirname(__file__), self.llm_input_path)
-        )
-
-        for file in llm_input_files:
-            if not os.path.exists(os.path.join(self.llm_input_path, file)):
-                raise InvalidBenchmarkException(f"File {file} not found")
-            try:
-                code = None
-                with open(os.path.join(self.llm_input_path, file)) as f:
-                    code = f.read()
-                self.preprocess(
-                    code,
-                    self.features,
-                )
-                self.input_file_paths.append(os.path.join(self.llm_input_path, file))
-            except InvalidBenchmarkException as e:
-                print(f"Error: {e.message}. File: {file}. ")
-            self.input_file_paths.append(os.path.join(self.llm_input_path, file))
+        with open(
+            datetime.now().strftime("benchmark_input_%Y_%m_%d_%H_%M_%S") + ".txt",
+            "w",
+        ) as f:
+            f.write("\n".join(self.input_file_paths))
+        return
 
     def get_code(self, file_path):
         code = None

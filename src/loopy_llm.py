@@ -66,12 +66,10 @@ class LLM:
         healing_prompt_configs=None,
         model="gpt-3.5-turbo",
         debug=False,
-        nudge_prompt_config=None,
     ):
         self.system_message = system_message
         self.prompt_configs = prompt_configs
         self.healing_prompt_configs = healing_prompt_configs
-        self.nudge_prompt_config = nudge_prompt_config
         self.model = model
         self.debug = debug
 
@@ -104,7 +102,7 @@ class LLM:
             if len(annotation) > 0
             else "\n".join(lines[line_nos[0] + 1 : line_nos[1]])
         )
-    
+
     def extract_label(self, output):
         label_start = output.find("<label>")
         label_end = output.find("</label>")
@@ -113,7 +111,9 @@ class LLM:
 
         return output[label_start + len("<label>") : label_end].strip().lower()
 
-    def run__(self, input, configs, input_tree=None, output_full_tree=False, label_only=False):
+    def run__(
+        self, input, configs, input_tree=None, output_full_tree=False, label_only=False
+    ):
         responses = None
         if input_tree is not None:
             conversation = input_tree
@@ -185,9 +185,16 @@ class LLM:
         return return_code, return_logs
 
     def run(self, input, input_tree=None, output_full_tree=False, label_only=False):
-        return self.run__(input, self.prompt_configs, input_tree, output_full_tree, label_only=label_only)
+        return self.run__(
+            input,
+            self.prompt_configs,
+            input_tree,
+            output_full_tree,
+            label_only=label_only,
+        )
 
     def nudge(self, input_tree=None, output_full_tree=False):
+        raise Exception("Not implemented")
         return self.run__(
             input={},
             configs=[self.nudge_prompt_config],
@@ -211,7 +218,9 @@ class LLM:
                 "role": "user",
                 "content": self.prompt_configs[0].render(input[1]),
             }
-            dataset_dump.append({"file": input[0], "input": [system_message, user_message]})
+            dataset_dump.append(
+                {"file": input[0], "input": [system_message, user_message]}
+            )
 
         dataset_path = datetime.now().strftime(
             f"local_llm_dataset_%Y_%m_%d_%H_%M_%S.json"
@@ -220,7 +229,7 @@ class LLM:
             json.dump(dataset_dump, f, indent=4, ensure_ascii=False)
 
         print("Dataset dumped to {}".format(dataset_path))
-        
+
         llm_client = LLMLocalClient(Settings())
         output_file = llm_client.chat_batch(dataset_path)
         print("Reading output dumped to {}".format(output_file))

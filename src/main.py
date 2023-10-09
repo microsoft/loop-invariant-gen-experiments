@@ -9,7 +9,7 @@ from loopy import Benchmark, Checker, LoopyPipeline
 def parse_args(args):
     parser = argparse.ArgumentParser()
 
-    # Config file to use. Either provide this or everything as command line arguments
+    # Config file to use. Either provide this, or everything as command line arguments
     parser.add_argument(
         "--config-file",
         help="Config file to use. Specify all params in this file (or as command line args).",
@@ -22,7 +22,7 @@ def parse_args(args):
         "--checker",
         help="Checker to use [Required]",
         choices=["boogie", "frama-c"],
-        required=True,
+        default="frama-c",
         type=str,
     )
 
@@ -50,12 +50,6 @@ def parse_args(args):
     # Input can be specified as a directory or a file
     input_group = parser.add_mutually_exclusive_group(required=False)
     input_group.add_argument(
-        "--benchmark-dir",
-        help="Input directory to read benchmarks from (relative to main.py)",
-        default="benchmarks/",
-        type=str,
-    )
-    input_group.add_argument(
         "--benchmark-file",
         help="Input file containing benchmark file paths (relative to main.py)",
         default="benchmarks.txt",
@@ -80,14 +74,6 @@ def parse_args(args):
         "--output-dir",
         help="Directory to write output logs to (Each file gets a separate file, and one final file with all logs)",
         default=datetime.datetime.now().strftime("../logs/loopy_%Y_%m_%d_%H_%M_%S/"),
-        type=str,
-    )
-
-    # Input prompt
-    parser.add_argument(
-        "--prompt-file",
-        help="File to read prompt from. The prompt can refer to the input code.",
-        default="",
         type=str,
     )
 
@@ -140,19 +126,6 @@ def parse_args(args):
     )
 
     parser.add_argument(
-        "--secondary-nudge",
-        help="Nudge the model to generate better code",
-        action="store_true",
-    )
-    parser.add_argument(
-        "--secondary-nudge-text",
-        help="File to read nudge prompt from.",
-        default="",
-        type=str,
-        required="--secondary-nudge" in args,
-    )
-
-    parser.add_argument(
         "--benchmark-features",
         help="Benchmarks to run based on features",
         choices=[
@@ -175,12 +148,6 @@ def parse_args(args):
     )
 
     parser.add_argument(
-        "--ground-truth",
-        help="Run Frama-C with \\true as the invariant",
-        action="store_true",
-    )
-
-    parser.add_argument(
         "--json-output",
         help="Use JSON output from the checker",
         action="store_true",
@@ -195,7 +162,7 @@ def parse_args(args):
 
     parser.add_argument(
         "--classify",
-        help="Classify the benchmarks",
+        help="Use the LLM as a classifier",
         action="store_true",
     )
     parser.add_argument(
@@ -237,19 +204,21 @@ def main(args):
         repair_errors_input_2=args.repair_input_2,
         repair_from_k=args.repair_from_k,
         num_repair_retries=args.repair_retries,
-        nudge=args.secondary_nudge,
         features=args.benchmark_features,
         arg_params=vars(args),
-        ground_truth=args.ground_truth,
         use_json_output=args.json_output,
     )
     if args.config_file:
         p = p.load_config(args.config_file)
 
     if args.provider == "local":
-        p.run_local(max_benchmarks=args.max_benchmarks, start_index=args.start_index, local_llm_output=args.local_llm_output)
+        p.run_local(
+            max_benchmarks=args.max_benchmarks,
+            start_index=args.start_index,
+            local_llm_output=args.local_llm_output,
+        )
         return
-    
+
     if args.classify:
         p.run_classification(
             max_benchmarks=args.max_benchmarks,
