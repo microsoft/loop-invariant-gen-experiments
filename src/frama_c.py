@@ -206,7 +206,6 @@ class FramaCChecker(Checker):
         checker_output = checker_output + "\n" + user_assertion + "\n"
 
         if check_variant:
-            print(str(frama_c_std_output, "UTF-8"))
             msg = str(frama_c_std_output, "UTF-8").split("\n")
             result = list(filter(lambda x: "Loop variant" in x, msg))
             if len(result) < 1:
