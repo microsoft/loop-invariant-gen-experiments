@@ -206,6 +206,7 @@ class FramaCChecker(Checker):
         checker_output = checker_output + "\n" + user_assertion + "\n"
 
         if check_variant:
+            # print(str(frama_c_std_output, "UTF-8"))
             msg = str(frama_c_std_output, "UTF-8").split("\n")
             result = list(filter(lambda x: "Loop variant" in x, msg))
             if len(result) < 1:
@@ -213,10 +214,10 @@ class FramaCChecker(Checker):
                 return False, "No variant found (wrong mode?)"
 
             if "Valid" in result[0]:
-                checker_output += "Loop variant is Valid.\n"
+                checker_output = checker_output + "Loop variant is Valid.\n"
                 success = success and True
             else:
-                checker_output += "Loop variant is Invalid.\n"
+                checker_output = checker_output + "Loop variant is Invalid.\n"
                 success = False
 
         os.remove(temp_c_file)
@@ -501,13 +502,26 @@ class FramaCBenchmark(Benchmark):
 
             invariants = {}
             variant = ""
+            inv_count = 0
+            
             llm_output = llm_outputs[0]
             lines = llm_output.splitlines()
+            
+            """
+            This loop picks up all the loop invariants, labels them
+            i1, i2... and picks up the last loop variant.
+            """
             for line in lines:
-                invariant = re.findall(r"(loop invariant .+;)", line)
+                invariant = re.findall(r"loop invariant (.+);", line)
                 variants = re.findall(r"(loop variant .+;)", line)
                 if len(invariant) > 0:
-                    invariants[invariant[0]] = True
+                    inv_id = re.findall(r"loop invariant (\w+:) ", line)
+                    if len(inv_id) > 0:
+                        invariant = [invariant[0].replace(inv_id[0], "")]
+                    invariant = f"loop invariant i{inv_count + 1}: {invariant[0]};"  # add loop invariant label
+                    invariants[invariant] = True
+                    inv_count += 1
+
                 if len(variants) > 0:
                     variant = variants[0]
 
