@@ -206,6 +206,7 @@ class FramaCChecker(Checker):
         checker_output = checker_output + "\n" + user_assertion + "\n"
 
         if check_variant:
+            print(str(frama_c_std_output, "UTF-8"))
             msg = str(frama_c_std_output, "UTF-8").split("\n")
             result = list(filter(lambda x: "Loop variant" in x, msg))
             if len(result) < 1:
@@ -496,20 +497,20 @@ class FramaCBenchmark(Benchmark):
         elif "termination_one_loop_one_method" == features:
             if len(llm_outputs) > 1:
                 raise Exception(
-                    "multiple completions for termination not supported yet"
+                    "Multiple completions for termination analysis not supported yet"
                 )
 
             invariants = {}
-            variant = None
+            variant = ""
             llm_output = llm_outputs[0]
             lines = llm_output.splitlines()
             for line in lines:
                 invariant = re.findall(r"(loop invariant .+;)", line)
-                variant = re.findall(r"(loop variant .+;)", line)
+                variants = re.findall(r"(loop variant .+;)", line)
                 if len(invariant) > 0:
                     invariants[invariant[0]] = True
-                if len(variant) > 0:
-                    variant = variant[0]
+                if len(variants) > 0:
+                    variant = variants[0]
 
             loop = self.get_loops(self.get_main_definition(checker_input))
             if len(loop) != 1:
@@ -521,6 +522,7 @@ class FramaCBenchmark(Benchmark):
                 checker_input[: loop.start_byte]
                 + "/*@\n"
                 + "\n".join(list(invariants.keys()))
+                + "\n" + variant
                 + "\n*/\n"
                 + checker_input[loop.start_byte :]
             )
@@ -529,7 +531,6 @@ class FramaCBenchmark(Benchmark):
 
         elif "one_loop_one_method" in features:
             invariants = {}
-            variant = None
             inv_count = 0
             for llm_output in llm_outputs:
                 lines = llm_output.splitlines()

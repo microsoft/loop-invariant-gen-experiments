@@ -134,6 +134,7 @@ def parse_args(args):
             # "multiple_loops_multiple_methods",
             "termination_one_loop_one_method",
             # "termination_multiple_loops_one_method",
+            # "termination_multiple_loops_multiple_methods",
             "all",
         ],
         default="one_loop_one_method",
@@ -191,7 +192,7 @@ def main(args):
     benchmark = (
         Benchmark()
         if args.checker == "boogie"
-        else (FramaCBenchmark() if args.checker == "frama-c" else None)
+        else (FramaCBenchmark(features=args.benchmark_features) if args.checker == "frama-c" else None)
     )
 
     p = LoopyPipeline(
