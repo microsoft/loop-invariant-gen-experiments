@@ -255,7 +255,7 @@ class LoopyPipeline:
                                     pruned_code,
                                     num_frama_c_calls,
                                 ) = self.checker.prune_annotations_and_check(
-                                    checker_input,
+                                    candidate,
                                     self.features,
                                     use_json_output=self.use_json_output,
                                 )
@@ -276,7 +276,7 @@ class LoopyPipeline:
                                 print(e)
                                 print(traceback.format_exc())
                                 candidate_completion["success_after_prune"] = False
-                                candidate_completion["pruned_candidate"] = checker_input
+                                candidate_completion["pruned_candidate"] = candidate
                                 candidate_completion[
                                     "checker_message_after_prune"
                                 ] = e.args[0]
@@ -306,16 +306,16 @@ class LoopyPipeline:
                     self.features,
                 )
 
-                for checker_input in checker_inputs:
+                for combined_candidate in checker_inputs:
                     success, checker_message = self.checker.check(
-                        checker_input,
+                        combined_candidate,
                         ("termination" in self.features),
                         use_json_output=self.use_json_output,
                     )
                     combined_candidate_completion = {"num_solver_calls": 1}
                     combined_candidate_completion[
                         "candidate_with_annotations"
-                    ] = checker_input
+                    ] = combined_candidate
                     combined_candidate_completion["checker_output"] = success
                     combined_candidate_completion["checker_message"] = checker_message
 
@@ -327,7 +327,7 @@ class LoopyPipeline:
                                 pruned_code,
                                 num_solver_calls,
                             ) = self.checker.prune_annotations_and_check(
-                                checker_input,
+                                combined_candidate,
                                 self.features,
                                 use_json_output=self.use_json_output,
                             )
@@ -357,7 +357,7 @@ class LoopyPipeline:
                             ] = False
                             combined_candidate_completion[
                                 "combine_and_prune_candidate"
-                            ] = checker_input
+                            ] = combined_candidate
                             combined_candidate_completion[
                                 "checker_message_after_combine_and_prune"
                             ] = e.args[0]
