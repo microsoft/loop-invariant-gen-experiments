@@ -2,6 +2,8 @@ import argparse
 import datetime
 import sys
 
+import yaml
+
 from frama_c import FramaCBenchmark, FramaCChecker
 from loopy import Benchmark, Checker, LoopyPipeline
 
@@ -13,7 +15,7 @@ def parse_args(args):
     parser.add_argument(
         "--config-file",
         help="Config file to use. Specify all params in this file (or as command line args).",
-        default="config.yaml",
+        default="",
         type=str,
     )
 
@@ -179,20 +181,28 @@ def parse_args(args):
 def main(args):
     args = parse_args(args[1:])
 
+    config = {}
+    if args.config_file != "":
+        config = yaml.load(open(args.config_file, "r"), Loader=yaml.FullLoader)
+
     # TODO: Add support for other models/hosts when available
     if args.provider not in ["azure-open-ai", "local"]:
         raise Exception("Only models on Azure Open AI are supported for now")
 
     checker = (
         Checker("boogie")
-        if args.checker == "boogie"
-        else (FramaCChecker() if args.checker == "frama-c" else None)
+        if config["checker"] == "boogie"
+        else (FramaCChecker() if config["checker"] == "frama-c" else None)
     )
 
     benchmark = (
         Benchmark()
-        if args.checker == "boogie"
-        else (FramaCBenchmark(features=args.benchmark_features) if args.checker == "frama-c" else None)
+        if config["checker"] == "boogie"
+        else (
+            FramaCBenchmark(features=config["analysis"])
+            if config["checker"] == "frama-c"
+            else None
+        )
     )
 
     p = LoopyPipeline(
@@ -205,7 +215,7 @@ def main(args):
         repair_errors_input_2=args.repair_input_2,
         repair_from_k=args.repair_from_k,
         num_repair_retries=args.repair_retries,
-        features=args.benchmark_features,
+        features=config["analysis"],
         arg_params=vars(args),
         use_json_output=args.json_output,
     )

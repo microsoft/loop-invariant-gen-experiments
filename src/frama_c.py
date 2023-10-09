@@ -495,35 +495,25 @@ class FramaCBenchmark(Benchmark):
             return output
 
         elif "termination_one_loop_one_method" == features:
-            if len(llm_outputs) > 1:
-                raise Exception(
-                    "Multiple completions for termination analysis not supported yet"
-                )
-
+            annotated_candidates = []
             invariants = {}
-            variant = ""
             inv_count = 0
-            
-            llm_output = llm_outputs[0]
-            lines = llm_output.splitlines()
-            
-            """
-            This loop picks up all the loop invariants, labels them
-            i1, i2... and picks up the last loop variant.
-            """
-            for line in lines:
-                invariant = re.findall(r"loop invariant (.+);", line)
-                variants = re.findall(r"(loop variant .+;)", line)
-                if len(invariant) > 0:
-                    inv_id = re.findall(r"loop invariant (\w+:) ", line)
-                    if len(inv_id) > 0:
-                        invariant = [invariant[0].replace(inv_id[0], "")]
-                    invariant = f"loop invariant i{inv_count + 1}: {invariant[0]};"  # add loop invariant label
-                    invariants[invariant] = True
-                    inv_count += 1
+            variants = {}
 
-                if len(variants) > 0:
-                    variant = variants[0]
+            for llm_output in llm_outputs:
+                for line in llm_output.split("\n"):
+                    invariant = re.findall(r"loop invariant (.+);", line)
+                    __variants = re.findall(r"(loop variant .+;)", line)
+                    if len(invariant) > 0:
+                        inv_id = re.findall(r"loop invariant (\w+:) ", line)
+                        if len(inv_id) > 0:
+                            invariant = [invariant[0].replace(inv_id[0], "")]
+                        invariant = f"loop invariant i{inv_count + 1}: {invariant[0]};"  # add loop invariant label
+                        invariants[invariant] = True
+                        inv_count += 1
+
+                    for variant in __variants:
+                        variants[variant] = True
 
             loop = self.get_loops(self.get_main_definition(checker_input))
             if len(loop) != 1:
@@ -531,16 +521,19 @@ class FramaCBenchmark(Benchmark):
                     "No singular loop found while adding annotations. Multiple loops not supported yet."
                 )
             loop = loop[0]
-            output = (
-                checker_input[: loop.start_byte]
-                + "/*@\n"
-                + "\n".join(list(invariants.keys()))
-                + "\n" + variant
-                + "\n*/\n"
-                + checker_input[loop.start_byte :]
-            )
 
-            return output
+            for variant in variants.keys():
+                annotated_candidates.append(
+                    checker_input[: loop.start_byte]
+                    + "/*@\n"
+                    + "\n".join(list(invariants.keys()))
+                    + "\n"
+                    + variant
+                    + "\n*/\n"
+                    + checker_input[loop.start_byte :]
+                )
+
+            return annotated_candidates
 
         elif "one_loop_one_method" in features:
             invariants = {}
