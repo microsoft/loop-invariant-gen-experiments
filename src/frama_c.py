@@ -54,7 +54,7 @@ class FramaCChecker(Checker):
                 -wp-prover=alt-ergo,z3,cvc4 {temp_c_file} -wp-report-json {temp_wp_json_report_file} -kernel-warn-key annot-error=active \
                 -kernel-log a:{temp_kernel_log_file} -then -no-unicode -report -report-csv {temp_output_dump_file}"
         p = subprocess.Popen(cmd.split(), stdout=subprocess.PIPE)
-        output, err = p.communicate()
+        frama_c_std_output, err = p.communicate()
 
         # Look for errors in the kernel logs
         if not os.path.exists(temp_kernel_log_file):
@@ -63,8 +63,8 @@ class FramaCChecker(Checker):
             kernel_logs = f.read()
             kl_lines = kernel_logs.splitlines()
             # if len(kl_lines) > 1:
-                # print("More than 1 line in Frama-C kernel logs.")
-                # print(kernel_logs)
+            # print("More than 1 line in Frama-C kernel logs.")
+            # print(kernel_logs)
             error_line = None
             for line in kl_lines:
                 if "[kernel:annot-error]" in line:
@@ -86,11 +86,11 @@ class FramaCChecker(Checker):
                 return False, "No JSON report found"
 
             with open(temp_wp_json_report_file, "r", encoding="utf-8") as f:
-                output = f.read()
-                output = re.sub(r"(\d+)\.,", r"\1.0,", output)
-                output = json.loads(output)
+                json_output = f.read()
+                json_output = re.sub(r"(\d+)\.,", r"\1.0,", json_output)
+                json_output = json.loads(json_output)
                 loop_invariant_status = {}
-                for item in output:
+                for item in json_output:
                     if "_loop_invariant_" in item["goal"]:
                         inv_id = re.findall(
                             r"_loop_invariant_(i\d+)_(preserved|established)",
@@ -206,23 +206,24 @@ class FramaCChecker(Checker):
         checker_output = checker_output + "\n" + user_assertion + "\n"
 
         if check_variant:
-            msg = str(output, "UTF-8").split("\n")
+            msg = str(frama_c_std_output, "UTF-8").split("\n")
             result = list(filter(lambda x: "Loop variant" in x, msg))
             if len(result) < 1:
                 print("No variant found (wrong mode?)")
                 return False, "No variant found (wrong mode?)"
 
             if "Valid" in result[0]:
-                csv_output += "Loop variant is Valid"
+                checker_output += "Loop variant is Valid.\n"
                 success = success and True
             else:
-                csv_output += "Loop variant is Invalid"
+                checker_output += "Loop variant is Invalid.\n"
                 success = False
 
         os.remove(temp_c_file)
         os.remove(temp_wp_json_report_file)
         os.remove(temp_kernel_log_file)
         os.remove(temp_output_dump_file)
+
         return success, checker_output
 
     def get_line_no_from_error_msg(self, checker_output):
