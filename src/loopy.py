@@ -282,6 +282,9 @@ class LoopyPipeline:
                                 ] = e.args[0]
                                 success = False
 
+                        completion["num_solver_calls"] += candidate_completion[
+                            "num_solver_calls"
+                        ]
                         completion["candidates"].append(candidate_completion)
                         completion["success"] = completion["success"] or success
                     completions.append(completion)
@@ -292,6 +295,7 @@ class LoopyPipeline:
                 )
                 instance_log_json["combined_annotation_num_solver_calls"] = 0
                 instance_log_json["success"] = False
+                instance_log_json["candidates"] = []
 
                 print(f"Checking combined completion")
                 checker_inputs = self.benchmark.combine_llm_outputs(
