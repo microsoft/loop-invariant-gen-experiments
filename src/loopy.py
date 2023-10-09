@@ -213,7 +213,7 @@ class LoopyPipeline:
                 completions = []
                 for j, llm_output in enumerate(llm_outputs):
                     print(f"Checking completion {j + 1}/{len(llm_outputs)}")
-                    completion = {}
+                    completion = {"num_solver_calls": 0}
                     if llm_output.startswith(
                         "ERROR: Output does not contain at least 1 code block"
                     ):
@@ -241,6 +241,7 @@ class LoopyPipeline:
                     )
                     completion["success"] = success
                     completion["checker_message"] = checker_message
+                    completion["num_solver_calls"] += 1
 
                     if not success:
                         print(f"Pruning completion {j + 1}/{len(llm_outputs)}")
@@ -248,6 +249,7 @@ class LoopyPipeline:
                             (
                                 success,
                                 pruned_code,
+                                num_frama_c_calls,
                             ) = self.checker.prune_annotations_and_check(
                                 checker_input,
                                 self.features,
@@ -261,6 +263,7 @@ class LoopyPipeline:
                             completion["success_after_prune"] = success
                             completion["pruned_code"] = pruned_code
                             completion["checker_message_after_prune"] = checker_message
+                            completion["num_solver_calls"] += num_frama_c_calls
                         except Exception as e:
                             print(e)
                             print(traceback.format_exc())
@@ -272,6 +275,10 @@ class LoopyPipeline:
                     completions.append(completion)
 
                 instance_log_json["completions"] = completions
+                instance_log_json["individual_completions_num_solver_calls"] = sum(
+                    [c["num_solver_calls"] for c in completions]
+                )
+                instance_log_json["combined_annotation_num_solver_calls"] = 0
 
                 print(f"Checking combined completion")
                 checker_input = self.benchmark.combine_llm_outputs(
@@ -291,6 +298,7 @@ class LoopyPipeline:
                     use_json_output=self.use_json_output,
                 )
 
+                instance_log_json["combined_annotation_num_solver_calls"] += 1
                 instance_log_json["code_with_combined_invariants"] = checker_input
                 instance_log_json["checker_output"] = success
                 instance_log_json["checker_message"] = checker_message
@@ -298,11 +306,20 @@ class LoopyPipeline:
                 if not success:
                     print("Pruning combined completion")
                     try:
-                        success, pruned_code = self.checker.prune_annotations_and_check(
+                        (
+                            success,
+                            pruned_code,
+                            num_solver_calls,
+                        ) = self.checker.prune_annotations_and_check(
                             checker_input,
                             self.features,
                             use_json_output=self.use_json_output,
                         )
+
+                        instance_log_json[
+                            "combined_annotation_num_solver_calls"
+                        ] += num_solver_calls
+
                         success, checker_message = self.checker.check(
                             pruned_code,
                             ("termination" in self.features),
@@ -408,6 +425,9 @@ class LoopyPipeline:
         return
 
     def heal(self, max_benchmarks=1, start_index=0):
+        """
+        TODO: Track solver calls
+        """
         logger = Logger()
         if self.llm is None:
             raise Exception(
@@ -485,6 +505,7 @@ class LoopyPipeline:
 
                 instance_log_json["code_with_failing_invariants"] = failed_checker_input
                 instance_log_json["checker_fail_error_message"] = checker_error_message
+                instance_log_json["num_solver_calls"] = 0
 
                 while not success and num_retries < self.num_repair_retries:
                     healing_json = {}
@@ -507,6 +528,7 @@ class LoopyPipeline:
                         use_json_output=self.use_json_output,
                     )
 
+                    healing_json["num_solver_calls"] = 1
                     healing_json["conversation"] = conversations.get_full_tree()
                     healing_json["invariants"] = llm_outputs
                     healing_json["benchmark_code"] = instance["benchmark_code"]
@@ -519,7 +541,11 @@ class LoopyPipeline:
                     healing_json["checker_message"] = checker_message
 
                     if not success:
-                        success, pruned_code = self.checker.prune_annotations_and_check(
+                        (
+                            success,
+                            pruned_code,
+                            num_solver_calls,
+                        ) = self.checker.prune_annotations_and_check(
                             checker_input,
                             self.features,
                             use_json_output=self.use_json_output,
@@ -534,15 +560,19 @@ class LoopyPipeline:
                         healing_json[
                             "checker_message_after_combine_and_prune"
                         ] = prune_checker_message
+                        healing_json["num_solver_calls"] += num_solver_calls
 
                         failed_checker_input = checker_input
                         checker_error_message = checker_message
 
+                    instance_log_json["num_solver_calls"] += healing_json[
+                        "num_solver_calls"
+                    ]
                     instance_log_json["healing_conversations"].append(healing_json)
                     num_retries += 1
 
                 if not success:
-                    success, pruned_code = self.checker.prune_annotations_and_check(
+                    success, pruned_code, num_solver_calls = self.checker.prune_annotations_and_check(
                         checker_input,
                         self.features,
                         use_json_output=self.use_json_output,
@@ -832,6 +862,9 @@ class LoopyPipeline:
         log_file.close()
 
     def run_local(self, max_benchmarks=1, start_index=0, local_llm_output=""):
+        """
+        TODO: Track solver calls
+        """
         if self.llm is None:
             raise Exception(
                 "LLM not initialized. Call load_config first, to load input and prompt files."

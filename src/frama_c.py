@@ -343,9 +343,9 @@ class FramaCChecker(Checker):
             + lines[invariant_line_end + 1 :]
         )
         code_queue = [input_code]
-        iterations = 0
+        num_frama_c_calls = 0
 
-        while len(code_queue) > 0 and iterations < 1000:
+        while len(code_queue) > 0 and num_frama_c_calls < 1000:
             input_code = code_queue.pop(0)
             code_lines = input_code.splitlines()
             if (
@@ -435,9 +435,9 @@ class FramaCChecker(Checker):
                         code_lines__ = deepcopy(code_lines)
                         code_lines__[line_no] = ""
                         code_queue.append("\n".join(code_lines__))
-            iterations += 1
+            num_frama_c_calls += 1
 
-        if iterations == 1000:
+        if num_frama_c_calls == 1000:
             print("Crossed 1000 iterations. Stopping pruning...")
 
         if not status:
@@ -447,7 +447,7 @@ class FramaCChecker(Checker):
         else:
             print("Found strong enough invariants/variant.")
 
-        return status, input_code
+        return status, input_code, num_frama_c_calls
 
 
 class FramaCBenchmark(Benchmark):
