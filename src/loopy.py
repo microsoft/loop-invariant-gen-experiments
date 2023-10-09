@@ -205,10 +205,11 @@ class LoopyPipeline:
                 conversations = None
 
                 llm_outputs, conversations = self.llm.run(
-                    {"code": self.benchmark.get_code(instance)},
-                    output_full_tree=True,
+                    {"code": self.benchmark.get_code(instance)}
                 )
 
+                instance_log_json["llm_conversation"] = conversations
+                instance_log_json["invariants"] = llm_outputs
                 completions = []
                 for j, llm_output in enumerate(llm_outputs):
                     print(f"Checking completion {j + 1}/{len(llm_outputs)}")
@@ -290,9 +291,6 @@ class LoopyPipeline:
                     use_json_output=self.use_json_output,
                 )
 
-                instance_log_json["llm_conversation"] = conversations.get_full_tree()
-
-                instance_log_json["invariants"] = llm_outputs
                 instance_log_json["code_with_combined_invariants"] = checker_input
                 instance_log_json["checker_output"] = success
                 instance_log_json["checker_message"] = checker_message
