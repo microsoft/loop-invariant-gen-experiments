@@ -441,11 +441,9 @@ class FramaCChecker(Checker):
             print("Crossed 1000 iterations. Stopping pruning...")
 
         if not status:
-            print(
-                "Invariants/variant not strong enough to prove or benchmark is invalid."
-            )
+            print("Invariants not strong enough to prove or benchmark is invalid.")
         else:
-            print("Found strong enough invariants/variant.")
+            print("Found strong enough invariants.")
 
         return status, input_code, num_frama_c_calls
 

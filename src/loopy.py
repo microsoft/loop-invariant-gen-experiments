@@ -234,7 +234,7 @@ class LoopyPipeline:
 
                     completion = {"num_solver_calls": 0, "success": False}
 
-                    # If the completion does not have a code block, 
+                    # If the completion does not have a code block,
                     # mark it as a failure and continue
                     if len(llm_output) == 2 and llm_output[0] == (
                         "ERROR: Output does not contain at least 1 code block"
@@ -269,7 +269,7 @@ class LoopyPipeline:
                         False,
                         use_json_output=self.use_json_output,
                     )
-                    
+
                     completion["num_solver_calls"] += 1
                     completion["checker_output_for_invariants"] = success
                     completion["checker_message_for_invariants"] = checker_message
@@ -296,8 +296,9 @@ class LoopyPipeline:
                         checker_input_with_invariants = pruned_code
 
                     # If termination checking is enabled,
-                    # add the variants to the pruned code and check 
+                    # add the variants to the pruned code and check
                     if self.analysis == "termination_one_loop_one_method":
+                        Logger.log_info("Checking termination")
                         completion["success"] = False
                         completion["candidates"] = []
                         invariants = self.benchmark.extract_loop_invariants(
@@ -339,6 +340,10 @@ class LoopyPipeline:
                     instance_log_json["success"] = (
                         instance_log_json["success"] or completion["success"]
                     )
+                    if completion["success"]:
+                        Logger.log_success(f"Checking completion succeeded")
+                    else:
+                        Logger.log_error(f"Checking completion failed")
                     completions.append(completion)
 
                 # Check the combined completions
@@ -395,7 +400,9 @@ class LoopyPipeline:
                         "one_loop_one_method",
                         use_json_output=self.use_json_output,
                     )
-                    instance_log_json["combined_annotation_num_solver_calls"] += num_frama_c_calls
+                    instance_log_json[
+                        "combined_annotation_num_solver_calls"
+                    ] += num_frama_c_calls
                     instance_log_json[
                         "code_with_combined_invariants_after_prune"
                     ] = pruned_code
@@ -409,6 +416,7 @@ class LoopyPipeline:
                 # If termination checking is enabled,
                 # add the variants to the pruned code and check
                 if self.analysis == "termination_one_loop_one_method":
+                    Logger.log_info("Checking termination")
                     instance_log_json["success"] = False
                     invariants = self.benchmark.extract_loop_invariants(
                         code_with_combined_invariants
@@ -456,8 +464,10 @@ class LoopyPipeline:
                         )
 
                 if instance_log_json["success"]:
+                    Logger.log_success(f"Checking combined annotation succeeded")
                     stats["success"].append(instance_log_json["file"])
                 else:
+                    Logger.log_error(f"Checking combined annotation failed")
                     stats["failure"].append(instance_log_json["file"])
                 stats["total"] += 1
 
