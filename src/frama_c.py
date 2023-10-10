@@ -682,6 +682,7 @@ class FramaCBenchmark(Benchmark):
         while len(nodes) > 0:
             node = nodes.pop()
             if node.type == "call_expression":
+                print(node.text.decode("utf-8"))
                 function_calls.append(
                     (
                         node,
@@ -1111,36 +1112,38 @@ class FramaCBenchmark(Benchmark):
         return code
 
     def preprocess(self, code, features):
-        code = self.remove_comments(code)
-        code = self.remove_local_includes(code)
-        code = self.remove_preprocess_lines(code)
-        code = self.analyze_main(code)
-        code = self.remove_verifier_function_definitions(code)
-        code = self.remove_verifier_function_declarations(code)
-        code = self.replace_nondets_and_assert_assumes(code)
-        code = self.apply_patches(code)
-        code = self.add_boiler_plate(code)
-        code = self.add_frama_c_asserts(code)
-        code = self.remove_tmpl(code)
-        code = self.clean_newlines(code)
-        if self.has_ill_formed_asserts(code):
-            raise InvalidBenchmarkException("Ill-formed asserts")
+        try:
+            code = self.remove_comments(code)
+            code = self.remove_local_includes(code)
+            code = self.remove_preprocess_lines(code)
+            code = self.analyze_main(code)
+            code = self.remove_verifier_function_definitions(code)
+            code = self.remove_verifier_function_declarations(code)
+            code = self.replace_nondets_and_assert_assumes(code)
+            code = self.apply_patches(code)
+            code = self.add_boiler_plate(code)
+            code = self.add_frama_c_asserts(code)
+            code = self.remove_tmpl(code)
+            code = self.clean_newlines(code)
+            if self.has_ill_formed_asserts(code):
+                raise InvalidBenchmarkException("Ill-formed asserts")
 
-        if self.get_total_loop_count(code) < 1:
-            raise InvalidBenchmarkException("No loop found")
+            if self.get_total_loop_count(code) < 1:
+                raise InvalidBenchmarkException("No loop found")
 
-        # Filter out benchmarks with multiple methods or loops based on features
-        if (not "multiple_methods" in features) and self.is_interprocedural(code):
-            raise InvalidBenchmarkException("Found multiple methods")
-        if (not "multiple_loops" in features) and self.is_multi_loop(code):
-            raise InvalidBenchmarkException("Found multiple loops")
+            # Filter out benchmarks with multiple methods or loops based on features
+            if (not "multiple_methods" in features) and self.is_interprocedural(code):
+                raise InvalidBenchmarkException("Found multiple methods")
+            if (not "multiple_loops" in features) and self.is_multi_loop(code):
+                raise InvalidBenchmarkException("Found multiple loops")
 
-        if (not "arrays" in features) and self.uses_arrays(code):
-            raise InvalidBenchmarkException("Found arrays")
-        if (not "pointers" in features) and self.uses_pointers(code):
-            raise InvalidBenchmarkException("Found pointers")
-        # add benchmark specific annotations
-        if "multiple_loops" in features:
+            if (not "arrays" in features) and self.uses_arrays(code):
+                raise InvalidBenchmarkException("Found arrays")
+            if (not "pointers" in features) and self.uses_pointers(code):
+                raise InvalidBenchmarkException("Found pointers")
+            # add benchmark specific annotations
+            if "multiple_loops" in features:
             code = self.add_loop_labels(code)
-
+        except Exception as e:
+            raise InvalidBenchmarkException(str(e))
         return code
