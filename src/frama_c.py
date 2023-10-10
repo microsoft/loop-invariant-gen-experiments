@@ -682,7 +682,6 @@ class FramaCBenchmark(Benchmark):
         while len(nodes) > 0:
             node = nodes.pop()
             if node.type == "call_expression":
-                print(node.text.decode("utf-8"))
                 function_calls.append(
                     (
                         node,
