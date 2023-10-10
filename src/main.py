@@ -215,7 +215,7 @@ def main(args):
         repair_errors_input_2=args.repair_input_2,
         repair_from_k=args.repair_from_k,
         num_repair_retries=args.repair_retries,
-        features=config["analysis"],
+        analysis=config["analysis"],
         arg_params=vars(args),
         use_json_output=args.json_output,
     )

@@ -82,7 +82,7 @@ class LoopyPipeline:
         repair_errors_input: str = "",
         repair_errors_input_2: str = "",
         repair_from_k: int = 1,
-        features: str = "one_loop_one_method",
+        analysis: str = "one_loop_one_method",
         arg_params: dict = None,
         ground_truth: bool = False,
         use_json_output: bool = False,
@@ -98,12 +98,15 @@ class LoopyPipeline:
         self.repair_errors_input_2 = repair_errors_input_2
         self.repair_from_k = repair_from_k
         self.system_message = ""
-        self.analysis = features
+        self.analysis = analysis
         self.arg_params = arg_params
         self.use_json_output = use_json_output
 
     def load_config(self, config_file):
         config = yaml.load(open(config_file, "r"), Loader=yaml.FullLoader)
+
+        if "analysis" in config:
+            self.analysis = config["analysis"]
 
         prompt_configs = []
         if "prompts" in config:
@@ -371,7 +374,7 @@ class LoopyPipeline:
                     use_json_output=self.use_json_output,
                 )
 
-                instance_log_json["num_solver_calls"] += 1
+                instance_log_json["combined_annotation_num_solver_calls"] += 1
                 instance_log_json[
                     "code_with_combined_invariants"
                 ] = code_with_combined_invariants
@@ -392,7 +395,7 @@ class LoopyPipeline:
                         "one_loop_one_method",
                         use_json_output=self.use_json_output,
                     )
-                    instance_log_json["num_solver_calls"] += num_frama_c_calls
+                    instance_log_json["combined_annotation_num_solver_calls"] += num_frama_c_calls
                     instance_log_json[
                         "code_with_combined_invariants_after_prune"
                     ] = pruned_code
