@@ -1143,7 +1143,7 @@ class FramaCBenchmark(Benchmark):
                 raise InvalidBenchmarkException("Found pointers")
             # add benchmark specific annotations
             if "multiple_loops" in features:
-            code = self.add_loop_labels(code)
+                code = self.add_loop_labels(code)
         except Exception as e:
             raise InvalidBenchmarkException(str(e))
         return code
