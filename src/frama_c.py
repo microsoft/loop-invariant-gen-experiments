@@ -564,6 +564,14 @@ class FramaCBenchmark(Benchmark):
         else:
             raise Exception("Unknown feature set")
 
+    def is_invariant(self, line):
+        inv = re.findall(r"loop invariant (.+);", line)
+        return len(inv) > 0
+
+    def is_variant(self, line):
+        inv = re.findall(r"loop variant (.+);", line)
+        return len(inv) > 0
+
     def extract_loop_invariants(self, code):
         loop_invariants = []
         ast = self.parser.parse(bytes(code, "utf-8"))
@@ -583,7 +591,7 @@ class FramaCBenchmark(Benchmark):
         comment = comments[0][0]
         comment = code[comment.start_byte : comment.end_byte]
 
-        for line in comment.splitlines():
+        for line in comment.split("\n"):
             if self.is_invariant(line):
                 loop_invariants.append(line)
         return loop_invariants
