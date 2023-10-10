@@ -1110,7 +1110,7 @@ class FramaCBenchmark(Benchmark):
             code = code.replace(l, "while(1)")
         return code
 
-    def preprocess(self, code, features):
+    def preprocess(self, code, features, max_lines=500):
         try:
             code = self.remove_comments(code)
             code = self.remove_local_includes(code)
@@ -1140,6 +1140,13 @@ class FramaCBenchmark(Benchmark):
                 raise InvalidBenchmarkException("Found arrays")
             if (not "pointers" in features) and self.uses_pointers(code):
                 raise InvalidBenchmarkException("Found pointers")
+            num_lines = len(code.splitlines())
+            if num_lines > max_lines:
+                raise InvalidBenchmarkException(
+                    "Number of lines ({}) exceeded max_lines ({})".format(
+                        num_lines, max_lines
+                    )
+                )
             # add benchmark specific annotations
             if "multiple_loops" in features:
                 code = self.add_loop_labels(code)
