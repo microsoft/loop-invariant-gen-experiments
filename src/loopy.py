@@ -98,7 +98,7 @@ class LoopyPipeline:
         self.repair_errors_input_2 = repair_errors_input_2
         self.repair_from_k = repair_from_k
         self.system_message = ""
-        self.features = features
+        self.analysis = features
         self.arg_params = arg_params
         self.use_json_output = use_json_output
 
@@ -161,12 +161,12 @@ class LoopyPipeline:
             self.benchmark = Benchmark(
                 config["llm_input_dir"],
                 config["llm_input_file_path"],
-                self.features,
+                self.analysis,
             )
         else:
             self.benchmark.llm_input_path = config["llm_input_dir"]
             self.benchmark.llm_input_file = config["llm_input_file_path"]
-            self.benchmark.features = self.features
+            self.benchmark.features = self.analysis
         self.benchmark.check_input()
 
         if "healing_retries" in config:
@@ -193,197 +193,269 @@ class LoopyPipeline:
             start_index : start_index + max_benchmarks
         ]
 
-        for i, instance in enumerate(sliced_benchmarks):
-            print(f"Running benchmark: {start_index + i + 1}/{len(sliced_benchmarks)}")
+        # TODO: Add support for other analysis types
+        if (
+            self.analysis != "one_loop_one_method"
+            and self.analysis != "termination_one_loop_one_method"
+        ):
+            raise Exception("Unsupported analysis type")
 
+        # Loop through all benchmarks
+        for i, instance in enumerate(sliced_benchmarks):
+            Logger.log_info(
+                f"Running benchmark: {start_index + i + 1}/{len(sliced_benchmarks)}"
+            )
             instance_log_json = {
                 "file": instance,
                 "benchmark_code": self.benchmark.get_code(instance),
+                "success": False,
             }
+
             try:
                 llm_outputs = None
                 conversations = None
-                benchmark_success = False
 
+                # Make the LLM query and get the code blocks, and the conversation
                 llm_outputs, conversations = self.llm.run(
                     {"code": self.benchmark.get_code(instance)}
                 )
-
                 instance_log_json["llm_conversation"] = conversations
                 instance_log_json["invariants"] = llm_outputs
+
+                # Check each completion individually
                 completions = []
                 for j, llm_output in enumerate(llm_outputs):
-                    print(f"Checking completion {j + 1}/{len(llm_outputs)}")
-                    completion = {"num_solver_calls": 0}
-                    if llm_output.startswith(
+                    Logger.log_info(
+                        f"Checking completion {j + 1}/{len(llm_outputs)} for benchmark: {start_index + i + 1}/{len(sliced_benchmarks)}"
+                    )
+
+                    completion = {"num_solver_calls": 0, "success": False}
+
+                    # If the completion does not have a code block, 
+                    # mark it as a failure and continue
+                    if len(llm_output) == 2 and llm_output[0] == (
                         "ERROR: Output does not contain at least 1 code block"
                     ):
                         completion["success"] = False
-                        completion["llm_output"] = llm_output.replace(
-                            "ERROR: Output does not contain at least 1 code block\nOutput:\n",
-                            "",
-                        )
+                        completion["llm_output"] = llm_output[1]
                         completion[
                             "error"
                         ] = "Output does not contain at least 1 code block"
                         continue
 
-                    checker_inputs = self.benchmark.combine_llm_outputs(
+                    # Add only the loop invariants to the code and check
+                    checker_input_with_invariants = self.benchmark.combine_llm_outputs(
                         self.benchmark.get_code(instance),
-                        [llm_output if not llm_output.startswith("ERROR") else ""],
-                        self.features,
+                        [
+                            llm_output
+                            if not (
+                                len(llm_output) == 2
+                                and llm_output[0]
+                                == "ERROR: Output does not contain at least 1 code block"
+                            )
+                            else ""
+                        ],
+                        "one_loop_one_method",
                     )
                     completion["annotations"] = llm_output
-                    completion["candidates"] = []
-                    completion["success"] = False
-                    for candidate in checker_inputs:
-                        candidate_completion = {"num_solver_calls": 0}
-                        candidate_completion["candidate_with_annotations"] = candidate
-                        success, checker_message = self.checker.check(
-                            candidate,
-                            ("termination" in self.features),
+                    completion[
+                        "code_with_loop_invariants"
+                    ] = checker_input_with_invariants
+                    success, checker_message = self.checker.check(
+                        checker_input_with_invariants,
+                        False,
+                        use_json_output=self.use_json_output,
+                    )
+                    
+                    completion["num_solver_calls"] += 1
+                    completion["checker_output_for_invariants"] = success
+                    completion["checker_message_for_invariants"] = checker_message
+                    completion["success"] = completion["success"] or success
+
+                    # If checking failed, try Houdini loop with invariants only
+                    if not success:
+                        (
+                            success,
+                            pruned_code,
+                            num_frama_c_calls,
+                        ) = self.checker.prune_annotations_and_check(
+                            checker_input_with_invariants,
+                            "one_loop_one_method",
                             use_json_output=self.use_json_output,
                         )
-                        candidate_completion["success"] = success
-                        candidate_completion["checker_message"] = checker_message
-                        candidate_completion["num_solver_calls"] += 1
-
-                        if not success:
-                            print(f"Pruning completion {j + 1}/{len(llm_outputs)}")
-                            try:
-                                (
-                                    success,
-                                    pruned_code,
-                                    num_frama_c_calls,
-                                ) = self.checker.prune_annotations_and_check(
-                                    candidate,
-                                    self.features,
-                                    use_json_output=self.use_json_output,
-                                )
-                                success, checker_message = self.checker.check(
-                                    pruned_code,
-                                    ("termination" in self.features),
-                                    use_json_output=self.use_json_output,
-                                )
-                                candidate_completion["success_after_prune"] = success
-                                candidate_completion["pruned_candidate"] = pruned_code
-                                candidate_completion[
-                                    "checker_message_after_prune"
-                                ] = checker_message
-                                candidate_completion[
-                                    "num_solver_calls"
-                                ] += num_frama_c_calls
-                            except Exception as e:
-                                print(e)
-                                print(traceback.format_exc())
-                                candidate_completion["success_after_prune"] = False
-                                candidate_completion["pruned_candidate"] = candidate
-                                candidate_completion[
-                                    "checker_message_after_prune"
-                                ] = e.args[0]
-                                success = False
-
-                        completion["num_solver_calls"] += candidate_completion[
-                            "num_solver_calls"
-                        ]
-                        completion["candidates"].append(candidate_completion)
+                        completion["num_solver_calls"] += num_frama_c_calls
+                        completion[
+                            "code_with_loop_invariants_after_prune"
+                        ] = pruned_code
+                        completion["checker_output_after_prune"] = success
                         completion["success"] = completion["success"] or success
-                        benchmark_success = benchmark_success or success
+
+                        checker_input_with_invariants = pruned_code
+
+                    # If termination checking is enabled,
+                    # add the variants to the pruned code and check 
+                    if self.analysis == "termination_one_loop_one_method":
+                        completion["success"] = False
+                        completion["candidates"] = []
+                        invariants = self.benchmark.extract_loop_invariants(
+                            checker_input_with_invariants
+                        )
+                        checker_inputs_with_variants = self.benchmark.combine_llm_outputs(
+                            self.benchmark.get_code(instance),
+                            (
+                                invariants,
+                                [
+                                    llm_output
+                                    if not (
+                                        len(llm_output) == 2
+                                        and llm_output[0]
+                                        == "ERROR: Output does not contain at least 1 code block"
+                                    )
+                                    else ""
+                                ],
+                            ),
+                            "termination_one_loop_one_method",
+                        )
+                        for checker_input in checker_inputs_with_variants:
+                            success, checker_message = self.checker.check(
+                                checker_input,
+                                True,
+                                use_json_output=self.use_json_output,
+                            )
+                            candidate_with_variant = {}
+                            candidate_with_variant[
+                                "candidate_with_variant"
+                            ] = checker_input
+                            candidate_with_variant["checker_output"] = success
+                            candidate_with_variant["checker_message"] = checker_message
+                            completion["success"] = completion["success"] or success
+
+                            completion["num_solver_calls"] += 1
+                            completion["candidates"].append(candidate_with_variant)
+
+                    instance_log_json["success"] = (
+                        instance_log_json["success"] or completion["success"]
+                    )
                     completions.append(completion)
 
+                # Check the combined completions
                 instance_log_json["completions"] = completions
                 instance_log_json["individual_completions_num_solver_calls"] = sum(
                     [c["num_solver_calls"] for c in completions]
                 )
                 instance_log_json["combined_annotation_num_solver_calls"] = 0
-                instance_log_json["success"] = False
                 instance_log_json["candidates"] = []
+                instance_log_json["combined_candidates"] = []
 
-                print(f"Checking combined completion")
-                checker_inputs = self.benchmark.combine_llm_outputs(
+                Logger.log_info(
+                    f"Checking combined completions for benchmark: {start_index + i + 1}/{len(sliced_benchmarks)}"
+                )
+
+                # First combine only the loop invariants and check
+                code_with_combined_invariants = self.benchmark.combine_llm_outputs(
                     self.benchmark.get_code(instance),
                     [
                         llm_output
                         for llm_output in llm_outputs
-                        if not llm_output.startswith(
-                            "ERROR: Output does not contain at least 1 code block"
+                        if not (
+                            len(llm_output) == 2
+                            and llm_output[0]
+                            == "ERROR: Output does not contain at least 1 code block"
                         )
                     ],
-                    self.features,
+                    "one_loop_one_method",
+                )
+                success, checker_message = self.checker.check(
+                    code_with_combined_invariants,
+                    False,
+                    use_json_output=self.use_json_output,
                 )
 
-                for combined_candidate in checker_inputs:
-                    success, checker_message = self.checker.check(
-                        combined_candidate,
-                        ("termination" in self.features),
+                instance_log_json["num_solver_calls"] += 1
+                instance_log_json[
+                    "code_with_combined_invariants"
+                ] = code_with_combined_invariants
+                instance_log_json["checker_output_for_combined_invariants"] = success
+                instance_log_json[
+                    "checker_message_for_combined_invariants"
+                ] = checker_message
+                instance_log_json["success"] = instance_log_json["success"] or success
+
+                # If checking failed, try Houdini loop with combined loop invariants only
+                if not success:
+                    (
+                        success,
+                        pruned_code,
+                        num_frama_c_calls,
+                    ) = self.checker.prune_annotations_and_check(
+                        code_with_combined_invariants,
+                        "one_loop_one_method",
                         use_json_output=self.use_json_output,
                     )
-                    combined_candidate_completion = {"num_solver_calls": 1}
-                    combined_candidate_completion[
-                        "candidate_with_annotations"
-                    ] = combined_candidate
-                    combined_candidate_completion["checker_output"] = success
-                    combined_candidate_completion["checker_message"] = checker_message
-
-                    if not success:
-                        print("Pruning combined completion candidate")
-                        try:
-                            (
-                                success,
-                                pruned_code,
-                                num_solver_calls,
-                            ) = self.checker.prune_annotations_and_check(
-                                combined_candidate,
-                                self.features,
-                                use_json_output=self.use_json_output,
-                            )
-
-                            combined_candidate_completion[
-                                "num_solver_calls"
-                            ] += num_solver_calls
-
-                            success, checker_message = self.checker.check(
-                                pruned_code,
-                                ("termination" in self.features),
-                                use_json_output=self.use_json_output,
-                            )
-                            combined_candidate_completion[
-                                "combine_and_prune_candidate"
-                            ] = pruned_code
-                            combined_candidate_completion[
-                                "checker_output_after_combine_and_prune"
-                            ] = success
-                            combined_candidate_completion[
-                                "checker_message_after_combine_and_prune"
-                            ] = checker_message
-                        except Exception as e:
-                            print(e)
-                            combined_candidate_completion[
-                                "checker_output_after_combine_and_prune"
-                            ] = False
-                            combined_candidate_completion[
-                                "combine_and_prune_candidate"
-                            ] = combined_candidate
-                            combined_candidate_completion[
-                                "checker_message_after_combine_and_prune"
-                            ] = e.args[0]
-                            success = False
-
-                    instance_log_json["candidates"].append(
-                        combined_candidate_completion
-                    )
+                    instance_log_json["num_solver_calls"] += num_frama_c_calls
                     instance_log_json[
-                        "combined_annotation_num_solver_calls"
-                    ] += combined_candidate_completion["num_solver_calls"]
+                        "code_with_combined_invariants_after_prune"
+                    ] = pruned_code
+                    instance_log_json["checker_output_after_prune"] = success
                     instance_log_json["success"] = (
                         instance_log_json["success"] or success
                     )
-                    benchmark_success = benchmark_success or success
 
-                if benchmark_success:
-                    stats["success"].append(i)
+                    code_with_combined_invariants = pruned_code
+
+                # If termination checking is enabled,
+                # add the variants to the pruned code and check
+                if self.analysis == "termination_one_loop_one_method":
+                    instance_log_json["success"] = False
+                    invariants = self.benchmark.extract_loop_invariants(
+                        code_with_combined_invariants
+                    )
+                    checker_inputs = self.benchmark.combine_llm_outputs(
+                        self.benchmark.get_code(instance),
+                        (
+                            invariants,
+                            [
+                                llm_output
+                                for llm_output in llm_outputs
+                                if not (
+                                    len(llm_output) == 2
+                                    and llm_output[0]
+                                    == "ERROR: Output does not contain at least 1 code block"
+                                )
+                            ],
+                        ),
+                        "termination_one_loop_one_method",
+                    )
+
+                    # Check each combined completion individually
+                    # with different variant each time
+                    for checker_input in checker_inputs:
+                        success, checker_message = self.checker.check(
+                            checker_input,
+                            True,
+                            use_json_output=self.use_json_output,
+                        )
+                        combined_candidate_with_variant = {}
+                        combined_candidate_with_variant[
+                            "candidate_with_combined_invariants_and_variant"
+                        ] = checker_input
+                        combined_candidate_with_variant["checker_output"] = success
+                        combined_candidate_with_variant[
+                            "checker_message"
+                        ] = checker_message
+                        instance_log_json["success"] = (
+                            instance_log_json["success"] or success
+                        )
+
+                        instance_log_json["combined_annotation_num_solver_calls"] += 1
+                        instance_log_json["combined_candidates"].append(
+                            combined_candidate_with_variant
+                        )
+
+                if instance_log_json["success"]:
+                    stats["success"].append(instance_log_json["file"])
                 else:
-                    stats["failure"].append(i)
+                    stats["failure"].append(instance_log_json["file"])
                 stats["total"] += 1
 
                 stats["success_rate"] = (
@@ -412,9 +484,9 @@ class LoopyPipeline:
                     )
                 log_json.append(instance_log_json)
             except (Exception, KeyboardInterrupt) as e:
-                print(traceback.format_exc())
+                Logger.log_error(traceback.format_exc())
                 instance_log_json["error"] = str(e)
-                stats["skipped"].append(i)
+                stats["skipped"].append(instance_log_json["file"])
                 with open(
                     os.path.join(
                         self.log_path,
@@ -508,7 +580,7 @@ class LoopyPipeline:
                 15,
                 self.repair_from_k,
                 combine_llm_output_lambda=self.benchmark.combine_llm_outputs,
-                features=self.features,
+                features=self.analysis,
             )
             if prune_and_check_with_k > 0.0:
                 logger.log_success(
@@ -530,11 +602,11 @@ class LoopyPipeline:
                 failed_checker_input = self.benchmark.combine_llm_outputs(
                     instance["benchmark_code"],
                     failing_invariants,
-                    self.features,
+                    self.analysis,
                 )
                 success, checker_error_message = self.checker.check(
                     failed_checker_input,
-                    ("termination" in self.features),
+                    ("termination" in self.analysis),
                     use_json_output=self.use_json_output,
                 )
 
@@ -555,11 +627,11 @@ class LoopyPipeline:
                     checker_input = self.benchmark.combine_llm_outputs(
                         instance["benchmark_code"],
                         llm_outputs,
-                        self.features,
+                        self.analysis,
                     )
                     success, checker_message = self.checker.check(
                         checker_input,
-                        ("termination" in self.features),
+                        ("termination" in self.analysis),
                         use_json_output=self.use_json_output,
                     )
 
@@ -582,12 +654,12 @@ class LoopyPipeline:
                             num_solver_calls,
                         ) = self.checker.prune_annotations_and_check(
                             checker_input,
-                            self.features,
+                            self.analysis,
                             use_json_output=self.use_json_output,
                         )
                         success, prune_checker_message = self.checker.check(
                             pruned_code,
-                            ("termination" in self.features),
+                            ("termination" in self.analysis),
                             use_json_output=self.use_json_output,
                         )
                         healing_json["code_after_combine_and_prune"] = pruned_code
@@ -613,12 +685,12 @@ class LoopyPipeline:
                         num_solver_calls,
                     ) = self.checker.prune_annotations_and_check(
                         checker_input,
-                        self.features,
+                        self.analysis,
                         use_json_output=self.use_json_output,
                     )
                     success, prune_checker_message = self.checker.check(
                         pruned_code,
-                        ("termination" in self.features),
+                        ("termination" in self.analysis),
                         use_json_output=self.use_json_output,
                     )
                     healing_json["code_after_heal_and_prune"] = pruned_code
@@ -769,13 +841,13 @@ class LoopyPipeline:
                     checker_input = self.benchmark.combine_llm_outputs(
                         instance["benchmark_code"],
                         [llm_output if not llm_output.startswith("ERROR") else ""],
-                        self.features,
+                        self.analysis,
                     )
                     completion["invariants"] = llm_output
                     completion["code_with_invariants"] = checker_input
                     success, checker_message = self.checker.check(
                         checker_input,
-                        ("termination" in self.features),
+                        ("termination" in self.analysis),
                         use_json_output=self.use_json_output,
                     )
                     completion["success"] = success
@@ -789,12 +861,12 @@ class LoopyPipeline:
                                 pruned_code,
                             ) = self.checker.prune_annotations_and_check(
                                 checker_input,
-                                self.features,
+                                self.analysis,
                                 use_json_output=self.use_json_output,
                             )
                             success, checker_message = self.checker.check(
                                 pruned_code,
-                                ("termination" in self.features),
+                                ("termination" in self.analysis),
                                 use_json_output=self.use_json_output,
                             )
                             completion["success_after_prune"] = success
@@ -822,11 +894,11 @@ class LoopyPipeline:
                             "ERROR: Output does not contain at least 1 code block"
                         )
                     ],
-                    self.features,
+                    self.analysis,
                 )
                 success, checker_message = self.checker.check(
                     checker_input,
-                    ("termination" in self.features),
+                    ("termination" in self.analysis),
                     use_json_output=self.use_json_output,
                 )
 
@@ -839,12 +911,12 @@ class LoopyPipeline:
                     try:
                         success, pruned_code = self.checker.prune_annotations_and_check(
                             checker_input,
-                            self.features,
+                            self.analysis,
                             use_json_output=self.use_json_output,
                         )
                         success, checker_message = self.checker.check(
                             pruned_code,
-                            ("termination" in self.features),
+                            ("termination" in self.analysis),
                             use_json_output=self.use_json_output,
                         )
                         instance_log_json["code_after_combine_and_prune"] = pruned_code
@@ -976,13 +1048,13 @@ class LoopyPipeline:
                     checker_input = self.benchmark.combine_llm_outputs(
                         self.benchmark.get_code(instance[0]),
                         [llm_output if not llm_output.startswith("ERROR") else ""],
-                        self.features,
+                        self.analysis,
                     )
                     completion["invariants"] = llm_output
                     completion["code_with_invariants"] = checker_input
                     success, checker_message = self.checker.check(
                         checker_input,
-                        ("termination" in self.features),
+                        ("termination" in self.analysis),
                         use_json_output=self.use_json_output,
                     )
                     completion["success"] = success
@@ -996,12 +1068,12 @@ class LoopyPipeline:
                                 pruned_code,
                             ) = self.checker.prune_annotations_and_check(
                                 checker_input,
-                                self.features,
+                                self.analysis,
                                 use_json_output=self.use_json_output,
                             )
                             success, checker_message = self.checker.check(
                                 pruned_code,
-                                ("termination" in self.features),
+                                ("termination" in self.analysis),
                                 use_json_output=self.use_json_output,
                             )
                             completion["success_after_prune"] = success
@@ -1029,11 +1101,11 @@ class LoopyPipeline:
                             "ERROR: Output does not contain at least 1 code block"
                         )
                     ],
-                    self.features,
+                    self.analysis,
                 )
                 success, checker_message = self.checker.check(
                     checker_input,
-                    ("termination" in self.features),
+                    ("termination" in self.analysis),
                     use_json_output=self.use_json_output,
                 )
 
@@ -1046,12 +1118,12 @@ class LoopyPipeline:
                     try:
                         success, pruned_code = self.checker.prune_annotations_and_check(
                             checker_input,
-                            self.features,
+                            self.analysis,
                             use_json_output=self.use_json_output,
                         )
                         success, checker_message = self.checker.check(
                             pruned_code,
-                            ("termination" in self.features),
+                            ("termination" in self.analysis),
                             use_json_output=self.use_json_output,
                         )
                         instance_log_json["code_after_combine_and_prune"] = pruned_code

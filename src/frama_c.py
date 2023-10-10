@@ -495,22 +495,19 @@ class FramaCBenchmark(Benchmark):
             return output
 
         elif "termination_one_loop_one_method" == features:
+            if len(llm_outputs) < 2:
+                raise Exception(
+                    "Inputs should be inductive invariants and possible variants"
+                )
+
             annotated_candidates = []
-            invariants = {}
+            invariants = llm_outputs[0]
             inv_count = 0
             variants = {}
 
-            for llm_output in llm_outputs:
+            for llm_output in llm_outputs[1]:
                 for line in llm_output.split("\n"):
-                    invariant = re.findall(r"loop invariant (.+);", line)
                     __variants = re.findall(r"(loop variant .+;)", line)
-                    if len(invariant) > 0:
-                        inv_id = re.findall(r"loop invariant (\w+:) ", line)
-                        if len(inv_id) > 0:
-                            invariant = [invariant[0].replace(inv_id[0], "")]
-                        invariant = f"loop invariant i{inv_count + 1}: {invariant[0]};"  # add loop invariant label
-                        invariants[invariant] = True
-                        inv_count += 1
 
                     for variant in __variants:
                         variants[variant] = True
@@ -526,7 +523,7 @@ class FramaCBenchmark(Benchmark):
                 annotated_candidates.append(
                     checker_input[: loop.start_byte]
                     + "/*@\n"
-                    + "\n".join(list(invariants.keys()))
+                    + "\n".join(invariants)
                     + "\n"
                     + variant
                     + "\n*/\n"
@@ -566,6 +563,30 @@ class FramaCBenchmark(Benchmark):
 
         else:
             raise Exception("Unknown feature set")
+
+    def extract_loop_invariants(self, code):
+        loop_invariants = []
+        ast = self.parser.parse(bytes(code, "utf-8"))
+        comment_query = self.language.query(
+            """
+            (comment) @comment 
+            """
+        )
+        comments = comment_query.captures(ast.root_node)
+        comments = list(
+            filter(lambda x: x[0].text.decode("utf-8").startswith("/*@"), comments)
+        )
+
+        if len(comments) > 1:
+            raise Exception("More than 1 loop annotation found")
+
+        comment = comments[0][0]
+        comment = code[comment.start_byte : comment.end_byte]
+
+        for line in comment.splitlines():
+            if self.is_invariant(line):
+                loop_invariants.append(line)
+        return loop_invariants
 
     def remove_comments(self, code):
         comment_query = self.language.query(

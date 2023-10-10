@@ -87,7 +87,7 @@ class LLM:
         if len(line_nos) < 2:
             return (
                 "ERROR: Output does not contain at least 1 code block\nOutput:\n"
-            ) + output
+            ), output
         annotation = ""
         line_nos = line_nos if len(line_nos) % 2 == 0 else line_nos[:-1]
         for i in range(0, len(line_nos), 2):

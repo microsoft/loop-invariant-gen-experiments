@@ -80,6 +80,8 @@ class Benchmark:
 
         return output
 
+    def extract_loop_invariants(self, code):
+        raise NotImplementedError
 
 class InvalidBenchmarkException(Exception):
     def __init__(self, message):
