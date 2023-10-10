@@ -203,6 +203,7 @@ class LoopyPipeline:
             try:
                 llm_outputs = None
                 conversations = None
+                benchmark_success = False
 
                 llm_outputs, conversations = self.llm.run(
                     {"code": self.benchmark.get_code(instance)}
@@ -287,6 +288,7 @@ class LoopyPipeline:
                         ]
                         completion["candidates"].append(candidate_completion)
                         completion["success"] = completion["success"] or success
+                        benchmark_success = benchmark_success or success
                     completions.append(completion)
 
                 instance_log_json["completions"] = completions
@@ -376,8 +378,9 @@ class LoopyPipeline:
                     instance_log_json["success"] = (
                         instance_log_json["success"] or success
                     )
+                    benchmark_success = benchmark_success or success
 
-                if success:
+                if benchmark_success:
                     stats["success"].append(i)
                 else:
                     stats["failure"].append(i)
