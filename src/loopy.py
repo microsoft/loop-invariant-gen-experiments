@@ -1468,7 +1468,7 @@ class LoopyPipeline:
                             "step": "Prompting LLM",
                             "generating_annotation": annotation_type,
                         }
-                        Logger.log_info(f"[Step {step_index}] Prompting {self.model}")
+                        Logger.log_info(f"[Step {step_index}] Prompting {self.model} for {annotation_type}")
 
                         generated_code_blocks = None
                         llm_output_text = None

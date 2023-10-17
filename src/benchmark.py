@@ -4,7 +4,9 @@ import os
 
 class Benchmark:
     def __init__(self, benchmarks_file="", features=None):
-        self.input_benchmarks = benchmarks_file
+        self.input_benchmarks = os.path.join(
+            os.path.dirname(__file__), "../", benchmarks_file
+        )
         self.features = features
         self.input_file_paths = []
 
@@ -82,6 +84,7 @@ class Benchmark:
 
     def extract_loop_invariants(self, code):
         raise NotImplementedError
+
 
 class InvalidBenchmarkException(Exception):
     def __init__(self, message):

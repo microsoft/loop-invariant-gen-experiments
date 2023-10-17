@@ -32,14 +32,14 @@ class Prompt:
 
     def get_system_text(self):
         template = Environment(
-            loader=FileSystemLoader(os.path.dirname(__file__))
+            loader=FileSystemLoader(os.path.join(os.path.dirname(__file__), "../"))
         ).get_template(self.system_text_file)
         # System prompt should ideally not have any inputs
         return template.render()
 
     def get_user_text(self, input: dict = None):
         template = Environment(
-            loader=FileSystemLoader(os.path.dirname(__file__))
+            loader=FileSystemLoader(os.path.join(os.path.dirname(__file__), "../"))
         ).get_template(self.prompt_text_file)
         prompt = template.render(input)
         return prompt
@@ -50,7 +50,7 @@ class Prompt:
             UserWarning,
         )
         template = Environment(
-            loader=FileSystemLoader(os.path.dirname(__file__))
+            loader=FileSystemLoader(os.path.join(os.path.dirname(__file__), "../"))
         ).get_template(self.set_output)
         prompt = template.render(input)
         return prompt
