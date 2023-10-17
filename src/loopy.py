@@ -1543,7 +1543,7 @@ class LoopyPipeline:
                                 annotations["loop_invariants"]
                             ):
                                 Logger.log_info(
-                                    f"Checking completion {ann_index + 1}/{len(annotations['loop_invariants'])} for benchmark: {start_index + benchmark_index + 1}/{len(sliced_benchmarks)}"
+                                    f"[Step {step_index + 1}] Checking completion {ann_index + 1}/{len(annotations['loop_invariants'])} for benchmark: {start_index + benchmark_index + 1}/{len(sliced_benchmarks)}"
                                 )
 
                                 completion = {"num_solver_calls": 0, "success": False}
@@ -1586,11 +1586,11 @@ class LoopyPipeline:
                                 if success:
                                     step_log_json["success"] = True
                                     Logger.log_success(
-                                        f"Completion {ann_index + 1} is correct"
+                                        f"[Step {step_index + 1}] Completion {ann_index + 1} is correct"
                                     )
                                 else:
                                     Logger.log_error(
-                                        f"Completion {ann_index + 1} is incorrect"
+                                        f"[Step {step_index + 1}] Completion {ann_index + 1} is incorrect"
                                     )
 
                                 completions.append(completion)
@@ -1632,7 +1632,7 @@ class LoopyPipeline:
                                 checker_inputs_with_variants
                             ):
                                 Logger.log_info(
-                                    f"Checking completion {c_index + 1}/{len(checker_inputs_with_variants)} for benchmark: {start_index + benchmark_index + 1}/{len(sliced_benchmarks)}"
+                                    f"[Step {step_index + 1}] Checking completion {c_index + 1}/{len(checker_inputs_with_variants)} for benchmark: {start_index + benchmark_index + 1}/{len(sliced_benchmarks)}"
                                 )
                                 success, checker_message = self.checker.check(
                                     checker_input,
@@ -1656,11 +1656,11 @@ class LoopyPipeline:
                                 if success:
                                     step_log_json["success"] = True
                                     Logger.log_success(
-                                        f"Completion {c_index + 1} is correct"
+                                        f"[Step {step_index + 1}] Completion {c_index + 1} is correct"
                                     )
                                 else:
                                     Logger.log_error(
-                                        f"Completion {c_index + 1} is incorrect"
+                                        f"[Step {step_index + 1}] Completion {c_index + 1} is incorrect"
                                     )
 
                             step_log_json["completions"] = candidates
@@ -1692,7 +1692,7 @@ class LoopyPipeline:
                             annotations["loop_invariants"]
                         ):
                             Logger.log_info(
-                                f"Checking completion {ann_index + 1}/{len(annotations['loop_invariants'])} for benchmark: {start_index + benchmark_index + 1}/{len(sliced_benchmarks)}"
+                                f"[Step {step_index + 1}] Checking completion {ann_index + 1}/{len(annotations['loop_invariants'])} for benchmark: {start_index + benchmark_index + 1}/{len(sliced_benchmarks)}"
                             )
 
                             completion = {"num_solver_calls": 0, "success": False}
@@ -1743,11 +1743,11 @@ class LoopyPipeline:
                             if success:
                                 step_log_json["success"] = True
                                 Logger.log_success(
-                                    f"Completion {ann_index + 1} is correct"
+                                    f"[Step {step_index + 1}] Completion {ann_index + 1} is correct"
                                 )
                             else:
                                 Logger.log_error(
-                                    f"Completion {ann_index + 1} is incorrect"
+                                    f"[Step {step_index + 1}] Completion {ann_index + 1} is incorrect"
                                 )
 
                             completions.append(completion)
@@ -1808,11 +1808,11 @@ class LoopyPipeline:
                         if success:
                             step_log_json["success"] = True
                             Logger.log_success(
-                                f"Houdini for combined completion successful"
+                                f"[Step {step_index + 1}] Houdini for combined completion successful"
                             )
                         else:
                             Logger.log_error(
-                                f"Houdini for combined completion unsuccessful"
+                                f"[Step {step_index + 1}] Houdini for combined completion unsuccessful"
                             )
 
                         pipeline_outputs.append(step_log_json)
@@ -1836,10 +1836,14 @@ class LoopyPipeline:
             instance_log_json["log"] = pipeline_outputs
             instance_log_json["success"] = pipeline_outputs[-1]["success"]
             if instance_log_json["success"]:
-                Logger.log_success(f"Benchmark {benchmark_file} succeeded")
+                Logger.log_success(
+                    f"Benchmark {start_index + benchmark_index + 1}/{len(sliced_benchmarks)} succeeded"
+                )
                 stats["success"].append(benchmark_file)
             else:
-                Logger.log_error(f"Benchmark {benchmark_file} failed")
+                Logger.log_error(
+                    f"Benchmark {start_index + benchmark_index + 1}/{len(sliced_benchmarks)} failed"
+                )
                 stats["failure"].append(benchmark_file)
 
             stats["total"] += 1

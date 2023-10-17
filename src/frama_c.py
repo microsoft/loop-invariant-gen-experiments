@@ -625,7 +625,7 @@ class FramaCBenchmark(Benchmark):
         # Generate ghost variable declaration
         ghost_var_string = (
             """//@ ghost variant_expression measure = { """
-            + ", ".join(variants)
+            + ", ".join(variant_expressions)
             + " };\n"
         )
 
