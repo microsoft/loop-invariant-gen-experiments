@@ -1529,6 +1529,7 @@ class LoopyPipeline:
                             and type(annotations["loop_invariants"]) != str
                         ):
                             # Houdini loop was not run maybe?
+                            print(json.dumps(annotations, indent=4, default=str))
                             raise Exception(
                                 "More than 1 loop inductive invariant set exists for this benchmark"
                             )
@@ -1562,18 +1563,12 @@ class LoopyPipeline:
                                     continue
 
                                 # Add only the loop invariants to the code and check
-                                checker_input_with_invariants = self.benchmark.combine_llm_outputs(
-                                    self.benchmark.get_code(benchmark_file),
-                                    [
-                                        llm_output
-                                        if not (
-                                            len(llm_output) == 2
-                                            and llm_output[0]
-                                            == "ERROR: Output does not contain at least 1 code block"
-                                        )
-                                        else ""
-                                    ],
-                                    "one_loop_one_method",
+                                checker_input_with_invariants = (
+                                    self.benchmark.combine_llm_outputs(
+                                        self.benchmark.get_code(benchmark_file),
+                                        [llm_output],
+                                        "one_loop_one_method",
+                                    )
                                 )
                                 completion["invariants"] = llm_output
                                 success, checker_message = self.checker.check(
@@ -1612,21 +1607,23 @@ class LoopyPipeline:
                             and "loop_invariants" in annotations
                             and type(annotations["loop_invariants"]) == str
                         ):
-                            checker_inputs_with_variants = self.benchmark.combine_llm_outputs(
-                                self.benchmark.get_code(benchmark_file),
-                                (
-                                    annotations["loop_invariants"],
-                                    [
-                                        llm_output
-                                        for llm_output in annotations["loop_variants"]
-                                        if not (
-                                            len(llm_output) == 2
-                                            and llm_output[0]
-                                            == "ERROR: Output does not contain at least 1 code block"
-                                        )
-                                    ],
-                                ),
-                                "termination_one_loop_one_method",
+                            variants = []
+                            for llm_output in annotations["loop_variants"]:
+                                if len(llm_output) == 2 and llm_output[0] == (
+                                    "ERROR: Output does not contain at least 1 code block"
+                                ):
+                                    continue
+                                variants.append(llm_output)
+
+                            checker_inputs_with_variants = (
+                                self.benchmark.combine_llm_outputs(
+                                    self.benchmark.get_code(benchmark_file),
+                                    (
+                                        annotations["loop_invariants"],
+                                        variants,
+                                    ),
+                                    "termination_one_loop_one_method",
+                                )
                             )
 
                             candidates = []
@@ -1824,6 +1821,7 @@ class LoopyPipeline:
                         raise Exception("Unsupported step")
 
                 except Exception as e:
+                    Logger.log_error(traceback.format_exc())
                     if isinstance(e, KeyboardInterrupt):
                         step_log_json["error"] = str(e)
                         instance_log_json["log"].append(step_log_json)
