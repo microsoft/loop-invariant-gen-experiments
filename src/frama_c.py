@@ -662,6 +662,7 @@ class FramaCBenchmark(Benchmark):
             + ghost_var_string
             + "/*@\n"
             + invariants
+            + "\n"
             + "loop variant measure for lexicographic;"
             + "\n*/\n"
             + annotated_checker_input[loop.start_byte :]
