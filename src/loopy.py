@@ -241,7 +241,7 @@ class LoopyPipeline:
                     # If the completion does not have a code block,
                     # mark it as a failure and continue
                     if len(llm_output) == 2 and llm_output[0] == (
-                        "ERROR: Output does not contain at least 1 code block"
+                        "ERROR: Output does not contain at least 1 complete code block"
                     ):
                         completion["success"] = False
                         completion["llm_output"] = llm_output[1]
@@ -258,7 +258,7 @@ class LoopyPipeline:
                             if not (
                                 len(llm_output) == 2
                                 and llm_output[0]
-                                == "ERROR: Output does not contain at least 1 code block"
+                                == "ERROR: Output does not contain at least 1 complete code block"
                             )
                             else ""
                         ],
@@ -317,7 +317,7 @@ class LoopyPipeline:
                                     if not (
                                         len(llm_output) == 2
                                         and llm_output[0]
-                                        == "ERROR: Output does not contain at least 1 code block"
+                                        == "ERROR: Output does not contain at least 1 complete code block"
                                     )
                                     else ""
                                 ],
@@ -372,7 +372,7 @@ class LoopyPipeline:
                         if not (
                             len(llm_output) == 2
                             and llm_output[0]
-                            == "ERROR: Output does not contain at least 1 code block"
+                            == "ERROR: Output does not contain at least 1 complete code block"
                         )
                     ],
                     "one_loop_one_method",
@@ -435,7 +435,7 @@ class LoopyPipeline:
                                 if not (
                                     len(llm_output) == 2
                                     and llm_output[0]
-                                    == "ERROR: Output does not contain at least 1 code block"
+                                    == "ERROR: Output does not contain at least 1 complete code block"
                                 )
                             ],
                         ),
@@ -843,11 +843,11 @@ class LoopyPipeline:
                     print(f"Checking completion {j + 1}/{len(llm_outputs)}")
                     completion = {}
                     if llm_output.startswith(
-                        "ERROR: Output does not contain at least 1 code block"
+                        "ERROR: Output does not contain at least 1 complete code block"
                     ):
                         completion["success"] = False
                         completion["llm_output"] = llm_output.replace(
-                            "ERROR: Output does not contain at least 1 code block\nOutput:\n",
+                            "ERROR: Output does not contain at least 1 complete code block\nOutput:\n",
                             "",
                         )
                         completion[
@@ -908,7 +908,7 @@ class LoopyPipeline:
                         llm_output
                         for llm_output in llm_outputs
                         if not llm_output.startswith(
-                            "ERROR: Output does not contain at least 1 code block"
+                            "ERROR: Output does not contain at least 1 complete code block"
                         )
                     ],
                     self.analysis,
@@ -1050,11 +1050,11 @@ class LoopyPipeline:
                     print(f"Checking completion {j + 1}/{len(llm_outputs)}")
                     completion = {}
                     if llm_output.startswith(
-                        "ERROR: Output does not contain at least 1 code block"
+                        "ERROR: Output does not contain at least 1 complete code block"
                     ):
                         completion["success"] = False
                         completion["llm_output"] = llm_output.replace(
-                            "ERROR: Output does not contain at least 1 code block\nOutput:\n",
+                            "ERROR: Output does not contain at least 1 complete code block\nOutput:\n",
                             "",
                         )
                         completion[
@@ -1115,7 +1115,7 @@ class LoopyPipeline:
                         llm_output
                         for llm_output in llm_outputs
                         if not llm_output.startswith(
-                            "ERROR: Output does not contain at least 1 code block"
+                            "ERROR: Output does not contain at least 1 complete code block"
                         )
                     ],
                     self.analysis,
@@ -1551,7 +1551,7 @@ class LoopyPipeline:
                                 # If the completion does not have a code block,
                                 # mark it as a failure and continue
                                 if len(llm_output) == 2 and llm_output[0] == (
-                                    "ERROR: Output does not contain at least 1 code block"
+                                    "ERROR: Output does not contain at least 1 complete code block"
                                 ):
                                     completion["success"] = False
                                     completion["num_solver_calls"] = 0
@@ -1610,7 +1610,7 @@ class LoopyPipeline:
                             variants = []
                             for llm_output in annotations["loop_variants"]:
                                 if len(llm_output) == 2 and llm_output[0] == (
-                                    "ERROR: Output does not contain at least 1 code block"
+                                    "ERROR: Output does not contain at least 1 complete code block"
                                 ):
                                     continue
                                 variants.append(llm_output)
@@ -1700,7 +1700,7 @@ class LoopyPipeline:
                             # If the completion does not have a code block,
                             # mark it as a failure and continue
                             if len(llm_output) == 2 and llm_output[0] == (
-                                "ERROR: Output does not contain at least 1 code block"
+                                "ERROR: Output does not contain at least 1 complete code block"
                             ):
                                 completion["success"] = False
                                 completion["num_solver_calls"] = 0
@@ -1719,7 +1719,7 @@ class LoopyPipeline:
                                     if not (
                                         len(llm_output) == 2
                                         and llm_output[0]
-                                        == "ERROR: Output does not contain at least 1 code block"
+                                        == "ERROR: Output does not contain at least 1 complete code block"
                                     )
                                     else ""
                                 ],
@@ -1781,7 +1781,7 @@ class LoopyPipeline:
                                 if not (
                                     len(llm_output) == 2
                                     and llm_output[0]
-                                    == "ERROR: Output does not contain at least 1 code block"
+                                    == "ERROR: Output does not contain at least 1 complete code block"
                                 )
                             ],
                             "one_loop_one_method",

@@ -672,7 +672,9 @@ class FramaCBenchmark(Benchmark):
 
         annotated_code_with_variants_and_ghost_variables = (
             annotated_code_with_variants[: loop.end_byte - 1]
+            + "\n"
             + ghost_assign_string
+            + "\n"
             + annotated_code_with_variants[loop.end_byte - 1 :]
         )
 
