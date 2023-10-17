@@ -708,7 +708,7 @@ class FramaCBenchmark(Benchmark):
         for line in comment.split("\n"):
             if self.is_invariant(line):
                 loop_invariants.append(line)
-        return loop_invariants
+        return "\n".join(loop_invariants)
 
     def remove_comments(self, code):
         comment_query = self.language.query(
