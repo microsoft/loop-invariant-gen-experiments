@@ -609,11 +609,7 @@ class FramaCBenchmark(Benchmark):
 
             disjunct = (
                 conjunct_1
-                + (
-                    (" && " + equality_conjunct_1)
-                    if equality_conjunct_1 is not ""
-                    else ""
-                )
+                + ((" && " + equality_conjunct_1) if equality_conjunct_1 != "" else "")
                 + " && "
                 + inequality_conjunct_1
             )
