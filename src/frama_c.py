@@ -533,7 +533,7 @@ class FramaCBenchmark(Benchmark):
                     annotated_candidates.append(
                         checker_input[: loop.start_byte]
                         + "/*@\n"
-                        + "\n".join(invariants)
+                        + invariants
                         + "\n"
                         + variant
                         + "\n*/\n"
@@ -640,7 +640,7 @@ class FramaCBenchmark(Benchmark):
             )
             + ";"
         )
-        invariants.append(ghost_inv_string)
+        invariants = invariants + "\n" + ghost_inv_string
 
         # Generate ghost variable assignments
         ghost_assign_string = "\n".join(
@@ -661,7 +661,7 @@ class FramaCBenchmark(Benchmark):
             annotated_checker_input[: loop.start_byte]
             + ghost_var_string
             + "/*@\n"
-            + "\n".join(invariants)
+            + invariants
             + "loop variant measure for lexicographic;"
             + "\n*/\n"
             + annotated_checker_input[loop.start_byte :]
