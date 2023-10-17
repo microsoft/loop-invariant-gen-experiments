@@ -1,3 +1,4 @@
+import datetime
 import json
 import os
 import random
@@ -1429,6 +1430,9 @@ class LoopyPipeline:
         stats = {"success": [], "failure": [], "skipped": [], "total": 0}
 
         # create logs dir
+        self.log_path = datetime.datetime.now().strftime(
+            f"../logs/loopy_%Y_%m_%d_%H_%M_%S/"
+        )
         if not os.path.exists(os.path.dirname(self.log_path)):
             os.makedirs(os.path.dirname(self.log_path))
 
@@ -1776,6 +1780,27 @@ class LoopyPipeline:
 
             instance_log_json["log"] = pipeline_outputs
             log_json.append(instance_log_json)
+
+            with open(
+                os.path.join(
+                    self.log_path,
+                    benchmark_file.replace(".c", ".json")
+                    .replace("../", "")
+                    .replace("/", "__"),
+                ),
+                "w",
+                encoding="utf-8",
+            ) as f:
+                f.write(
+                    json.dumps(
+                        {
+                            "logs": instance_log_json,
+                            "stats": stats,
+                        },
+                        indent=4,
+                        ensure_ascii=False,
+                    )
+                )
 
         log_file.write(
             json.dumps(
