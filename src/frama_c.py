@@ -501,14 +501,6 @@ class FramaCBenchmark(Benchmark):
             annotated_candidates = []
             invariants = llm_outputs[0]
             inv_count = 0
-            variants = {}
-
-            for llm_output in llm_outputs[1]:
-                for line in llm_output.split("\n"):
-                    __variants = re.findall(r"(loop variant .+;)", line)
-
-                    for variant in __variants:
-                        variants[variant] = True
 
             loop = self.get_loops(self.get_main_definition(checker_input))
             if len(loop) != 1:
@@ -517,16 +509,36 @@ class FramaCBenchmark(Benchmark):
                 )
             loop = loop[0]
 
-            for variant in variants.keys():
-                annotated_candidates.append(
-                    checker_input[: loop.start_byte]
-                    + "/*@\n"
-                    + "\n".join(invariants)
-                    + "\n"
-                    + variant
-                    + "\n*/\n"
-                    + checker_input[loop.start_byte :]
-                )
+            for llm_output in llm_outputs[1]:
+                variants = {}
+                for line in llm_output.split("\n"):
+                    __variants = re.findall(r"(loop variant .+;)", line)
+
+                    for variant in __variants:
+                        variants[variant] = True
+
+                if len(variants) == 0:
+                    continue
+
+                elif len(variants) > 1:
+                    annotated_candidate = self.generate_lexicographic_variants(
+                        checker_input=checker_input,
+                        invariants=invariants,
+                        variants=llm_output,
+                    )
+                    annotated_candidates.append(annotated_candidate)
+
+                else:
+                    variant = list(variants.keys())[0]
+                    annotated_candidates.append(
+                        checker_input[: loop.start_byte]
+                        + "/*@\n"
+                        + "\n".join(invariants)
+                        + "\n"
+                        + variant
+                        + "\n*/\n"
+                        + checker_input[loop.start_byte :]
+                    )
 
             return annotated_candidates
 
@@ -561,6 +573,114 @@ class FramaCBenchmark(Benchmark):
 
         else:
             raise Exception("Unknown feature set")
+
+    def generate_lexicographic_variants(self, checker_input, invariants, variants):
+        # Assume all the variant expressions are unique
+        variant_expressions = []
+        for line in variants.split("\n"):
+            variant = re.findall(r"loop variant (.+);", line)
+            if len(variant) > 0:
+                variant_expressions.append(variant[0])
+
+        num_variants = len(variant_expressions)
+
+        if num_variants == 0:
+            return checker_input
+
+        # Generate a struct for the variant expressions
+        struct_string = """
+        typedef struct {
+        """
+        for i in range(num_variants):
+            struct_string += f"int {chr(i + 97)};\n"
+        struct_string += "} variant_expression;\n"
+
+        # Generate the lexicographic predicate
+        predicate_string = """/*@ 
+            predicate lexicographic(variant_expression v1, variant_expression v2) =
+        """
+        disjuncts = []
+        for i in range(num_variants):
+            conjunct_1 = f"v1.{chr(i + 97)} >= 0"
+            equality_conjunct_1 = " && ".join(
+                [f"v1.{chr(j + 97)} == v2.{chr(j + 97)}" for j in range(i)]
+            )
+            inequality_conjunct_1 = f"v1.{chr(i + 97)} > v2.{chr(i + 97)}"
+
+            disjunct = (
+                conjunct_1
+                + (
+                    (" && " + equality_conjunct_1)
+                    if equality_conjunct_1 is not ""
+                    else ""
+                )
+                + " && "
+                + inequality_conjunct_1
+            )
+            disjunct = "(" + disjunct + ")"
+            disjuncts.append(disjunct)
+
+        predicate_string += " ||\n ".join(disjuncts) + ";\n*/"
+
+        annotated_checker_input = (
+            struct_string + "\n" + predicate_string + "\n" + checker_input
+        )
+
+        # Generate ghost variable declaration
+        ghost_var_string = (
+            """//@ ghost variant_expression measure = { """
+            + ", ".join(variants)
+            + " };\n"
+        )
+
+        # Generate ghost variable loop invariant
+        ghost_inv_string = (
+            "loop invariant "
+            + " && ".join(
+                [
+                    f"measure.{chr(i + 97)} == {variant_expressions[i]}"
+                    for i in range(num_variants)
+                ]
+            )
+            + ";"
+        )
+        invariants.append(ghost_inv_string)
+
+        # Generate ghost variable assignments
+        ghost_assign_string = "\n".join(
+            [
+                f"//@ ghost measure.{chr(i + 97)} = {variant_expressions[i]};"
+                for i in range(num_variants)
+            ]
+        )
+
+        loop = self.get_loops(self.get_main_definition(annotated_checker_input))
+        if len(loop) != 1:
+            raise Exception(
+                "No singular loop found while adding annotations. Multiple loops not supported yet."
+            )
+        loop = loop[0]
+
+        annotated_code_with_variants = (
+            annotated_checker_input[: loop.start_byte]
+            + ghost_var_string
+            + "/*@\n"
+            + "\n".join(invariants)
+            + "loop variant measure for lexicographic;"
+            + "\n*/\n"
+            + annotated_checker_input[loop.start_byte :]
+        )
+
+        loop = self.get_loops(self.get_main_definition(annotated_code_with_variants))
+        loop = loop[0]
+
+        annotated_code_with_variants_and_ghost_variables = (
+            annotated_code_with_variants[: loop.end_byte - 1]
+            + ghost_assign_string
+            + annotated_code_with_variants[loop.end_byte - 1 :]
+        )
+
+        return annotated_code_with_variants_and_ghost_variables
 
     def is_invariant(self, line):
         inv = re.findall(r"loop invariant (.+);", line)

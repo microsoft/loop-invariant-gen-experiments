@@ -1524,7 +1524,7 @@ class LoopyPipeline:
                         elif (
                             "loop_variants" in annotations
                             and "loop_invariants" in annotations
-                            and len(annotations["loop_invariants"]) > 1
+                            and type(annotations["loop_invariants"]) != str
                         ):
                             # Houdini loop was not run maybe?
                             raise Exception(
