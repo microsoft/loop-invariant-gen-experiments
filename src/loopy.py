@@ -109,6 +109,9 @@ class LoopyPipeline:
     def load_config(self, config_file):
         config = yaml.load(open(config_file, "r"), Loader=yaml.FullLoader)
 
+        if "analysis" in config:
+            self.analysis = config["analysis"]
+
         if not "benchmarks" in config:
             raise Exception("No benchmarks found in config file")
         benchmarks = config["benchmarks"]
@@ -1419,7 +1422,7 @@ class LoopyPipeline:
         if self.llm is None or self.benchmark is None or self.checker is None:
             raise Exception("Pipeline not initialized. Call load_config first.")
 
-        if not all(self.analysis in x for x in ["termination", "safety"]):
+        if not all(self.analysis in x for x in ["loop_invariants", "loop_variants"]):
             raise Exception("Unsupported analysis for sequence pipeline")
 
         log_json = []
