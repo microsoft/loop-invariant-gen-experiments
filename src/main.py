@@ -181,33 +181,11 @@ def parse_args(args):
 def main(args):
     args = parse_args(args[1:])
 
-    config = {}
-    if args.config_file != "":
-        config = yaml.load(open(args.config_file, "r"), Loader=yaml.FullLoader)
-
     # TODO: Add support for other models/hosts when available
     if args.provider not in ["azure-open-ai", "local"]:
         raise Exception("Only models on Azure Open AI are supported for now")
 
-    checker = (
-        Checker("boogie")
-        if config["checker"] == "boogie"
-        else (FramaCChecker() if config["checker"] == "frama-c" else None)
-    )
-
-    benchmark = (
-        Benchmark()
-        if config["checker"] == "boogie"
-        else (
-            FramaCBenchmark(features=config["analysis"])
-            if config["checker"] == "frama-c"
-            else None
-        )
-    )
-
-    p = LoopyPipeline(
-        arg_params=vars(args),
-    )
+    p = LoopyPipeline(arg_params=vars(args))
 
     p = p.load_config(args.config_file)
 
