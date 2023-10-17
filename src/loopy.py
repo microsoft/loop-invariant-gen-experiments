@@ -1836,8 +1836,10 @@ class LoopyPipeline:
             instance_log_json["log"] = pipeline_outputs
             instance_log_json["success"] = pipeline_outputs[-1]["success"]
             if instance_log_json["success"]:
+                Logger.log_success(f"Benchmark {benchmark_file} succeeded")
                 stats["success"].append(benchmark_file)
             else:
+                Logger.log_error(f"Benchmark {benchmark_file} failed")
                 stats["failure"].append(benchmark_file)
 
             stats["total"] += 1
