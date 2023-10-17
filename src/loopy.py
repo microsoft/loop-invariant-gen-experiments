@@ -1422,7 +1422,7 @@ class LoopyPipeline:
         if self.llm is None or self.benchmark is None or self.checker is None:
             raise Exception("Pipeline not initialized. Call load_config first.")
 
-        if not all(self.analysis in x for x in ["loop_invariants", "loop_variants"]):
+        if not all([x in ["loop_invariants", "loop_variants"] for x in self.analysis]):
             raise Exception("Unsupported analysis for sequence pipeline")
 
         log_json = []
