@@ -110,11 +110,6 @@ class LLM:
             if filter(snippet):
                 annotation_block = snippet
                 break
-            # loop_invariants = re.findall(r"loop invariant (.*);", snippet)
-            # loop_variants = re.findall(r"loop variant (.*);", snippet)
-            # if len(loop_invariants) > 0 or len(loop_variants) > 0:
-            #     annotation_block = snippet
-            #     break
 
         return (
             annotation_block

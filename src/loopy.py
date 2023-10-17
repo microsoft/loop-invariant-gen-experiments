@@ -1599,7 +1599,7 @@ class LoopyPipeline:
                             "loop_variants" in annotations
                             and len(annotations["loop_variants"]) > 0
                             and "loop_invariants" in annotations
-                            and len(annotations["loop_invariants"]) == 1
+                            and type(annotations["loop_invariants"]) == str
                         ):
                             checker_inputs_with_variants = self.benchmark.combine_llm_outputs(
                                 self.benchmark.get_code(benchmark_file),
@@ -1607,12 +1607,12 @@ class LoopyPipeline:
                                     annotations["loop_invariants"],
                                     [
                                         llm_output
+                                        for llm_output in annotations["loop_variants"]
                                         if not (
                                             len(llm_output) == 2
                                             and llm_output[0]
                                             == "ERROR: Output does not contain at least 1 code block"
                                         )
-                                        else ""
                                     ],
                                 ),
                                 "termination_one_loop_one_method",
