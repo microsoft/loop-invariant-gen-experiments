@@ -1467,6 +1467,7 @@ class LoopyPipeline:
                         step_log_json = {
                             "step": "Prompting LLM",
                             "generating_annotation": annotation_type,
+                            "success": True,
                         }
                         Logger.log_info(
                             f"[Step {step_index + 1}] Prompting {self.model} for {annotation_type}"
@@ -1504,6 +1505,7 @@ class LoopyPipeline:
                             "step": "Checking individual completion",
                             "solver_calls": 0,
                             "completions": [],
+                            "success": False,
                         }
                         Logger.log_info(
                             f"[Step {step_index + 1}] Checking individual completion"
@@ -1586,6 +1588,15 @@ class LoopyPipeline:
                                     "checker_message_for_invariants"
                                 ] = checker_message
                                 completion["success"] = success
+                                if success:
+                                    step_log_json["success"] = True
+                                    Logger.log_success(
+                                        f"Completion {ann_index + 1} is correct"
+                                    )
+                                else:
+                                    Logger.log_error(
+                                        f"Completion {ann_index + 1} is incorrect"
+                                    )
 
                                 completions.append(completion)
 
@@ -1620,7 +1631,12 @@ class LoopyPipeline:
 
                             candidates = []
 
-                            for checker_input in checker_inputs_with_variants:
+                            for c_index, checker_input in enumerate(
+                                checker_inputs_with_variants
+                            ):
+                                Logger.log_info(
+                                    f"Checking completion {c_index + 1}/{len(checker_inputs_with_variants)} for benchmark: {start_index + benchmark_index + 1}/{len(sliced_benchmarks)}"
+                                )
                                 success, checker_message = self.checker.check(
                                     checker_input,
                                     True,
@@ -1640,6 +1656,15 @@ class LoopyPipeline:
                                 candidates.append(combined_candidate_with_variant)
 
                                 step_log_json["solver_calls"] += 1
+                                if success:
+                                    step_log_json["success"] = True
+                                    Logger.log_success(
+                                        f"Completion {c_index + 1} is correct"
+                                    )
+                                else:
+                                    Logger.log_error(
+                                        f"Completion {c_index + 1} is incorrect"
+                                    )
 
                             step_log_json["completions"] = candidates
                             pipeline_outputs.append(step_log_json)
@@ -1651,6 +1676,7 @@ class LoopyPipeline:
                     elif step == "houdini_for_individual_completion":
                         step_log_json = {
                             "step": "Houdini for individual completion",
+                            "success": False,
                         }
                         Logger.log_info(
                             f"[Step {step_index + 1}] Houdini for individual completions"
@@ -1717,6 +1743,16 @@ class LoopyPipeline:
                             completion["code_after_prune"] = pruned_code
                             completion["checker_output_after_prune"] = success
 
+                            if success:
+                                step_log_json["success"] = True
+                                Logger.log_success(
+                                    f"Completion {ann_index + 1} is correct"
+                                )
+                            else:
+                                Logger.log_error(
+                                    f"Completion {ann_index + 1} is incorrect"
+                                )
+
                             completions.append(completion)
 
                         step_log_json["completions"] = completions
@@ -1726,6 +1762,7 @@ class LoopyPipeline:
                         step_log_json = {
                             "step": "Houdini for combined completion",
                             "solver_calls": 0,
+                            "success": False,
                         }
                         Logger.log_info(
                             f"[Step {step_index + 1}] Houdini for combined completion"
@@ -1771,6 +1808,16 @@ class LoopyPipeline:
                         step_log_json["code_with_combined_invariants"] = pruned_code
                         step_log_json["checker_output"] = success
 
+                        if success:
+                            step_log_json["success"] = True
+                            Logger.log_success(
+                                f"Houdini for combined completion successful"
+                            )
+                        else:
+                            Logger.log_error(
+                                f"Houdini for combined completion unsuccessful"
+                            )
+
                         pipeline_outputs.append(step_log_json)
 
                     else:
@@ -1780,13 +1827,28 @@ class LoopyPipeline:
                     if isinstance(e, KeyboardInterrupt):
                         step_log_json["error"] = str(e)
                         instance_log_json["log"].append(step_log_json)
+                        stats["skipped"].append(benchmark_file)
                         break
                     Logger.log_error(e)
                     step_log_json["error"] = str(e)
                     instance_log_json["log"].append(step_log_json)
+                    stats["skipped"].append(benchmark_file)
                     continue
 
             instance_log_json["log"] = pipeline_outputs
+            instance_log_json["success"] = pipeline_outputs[-1]["success"]
+            if instance_log_json["success"]:
+                stats["success"].append(benchmark_file)
+            else:
+                stats["failure"].append(benchmark_file)
+
+            stats["total"] += 1
+            stats["success_count"] = len(stats["success"])
+            stats["failure_count"] = len(stats["failure"])
+            stats["success_rate"] = (
+                stats["success_count"] / stats["total"] if stats["total"] != 0 else 0
+            )
+
             log_json.append(instance_log_json)
 
             with open(
