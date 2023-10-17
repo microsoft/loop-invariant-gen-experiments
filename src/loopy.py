@@ -1468,7 +1468,9 @@ class LoopyPipeline:
                             "step": "Prompting LLM",
                             "generating_annotation": annotation_type,
                         }
-                        Logger.log_info(f"[Step {step_index}] Prompting {self.model} for {annotation_type}")
+                        Logger.log_info(
+                            f"[Step {step_index + 1}] Prompting {self.model} for {annotation_type}"
+                        )
 
                         generated_code_blocks = None
                         llm_output_text = None
@@ -1504,7 +1506,7 @@ class LoopyPipeline:
                             "completions": [],
                         }
                         Logger.log_info(
-                            f"[Step {step_index}] Checking individual completion"
+                            f"[Step {step_index + 1}] Checking individual completion"
                         )
                         if annotations == {}:  # No annotations generated
                             raise Exception(
@@ -1650,6 +1652,9 @@ class LoopyPipeline:
                         step_log_json = {
                             "step": "Houdini for individual completion",
                         }
+                        Logger.log_info(
+                            f"[Step {step_index + 1}] Houdini for individual completions"
+                        )
 
                         if (
                             "loop_invariants" not in annotations
@@ -1722,6 +1727,9 @@ class LoopyPipeline:
                             "step": "Houdini for combined completion",
                             "solver_calls": 0,
                         }
+                        Logger.log_info(
+                            f"[Step {step_index + 1}] Houdini for combined completion"
+                        )
 
                         if (
                             "loop_invariants" not in annotations

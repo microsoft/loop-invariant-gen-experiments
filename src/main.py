@@ -185,7 +185,12 @@ def main(args):
     if args.provider not in ["azure-open-ai", "local"]:
         raise Exception("Only models on Azure Open AI are supported for now")
 
-    p = LoopyPipeline(arg_params=vars(args))
+    p = LoopyPipeline(
+        arg_params=vars(args),
+        model=args.model,
+        debug=args.debug,
+        use_json_output=args.json_output,
+    )
 
     p = p.load_config(args.config_file)
 
