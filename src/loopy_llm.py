@@ -3,6 +3,7 @@ import json
 import os
 import re
 from copy import deepcopy
+import warnings
 
 from jinja2 import Environment, FileSystemLoader
 
@@ -12,98 +13,119 @@ from llm_utils import Settings
 from utils import ConvTree, Node
 
 
-class PromptConfig:
+class Prompt:
     def __init__(
         self,
-        prompt_file=None,
-        temperature=0.7,
-        num_completions=1,
-        set_output=None,
-        dir=None,
+        system_text_file: str = None,
+        prompt_text_file: str = None,
+        temperature: float = 0.7,
+        num_completions: int = 1,
+        batch_size: int = 5,
+        set_output: str = None,
     ):
-        self.prompt_file = prompt_file
+        self.system_text_file = system_text_file
+        self.prompt_text_file = prompt_text_file
         self.temperature = temperature
         self.num_completions = num_completions
+        self.batch_size = batch_size
         self.set_output = set_output
-        self.dir = os.path.join(os.path.dirname(__file__), dir)
 
-    def __repr__(self) -> str:
-        return "<PromptConfig prompt_file: {}, temperature: {}, num_completions: {}, set_output: {}>".format(
-            self.prompt_file, self.temperature, self.num_completions, self.set_output
-        )
+    def get_system_text(self):
+        template = Environment(
+            loader=FileSystemLoader(os.path.dirname(__file__))
+        ).get_template(self.system_text_file)
+        # System prompt should ideally not have any inputs
+        return template.render()
 
-    def render(self, input):
-        template = Environment(loader=FileSystemLoader(self.dir)).get_template(
-            self.prompt_file
-        )
+    def get_user_text(self, input: dict = None):
+        template = Environment(
+            loader=FileSystemLoader(os.path.dirname(__file__))
+        ).get_template(self.prompt_text_file)
         prompt = template.render(input)
         return prompt
 
-    def render_fixed_output(self, input):
-        template = Environment(loader=FileSystemLoader(self.dir)).get_template(
-            self.set_output
+    def get_assistant_text(self, input: dict = None):
+        warnings.warn(
+            "Usage of get_assistant_text is discouraged, refactor the LLM interaction and use get_user_text instead",
+            UserWarning,
         )
+        template = Environment(
+            loader=FileSystemLoader(os.path.dirname(__file__))
+        ).get_template(self.set_output)
         prompt = template.render(input)
         return prompt
 
     def from_file(self, input):
-        if type(input) == str:
-            self.prompt_file = input
-        elif type(input) == dict:
-            self.prompt_file = list(input.items())[0][0]
-            for k, v in list(input.items())[0][1].items():
-                setattr(self, k, v)
+        if type(input) == dict:
+            self.system_text_file = input["system_text"]
+            self.prompt_text_file = input["prompt_text"]
+            self.temperature = (
+                0.7 if "temperature" not in input else input["temperature"]
+            )
+            self.num_completions = (
+                1 if "num_completions" not in input else input["num_completions"]
+            )
+            self.batch_size = 5 if "batch_size" not in input else input["batch_size"]
+            self.set_output = None if "set_output" not in input else input["set_output"]
         else:
-            raise Exception("Invalid input type")
+            raise Exception("Invalid input type for prompt")
         return self
 
 
 class LLM:
     def __init__(
         self,
-        system_message=None,
-        prompt_configs=None,
-        healing_prompt_configs=None,
         model="gpt-3.5-turbo",
         debug=False,
     ):
-        self.system_message = system_message
-        self.prompt_configs = prompt_configs
-        self.healing_prompt_configs = healing_prompt_configs
         self.model = model
         self.debug = debug
 
-    def __repr__(self) -> str:
-        return "<LLM prompt_configs: {}, healing_prompt_configs: {}, model: {}>".format(
-            self.prompt_configs, self.healing_prompt_configs, self.model
-        )
-
-    def extract_code(self, output):
+    def extract_code(self, output, filter=lambda x: True):
+        """
+        Extracts the first code block that returns true
+        for the filter function. We adhere to markdown
+        format since it has shown to be very robust in
+        the case of LLMs.
+        """
         lines = output.split("\n")
         line_nos = []
+
         for i, line in enumerate(lines):
             if "```" in line:
                 line_nos.append(i)
+
         if len(line_nos) < 2:
             return (
-                "ERROR: Output does not contain at least 1 code block"
+                "ERROR: Output does not contain at least 1 complete code block"
             ), output
-        annotation = ""
-        line_nos = line_nos if len(line_nos) % 2 == 0 else line_nos[:-1]
+
+        annotation_block = ""
+        line_nos = (
+            line_nos if len(line_nos) % 2 == 0 else line_nos[:-1]
+        )  # skip the last block if it is incomplete
+
         for i in range(0, len(line_nos), 2):
             snippet = "\n".join(lines[line_nos[i] + 1 : line_nos[i + 1]])
-            loop_invariants = re.findall(r"loop invariant (.*);", snippet)
-            loop_variants = re.findall(r"loop variant (.*);", snippet)
-            if len(loop_invariants) > 0 or len(loop_variants) > 0:
-                annotation = snippet
+            if filter(snippet):
+                annotation_block = snippet
                 break
+            # loop_invariants = re.findall(r"loop invariant (.*);", snippet)
+            # loop_variants = re.findall(r"loop variant (.*);", snippet)
+            # if len(loop_invariants) > 0 or len(loop_variants) > 0:
+            #     annotation_block = snippet
+            #     break
+
         return (
-            annotation
-            if len(annotation) > 0
-            else "\n".join(lines[line_nos[0] + 1 : line_nos[1]])
+            annotation_block
+            if len(annotation_block) > 0
+            else "\n".join(
+                lines[line_nos[0] + 1 : line_nos[1]]
+            )  # return the first code block if no annotation block is found
         )
 
     def extract_label(self, output):
+        # TODO: Clean this up
         label_start = output.find("<label>")
         label_end = output.find("</label>")
         if label_start == -1 or label_end == -1:
@@ -111,112 +133,90 @@ class LLM:
 
         return output[label_start + len("<label>") : label_end].strip().lower()
 
-    def run__(
-        self, input, configs, input_tree=None, output_full_tree=False, label_only=False
+    def chat_completion(
+        self,
+        input: dict = None,
+        prompt: Prompt = None,
+        label_only: bool = False,
+        extraction_filter=lambda x: True,
     ):
         responses = None
-        if input_tree is not None:
-            conversation = input_tree
-        else:
-            conversation = ConvTree(
-                Node(
-                    {
-                        "role": "system",
-                        "content": ""
-                        if self.system_message is None
-                        else self.system_message,
-                    }
-                )
+        if prompt is None:
+            raise Exception("No prompt supplied to chat_completion")
+
+        system_message = {
+            "role": "system",
+            "content": ""
+            if prompt.system_text_file is None
+            else prompt.get_system_text(),
+        }
+        user_message = {
+            "role": "user",
+            "content": prompt.get_user_text(input),
+        }
+
+        llm_client = LLMAPIClient(
+            Settings(
+                model=self.model,
+                temperature=prompt.temperature,
+                num_completions=prompt.num_completions,
+                debug=self.debug,
             )
+        )
 
-        for prompt_config in configs:
-            if prompt_config.set_output:
-                latest = conversation.get_latest()
-                user_node = Node(
-                    {"role": "user", "content": prompt_config.render(input)}
-                )
-                assistant_node = Node(
-                    {
-                        "role": "assistant",
-                        "content": prompt_config.render_fixed_output(input),
-                    }
-                )
-                for node in latest:
-                    user_node_ = deepcopy(user_node)
-                    assistant_node_ = deepcopy(assistant_node)
-                    user_node_.add_child(assistant_node_)
-                    node.add_child(user_node_)
-            else:
-                llm_client = LLMAPIClient(
-                    Settings(
-                        model=self.model,
-                        temperature=prompt_config.temperature,
-                        num_completions=prompt_config.num_completions,
-                        debug=self.debug,
-                    )
-                )
-                latest = conversation.get_latest()
+        (_, responses) = llm_client.chat([system_message, user_message])
 
-                for node in latest:
-                    last_node = deepcopy(
-                        Node({"role": "user", "content": prompt_config.render(input)})
-                    )
-                    node.add_child(last_node)
+        response_logs = [system_message, user_message] + responses
 
-                    (_, responses) = llm_client.chat(last_node.path_to_root())
-
-                    for response in responses:
-                        response_node = Node({"role": "assistant", "content": response})
-                        last_node.add_child(response_node)
-
-        latest = conversation.get_latest()
-        return_code = []
-        return_logs = None
-        if output_full_tree:
-            return_logs = deepcopy(conversation)
-        else:
-            return_logs = conversation.get_full_tree()
-        for response in latest:
+        response_blocks = []
+        for response in responses:
             if label_only:
-                return_code.append(self.extract_label(response.data["content"]))
+                response_blocks.append(self.extract_label(response))
             else:
-                return_code.append(self.extract_code(response.data["content"]))
+                response_blocks.append(self.extract_code(response, extraction_filter))
 
-        return return_code, return_logs
+        return response_blocks, response_logs
 
-    def run(self, input, input_tree=None, output_full_tree=False, label_only=False):
-        return self.run__(
-            input,
-            self.prompt_configs,
-            input_tree,
-            output_full_tree,
+    def generate_annotation(
+        self,
+        input: dict = None,
+        prompt: Prompt = None,
+        label_only: bool = False,
+        extraction_filter=lambda x: True,
+    ):
+        return self.chat_completion(
+            input=input,
+            prompt=prompt,
             label_only=label_only,
+            extraction_filter=extraction_filter,
         )
 
-    def nudge(self, input_tree=None, output_full_tree=False):
-        raise Exception("Not implemented")
-        return self.run__(
-            input={},
-            configs=[self.nudge_prompt_config],
-            input_tree=input_tree,
-            output_full_tree=output_full_tree,
+    def heal(
+        self,
+        input: dict = None,
+        prompt: Prompt = None,
+        label_only: bool = False,
+        extraction_filter=lambda x: True,
+    ):
+        return self.chat_completion(
+            input=input,
+            prompt=prompt,
+            label_only=label_only,
+            extraction_filter=extraction_filter,
         )
 
-    def heal(self, input, input_tree=None, output_full_tree=False):
-        return self.run__(
-            input, self.healing_prompt_configs, input_tree, output_full_tree
-        )
-
-    def run_local(self, inputs):
+    def generate_annotations_local(self, inputs: [dict] = [], prompt: Prompt = None):
         dataset_dump = []
+
+        system_text = (
+            "" if prompt.system_text_file is None else prompt.get_system_text()
+        )
+
         for input in inputs:
-            system_message = {
-                "role": "system",
-                "content": "" if self.system_message is None else self.system_message,
-            }
+            system_message = {"role": "system", "content": system_text}
             user_message = {
                 "role": "user",
-                "content": self.prompt_configs[0].render(input[1]),
+                "content": prompt.get_user_text(input),
             }
             dataset_dump.append(
                 {"file": input[0], "input": [system_message, user_message]}
@@ -230,10 +230,18 @@ class LLM:
 
         print("Dataset dumped to {}".format(dataset_path))
 
-        llm_client = LLMLocalClient(Settings())
+        llm_client = LLMLocalClient(
+            Settings(
+                temperature=prompt.temperature,
+                num_completions=prompt.num_completions,
+                max_batch_size=prompt.batch_size,
+            )
+        )
         output_file = llm_client.chat_batch(dataset_path)
+
         print("Reading output dumped to {}".format(output_file))
         output = None
+
         with open(output_file, "r", encoding="utf-8") as f:
             output = json.load(f)
         return output

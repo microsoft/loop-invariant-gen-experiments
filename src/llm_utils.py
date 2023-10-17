@@ -16,6 +16,7 @@ class Settings:
         num_completions: int = 1,
         max_retries: int = 10,
         prompts_per_minute: int = 2,
+        max_batch_size: int = 5,
         verbose: bool = False,
         debug: bool = False,
     ):
@@ -32,6 +33,7 @@ class Settings:
         self.num_completions = num_completions
         self.max_retries = max_retries
         self.prompts_per_minute = prompts_per_minute
+        self.max_batch_size = max_batch_size
         self.verbose = verbose
         self.debug = debug
 

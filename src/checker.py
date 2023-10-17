@@ -22,6 +22,9 @@ class Checker:
 
     def is_invariant(self, line):
         return "invariant" in line
+    
+    def is_variant(self, line):
+        raise NotImplementedError
 
     def get_line_no_from_error_msg(self, error_string):
         pattern = r"\((\d+),\d+\): Error"

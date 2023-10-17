@@ -1,8 +1,10 @@
 from typing import Any, List
 
+from llm_utils import Settings
+
 
 class LLMClient:
-    def __init__(self, settings):
+    def __init__(self, settings: Settings):
         self.settings = settings
 
     def chat(self, messages):

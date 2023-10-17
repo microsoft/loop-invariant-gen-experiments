@@ -206,21 +206,14 @@ def main(args):
     )
 
     p = LoopyPipeline(
-        benchmark=benchmark,
-        checker=checker,
-        model=args.model,
-        debug=args.debug,
-        log_path=args.output_dir,
-        repair_errors_input=args.repair_input,
-        repair_errors_input_2=args.repair_input_2,
-        repair_from_k=args.repair_from_k,
-        num_repair_retries=args.repair_retries,
-        analysis=config["analysis"],
         arg_params=vars(args),
-        use_json_output=args.json_output,
     )
-    if args.config_file:
-        p = p.load_config(args.config_file)
+
+    p = p.load_config(args.config_file)
+
+    p.run_sequence(max_benchmarks=args.max_benchmarks, start_index=args.start_index)
+
+    return
 
     if args.provider == "local":
         p.run_local(

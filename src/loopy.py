@@ -4,13 +4,15 @@ import random
 import re
 import traceback
 from copy import deepcopy
+import warnings
 
 import yaml
 
 from benchmark import Benchmark
 from checker import Checker
 from llm_utils import Logger
-from loopy_llm import LLM, PromptConfig
+from loopy_llm import LLM, Prompt
+from frama_c import FramaCBenchmark, FramaCChecker
 from process_results import prune_wrapper, run_parallel, shuffle
 
 
@@ -92,6 +94,8 @@ class LoopyPipeline:
         self.model = model
         self.debug = debug
         self.log_path = log_path
+        self.benchmark_features = ""
+        self.steps = []
 
         self.num_repair_retries = num_repair_retries
         self.repair_errors_input = repair_errors_input
@@ -105,75 +109,71 @@ class LoopyPipeline:
     def load_config(self, config_file):
         config = yaml.load(open(config_file, "r"), Loader=yaml.FullLoader)
 
-        if "analysis" in config:
-            self.analysis = config["analysis"]
+        if not "benchmarks" in config:
+            raise Exception("No benchmarks found in config file")
+        benchmarks = config["benchmarks"]
 
-        prompt_configs = []
-        if "prompts" in config:
-            prompt_template_dir = (
-                None
-                if "prompt_template_dir" not in config
-                else config["prompt_template_dir"]
+        if "benchmark_features" in config:
+            self.benchmark_features = config["benchmark_features"]
+        else:
+            self.benchmark_features = "one_loop_one_method"
+
+        if not "checker" in config:
+            raise Exception("No checker found in config file")
+
+        if config["checker"] == "frama-c":
+            self.benchmark = FramaCBenchmark(
+                benchmarks_file=benchmarks, features=self.benchmark_features
             )
-
-            for prompt_config in config["prompts"]:
-                prompt_configs.append(
-                    PromptConfig(
-                        dir=prompt_template_dir,
-                        set_output=(
-                            None
-                            if not "set_output" in prompt_config
-                            else prompt_config["set_output"]
-                        ),
-                    ).from_file(prompt_config)
-                )
-
-        healing_prompt_configs = []
-        if "healing_prompts" in config:
-            healing_template_dir = (
-                None
-                if "healing_template_dir" not in config
-                else config["healing_template_dir"]
+            self.checker = FramaCChecker()
+        elif config["checker"] == "boogie":
+            warnings.warn(
+                "Boogie checker integration might not fully work, use Frama-C instead",
+                UserWarning,
             )
+            self.benchmark = Benchmark(
+                benchmarks_file=benchmarks, features=self.benchmark_features
+            )
+            self.checker = Checker("boogie")
+        else:
+            raise Exception(f"Invalid checker: {config['checker']}")
 
-            for healing_prompt_config in config["healing_prompts"]:
-                healing_prompt_configs.append(
-                    PromptConfig(dir=healing_template_dir).from_file(
-                        healing_prompt_config
+        if not "loopy_sequence" in config:
+            raise Exception("No Loopy sequence found in config file")
+
+        for step in config["loopy_sequence"]:
+            if type(step) == dict:
+                assert len(step.keys()) == 1 and list(step.keys())[0] in [
+                    "prompt_llm",
+                    "repair_llm",
+                ], "Invalid dict step in loopy sequence"
+                if list(step.keys())[0] == "prompt_llm":
+                    prompt = Prompt().from_file(step["prompt_llm"])
+                    annotation_type = step["prompt_llm"]["extract_annotation"]
+                    self.steps.append(
+                        {"prompt": prompt, "annotation_type": annotation_type}
                     )
-                )
-
-        if "system_message_file" in config:
-            self.system_message_file = config["system_message_file"]
-            self.system_message = open(self.system_message_file, "r").read()
+                else:
+                    prompt = Prompt().from_file(step["repair_llm"])
+                    annotation_type = step["repair_llm"]["extract_annotation"]
+                    self.steps.append(
+                        {
+                            "repair": prompt,
+                            "annotation_type": annotation_type,
+                            "num_retries": step["repair_llm"]["num_retries"],
+                        }
+                    )
+            elif type(step) == str:
+                self.steps.append(step)
+            else:
+                raise Exception("Invalid step type in loopy sequence")
 
         self.llm = LLM(
-            self.system_message,
-            prompt_configs,
-            healing_prompt_configs,
             self.model,
             self.debug,
         )
 
-        if "llm_input_file_path" not in config:
-            config["llm_input_file_path"] = ""
-
-        if "llm_input_dir" not in config:
-            config["llm_input_dir"] = "llm_input"
-        if self.benchmark is None:
-            self.benchmark = Benchmark(
-                config["llm_input_dir"],
-                config["llm_input_file_path"],
-                self.analysis,
-            )
-        else:
-            self.benchmark.llm_input_path = config["llm_input_dir"]
-            self.benchmark.llm_input_file = config["llm_input_file_path"]
-            self.benchmark.features = self.analysis
         self.benchmark.check_input()
-
-        if "healing_retries" in config:
-            self.num_repair_retries = config["healing_retries"]
 
         return self
 
@@ -219,7 +219,7 @@ class LoopyPipeline:
                 conversations = None
 
                 # Make the LLM query and get the code blocks, and the conversation
-                llm_outputs, conversations = self.llm.run(
+                llm_outputs, conversations = self.llm.generate_annotation(
                     {"code": self.benchmark.get_code(instance)}
                 )
                 instance_log_json["llm_conversation"] = conversations
@@ -1012,7 +1012,7 @@ class LoopyPipeline:
         ]
 
         if local_llm_output == "":
-            outputs = self.llm.run_local(sliced_benchmarks)
+            outputs = self.llm.generate_annotations_local(sliced_benchmarks)
         else:
             with open(local_llm_output, "r", encoding="utf-8") as f:
                 outputs = json.load(f)
@@ -1285,7 +1285,7 @@ class LoopyPipeline:
 
             completions = []
             try:
-                llm_outputs, llm_conversation = self.llm.run(
+                llm_outputs, llm_conversation = self.llm.generate_annotation(
                     instance[1],
                     output_full_tree=False,
                     label_only=True,
@@ -1403,6 +1403,376 @@ class LoopyPipeline:
         stats["failure_count"] = len(stats["failure"])
         stats["partial_count"] = len(stats["partial"])
         stats["skipped_count"] = len(stats["skipped"])
+
+        log_file.write(
+            json.dumps(
+                {"params": self.arg_params, "logs": log_json, "stats": stats},
+                indent=4,
+                ensure_ascii=False,
+            )
+        )
+        log_file.close()
+
+        return
+
+    def run_sequence(self, max_benchmarks=1, start_index=0):
+        if self.llm is None or self.benchmark is None or self.checker is None:
+            raise Exception("Pipeline not initialized. Call load_config first.")
+
+        if not all(self.analysis in x for x in ["termination", "safety"]):
+            raise Exception("Unsupported analysis for sequence pipeline")
+
+        log_json = []
+        stats = {"success": [], "failure": [], "skipped": [], "total": 0}
+
+        # create logs dir
+        if not os.path.exists(os.path.dirname(self.log_path)):
+            os.makedirs(os.path.dirname(self.log_path))
+
+        log_file = open(self.log_path + "final.json", "w", encoding="utf-8")
+
+        sliced_benchmarks = self.benchmark.input_file_paths[
+            start_index : start_index + max_benchmarks
+        ]
+
+        for benchmark_index, benchmark_file in enumerate(sliced_benchmarks):
+            Logger.log_info(
+                f"Running benchmark: {start_index + benchmark_index + 1}/{len(sliced_benchmarks)}"
+            )
+
+            instance_log_json = {
+                "file": benchmark_file,
+                "benchmark_code": self.benchmark.get_code(benchmark_file),
+                "success": False,
+                "log": [],
+            }
+            annotations = {}
+            pipeline_outputs = []
+
+            for step_index, step in enumerate(self.steps):
+                try:
+                    if type(step) == dict:
+                        # This step just makes an LLM call and stores the output code block
+                        prompt, annotation_type = (
+                            step["prompt"],
+                            step["annotation_type"],
+                        )
+                        step_log_json = {
+                            "step": "Prompting LLM",
+                            "generating_annotation": annotation_type,
+                        }
+                        Logger.log_info(f"[Step {step_index}] Prompting {self.model}")
+
+                        generated_code_blocks = None
+                        llm_output_text = None
+
+                        extraction_filter = None
+                        if annotation_type == "loop_invariants":
+                            extraction_filter = self.checker.is_invariant
+                        elif annotation_type == "loop_variants":
+                            extraction_filter = self.checker.is_variant
+                        else:
+                            raise Exception("Unsupported annotation type")
+
+                        # Make the LLM query and get the code blocks, and the LLM output
+                        (
+                            generated_code_blocks,
+                            llm_output_text,
+                        ) = self.llm.generate_annotation(
+                            input={"code": self.benchmark.get_code(benchmark_file)},
+                            prompt=prompt,
+                            extraction_filter=extraction_filter,
+                        )
+
+                        step_log_json["llm_chat"] = llm_output_text
+                        step_log_json["output"] = generated_code_blocks
+                        annotations[annotation_type] = generated_code_blocks
+
+                        pipeline_outputs.append(step_log_json)
+
+                    elif step == "check_individual_completion":
+                        step_log_json = {
+                            "step": "Checking individual completion",
+                            "solver_calls": 0,
+                            "completions": [],
+                        }
+                        Logger.log_info(
+                            f"[Step {step_index}] Checking individual completion"
+                        )
+                        if annotations == {}:  # No annotations generated
+                            raise Exception(
+                                "No annotations to check for this benchmark"
+                            )
+
+                        elif (
+                            "loop_invariants" not in annotations
+                            and "loop_variants" in annotations
+                        ):
+                            raise Exception(
+                                "No loop invariants generated for this benchmark"
+                            )
+
+                        elif (
+                            "loop_variants" in annotations
+                            and "loop_invariants" in annotations
+                            and len(annotations["loop_invariants"]) > 1
+                        ):
+                            # Houdini loop was not run maybe?
+                            raise Exception(
+                                "More than 1 loop inductive invariant set exists for this benchmark"
+                            )
+
+                        elif (
+                            "loop_variants" not in annotations
+                            or len(annotations["loop_variants"]) == 0
+                        ):
+                            completions = []
+                            for ann_index, llm_output in enumerate(
+                                annotations["loop_invariants"]
+                            ):
+                                Logger.log_info(
+                                    f"Checking completion {ann_index + 1}/{len(annotations['loop_invariants'])} for benchmark: {start_index + benchmark_index + 1}/{len(sliced_benchmarks)}"
+                                )
+
+                                completion = {"num_solver_calls": 0, "success": False}
+
+                                # If the completion does not have a code block,
+                                # mark it as a failure and continue
+                                if len(llm_output) == 2 and llm_output[0] == (
+                                    "ERROR: Output does not contain at least 1 code block"
+                                ):
+                                    completion["success"] = False
+                                    completion["num_solver_calls"] = 0
+                                    completion["llm_output"] = llm_output[1]
+                                    completion[
+                                        "error"
+                                    ] = "Output does not contain at least 1 code block"
+                                    completions.append(completion)
+                                    continue
+
+                                # Add only the loop invariants to the code and check
+                                checker_input_with_invariants = self.benchmark.combine_llm_outputs(
+                                    self.benchmark.get_code(benchmark_file),
+                                    [
+                                        llm_output
+                                        if not (
+                                            len(llm_output) == 2
+                                            and llm_output[0]
+                                            == "ERROR: Output does not contain at least 1 code block"
+                                        )
+                                        else ""
+                                    ],
+                                    "one_loop_one_method",
+                                )
+                                completion["invariants"] = llm_output
+                                success, checker_message = self.checker.check(
+                                    checker_input_with_invariants,
+                                    False,
+                                    use_json_output=self.use_json_output,
+                                )
+
+                                completion["num_solver_calls"] += 1
+                                completion["checker_output_for_invariants"] = success
+                                completion[
+                                    "checker_message_for_invariants"
+                                ] = checker_message
+                                completion["success"] = success
+
+                                completions.append(completion)
+
+                            step_log_json["completions"] = completions
+                            step_log_json["solver_calls"] = sum(
+                                [x["num_solver_calls"] for x in completions]
+                            )
+                            pipeline_outputs.append(step_log_json)
+
+                        elif (
+                            "loop_variants" in annotations
+                            and len(annotations["loop_variants"]) > 0
+                            and "loop_invariants" in annotations
+                            and len(annotations["loop_invariants"]) == 1
+                        ):
+                            checker_inputs_with_variants = self.benchmark.combine_llm_outputs(
+                                self.benchmark.get_code(benchmark_file),
+                                (
+                                    annotations["loop_invariants"],
+                                    [
+                                        llm_output
+                                        if not (
+                                            len(llm_output) == 2
+                                            and llm_output[0]
+                                            == "ERROR: Output does not contain at least 1 code block"
+                                        )
+                                        else ""
+                                    ],
+                                ),
+                                "termination_one_loop_one_method",
+                            )
+
+                            candidates = []
+
+                            for checker_input in checker_inputs_with_variants:
+                                success, checker_message = self.checker.check(
+                                    checker_input,
+                                    True,
+                                    use_json_output=self.use_json_output,
+                                )
+                                combined_candidate_with_variant = {}
+                                combined_candidate_with_variant[
+                                    "candidate_with_combined_invariants_and_variant"
+                                ] = checker_input
+                                combined_candidate_with_variant[
+                                    "checker_output"
+                                ] = success
+                                combined_candidate_with_variant[
+                                    "checker_message"
+                                ] = checker_message
+
+                                candidates.append(combined_candidate_with_variant)
+
+                                step_log_json["solver_calls"] += 1
+
+                            step_log_json["completions"] = candidates
+                            pipeline_outputs.append(step_log_json)
+
+                        else:
+                            print(annotations)
+                            raise Exception("Unsupported annotation combination ^")
+
+                    elif step == "houdini_for_individual_completion":
+                        step_log_json = {
+                            "step": "Houdini for individual completion",
+                        }
+
+                        if (
+                            "loop_invariants" not in annotations
+                            or len(annotations["loop_invariants"]) == 0
+                        ):
+                            raise Exception(
+                                "No loop invariants found for this benchmark"
+                            )
+
+                        completions = []
+                        for ann_index, llm_output in enumerate(
+                            annotations["loop_invariants"]
+                        ):
+                            Logger.log_info(
+                                f"Checking completion {ann_index + 1}/{len(annotations['loop_invariants'])} for benchmark: {start_index + benchmark_index + 1}/{len(sliced_benchmarks)}"
+                            )
+
+                            completion = {"num_solver_calls": 0, "success": False}
+
+                            # If the completion does not have a code block,
+                            # mark it as a failure and continue
+                            if len(llm_output) == 2 and llm_output[0] == (
+                                "ERROR: Output does not contain at least 1 code block"
+                            ):
+                                completion["success"] = False
+                                completion["num_solver_calls"] = 0
+                                completion["llm_output"] = llm_output[1]
+                                completion[
+                                    "error"
+                                ] = "Output does not contain at least 1 code block"
+                                completions.append(completion)
+                                continue
+
+                            # Add only the loop invariants to the code and check
+                            checker_input_with_invariants = self.benchmark.combine_llm_outputs(
+                                self.benchmark.get_code(benchmark_file),
+                                [
+                                    llm_output
+                                    if not (
+                                        len(llm_output) == 2
+                                        and llm_output[0]
+                                        == "ERROR: Output does not contain at least 1 code block"
+                                    )
+                                    else ""
+                                ],
+                                "one_loop_one_method",
+                            )
+                            completion["invariants"] = llm_output
+                            (
+                                success,
+                                pruned_code,
+                                num_frama_c_calls,
+                            ) = self.checker.prune_annotations_and_check(
+                                checker_input_with_invariants,
+                                "one_loop_one_method",
+                                use_json_output=self.use_json_output,
+                            )
+
+                            completion["num_solver_calls"] += num_frama_c_calls
+                            completion["code_after_prune"] = pruned_code
+                            completion["checker_output_after_prune"] = success
+
+                            completions.append(completion)
+
+                        step_log_json["completions"] = completions
+                        pipeline_outputs.append(step_log_json)
+
+                    elif step == "houdini_for_combined_completion":
+                        step_log_json = {
+                            "step": "Houdini for combined completion",
+                            "solver_calls": 0,
+                        }
+
+                        if (
+                            "loop_invariants" not in annotations
+                            or len(annotations["loop_invariants"]) == 0
+                        ):
+                            raise Exception(
+                                "No loop invariants found for this benchmark"
+                            )
+
+                        code_with_combined_invariants = self.benchmark.combine_llm_outputs(
+                            self.benchmark.get_code(benchmark_file),
+                            [
+                                llm_output
+                                for llm_output in annotations["loop_invariants"]
+                                if not (
+                                    len(llm_output) == 2
+                                    and llm_output[0]
+                                    == "ERROR: Output does not contain at least 1 code block"
+                                )
+                            ],
+                            "one_loop_one_method",
+                        )
+                        (
+                            success,
+                            pruned_code,
+                            num_frama_c_calls,
+                        ) = self.checker.prune_annotations_and_check(
+                            code_with_combined_invariants,
+                            "one_loop_one_method",
+                            use_json_output=self.use_json_output,
+                        )
+
+                        inductive_invariants = self.benchmark.extract_loop_invariants(
+                            pruned_code
+                        )
+                        annotations["loop_invariants"] = inductive_invariants
+
+                        step_log_json["solver_calls"] += num_frama_c_calls
+                        step_log_json["code_with_combined_invariants"] = pruned_code
+                        step_log_json["checker_output"] = success
+
+                        pipeline_outputs.append(step_log_json)
+
+                    else:
+                        raise Exception("Unsupported step")
+
+                except Exception as e:
+                    if isinstance(e, KeyboardInterrupt):
+                        step_log_json["error"] = str(e)
+                        instance_log_json["log"].append(step_log_json)
+                        break
+                    Logger.log_error(e)
+                    step_log_json["error"] = str(e)
+                    instance_log_json["log"].append(step_log_json)
+                    continue
+
+            instance_log_json["log"] = pipeline_outputs
+            log_json.append(instance_log_json)
 
         log_file.write(
             json.dumps(

@@ -3,8 +3,8 @@ import os
 
 
 class Benchmark:
-    def __init__(self, llm_input_file="", features=None):
-        self.llm_input_file = llm_input_file
+    def __init__(self, benchmarks_file="", features=None):
+        self.input_benchmarks = benchmarks_file
         self.features = features
         self.input_file_paths = []
 
@@ -12,12 +12,12 @@ class Benchmark:
         raise NotImplementedError
 
     def check_input(self):
-        if not os.path.exists(self.llm_input_file):
+        if not os.path.exists(self.input_benchmarks):
             raise InvalidBenchmarkException(
-                f"Input file {self.llm_input_file} not found"
+                f"Input file {self.input_benchmarks} not found"
             )
 
-        with open(self.llm_input_file) as f:
+        with open(self.input_benchmarks) as f:
             files = f.read().splitlines()
             for file in files:
                 if not os.path.exists(file):

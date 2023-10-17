@@ -449,8 +449,8 @@ class FramaCChecker(Checker):
 
 
 class FramaCBenchmark(Benchmark):
-    def __init__(self, llm_input_file="", features=None):
-        super().__init__(llm_input_file, features)
+    def __init__(self, benchmarks_file="", features=None):
+        super().__init__(benchmarks_file, features)
         lib_path = os.path.join(os.path.dirname(__file__), "tree_sitter_lib/build/")
         self.language = Language(lib_path + "c-tree-sitter.so", "c")
         self.parser = Parser()
