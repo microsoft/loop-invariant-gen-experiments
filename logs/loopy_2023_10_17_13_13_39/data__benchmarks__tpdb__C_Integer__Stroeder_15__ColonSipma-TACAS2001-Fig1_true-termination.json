@@ -1,0 +1,328 @@
+{
+    "logs": {
+        "file": "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ColonSipma-TACAS2001-Fig1_true-termination.c",
+        "benchmark_code": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\ntypedef enum {false, true} bool;\n\nint main() {\n    int k, i, j, tmp;\n\tk = unknown_int();\n    i = unknown_int();\n    j = unknown_int();\n\twhile (i <= 100 && j <= k) {\n\t\ttmp = i;\n\t\ti = j;\n\t\tj = tmp + 1;\n\t\tk = k - 1;\n\t}\n\treturn 0;\n}",
+        "success": false,
+        "log": [
+            {
+                "step": "Prompting LLM",
+                "generating_annotation": "loop_invariants",
+                "success": true,
+                "llm_chat": [
+                    {
+                        "role": "system",
+                        "content": "You are a helpful AI software assistant that reasons about how code behaves. Given a program, you can find loop invariants, which can then be used to verify some property in the program. \nFrama-C is a software verification tool for C programs. The input to Frama-C is a C program file with ACSL (ANSI/ISO C Specification Language) annotations.\nFor the given program, find the necessary loop invariants of the while loop to help Frama-C verify the post-condition.\n\nInstructions:\n- Make a note of the pre-conditions or variable assignments in the program.\n- Analyze the loop body and make a note of the loop condition. \n- Output loop invariants that are true \n(i) before the loop execution, \n(ii) in every iteration of the loop and \n(iii) after the loop termination, \nsuch that the loop invariants imply the post condition.\n- If a loop invariant is a conjunction, split it into its parts.\n- Output all the loop invariants in one code block. For example:\n```\n/*@ \n    loop invariant i1;\n    loop invariant i2;\n*/\n```\nRules:\n- **Do not use variables or functions that are not declared in the program.** \n- **Do not make any assumptions about functions whose definitions are not given.**\n- **All undefined variables contain garbage values. Do not use variables that have garbage values.**\n- **Do not use keywords that are not supported in ACSL annotations for loops.**\n- **Variables that are not explicitly initialized, could have garbage values. Do not make any assumptions about such values.**\n- **Do not use the \\at(x, Pre) notation for any variable x.**\n- **Do not use non-deterministic function calls.**"
+                    },
+                    {
+                        "role": "user",
+                        "content": "\nConsider the following C program:\n```\n#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\ntypedef enum {false, true} bool;\n\nint main() {\n    int k, i, j, tmp;\n\tk = unknown_int();\n    i = unknown_int();\n    j = unknown_int();\n\twhile (i <= 100 && j <= k) {\n\t\ttmp = i;\n\t\ti = j;\n\t\tj = tmp + 1;\n\t\tk = k - 1;\n\t}\n\treturn 0;\n}\n```\n\nYou are allowed to use implication to take care of the conditional nature of the code. Use implication (==>) instead of using if-then.\n\nFor all variables, add conjunctions that bound the maximum and minimum values that they can take, if such bounds exist.\n\nIf a variable is always equal to or smaller or larger than another variable, add a conjunction for their relation.\n\nIf the assertion is guarded by a condition, use the guard condition in an implication.\n\nIf certain variables are non-deterministic at the beginning or end of the loop, use an implication to make the invariant trivially true at that location. \n\nOutput the loop invariants for the loop in the program above. Let's think step by step."
+                    },
+                    "First, we note the following:\n- The loop condition is i <= 100 && j <= k.\n- Variables i, j, and k are non-deterministic at the beginning.\n- The loop body updates i, j, and k in each iteration.\n\nBased on the loop condition and the loop body, we can construct the following loop invariants:\n\n```\n/*@ \n    loop invariant 0 <= i <= 100;\n    loop invariant 0 <= j;\n    loop invariant j <= k + 1;\n    loop invariant i <= j;\n    loop invariant \\valid(&i) && \\valid(&j) && \\valid(&k);\n*/\n```\n\nThese loop invariants are true:\n(i) before the loop execution,\n(ii) in every iteration of the loop, and\n(iii) after the loop termination.\n\nThe loop invariants ensure that the variables i, j, and k are within their respective bounds, and they also establish the relationship between i, j, and k during the loop execution. Additionally, they ensure that the memory addresses of i, j, and k are valid throughout the loop execution.",
+                    "First, let's make a note of the pre-conditions or variable assignments in the program:\n- k, i, and j are assigned unknown_int() values.\n\nNext, analyze the loop body and make a note of the loop condition:\n- The loop condition is (i <= 100 && j <= k).\n\nNow, let's find the loop invariants:\n\n```\n/*@ \n    loop invariant 0 <= i && i <= 101;\n    loop invariant 0 <= j && j <= k + 1;\n    loop invariant k >= -1;\n    loop invariant i <= 100 ==> i <= j;\n*/\n```\n\nHere are the explanations for the loop invariants:\n\n1. `0 <= i && i <= 101`: i starts with a non-deterministic value and is updated to j, which is always non-negative. It will never exceed 101 because when i becomes 101, the loop condition is false, and the loop terminates.\n2. `0 <= j && j <= k + 1`: j starts with a non-deterministic value and is updated to `tmp + 1`, which is `i + 1`. Since i is always non-negative, j will always be non-negative. Also, j is always less than or equal to k + 1 because it is updated in every iteration while k is decreased by 1.\n3. `k >= -1`: k starts with a non-deterministic value and is updated by decrementing 1 in each iteration. It will never go below -1 because when k becomes -1, the loop condition is false, and the loop terminates.\n4. `i <= 100 ==> i <= j`: When i is less than or equal to 100, j is always greater than or equal to i because j is updated to `tmp + 1`, which is `i + 1`.",
+                    "First, we note the variable assignments in the program:\n- k is assigned an unknown integer value.\n- i is assigned an unknown integer value.\n- j is assigned an unknown integer value.\n\nNext, we analyze the loop body and make a note of the loop condition:\n- The loop condition is (i <= 100 && j <= k).\n\nNow, we can output the necessary loop invariants that are true before the loop execution, in every iteration of the loop, and after the loop termination:\n\n```\n/*@ \n    loop invariant 0 <= i <= 101;\n    loop invariant 0 <= j <= k + 1;\n    loop invariant k <= k + 1;\n*/\n```\n\nThese loop invariants are true before the loop execution, in every iteration of the loop, and after the loop termination. They are necessary for Frama-C to verify the post-condition.",
+                    "First, let's make a note of the pre-conditions or variable assignments in the program. The variables k, i, and j are assigned non-deterministic values from the unknown_int() function. There are no other pre-conditions given.\n\nNow, let's analyze the loop body and make a note of the loop condition. The loop condition is (i <= 100 && j <= k). Inside the loop, we have the following actions:\n1. tmp = i;\n2. i = j;\n3. j = tmp + 1;\n4. k = k - 1;\n\nNow, we can output the loop invariants that are true before the loop execution, in every iteration of the loop, and after the loop termination, such that the loop invariants imply the post-condition:\n\n```\n/*@ \n    loop invariant i <= 100;\n    loop invariant j <= k + 1;\n    loop invariant k <= \\at(k, Pre);\n*/\n```\n\nThese loop invariants are true before the loop execution, in every iteration of the loop, and after the loop termination. They also imply the post-condition of the program.",
+                    "First, let's make a note of the pre-conditions or variable assignments in the program:\n\n1. k, i, and j are initially assigned non-deterministic integer values (unknown_int()).\n\nNow, let's analyze the loop body and make a note of the loop condition:\n\n1. Loop condition: i <= 100 && j <= k\n2. Loop body:\n   a. tmp = i;\n   b. i = j;\n   c. j = tmp + 1;\n   d. k = k - 1;\n\nNow, let's output the loop invariants that are true before the loop execution, in every iteration of the loop, and after the loop termination:\n\n```\n/*@ \n    loop invariant 0 <= i && i <= 100;\n    loop invariant 0 <= j;\n    loop invariant i <= k + 1;\n    loop invariant i <= j || (i == j + 1 && k == j);\n*/\n```\n\nThese loop invariants hold true before the loop execution, in every iteration of the loop, and after the loop termination. They also help Frama-C verify the post-condition."
+                ],
+                "output": [
+                    "/*@ \n    loop invariant 0 <= i <= 100;\n    loop invariant 0 <= j;\n    loop invariant j <= k + 1;\n    loop invariant i <= j;\n    loop invariant \\valid(&i) && \\valid(&j) && \\valid(&k);\n*/",
+                    "/*@ \n    loop invariant 0 <= i && i <= 101;\n    loop invariant 0 <= j && j <= k + 1;\n    loop invariant k >= -1;\n    loop invariant i <= 100 ==> i <= j;\n*/",
+                    "/*@ \n    loop invariant 0 <= i <= 101;\n    loop invariant 0 <= j <= k + 1;\n    loop invariant k <= k + 1;\n*/",
+                    "/*@ \n    loop invariant i <= 100;\n    loop invariant j <= k + 1;\n    loop invariant k <= \\at(k, Pre);\n*/",
+                    "/*@ \n    loop invariant 0 <= i && i <= 100;\n    loop invariant 0 <= j;\n    loop invariant i <= k + 1;\n    loop invariant i <= j || (i == j + 1 && k == j);\n*/"
+                ]
+            },
+            {
+                "step": "Checking individual completion",
+                "solver_calls": 5,
+                "completions": [
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant 0 <= i <= 100;\n    loop invariant 0 <= j;\n    loop invariant j <= k + 1;\n    loop invariant i <= j;\n    loop invariant \\valid(&i) && \\valid(&j) && \\valid(&k);\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant 0 <= i <= 100 is neither established nor preserved.\nloop invariant 0 <= j is preserved but not established.\nloop invariant j <= k + 1 is neither established nor preserved.\nloop invariant i <= j is neither established nor preserved.\nloop invariant \\valid(&i) && \\valid(&j) && \\valid(&k) is inductive.\n\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant 0 <= i && i <= 101;\n    loop invariant 0 <= j && j <= k + 1;\n    loop invariant k >= -1;\n    loop invariant i <= 100 ==> i <= j;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant 0 <= i && i <= 101 is neither established nor preserved.\nloop invariant 0 <= j && j <= k + 1 is neither established nor preserved.\nloop invariant k >= -1 is inductive.\nloop invariant i <= 100 ==> i <= j is neither established nor preserved.\n\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant 0 <= i <= 101;\n    loop invariant 0 <= j <= k + 1;\n    loop invariant k <= k + 1;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant 0 <= i <= 101 is neither established nor preserved.\nloop invariant 0 <= j <= k + 1 is neither established nor preserved.\nloop invariant k <= k + 1 is inductive.\n\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant i <= 100;\n    loop invariant j <= k + 1;\n    loop invariant k <= \\at(k, Pre);\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "Annotation error on line 15: unbound logic variable k. Ignoring loop annotation"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant 0 <= i && i <= 100;\n    loop invariant 0 <= j;\n    loop invariant i <= k + 1;\n    loop invariant i <= j || (i == j + 1 && k == j);\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant 0 <= i && i <= 100 is neither established nor preserved.\nloop invariant 0 <= j is preserved but not established.\nloop invariant i <= k + 1 is preserved but not established.\nloop invariant i <= j || (i == j + 1 && k == j) is neither established nor preserved.\n\n"
+                    }
+                ],
+                "success": false
+            },
+            {
+                "step": "Houdini for individual completion",
+                "success": true,
+                "completions": [
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant 0 <= i <= 100;\n    loop invariant 0 <= j;\n    loop invariant j <= k + 1;\n    loop invariant i <= j;\n    loop invariant \\valid(&i) && \\valid(&j) && \\valid(&k);\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\ntypedef enum {false, true} bool;\n\nint main() {\n    int k, i, j, tmp;\n\tk = unknown_int();\n    i = unknown_int();\n    j = unknown_int();\n\t/*@\n\n\n\n\nloop invariant i5: \\valid(&i) && \\valid(&j) && \\valid(&k);\n*/\nwhile (i <= 100 && j <= k) {\n\t\ttmp = i;\n\t\ti = j;\n\t\tj = tmp + 1;\n\t\tk = k - 1;\n\t}\n\treturn 0;\n}",
+                        "checker_output_after_prune": true
+                    },
+                    {
+                        "num_solver_calls": 3,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant 0 <= i && i <= 101;\n    loop invariant 0 <= j && j <= k + 1;\n    loop invariant k >= -1;\n    loop invariant i <= 100 ==> i <= j;\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\ntypedef enum {false, true} bool;\n\nint main() {\n    int k, i, j, tmp;\n\tk = unknown_int();\n    i = unknown_int();\n    j = unknown_int();\n\t/*@\n\n\n\n\n*/\nwhile (i <= 100 && j <= k) {\n\t\ttmp = i;\n\t\ti = j;\n\t\tj = tmp + 1;\n\t\tk = k - 1;\n\t}\n\treturn 0;\n}",
+                        "checker_output_after_prune": false
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant 0 <= i <= 101;\n    loop invariant 0 <= j <= k + 1;\n    loop invariant k <= k + 1;\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\ntypedef enum {false, true} bool;\n\nint main() {\n    int k, i, j, tmp;\n\tk = unknown_int();\n    i = unknown_int();\n    j = unknown_int();\n\t/*@\n\n\nloop invariant i3: k <= k + 1;\n*/\nwhile (i <= 100 && j <= k) {\n\t\ttmp = i;\n\t\ti = j;\n\t\tj = tmp + 1;\n\t\tk = k - 1;\n\t}\n\treturn 0;\n}",
+                        "checker_output_after_prune": true
+                    },
+                    {
+                        "num_solver_calls": 3,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant i <= 100;\n    loop invariant j <= k + 1;\n    loop invariant k <= \\at(k, Pre);\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\ntypedef enum {false, true} bool;\n\nint main() {\n    int k, i, j, tmp;\n\tk = unknown_int();\n    i = unknown_int();\n    j = unknown_int();\n\t/*@\n\n\n\n*/\nwhile (i <= 100 && j <= k) {\n\t\ttmp = i;\n\t\ti = j;\n\t\tj = tmp + 1;\n\t\tk = k - 1;\n\t}\n\treturn 0;\n}",
+                        "checker_output_after_prune": false
+                    },
+                    {
+                        "num_solver_calls": 2,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant 0 <= i && i <= 100;\n    loop invariant 0 <= j;\n    loop invariant i <= k + 1;\n    loop invariant i <= j || (i == j + 1 && k == j);\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\ntypedef enum {false, true} bool;\n\nint main() {\n    int k, i, j, tmp;\n\tk = unknown_int();\n    i = unknown_int();\n    j = unknown_int();\n\t/*@\n\n\n\n\n*/\nwhile (i <= 100 && j <= k) {\n\t\ttmp = i;\n\t\ti = j;\n\t\tj = tmp + 1;\n\t\tk = k - 1;\n\t}\n\treturn 0;\n}",
+                        "checker_output_after_prune": false
+                    }
+                ]
+            },
+            {
+                "step": "Houdini for combined completion",
+                "solver_calls": 4,
+                "success": true,
+                "code_with_combined_invariants": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\ntypedef enum {false, true} bool;\n\nint main() {\n    int k, i, j, tmp;\n\tk = unknown_int();\n    i = unknown_int();\n    j = unknown_int();\n\t/*@\n\n\n\n\nloop invariant i5: \\valid(&i) && \\valid(&j) && \\valid(&k);\n\n\n\n\n\n\nloop invariant i12: k <= k + 1;\n\n\n\n\n\n*/\nwhile (i <= 100 && j <= k) {\n\t\ttmp = i;\n\t\ti = j;\n\t\tj = tmp + 1;\n\t\tk = k - 1;\n\t}\n\treturn 0;\n}",
+                "checker_output": true
+            },
+            {
+                "step": "Prompting LLM",
+                "generating_annotation": "loop_variants",
+                "success": true,
+                "llm_chat": [
+                    {
+                        "role": "system",
+                        "content": "A ranking function (also called variant) is an expression  over program variables that are live as the loop head. The value of the expression must decrease with every successive iteration of the loop. And the value must be positive for the loop to continue executing. Finding a ranking function helps prove that the loop must terminate.\nLexicographic ranking functions are a generation. They are a sequence of expressions (e1, e2, ...) with the property that the value of each expression must be positive for the loop to execute. Either e1 must decrease or its value remains the same. If its value remains the same then the value of e2 must decrease.\nFind the ranking function for the loop in the following program and explain why it is a valid ranking function.\n\nInstructions:\nOutput the ranking function in one code block, in ACSL syntax. For example,\n```\n/*@\n    loop variant v;\n*/\n```\nIf the ranking function is a sequence of expressions, output them in different lines in their lexicographic order. "
+                    },
+                    {
+                        "role": "user",
+                        "content": "Consider the following C program:  \n```  \n#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\ntypedef enum {false, true} bool;\n\nint main() {\n    int k, i, j, tmp;\n\tk = unknown_int();\n    i = unknown_int();\n    j = unknown_int();\n\twhile (i <= 100 && j <= k) {\n\t\ttmp = i;\n\t\ti = j;\n\t\tj = tmp + 1;\n\t\tk = k - 1;\n\t}\n\treturn 0;\n}\n```\nFind the ranking function for the loop in the given program and explain why it is a valid ranking function. Let's think step by step. "
+                    },
+                    "First, let's identify the loop and the conditions for the loop to execute. The loop will execute as long as `i <= 100` and `j <= k`. Now, let's analyze the loop body to find out how the variables change during each iteration:\n\n1. `tmp` gets the value of `i`.\n2. `i` gets the value of `j`.\n3. `j` gets the value of `tmp + 1`, which is `i + 1`.\n4. `k` gets decremented by 1.\n\nNow, we need to find a ranking function that decreases with every iteration and is positive for the loop to continue executing. Let's consider the expression `k + 101 - i`.\n\nAt the beginning of each loop iteration, the value of this expression is positive since `i <= 100` and `j <= k`. Now, let's check if it decreases with every iteration:\n\n- After the first assignment, `tmp` gets the value of `i`.\n- After the second assignment, `i` gets the value of `j`.\n- After the third assignment, `j` gets the value of `tmp + 1`, which is `i + 1`.\n- After the fourth assignment, `k` gets decremented by 1.\n\nSo, the value of the ranking function after the loop body execution is `(k - 1) + 101 - j`. Since `j = i + 1`, this expression is equal to `k + 101 - i - 1 = k + 100 - i`. Thus, the ranking function decreases by at least 1 with each iteration.\n\nNow, let's write the ranking function in ACSL syntax:\n\n```\n/*@\n    loop variant k + 101 - i;\n*/\n```\n\nThis ranking function is valid because it is positive for the loop to continue executing and decreases with every iteration, ensuring the loop terminates.",
+                    "First, let's identify the loop in the given program:\n\n```\nwhile (i <= 100 && j <= k) {\n\ttmp = i;\n\ti = j;\n\tj = tmp + 1;\n\tk = k - 1;\n}\n```\n\nNow let's find a ranking function for this loop. We need to find an expression that decreases with every iteration and is positive for the loop to continue executing. Let's consider the following ranking function:\n\n```\nk + 1\n```\n\nNow let's explain why it is a valid ranking function:\n\n1. The value of the expression is positive for the loop to continue executing: As long as the loop continues, `j <= k`, so `k >= j`. Since `j` is non-negative (it is assigned `i`, which is non-negative), `k` must be non-negative. Hence, `k + 1` is positive.\n\n2. The value of the expression decreases with every successive iteration of the loop: In each iteration, `k` is decremented by 1 (`k = k - 1`). Therefore, the value of `k + 1` decreases by 1 in each iteration.\n\nHere's the ranking function in ACSL syntax:\n\n```\n/*@\n    loop variant k + 1;\n*/\n```",
+                    "First, let's analyze the loop in the given program:\n\n```\nwhile (i <= 100 && j <= k) {\n    tmp = i;\n    i = j;\n    j = tmp + 1;\n    k = k - 1;\n}\n```\n\nIn each iteration of the loop, the values of `i`, `j`, and `k` are updated as follows:\n1. `tmp` takes the current value of `i`.\n2. `i` takes the current value of `j`.\n3. `j` takes the previous value of `i` and increases by 1.\n4. `k` decreases by 1.\n\nTo find a ranking function for this loop, we need to find an expression that decreases with each successive iteration of the loop and is positive for the loop to continue executing.\n\nA possible ranking function for this loop is `(k + 1)`.\n\nNow let's explain why it is a valid ranking function:\n\n1. The value of the ranking function decreases with every iteration of the loop: In each iteration, `k` is decreased by 1, so `(k + 1)` also decreases by 1.\n\n2. The value of the ranking function is positive for the loop to continue executing: Since the loop condition is `i <= 100 && j <= k`, if `j > k`, the loop will not execute. So, `j <= k` must hold for the loop to continue executing. This means that `(k + 1) > 0`, so the ranking function is positive.\n\nTherefore, the ranking function `(k + 1)` is valid for the given loop. The ACSL syntax for the ranking function is:\n\n```\n/*@\n    loop variant k + 1;\n*/\n```",
+                    "First, let's identify the loop variables and the loop condition. In this case, the variables are i, j, and k, and the loop condition is `i <= 100 && j <= k`.\n\nNow, we need to find an expression or a sequence of expressions that decrease with each iteration of the loop and are positive when the loop continues executing. Let's analyze how the variables change with each iteration:\n\n1. i gets the value of j.\n2. j gets the value of tmp + 1, which is the previous value of i + 1.\n3. k gets decremented by 1.\n\nBased on these observations, we can define the following lexicographic ranking function:\n\n```\n/*@\n    loop variant k;\n    loop variant 101 - i;\n*/\n```\n\nNow, let's explain why this is a valid ranking function:\n\n1. k decreases by 1 in each iteration of the loop, and the loop continues executing while `j <= k`. Therefore, k will always be positive, and it will decrease with every iteration.\n\n2. The expression `101 - i` represents the remaining distance from i to 100. Since i gets the value of j in each iteration, and j increases by 1, this expression will either decrease or stay the same. When i reaches 101, the loop will stop executing, as the loop condition `i <= 100` will no longer be satisfied.\n\nThus, this lexicographic ranking function guarantees that the loop will eventually terminate, and it is a valid ranking function for the given program.",
+                    "First, let's identify the variables that are live at the loop head: i, j, and k. Now we need to find an expression or a sequence of expressions involving these variables that decrease with every iteration and are positive for the loop to continue.\n\nThe loop continues as long as `i <= 100 && j <= k`. Let's analyze the changes in the variables during the loop:\n\n1. `tmp` is assigned the value of `i`.\n2. `i` is assigned the value of `j`.\n3. `j` is assigned the value of `tmp + 1`, which is `i + 1`.\n4. `k` is decremented by 1.\n\nNow, let's find a ranking function based on these changes:\n\n1. The value of `i` is replaced by `j`, so it may increase or decrease.\n2. The value of `j` increases by 1 in every iteration.\n3. The value of `k` decreases by 1 in every iteration.\n\nBased on these observations, we can propose the following lexicographic ranking function:\n\n```\n/*@\n    loop variant k;\n    loop variant 100 - i;\n*/\n```\n\nThis ranking function is valid because:\n\n1. `k` decreases by 1 in every iteration, which ensures progress towards termination.\n2. `100 - i` either decreases or stays the same, as `i` is replaced by `j` and `j <= k`.\n3. If `100 - i` stays the same, it means that `i == j`, and in the next iteration, `j` will increase, causing `100 - i` to decrease.\n\nThe lexicographic ranking function `(k, 100 - i)` guarantees that the loop will terminate, as both components are non-negative and decrease in every iteration or ensure the decrease of the other component."
+                ],
+                "output": [
+                    "/*@\n    loop variant k + 101 - i;\n*/",
+                    "/*@\n    loop variant k + 1;\n*/",
+                    "/*@\n    loop variant k + 1;\n*/",
+                    "/*@\n    loop variant k;\n    loop variant 101 - i;\n*/",
+                    "/*@\n    loop variant k;\n    loop variant 100 - i;\n*/"
+                ]
+            },
+            {
+                "step": "Checking individual completion",
+                "solver_calls": 5,
+                "completions": [
+                    {
+                        "candidate_with_combined_invariants_and_variant": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\ntypedef enum {false, true} bool;\n\nint main() {\n    int k, i, j, tmp;\n\tk = unknown_int();\n    i = unknown_int();\n    j = unknown_int();\n\t/*@\nloop invariant i5: \\valid(&i) && \\valid(&j) && \\valid(&k);\nloop invariant i12: k <= k + 1;\nloop variant k + 101 - i;\n*/\nwhile (i <= 100 && j <= k) {\n\t\ttmp = i;\n\t\ti = j;\n\t\tj = tmp + 1;\n\t\tk = k - 1;\n\t}\n\treturn 0;\n}",
+                        "checker_output": false,
+                        "checker_message": "loop invariant \\valid(&i) && \\valid(&j) && \\valid(&k) is inductive.\nloop invariant k <= k + 1 is inductive.\n\nLoop variant is Invalid.\n"
+                    },
+                    {
+                        "candidate_with_combined_invariants_and_variant": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\ntypedef enum {false, true} bool;\n\nint main() {\n    int k, i, j, tmp;\n\tk = unknown_int();\n    i = unknown_int();\n    j = unknown_int();\n\t/*@\nloop invariant i5: \\valid(&i) && \\valid(&j) && \\valid(&k);\nloop invariant i12: k <= k + 1;\nloop variant k + 1;\n*/\nwhile (i <= 100 && j <= k) {\n\t\ttmp = i;\n\t\ti = j;\n\t\tj = tmp + 1;\n\t\tk = k - 1;\n\t}\n\treturn 0;\n}",
+                        "checker_output": false,
+                        "checker_message": "loop invariant \\valid(&i) && \\valid(&j) && \\valid(&k) is inductive.\nloop invariant k <= k + 1 is inductive.\n\nLoop variant is Invalid.\n"
+                    },
+                    {
+                        "candidate_with_combined_invariants_and_variant": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\ntypedef enum {false, true} bool;\n\nint main() {\n    int k, i, j, tmp;\n\tk = unknown_int();\n    i = unknown_int();\n    j = unknown_int();\n\t/*@\nloop invariant i5: \\valid(&i) && \\valid(&j) && \\valid(&k);\nloop invariant i12: k <= k + 1;\nloop variant k + 1;\n*/\nwhile (i <= 100 && j <= k) {\n\t\ttmp = i;\n\t\ti = j;\n\t\tj = tmp + 1;\n\t\tk = k - 1;\n\t}\n\treturn 0;\n}",
+                        "checker_output": false,
+                        "checker_message": "loop invariant \\valid(&i) && \\valid(&j) && \\valid(&k) is inductive.\nloop invariant k <= k + 1 is inductive.\n\nLoop variant is Invalid.\n"
+                    },
+                    {
+                        "candidate_with_combined_invariants_and_variant": "\n        typedef struct {\n        int a;\nint b;\n} variant_expression;\n\n/*@ \n            predicate lexicographic(variant_expression v1, variant_expression v2) =\n        (v1.a >= 0 && v1.a > v2.a) ||\n (v1.b >= 0 && v1.a == v2.a && v1.b > v2.b);\n*/\n#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\ntypedef enum {false, true} bool;\n\nint main() {\n    int k, i, j, tmp;\n\tk = unknown_int();\n    i = unknown_int();\n    j = unknown_int();\n\t//@ ghost variant_expression measure = { k, 101 - i };\n/*@\nloop invariant i5: \\valid(&i) && \\valid(&j) && \\valid(&k);\nloop invariant i12: k <= k + 1;\nloop invariant measure.a == k && measure.b == 101 - i;\nloop variant measure for lexicographic;\n*/\nwhile (i <= 100 && j <= k) {\n\t\ttmp = i;\n\t\ti = j;\n\t\tj = tmp + 1;\n\t\tk = k - 1;\n\t\n//@ ghost measure.a = k;\n//@ ghost measure.b = 101 - i;\n}\n\treturn 0;\n}",
+                        "checker_output": false,
+                        "checker_message": "loop invariant \\valid(&i) && \\valid(&j) && \\valid(&k) is inductive.\nloop invariant k <= k + 1 is inductive.\n\nLoop variant is Invalid.\n"
+                    },
+                    {
+                        "candidate_with_combined_invariants_and_variant": "\n        typedef struct {\n        int a;\nint b;\n} variant_expression;\n\n/*@ \n            predicate lexicographic(variant_expression v1, variant_expression v2) =\n        (v1.a >= 0 && v1.a > v2.a) ||\n (v1.b >= 0 && v1.a == v2.a && v1.b > v2.b);\n*/\n#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\ntypedef enum {false, true} bool;\n\nint main() {\n    int k, i, j, tmp;\n\tk = unknown_int();\n    i = unknown_int();\n    j = unknown_int();\n\t//@ ghost variant_expression measure = { k, 100 - i };\n/*@\nloop invariant i5: \\valid(&i) && \\valid(&j) && \\valid(&k);\nloop invariant i12: k <= k + 1;\nloop invariant measure.a == k && measure.b == 100 - i;\nloop variant measure for lexicographic;\n*/\nwhile (i <= 100 && j <= k) {\n\t\ttmp = i;\n\t\ti = j;\n\t\tj = tmp + 1;\n\t\tk = k - 1;\n\t\n//@ ghost measure.a = k;\n//@ ghost measure.b = 100 - i;\n}\n\treturn 0;\n}",
+                        "checker_output": false,
+                        "checker_message": "loop invariant \\valid(&i) && \\valid(&j) && \\valid(&k) is inductive.\nloop invariant k <= k + 1 is inductive.\n\nLoop variant is Invalid.\n"
+                    }
+                ],
+                "success": false
+            }
+        ]
+    },
+    "stats": {
+        "success": [
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/PastaB7.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/BrockschmidtCookFuhs-CAV2013-Introduction_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/genady_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_b.12.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/WhileDecr.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_a.09_assume.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex3.04_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/AliasDarteFeautrierGonnord-SAS2010-speedpldi2_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Bangalore_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_java_Break.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/PastaB2.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/LogMult.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/KroeningSharyginaTsitovichWintersteiger-CAV2010-Ex_true-termination.c",
+            "../data/benchmarks/non_termination/loop/Signed_Overflow_Error_3_T.c",
+            "../data/benchmarks/tpdb/C/Ultimate/Parallel_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_ex2.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/HeizmannHoenickeLeikePodelski-ATVA2013-Fig6_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex2.10_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/PastaC7.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChawdharyCookGulwaniSagivYang-ESOP2008-random1d_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_b.11.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/genady_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Nyala-2lex_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_ex3b.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_b.05.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex2.20_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_ex1.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_a.05.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/ChenFlurMukhopadhyay-SAS2012-Ex2.10_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_a.04.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/HeizmannHoenickeLeikePodelski-ATVA2013-Fig9_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/PastaA7.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/HeizmannHoenickeLeikePodelski-ATVA2013-Fig6_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/HeizmannHoenickeLeikePodelski-ATVA2013-Fig8_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_java_Continue1.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/AliasDarteFeautrierGonnord-SAS2010-random2d_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/aaron2_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/aaron2_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/ChenFlurMukhopadhyay-SAS2012-Ex1.04_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChawdharyCookGulwaniSagivYang-ESOP2008-random2d_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/PastaA4.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_fermat.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Overflow.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/Toulouse-BranchesToLoop_true-termination.c",
+            "../data/benchmarks/non_termination/loop/Signed_Overflow_Error_2_T.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/PastaC3.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_b.13.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/GulavaniGulwani-CAV2008-Fig1a_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_a.06.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/AliasDarteFeautrierGonnord-SAS2010-ndecr_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/PodelskiRybalchenko-TACAS2011-Fig1_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/HeizmannHoenickeLeikePodelski-ATVA2013-Fig9_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/PastaA8.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/HeizmannHoenickeLeikePodelski-ATVA2013-Fig5_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/KroeningSharyginaTsitovichWintersteiger-CAV2010-Ex_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/AliasDarteFeautrierGonnord-SAS2010-random1d_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/PastaC9.c",
+            "../data/benchmarks/non_termination/loop/Unsigned_Wraparound_Error_4_T.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/MinusBuiltIn.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Masse-VMCAI2014-Ex6_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_a.07.c"
+        ],
+        "failure": [
+            "../data/benchmarks/tpdb/C_Integer/Ton_Chanh_15/Hanoi_plus_false-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/UrbanMine-ESOP2014-Fig3_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Factorial.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Swingers.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex2.07_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Piecewise_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/PodelskiRybalchenko-LICS2004-Fig2-TACAS2011-Fig3_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex1.03_true-termination.c",
+            "../data/benchmarks/tpdb/C/Ultimate/Lobnya-Boolean-Reordered_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/ChenFlurMukhopadhyay-SAS2012-Ex2.22_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex2.08_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/CookSeeZuleger-TACAS2013-Fig8a-modified_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex2.09_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/LeikeHeizmann-WST2014-Ex5_false-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex2.18_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex4.01_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Ton_Chanh_15/Benghazi_nondet_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex1.02_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/GulwaniJainKoskinen-PLDI2009-Fig1_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/ChenFlurMukhopadhyay-SAS2012-Ex2.16_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Pure2Phase_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/PodelskiRybalchenko-LICS2004-Fig2_true-termination.c",
+            "../data/benchmarks/tpdb/C/Ultimate/Cairo_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/LeikeHeizmann-TACAS2014-Fig1_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Pure3Phase_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_c.07.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex3.03_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/PlusSwap.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/AliasDarteFeautrierGonnord-SAS2010-counterex1a_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/aaron3_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Toulouse-MultiBranchesToLoop_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/AliasDarteFeautrierGonnord-SAS2010-counterex1a_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex1.01_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/LeikeHeizmann-TACAS2014-Ex9_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/min_rf_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Et1.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/2Nested_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/ChenFlurMukhopadhyay-SAS2012-Ex2.08_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Masse-VMCAI2014-Fig1b_true-termination.c",
+            "../data/benchmarks/tpdb/C/Ultimate/Gothenburg_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/NoriSharma-FSE2013-Fig8_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/CookSeeZuleger-TACAS2013-Fig8b_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Toulouse-BranchesToLoop_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/MenloPark_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex2.13_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/AliasDarteFeautrierGonnord-SAS2010-rsd_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/TelAviv-Amir-Minimum_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex3.09_true-termination.c",
+            "../data/benchmarks/non_termination/loop/Signed_Overflow_Error_1_T.c",
+            "../data/benchmarks/non_termination/loop/Incorrect_Bit_Calculation_3_T.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex2.06_false-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_b.03-no-inv_assume.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/GopanReps-CAV2006-Fig1a_true-termination.c.c",
+            "../data/benchmarks/non_termination/loop/Incorrect_Bit_Calculation_2_T.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Gothenburg_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Thun_true-termination.c",
+            "../data/benchmarks/tpdb/C/Ultimate/Pure3Phase_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/PastaA10.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/AliasDarteFeautrierGonnord-SAS2010-speedpldi2_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Stockholm_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/IntPath.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex2.19_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Ben-Amram-LMCS2010-Ex2.3_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Fibonacci.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/CookSeeZuleger-TACAS2013-Fig7b_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/DoubleNeg.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/ChenFlurMukhopadhyay-SAS2012-Ex4.01_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/BradleyMannaSipma-ICALP2005-Fig1_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/ChenFlurMukhopadhyay-SAS2012-Ex2.01_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Masse-VMCAI2014-Fig1a_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ColonSipma-TACAS2001-Fig1_true-termination.c"
+        ],
+        "skipped": [],
+        "total": 132,
+        "success_count": 61,
+        "failure_count": 71,
+        "success_rate": 0.4621212121212121
+    }
+}

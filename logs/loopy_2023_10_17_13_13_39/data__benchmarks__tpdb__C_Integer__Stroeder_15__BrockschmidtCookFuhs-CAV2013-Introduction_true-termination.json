@@ -1,0 +1,197 @@
+{
+    "logs": {
+        "file": "../data/benchmarks/tpdb/C_Integer/Stroeder_15/BrockschmidtCookFuhs-CAV2013-Introduction_true-termination.c",
+        "benchmark_code": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\ntypedef enum {false, true} bool;\n\nint main() {\n    int x, y;\n    x = unknown_int();\n    y = 1;\n    while (x > 0) {\n        x = x - y;\n        y = y + 1;\n    }\n    return 0;\n}",
+        "success": true,
+        "log": [
+            {
+                "step": "Prompting LLM",
+                "generating_annotation": "loop_invariants",
+                "success": true,
+                "llm_chat": [
+                    {
+                        "role": "system",
+                        "content": "You are a helpful AI software assistant that reasons about how code behaves. Given a program, you can find loop invariants, which can then be used to verify some property in the program. \nFrama-C is a software verification tool for C programs. The input to Frama-C is a C program file with ACSL (ANSI/ISO C Specification Language) annotations.\nFor the given program, find the necessary loop invariants of the while loop to help Frama-C verify the post-condition.\n\nInstructions:\n- Make a note of the pre-conditions or variable assignments in the program.\n- Analyze the loop body and make a note of the loop condition. \n- Output loop invariants that are true \n(i) before the loop execution, \n(ii) in every iteration of the loop and \n(iii) after the loop termination, \nsuch that the loop invariants imply the post condition.\n- If a loop invariant is a conjunction, split it into its parts.\n- Output all the loop invariants in one code block. For example:\n```\n/*@ \n    loop invariant i1;\n    loop invariant i2;\n*/\n```\nRules:\n- **Do not use variables or functions that are not declared in the program.** \n- **Do not make any assumptions about functions whose definitions are not given.**\n- **All undefined variables contain garbage values. Do not use variables that have garbage values.**\n- **Do not use keywords that are not supported in ACSL annotations for loops.**\n- **Variables that are not explicitly initialized, could have garbage values. Do not make any assumptions about such values.**\n- **Do not use the \\at(x, Pre) notation for any variable x.**\n- **Do not use non-deterministic function calls.**"
+                    },
+                    {
+                        "role": "user",
+                        "content": "\nConsider the following C program:\n```\n#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\ntypedef enum {false, true} bool;\n\nint main() {\n    int x, y;\n    x = unknown_int();\n    y = 1;\n    while (x > 0) {\n        x = x - y;\n        y = y + 1;\n    }\n    return 0;\n}\n```\n\nYou are allowed to use implication to take care of the conditional nature of the code. Use implication (==>) instead of using if-then.\n\nFor all variables, add conjunctions that bound the maximum and minimum values that they can take, if such bounds exist.\n\nIf a variable is always equal to or smaller or larger than another variable, add a conjunction for their relation.\n\nIf the assertion is guarded by a condition, use the guard condition in an implication.\n\nIf certain variables are non-deterministic at the beginning or end of the loop, use an implication to make the invariant trivially true at that location. \n\nOutput the loop invariants for the loop in the program above. Let's think step by step."
+                    },
+                    "First, we note the variable assignments and loop condition:\n- x is assigned an unknown integer value\n- y is assigned the value 1\n- The loop condition is x > 0\n\nNow, we can derive the loop invariants. \n\nBefore the loop execution:\n- y is always 1\n\nIn every iteration of the loop:\n- x decreases by y\n- y increases by 1\n- y is always positive\n\nAfter the loop termination:\n- x is less than or equal to 0\n\nConsidering these, the loop invariants can be written as:\n\n```\n/*@ \n    loop invariant y >= 1;\n    loop invariant \\forall int k; 0 <= k < y ==> x >= (y*(y-1))/2 - (k*(k+1))/2;\n*/\n```",
+                    "First, let's note the pre-conditions and variable assignments in the program:\n\n1. x is assigned an unknown integer value.\n2. y is initialized to 1.\n\nNow, let's analyze the loop body and make a note of the loop condition:\n\n- The loop condition is x > 0.\n\nNow, let's find the loop invariants that are true before the loop execution, in every iteration of the loop, and after the loop termination:\n\n1. Before the loop execution: y is initialized to 1.\n2. In every iteration of the loop: x is decreased by y, and y is increased by 1.\n3. After the loop termination: x <= 0.\n\nConsidering all these points, the loop invariants are:\n\n```\n/*@ \n    loop invariant y >= 1;\n    loop invariant x >= 0 ==> (y * (y - 1) / 2) <= x;\n    loop invariant x <= 0 ==> (y * (y - 1) / 2) > x;\n*/\n```",
+                    "First, let's note the variable assignments and pre-conditions in the program:\n- x is assigned a non-deterministic integer value.\n- y is assigned the value 1.\n\nNow, let's analyze the loop body and make a note of the loop condition:\n- The loop condition is x > 0.\n- Inside the loop, x is decremented by y, and y is incremented by 1 in each iteration.\n\nNow, let's output the loop invariants:\n```\n/*@ \n    loop invariant x >= 0;\n    loop invariant y >= 1;\n    loop invariant x <= y*(y-1)/2;\n*/\n```",
+                    "1. Pre-conditions or variable assignments in the program:\n- x is assigned a value from unknown_int() which we do not know, so it could be any integer.\n- y is assigned a value of 1.\n\n2. Analyzing the loop body and condition:\n- The loop condition is x > 0.\n- Inside the loop, x is decremented by y, and y is incremented by 1.\n\nNow, let's find the loop invariants:\n\n```\n/*@ \n    loop invariant x >= 0;\n    loop invariant y >= 1;\n    loop invariant x + y >= 1;\n*/\n```",
+                    "Let's analyze the given program:\n\n1. Initial variable assignments: x is assigned an unknown integer value, and y is assigned 1.\n2. Loop condition: The while loop iterates as long as x > 0.\n3. Loop body: In each iteration, x is decremented by y, and y is incremented by 1.\n\nNow, let's derive the loop invariants:\n\n1. Before the loop execution: y starts at 1.\n2. In every iteration: y keeps increasing by 1, so y is always positive; x is non-increasing since x is decreased by y in each iteration.\n3. After loop termination: The loop terminates when x is no longer greater than 0, which means x must be less than or equal to 0.\n\nHere are the loop invariants for the while loop in the given program:\n\n```\n/*@ \n    loop invariant y > 0;\n    loop invariant \\forall integer k; 0 <= k <= y ==> x >= k * (k - 1) / 2;\n    loop invariant x >= 0;\n*/\n```"
+                ],
+                "output": [
+                    "/*@ \n    loop invariant y >= 1;\n    loop invariant \\forall int k; 0 <= k < y ==> x >= (y*(y-1))/2 - (k*(k+1))/2;\n*/",
+                    "/*@ \n    loop invariant y >= 1;\n    loop invariant x >= 0 ==> (y * (y - 1) / 2) <= x;\n    loop invariant x <= 0 ==> (y * (y - 1) / 2) > x;\n*/",
+                    "/*@ \n    loop invariant x >= 0;\n    loop invariant y >= 1;\n    loop invariant x <= y*(y-1)/2;\n*/",
+                    "/*@ \n    loop invariant x >= 0;\n    loop invariant y >= 1;\n    loop invariant x + y >= 1;\n*/",
+                    "/*@ \n    loop invariant y > 0;\n    loop invariant \\forall integer k; 0 <= k <= y ==> x >= k * (k - 1) / 2;\n    loop invariant x >= 0;\n*/"
+                ]
+            },
+            {
+                "step": "Checking individual completion",
+                "solver_calls": 5,
+                "completions": [
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant y >= 1;\n    loop invariant \\forall int k; 0 <= k < y ==> x >= (y*(y-1))/2 - (k*(k+1))/2;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant y >= 1 is inductive.\nloop invariant \\forall int k; 0 <= k < y ==> x >= (y*(y-1))/2 - (k*(k+1))/2 is neither established nor preserved.\n\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant y >= 1;\n    loop invariant x >= 0 ==> (y * (y - 1) / 2) <= x;\n    loop invariant x <= 0 ==> (y * (y - 1) / 2) > x;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant y >= 1 is inductive.\nloop invariant x >= 0 ==> (y * (y - 1) / 2) <= x is established but not preserved.\nloop invariant x <= 0 ==> (y * (y - 1) / 2) > x is preserved but not established.\n\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant x >= 0;\n    loop invariant y >= 1;\n    loop invariant x <= y*(y-1)/2;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant x >= 0 is neither established nor preserved.\nloop invariant y >= 1 is inductive.\nloop invariant x <= y*(y-1)/2 is preserved but not established.\n\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant x >= 0;\n    loop invariant y >= 1;\n    loop invariant x + y >= 1;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant x >= 0 is neither established nor preserved.\nloop invariant y >= 1 is inductive.\nloop invariant x + y >= 1 is inductive.\n\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant y > 0;\n    loop invariant \\forall integer k; 0 <= k <= y ==> x >= k * (k - 1) / 2;\n    loop invariant x >= 0;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant y > 0 is inductive.\nloop invariant \\forall integer k; 0 <= k <= y ==> x >= k * (k - 1) / 2 is neither established nor preserved.\nloop invariant x >= 0 is inductive.\n\n"
+                    }
+                ],
+                "success": false
+            },
+            {
+                "step": "Houdini for individual completion",
+                "success": true,
+                "completions": [
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant y >= 1;\n    loop invariant \\forall int k; 0 <= k < y ==> x >= (y*(y-1))/2 - (k*(k+1))/2;\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\ntypedef enum {false, true} bool;\n\nint main() {\n    int x, y;\n    x = unknown_int();\n    y = 1;\n    /*@\nloop invariant i1: y >= 1;\n\n*/\nwhile (x > 0) {\n        x = x - y;\n        y = y + 1;\n    }\n    return 0;\n}",
+                        "checker_output_after_prune": true
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant y >= 1;\n    loop invariant x >= 0 ==> (y * (y - 1) / 2) <= x;\n    loop invariant x <= 0 ==> (y * (y - 1) / 2) > x;\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\ntypedef enum {false, true} bool;\n\nint main() {\n    int x, y;\n    x = unknown_int();\n    y = 1;\n    /*@\nloop invariant i1: y >= 1;\n\n\n*/\nwhile (x > 0) {\n        x = x - y;\n        y = y + 1;\n    }\n    return 0;\n}",
+                        "checker_output_after_prune": true
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant x >= 0;\n    loop invariant y >= 1;\n    loop invariant x <= y*(y-1)/2;\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\ntypedef enum {false, true} bool;\n\nint main() {\n    int x, y;\n    x = unknown_int();\n    y = 1;\n    /*@\n\nloop invariant i2: y >= 1;\n\n*/\nwhile (x > 0) {\n        x = x - y;\n        y = y + 1;\n    }\n    return 0;\n}",
+                        "checker_output_after_prune": true
+                    },
+                    {
+                        "num_solver_calls": 2,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant x >= 0;\n    loop invariant y >= 1;\n    loop invariant x + y >= 1;\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\ntypedef enum {false, true} bool;\n\nint main() {\n    int x, y;\n    x = unknown_int();\n    y = 1;\n    /*@\n\nloop invariant i2: y >= 1;\n\n*/\nwhile (x > 0) {\n        x = x - y;\n        y = y + 1;\n    }\n    return 0;\n}",
+                        "checker_output_after_prune": true
+                    },
+                    {
+                        "num_solver_calls": 2,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant y > 0;\n    loop invariant \\forall integer k; 0 <= k <= y ==> x >= k * (k - 1) / 2;\n    loop invariant x >= 0;\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\ntypedef enum {false, true} bool;\n\nint main() {\n    int x, y;\n    x = unknown_int();\n    y = 1;\n    /*@\nloop invariant i1: y > 0;\n\n\n*/\nwhile (x > 0) {\n        x = x - y;\n        y = y + 1;\n    }\n    return 0;\n}",
+                        "checker_output_after_prune": true
+                    }
+                ]
+            },
+            {
+                "step": "Houdini for combined completion",
+                "solver_calls": 3,
+                "success": true,
+                "code_with_combined_invariants": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\ntypedef enum {false, true} bool;\n\nint main() {\n    int x, y;\n    x = unknown_int();\n    y = 1;\n    /*@\nloop invariant i1: y >= 1;\n\n\n\n\n\n\nloop invariant i12: y > 0;\n\n*/\nwhile (x > 0) {\n        x = x - y;\n        y = y + 1;\n    }\n    return 0;\n}",
+                "checker_output": true
+            },
+            {
+                "step": "Prompting LLM",
+                "generating_annotation": "loop_variants",
+                "success": true,
+                "llm_chat": [
+                    {
+                        "role": "system",
+                        "content": "A ranking function (also called variant) is an expression  over program variables that are live as the loop head. The value of the expression must decrease with every successive iteration of the loop. And the value must be positive for the loop to continue executing. Finding a ranking function helps prove that the loop must terminate.\nLexicographic ranking functions are a generation. They are a sequence of expressions (e1, e2, ...) with the property that the value of each expression must be positive for the loop to execute. Either e1 must decrease or its value remains the same. If its value remains the same then the value of e2 must decrease.\nFind the ranking function for the loop in the following program and explain why it is a valid ranking function.\n\nInstructions:\nOutput the ranking function in one code block, in ACSL syntax. For example,\n```\n/*@\n    loop variant v;\n*/\n```\nIf the ranking function is a sequence of expressions, output them in different lines in their lexicographic order. "
+                    },
+                    {
+                        "role": "user",
+                        "content": "Consider the following C program:  \n```  \n#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\ntypedef enum {false, true} bool;\n\nint main() {\n    int x, y;\n    x = unknown_int();\n    y = 1;\n    while (x > 0) {\n        x = x - y;\n        y = y + 1;\n    }\n    return 0;\n}\n```\nFind the ranking function for the loop in the given program and explain why it is a valid ranking function. Let's think step by step. "
+                    },
+                    "First, let's identify the loop in the given program:\n\n```\nwhile (x > 0) {\n    x = x - y;\n    y = y + 1;\n}\n```\n\nNow, let's find the ranking function for this loop. We need to find an expression that decreases with each iteration and is positive while the loop continues.\n\nLet's use x as our ranking function:\n\n```\n/*@\n    loop variant x;\n*/\n```\n\nNow, let's explain why x is a valid ranking function:\n\n1. The value of x is positive for the loop to continue executing: The loop condition is `x > 0`, so as long as the loop is executing, x must be positive.\n\n2. The value of x decreases with every successive iteration of the loop: In each iteration, x is updated as `x = x - y`, and since y is always positive (it starts at 1 and is incremented in each iteration), the value of x will decrease with each iteration.\n\nThus, x is a valid ranking function for the given loop, and it helps prove that the loop must terminate.",
+                    "First, let's analyze the loop in the program:\n\n```\nwhile (x > 0) {\n    x = x - y;\n    y = y + 1;\n}\n```\n\nThe loop continues to execute as long as `x > 0`. In each iteration, `x` decreases by `y` and `y` increases by 1. To prove that the loop terminates, we need to find a ranking function that decreases with every successive iteration of the loop and is positive for the loop to continue executing.\n\nLet's consider the ranking function `v = x`. \n\n```\n/*@\n    loop variant x;\n*/\n```\n\nAt the start of each iteration, the value of `x` is positive, as it is the loop condition (`x > 0`). In each iteration, `x` is decreased by `y`, which is initially 1 and increases by 1 in each iteration. So, the value of `x` is always decreasing with every successive iteration of the loop. Since `x` is always decreasing, and the loop continues to execute only when `x > 0`, this ranking function proves that the loop must terminate.\n\nHence, the ranking function `v = x` is a valid ranking function for the given loop.",
+                    "First, we need to identify the variables that are live at the loop head. In this case, the live variables are `x` and `y`.\n\nNow, let's find a ranking function for the loop. We need an expression or a sequence of expressions that decrease with every successive iteration of the loop and are positive for the loop to continue executing.\n\nWe can use the following lexicographic ranking function:\n\n```\n/*@\n    loop variant x;\n    loop variant -y;\n*/\n```\n\nNow let's explain why this is a valid ranking function:\n\n1. The value of `x` decreases with every successive iteration of the loop, as `x = x - y` is executed in each iteration. Since `y` is always positive, the subtraction will cause `x` to decrease.\n\n2. The value of `-y` also decreases with every successive iteration of the loop, as `y = y + 1` is executed in each iteration. Since `y` is increasing, `-y` is decreasing.\n\n3. For the loop to continue executing, the condition `x > 0` must be true. This means that the value of `x` must be positive. The value of `-y` is negative, as `y` is always positive.\n\nSince the ranking function satisfies the required properties, it is a valid ranking function for the given loop. This ranking function helps prove that the loop must terminate, as both `x` and `-y` decrease with every successive iteration, and the loop continues only when `x > 0`.",
+                    "First, let's identify the loop and the loop variables. The loop is the `while (x > 0)` loop, and the loop variables are `x` and `y`.\n\nNow, let's analyze the loop body to find a ranking function. Inside the loop, `x` is being decremented by `y`, and `y` is being incremented by `1`. We can see that `y` will always increase, and `x` will decrease by an increasing amount in each iteration.\n\nLet's propose a ranking function using these observations:\n\n```\n/*@\n    loop variant x;\n    loop variant -y;\n*/\n```\n\nThis ranking function is a lexicographic ranking function with two expressions, `x` and `-y`. Let's check if it satisfies the properties of a valid ranking function:\n\n1. The value of the expression must be positive for the loop to continue executing: The loop condition is `x > 0`, so `x` must be positive for the loop to execute. Also, since `y` is incremented by `1` in each iteration and starts from `1`, `-y` will always be negative, satisfying this property.\n\n2. Either the first expression (x) must decrease, or its value remains the same, and the value of the second expression (-y) must decrease: In each iteration, `x` is decremented by `y`, so its value is decreasing. The second expression, `-y`, is also decreasing because `y` is increasing by `1` in each iteration.\n\nBased on these observations, the proposed ranking function is valid and proves that the loop must terminate.",
+                    "First, let's identify the loop in the given program:\n\n```\nwhile (x > 0) {\n    x = x - y;\n    y = y + 1;\n}\n```\n\nNow let's find the ranking function for this loop. We need to find an expression that decreases with every successive iteration of the loop and is positive for the loop to continue executing.\n\nWe can choose the ranking function as 'x' itself because 'x' is positive for the loop to continue executing, and it decreases with every iteration as 'x = x - y'.\n\nSo, the ranking function is 'x'. Let's put it in ACSL syntax:\n\n```\n/*@\n    loop variant x;\n*/\n```\n\nNow let's explain why it is a valid ranking function:\n- 'x' is positive for the loop to continue executing as the loop condition is \"x > 0\".\n- With every iteration of the loop, 'x' is decreased by 'y', where 'y' starts from 1 and increases by 1 in each iteration. Since 'y' is always positive, 'x' will always decrease in each iteration.\n\nThus, the ranking function 'x' satisfies the required properties, proving that the loop must terminate."
+                ],
+                "output": [
+                    "/*@\n    loop variant x;\n*/",
+                    "/*@\n    loop variant x;\n*/",
+                    "/*@\n    loop variant x;\n    loop variant -y;\n*/",
+                    "/*@\n    loop variant x;\n    loop variant -y;\n*/",
+                    "/*@\n    loop variant x;\n*/"
+                ]
+            },
+            {
+                "step": "Checking individual completion",
+                "solver_calls": 5,
+                "completions": [
+                    {
+                        "candidate_with_combined_invariants_and_variant": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\ntypedef enum {false, true} bool;\n\nint main() {\n    int x, y;\n    x = unknown_int();\n    y = 1;\n    /*@\nloop invariant i1: y >= 1;\nloop invariant i12: y > 0;\nloop variant x;\n*/\nwhile (x > 0) {\n        x = x - y;\n        y = y + 1;\n    }\n    return 0;\n}",
+                        "checker_output": true,
+                        "checker_message": "loop invariant y >= 1 is inductive.\nloop invariant y > 0 is inductive.\n\nLoop variant is Valid.\n"
+                    },
+                    {
+                        "candidate_with_combined_invariants_and_variant": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\ntypedef enum {false, true} bool;\n\nint main() {\n    int x, y;\n    x = unknown_int();\n    y = 1;\n    /*@\nloop invariant i1: y >= 1;\nloop invariant i12: y > 0;\nloop variant x;\n*/\nwhile (x > 0) {\n        x = x - y;\n        y = y + 1;\n    }\n    return 0;\n}",
+                        "checker_output": true,
+                        "checker_message": "loop invariant y >= 1 is inductive.\nloop invariant y > 0 is inductive.\n\nLoop variant is Valid.\n"
+                    },
+                    {
+                        "candidate_with_combined_invariants_and_variant": "\n        typedef struct {\n        int a;\nint b;\n} variant_expression;\n\n/*@ \n            predicate lexicographic(variant_expression v1, variant_expression v2) =\n        (v1.a >= 0 && v1.a > v2.a) ||\n (v1.b >= 0 && v1.a == v2.a && v1.b > v2.b);\n*/\n#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\ntypedef enum {false, true} bool;\n\nint main() {\n    int x, y;\n    x = unknown_int();\n    y = 1;\n    //@ ghost variant_expression measure = { x, -y };\n/*@\nloop invariant i1: y >= 1;\nloop invariant i12: y > 0;\nloop invariant measure.a == x && measure.b == -y;\nloop variant measure for lexicographic;\n*/\nwhile (x > 0) {\n        x = x - y;\n        y = y + 1;\n    \n//@ ghost measure.a = x;\n//@ ghost measure.b = -y;\n}\n    return 0;\n}",
+                        "checker_output": true,
+                        "checker_message": "loop invariant y >= 1 is inductive.\nloop invariant y > 0 is inductive.\n\nLoop variant is Valid.\n"
+                    },
+                    {
+                        "candidate_with_combined_invariants_and_variant": "\n        typedef struct {\n        int a;\nint b;\n} variant_expression;\n\n/*@ \n            predicate lexicographic(variant_expression v1, variant_expression v2) =\n        (v1.a >= 0 && v1.a > v2.a) ||\n (v1.b >= 0 && v1.a == v2.a && v1.b > v2.b);\n*/\n#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\ntypedef enum {false, true} bool;\n\nint main() {\n    int x, y;\n    x = unknown_int();\n    y = 1;\n    //@ ghost variant_expression measure = { x, -y };\n/*@\nloop invariant i1: y >= 1;\nloop invariant i12: y > 0;\nloop invariant measure.a == x && measure.b == -y;\nloop variant measure for lexicographic;\n*/\nwhile (x > 0) {\n        x = x - y;\n        y = y + 1;\n    \n//@ ghost measure.a = x;\n//@ ghost measure.b = -y;\n}\n    return 0;\n}",
+                        "checker_output": true,
+                        "checker_message": "loop invariant y >= 1 is inductive.\nloop invariant y > 0 is inductive.\n\nLoop variant is Valid.\n"
+                    },
+                    {
+                        "candidate_with_combined_invariants_and_variant": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\ntypedef enum {false, true} bool;\n\nint main() {\n    int x, y;\n    x = unknown_int();\n    y = 1;\n    /*@\nloop invariant i1: y >= 1;\nloop invariant i12: y > 0;\nloop variant x;\n*/\nwhile (x > 0) {\n        x = x - y;\n        y = y + 1;\n    }\n    return 0;\n}",
+                        "checker_output": true,
+                        "checker_message": "loop invariant y >= 1 is inductive.\nloop invariant y > 0 is inductive.\n\nLoop variant is Valid.\n"
+                    }
+                ],
+                "success": true
+            }
+        ]
+    },
+    "stats": {
+        "success": [
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/PastaB7.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/BrockschmidtCookFuhs-CAV2013-Introduction_true-termination.c"
+        ],
+        "failure": [],
+        "skipped": [],
+        "total": 2,
+        "success_count": 2,
+        "failure_count": 0,
+        "success_rate": 1.0
+    }
+}

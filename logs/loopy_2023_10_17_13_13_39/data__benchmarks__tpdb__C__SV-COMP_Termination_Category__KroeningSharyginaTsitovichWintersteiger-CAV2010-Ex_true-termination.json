@@ -1,0 +1,222 @@
+{
+    "logs": {
+        "file": "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/KroeningSharyginaTsitovichWintersteiger-CAV2010-Ex_true-termination.c",
+        "benchmark_code": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\nint main() {\n\tint i = unknown_int();\n\twhile (i < 255) {\n\t\tif (unknown_int()) {\n\t\t\ti = i + 1;\n\t\t} else {\n\t\t\ti = i + 2;\n\t\t}\n\t}\n\treturn 0;\n}",
+        "success": true,
+        "log": [
+            {
+                "step": "Prompting LLM",
+                "generating_annotation": "loop_invariants",
+                "success": true,
+                "llm_chat": [
+                    {
+                        "role": "system",
+                        "content": "You are a helpful AI software assistant that reasons about how code behaves. Given a program, you can find loop invariants, which can then be used to verify some property in the program. \nFrama-C is a software verification tool for C programs. The input to Frama-C is a C program file with ACSL (ANSI/ISO C Specification Language) annotations.\nFor the given program, find the necessary loop invariants of the while loop to help Frama-C verify the post-condition.\n\nInstructions:\n- Make a note of the pre-conditions or variable assignments in the program.\n- Analyze the loop body and make a note of the loop condition. \n- Output loop invariants that are true \n(i) before the loop execution, \n(ii) in every iteration of the loop and \n(iii) after the loop termination, \nsuch that the loop invariants imply the post condition.\n- If a loop invariant is a conjunction, split it into its parts.\n- Output all the loop invariants in one code block. For example:\n```\n/*@ \n    loop invariant i1;\n    loop invariant i2;\n*/\n```\nRules:\n- **Do not use variables or functions that are not declared in the program.** \n- **Do not make any assumptions about functions whose definitions are not given.**\n- **All undefined variables contain garbage values. Do not use variables that have garbage values.**\n- **Do not use keywords that are not supported in ACSL annotations for loops.**\n- **Variables that are not explicitly initialized, could have garbage values. Do not make any assumptions about such values.**\n- **Do not use the \\at(x, Pre) notation for any variable x.**\n- **Do not use non-deterministic function calls.**"
+                    },
+                    {
+                        "role": "user",
+                        "content": "\nConsider the following C program:\n```\n#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\nint main() {\n\tint i = unknown_int();\n\twhile (i < 255) {\n\t\tif (unknown_int()) {\n\t\t\ti = i + 1;\n\t\t} else {\n\t\t\ti = i + 2;\n\t\t}\n\t}\n\treturn 0;\n}\n```\n\nYou are allowed to use implication to take care of the conditional nature of the code. Use implication (==>) instead of using if-then.\n\nFor all variables, add conjunctions that bound the maximum and minimum values that they can take, if such bounds exist.\n\nIf a variable is always equal to or smaller or larger than another variable, add a conjunction for their relation.\n\nIf the assertion is guarded by a condition, use the guard condition in an implication.\n\nIf certain variables are non-deterministic at the beginning or end of the loop, use an implication to make the invariant trivially true at that location. \n\nOutput the loop invariants for the loop in the program above. Let's think step by step."
+                    },
+                    "First, we make a note of variable assignments and loop condition:\n- int i = unknown_int();\n- Loop condition: i < 255\n\nNow, let's find the loop invariants:\n\n```\n/*@ \n    loop invariant 0 <= i;\n    loop invariant i <= 256;\n    loop invariant i % 2 == 0 ==> i < 254;\n*/\n```",
+                    "First, let's analyze the given program:\n\n1. Pre-conditions or variable assignments:\n   - i is assigned an unknown integer value.\n\n2. Loop condition: `i < 255`\n\nNow, let's find the loop invariants:\n\n1. Before the loop execution:\n   - i has an unknown integer value.\n\n2. In every iteration of the loop:\n   - i is increased by either 1 or 2.\n\n3. After the loop termination:\n   - i is greater than or equal to 255.\n\nConsidering these points, the loop invariants are:\n\n```\n/*@ \n    loop invariant i >= \\old(i); // i is non-decreasing\n    loop invariant i < 255 ==> (i % 2 == \\old(i) % 2); // i increases by either 1 or 2\n*/\n```",
+                    "First, let's analyze the given program:\n\nPre-conditions:\n- i is assigned an unknown integer value.\n\nLoop condition:\n- The loop executes while i is less than 255.\n\nLoop body:\n- If unknown_int() returns a non-zero value, i is incremented by 1.\n- Otherwise, i is incremented by 2.\n\nNow, let's find the loop invariants:\n\n1. The value of i is non-negative and always increasing.\n2. The value of i is always less than or equal to 255.\n\nConsidering these invariants, we can write the loop invariants for the while loop as follows:\n\n```\n/*@ \n    loop invariant 0 <= i;\n    loop invariant i <= 255;\n*/\n```",
+                    "First, let's note the variable assignment and loop condition:\n\n- Variable assignment: i = unknown_int();\n- Loop condition: i < 255;\n\nNow, we can write the loop invariants:\n\n```\n/*@ \n    loop invariant 0 <= i;\n    loop invariant i <= 256;\n*/\n```\n\nThese invariants are true before the loop execution, in every iteration of the loop, and after the loop termination. They also imply the post-condition that the loop will eventually terminate.",
+                    "First, let's analyze the given program:\n\n1. The variable `i` is assigned an unknown integer value.\n2. The while loop condition is `i < 255`.\n3. In the loop body, if `unknown_int()` is true, `i` is incremented by 1. Otherwise, `i` is incremented by 2.\n\nNow, let's find the loop invariants that are true before the loop execution, in every iteration of the loop, and after the loop termination.\n\n```\n/*@ \n    loop invariant 0 <= i;\n    loop invariant i <= 256;\n    loop invariant i % 2 == (unknown_int() ? 1 : 0) ==> i % 2 == (unknown_int() ? 1 : 0);\n*/\n```\n\nExplanation:\n\n1. `0 <= i`: Since `i` is incremented by 1 or 2 in the loop body, it will never be negative.\n2. `i <= 256`: The loop terminates when `i >= 255`. After the final loop iteration, the maximum value `i` can have is 256 (when `i` is incremented by 2).\n3. `i % 2 == (unknown_int() ? 1 : 0) ==> i % 2 == (unknown_int() ? 1 : 0)`: This invariant states that the parity (even or odd) of `i` is determined by the value of `unknown_int()`. If `unknown_int()` is true, `i` will be incremented by 1, making it odd. If `unknown_int()` is false, `i` will be incremented by 2, keeping its parity even. The implication allows this invariant to be true when the value of `unknown_int()` is unknown at the beginning or end of the loop."
+                ],
+                "output": [
+                    "/*@ \n    loop invariant 0 <= i;\n    loop invariant i <= 256;\n    loop invariant i % 2 == 0 ==> i < 254;\n*/",
+                    "/*@ \n    loop invariant i >= \\old(i); // i is non-decreasing\n    loop invariant i < 255 ==> (i % 2 == \\old(i) % 2); // i increases by either 1 or 2\n*/",
+                    "/*@ \n    loop invariant 0 <= i;\n    loop invariant i <= 255;\n*/",
+                    "/*@ \n    loop invariant 0 <= i;\n    loop invariant i <= 256;\n*/",
+                    "/*@ \n    loop invariant 0 <= i;\n    loop invariant i <= 256;\n    loop invariant i % 2 == (unknown_int() ? 1 : 0) ==> i % 2 == (unknown_int() ? 1 : 0);\n*/"
+                ]
+            },
+            {
+                "step": "Checking individual completion",
+                "solver_calls": 5,
+                "completions": [
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant 0 <= i;\n    loop invariant i <= 256;\n    loop invariant i % 2 == 0 ==> i < 254;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant 0 <= i is preserved but not established.\nloop invariant i <= 256 is preserved but not established.\nloop invariant i % 2 == 0 ==> i < 254 is neither established nor preserved.\n\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant i >= \\old(i); // i is non-decreasing\n    loop invariant i < 255 ==> (i % 2 == \\old(i) % 2); // i increases by either 1 or 2\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "Annotation error on line 8: \\old undefined in this context. Ignoring loop annotation"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant 0 <= i;\n    loop invariant i <= 255;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant 0 <= i is preserved but not established.\nloop invariant i <= 255 is neither established nor preserved.\n\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant 0 <= i;\n    loop invariant i <= 256;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant 0 <= i is preserved but not established.\nloop invariant i <= 256 is preserved but not established.\n\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant 0 <= i;\n    loop invariant i <= 256;\n    loop invariant i % 2 == (unknown_int() ? 1 : 0) ==> i % 2 == (unknown_int() ? 1 : 0);\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "Annotation error on line 10: unexpected token ')'"
+                    }
+                ],
+                "success": false
+            },
+            {
+                "step": "Houdini for individual completion",
+                "success": false,
+                "completions": [
+                    {
+                        "num_solver_calls": 2,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant 0 <= i;\n    loop invariant i <= 256;\n    loop invariant i % 2 == 0 ==> i < 254;\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\nint main() {\n\tint i = unknown_int();\n\t/*@\n\n\n\n*/\nwhile (i < 255) {\n\t\tif (unknown_int()) {\n\t\t\ti = i + 1;\n\t\t} else {\n\t\t\ti = i + 2;\n\t\t}\n\t}\n\treturn 0;\n}",
+                        "checker_output_after_prune": false
+                    },
+                    {
+                        "num_solver_calls": 3,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant i >= \\old(i); // i is non-decreasing\n    loop invariant i < 255 ==> (i % 2 == \\old(i) % 2); // i increases by either 1 or 2\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\nint main() {\n\tint i = unknown_int();\n\t/*@\n\n\n*/\nwhile (i < 255) {\n\t\tif (unknown_int()) {\n\t\t\ti = i + 1;\n\t\t} else {\n\t\t\ti = i + 2;\n\t\t}\n\t}\n\treturn 0;\n}",
+                        "checker_output_after_prune": false
+                    },
+                    {
+                        "num_solver_calls": 2,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant 0 <= i;\n    loop invariant i <= 255;\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\nint main() {\n\tint i = unknown_int();\n\t/*@\n\n\n*/\nwhile (i < 255) {\n\t\tif (unknown_int()) {\n\t\t\ti = i + 1;\n\t\t} else {\n\t\t\ti = i + 2;\n\t\t}\n\t}\n\treturn 0;\n}",
+                        "checker_output_after_prune": false
+                    },
+                    {
+                        "num_solver_calls": 2,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant 0 <= i;\n    loop invariant i <= 256;\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\nint main() {\n\tint i = unknown_int();\n\t/*@\n\n\n*/\nwhile (i < 255) {\n\t\tif (unknown_int()) {\n\t\t\ti = i + 1;\n\t\t} else {\n\t\t\ti = i + 2;\n\t\t}\n\t}\n\treturn 0;\n}",
+                        "checker_output_after_prune": false
+                    },
+                    {
+                        "num_solver_calls": 3,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant 0 <= i;\n    loop invariant i <= 256;\n    loop invariant i % 2 == (unknown_int() ? 1 : 0) ==> i % 2 == (unknown_int() ? 1 : 0);\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\nint main() {\n\tint i = unknown_int();\n\t/*@\n\n\n\n*/\nwhile (i < 255) {\n\t\tif (unknown_int()) {\n\t\t\ti = i + 1;\n\t\t} else {\n\t\t\ti = i + 2;\n\t\t}\n\t}\n\treturn 0;\n}",
+                        "checker_output_after_prune": false
+                    }
+                ]
+            },
+            {
+                "step": "Houdini for combined completion",
+                "solver_calls": 6,
+                "success": false,
+                "code_with_combined_invariants": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\nint main() {\n\tint i = unknown_int();\n\t/*@\n\n\n\n\n\n\n\n*/\nwhile (i < 255) {\n\t\tif (unknown_int()) {\n\t\t\ti = i + 1;\n\t\t} else {\n\t\t\ti = i + 2;\n\t\t}\n\t}\n\treturn 0;\n}",
+                "checker_output": false
+            },
+            {
+                "step": "Prompting LLM",
+                "generating_annotation": "loop_variants",
+                "success": true,
+                "llm_chat": [
+                    {
+                        "role": "system",
+                        "content": "A ranking function (also called variant) is an expression  over program variables that are live as the loop head. The value of the expression must decrease with every successive iteration of the loop. And the value must be positive for the loop to continue executing. Finding a ranking function helps prove that the loop must terminate.\nLexicographic ranking functions are a generation. They are a sequence of expressions (e1, e2, ...) with the property that the value of each expression must be positive for the loop to execute. Either e1 must decrease or its value remains the same. If its value remains the same then the value of e2 must decrease.\nFind the ranking function for the loop in the following program and explain why it is a valid ranking function.\n\nInstructions:\nOutput the ranking function in one code block, in ACSL syntax. For example,\n```\n/*@\n    loop variant v;\n*/\n```\nIf the ranking function is a sequence of expressions, output them in different lines in their lexicographic order. "
+                    },
+                    {
+                        "role": "user",
+                        "content": "Consider the following C program:  \n```  \n#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\nint main() {\n\tint i = unknown_int();\n\twhile (i < 255) {\n\t\tif (unknown_int()) {\n\t\t\ti = i + 1;\n\t\t} else {\n\t\t\ti = i + 2;\n\t\t}\n\t}\n\treturn 0;\n}\n```\nFind the ranking function for the loop in the given program and explain why it is a valid ranking function. Let's think step by step. "
+                    },
+                    "We can see that the loop continues executing as long as `i < 255`. The variable `i` is incremented by either 1 or 2 in each iteration. Since `i` is always increasing, the loop will eventually terminate when `i` reaches or surpasses 255. \n\nThe ranking function for this loop is `255 - i`. Let's now prove that it is a valid ranking function:\n\n1. The value of the expression is positive for the loop to continue executing: As long as `i < 255`, the value of `255 - i` will be positive.\n\n2. The value of the expression must decrease with every successive iteration of the loop: In each iteration, `i` is incremented by either 1 or 2, which means the value of `255 - i` will decrease by either 1 or 2.\n\nSo, the ranking function in ACSL syntax would be:\n\n```\n/*@\n    loop variant 255 - i;\n*/\n```\n\nThis ranking function is valid because it satisfies the conditions for the loop to continue executing, and its value decreases in each iteration, ensuring that the loop must terminate.",
+                    "The loop in the given program is as follows:\n\n```c\nwhile (i < 255) {\n\tif (unknown_int()) {\n\t\ti = i + 1;\n\t} else {\n\t\ti = i + 2;\n\t}\n}\n```\n\nNow let's find the ranking function for this loop. Since `i` increases by either 1 or 2 in each iteration and the loop terminates when `i >= 255`, we can use the expression `255 - i` as the ranking function. This is because the value of the expression will decrease with every iteration and must be positive for the loop to continue executing.\n\nHere's the ranking function in ACSL syntax:\n\n```c\n/*@\n    loop variant 255 - i;\n*/\n```\n\nThis is a valid ranking function because:\n\n1. The value of the expression `255 - i` is positive when the loop is executing (i.e., when `i < 255`).\n2. The value of the expression `255 - i` decreases with every successive iteration, as `i` increases by either 1 or 2 in each iteration.\n3. The loop must terminate when the value of the expression `255 - i` becomes non-positive (i.e., when `i >= 255`).",
+                    "To find the ranking function for the loop in the given program, we first need to understand the program's behavior.\n\nThe variable `i` is initialized with an unknown integer value. The loop will continue to execute as long as `i` is less than 255. Inside the loop, `i` will either increase by 1 or 2 based on the result of the `unknown_int()` function. This means that the value of `i` is guaranteed to increase in each iteration of the loop until it reaches 255 or greater, at which point the loop will terminate.\n\nThe ranking function for this loop can be expressed as:\n\n```\n/*@\n    loop variant 255 - i;\n*/\n```\n\nThis ranking function is valid because:\n\n1. It is an expression over the live variable `i` at the loop head.\n2. The value of the expression (255 - i) is positive as long as the loop continues executing (i < 255).\n3. The value of the expression decreases with every successive iteration of the loop, as `i` increases by either 1 or 2 in each iteration.\n\nTherefore, this ranking function proves that the loop must terminate.",
+                    "First, let's identify the loop condition and the variables involved in the loop. The loop condition is `i < 255`, and the variable involved is `i`. The value of `i` is incremented by either 1 or 2 within the loop, depending on the result of `unknown_int()`.\n\nNow, we need to find a ranking function `v` such that its value decreases with every iteration, and it is positive as long as the loop executes.\n\nWe can use `v = 255 - i` as the ranking function. \n\nLet's verify that this is a valid ranking function:\n\n1. The value of `v` decreases with every iteration: As `i` increases by either 1 or 2 in each iteration, the value of `255 - i` will decrease in each iteration.\n\n2. The value of `v` is positive as long as the loop executes: Since the loop condition is `i < 255`, the value of `255 - i` will always be positive as long as the loop is executing.\n\nTherefore, the ranking function for the given loop is `v = 255 - i`.\n\nHere is the ranking function in ACSL syntax:\n\n```\n/*@\n    loop variant 255 - i;\n*/\n```\n\nThis ranking function proves that the loop must terminate, as the value of `i` keeps increasing and eventually reaches or exceeds 255.",
+                    "First, let's identify the loop condition and the variables involved in the loop. In this case, the loop condition is `i < 255`, and the variable involved is `i`.\n\nNow we need to find an expression that decreases with each iteration of the loop and is positive when the loop continues to execute. We can observe that the value of `i` increases by either 1 or 2 in each iteration of the loop. So, a suitable ranking function for this loop would be `255 - i`.\n\nLet's put it in ACSL syntax:\n\n```\n/*@\n    loop variant 255 - i;\n*/\n```\n\nThis ranking function is valid for the following reasons:\n\n1. The value of the ranking function is positive when the loop continues to execute. If `i < 255`, then `255 - i` is positive.\n2. The value of the ranking function decreases with each iteration of the loop. Since `i` increases by 1 or 2 in each iteration, `255 - i` decreases by 1 or 2.\n\nSince the ranking function satisfies these conditions, it is a valid ranking function and proves that the loop must terminate."
+                ],
+                "output": [
+                    "/*@\n    loop variant 255 - i;\n*/",
+                    "/*@\n    loop variant 255 - i;\n*/",
+                    "/*@\n    loop variant 255 - i;\n*/",
+                    "/*@\n    loop variant 255 - i;\n*/",
+                    "/*@\n    loop variant 255 - i;\n*/"
+                ]
+            },
+            {
+                "step": "Checking individual completion",
+                "solver_calls": 5,
+                "completions": [
+                    {
+                        "candidate_with_combined_invariants_and_variant": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\nint main() {\n\tint i = unknown_int();\n\t/*@\n\nloop variant 255 - i;\n*/\nwhile (i < 255) {\n\t\tif (unknown_int()) {\n\t\t\ti = i + 1;\n\t\t} else {\n\t\t\ti = i + 2;\n\t\t}\n\t}\n\treturn 0;\n}",
+                        "checker_output": true,
+                        "checker_message": "\n\nLoop variant is Valid.\n"
+                    },
+                    {
+                        "candidate_with_combined_invariants_and_variant": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\nint main() {\n\tint i = unknown_int();\n\t/*@\n\nloop variant 255 - i;\n*/\nwhile (i < 255) {\n\t\tif (unknown_int()) {\n\t\t\ti = i + 1;\n\t\t} else {\n\t\t\ti = i + 2;\n\t\t}\n\t}\n\treturn 0;\n}",
+                        "checker_output": true,
+                        "checker_message": "\n\nLoop variant is Valid.\n"
+                    },
+                    {
+                        "candidate_with_combined_invariants_and_variant": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\nint main() {\n\tint i = unknown_int();\n\t/*@\n\nloop variant 255 - i;\n*/\nwhile (i < 255) {\n\t\tif (unknown_int()) {\n\t\t\ti = i + 1;\n\t\t} else {\n\t\t\ti = i + 2;\n\t\t}\n\t}\n\treturn 0;\n}",
+                        "checker_output": true,
+                        "checker_message": "\n\nLoop variant is Valid.\n"
+                    },
+                    {
+                        "candidate_with_combined_invariants_and_variant": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\nint main() {\n\tint i = unknown_int();\n\t/*@\n\nloop variant 255 - i;\n*/\nwhile (i < 255) {\n\t\tif (unknown_int()) {\n\t\t\ti = i + 1;\n\t\t} else {\n\t\t\ti = i + 2;\n\t\t}\n\t}\n\treturn 0;\n}",
+                        "checker_output": true,
+                        "checker_message": "\n\nLoop variant is Valid.\n"
+                    },
+                    {
+                        "candidate_with_combined_invariants_and_variant": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\nint main() {\n\tint i = unknown_int();\n\t/*@\n\nloop variant 255 - i;\n*/\nwhile (i < 255) {\n\t\tif (unknown_int()) {\n\t\t\ti = i + 1;\n\t\t} else {\n\t\t\ti = i + 2;\n\t\t}\n\t}\n\treturn 0;\n}",
+                        "checker_output": true,
+                        "checker_message": "\n\nLoop variant is Valid.\n"
+                    }
+                ],
+                "success": true
+            }
+        ]
+    },
+    "stats": {
+        "success": [
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/PastaB7.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/BrockschmidtCookFuhs-CAV2013-Introduction_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/genady_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_b.12.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/WhileDecr.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_a.09_assume.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex3.04_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/AliasDarteFeautrierGonnord-SAS2010-speedpldi2_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Bangalore_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_java_Break.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/PastaB2.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/LogMult.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/KroeningSharyginaTsitovichWintersteiger-CAV2010-Ex_true-termination.c"
+        ],
+        "failure": [
+            "../data/benchmarks/tpdb/C_Integer/Ton_Chanh_15/Hanoi_plus_false-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/UrbanMine-ESOP2014-Fig3_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Factorial.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Swingers.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex2.07_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Piecewise_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/PodelskiRybalchenko-LICS2004-Fig2-TACAS2011-Fig3_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex1.03_true-termination.c",
+            "../data/benchmarks/tpdb/C/Ultimate/Lobnya-Boolean-Reordered_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/ChenFlurMukhopadhyay-SAS2012-Ex2.22_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex2.08_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/CookSeeZuleger-TACAS2013-Fig8a-modified_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex2.09_true-termination.c"
+        ],
+        "skipped": [],
+        "total": 26,
+        "success_count": 13,
+        "failure_count": 13,
+        "success_rate": 0.5
+    }
+}

@@ -1,0 +1,219 @@
+{
+    "logs": {
+        "file": "../data/benchmarks/tpdb/C_Integer/Stroeder_15/CookSeeZuleger-TACAS2013-Fig8a-modified_true-termination.c",
+        "benchmark_code": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\ntypedef enum {false, true} bool;\n\nint main() {\n    int K, x;\n    K = unknown_int();\n    x = unknown_int();\n    while (x != K) {\n        if (x > K) {\n            x = x - 1;\n        } else {\n            x = x + 1;\n        }\n    }\n    return 0;\n}",
+        "success": false,
+        "log": [
+            {
+                "step": "Prompting LLM",
+                "generating_annotation": "loop_invariants",
+                "success": true,
+                "llm_chat": [
+                    {
+                        "role": "system",
+                        "content": "You are a helpful AI software assistant that reasons about how code behaves. Given a program, you can find loop invariants, which can then be used to verify some property in the program. \nFrama-C is a software verification tool for C programs. The input to Frama-C is a C program file with ACSL (ANSI/ISO C Specification Language) annotations.\nFor the given program, find the necessary loop invariants of the while loop to help Frama-C verify the post-condition.\n\nInstructions:\n- Make a note of the pre-conditions or variable assignments in the program.\n- Analyze the loop body and make a note of the loop condition. \n- Output loop invariants that are true \n(i) before the loop execution, \n(ii) in every iteration of the loop and \n(iii) after the loop termination, \nsuch that the loop invariants imply the post condition.\n- If a loop invariant is a conjunction, split it into its parts.\n- Output all the loop invariants in one code block. For example:\n```\n/*@ \n    loop invariant i1;\n    loop invariant i2;\n*/\n```\nRules:\n- **Do not use variables or functions that are not declared in the program.** \n- **Do not make any assumptions about functions whose definitions are not given.**\n- **All undefined variables contain garbage values. Do not use variables that have garbage values.**\n- **Do not use keywords that are not supported in ACSL annotations for loops.**\n- **Variables that are not explicitly initialized, could have garbage values. Do not make any assumptions about such values.**\n- **Do not use the \\at(x, Pre) notation for any variable x.**\n- **Do not use non-deterministic function calls.**"
+                    },
+                    {
+                        "role": "user",
+                        "content": "\nConsider the following C program:\n```\n#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\ntypedef enum {false, true} bool;\n\nint main() {\n    int K, x;\n    K = unknown_int();\n    x = unknown_int();\n    while (x != K) {\n        if (x > K) {\n            x = x - 1;\n        } else {\n            x = x + 1;\n        }\n    }\n    return 0;\n}\n```\n\nYou are allowed to use implication to take care of the conditional nature of the code. Use implication (==>) instead of using if-then.\n\nFor all variables, add conjunctions that bound the maximum and minimum values that they can take, if such bounds exist.\n\nIf a variable is always equal to or smaller or larger than another variable, add a conjunction for their relation.\n\nIf the assertion is guarded by a condition, use the guard condition in an implication.\n\nIf certain variables are non-deterministic at the beginning or end of the loop, use an implication to make the invariant trivially true at that location. \n\nOutput the loop invariants for the loop in the program above. Let's think step by step."
+                    },
+                    "Pre-conditions and variable assignments:\n- K and x are assigned non-deterministic integer values through unknown_int().\n\nLoop condition:\n- The loop continues executing as long as x is not equal to K.\n\nNow, let's find the loop invariants:\n\n1. Before the loop execution, x and K can have any integer values.\n2. In every iteration of the loop, x gets closer to K (either increases if x < K, or decreases if x > K).\n3. After the loop termination, x must be equal to K.\n\nBased on these observations, we can define the following loop invariants:\n\n```\n/*@ \n    loop invariant K >= INT_MIN && K <= INT_MAX;\n    loop invariant x >= INT_MIN && x <= INT_MAX;\n    loop invariant (x < K) ==> (x < K + 1);\n    loop invariant (x > K) ==> (x > K - 1);\n*/\n```",
+                    "First, let's note the pre-conditions or variable assignments in the program:\n\n1. K = unknown_int(); (K is a non-deterministic integer value)\n2. x = unknown_int(); (x is a non-deterministic integer value)\n\nNow, let's analyze the loop body and make a note of the loop condition:\n\n1. while (x != K)\n\nWe can now output the necessary loop invariants for the while loop:\n\n```\n/*@ \n    loop invariant K == \\at(K, Pre); // K does not change during the loop\n    loop invariant x >= \\min(\\at(x, Pre), \\at(K, Pre)); // x cannot be smaller than the minimum of its initial value and K's initial value\n    loop invariant x <= \\max(\\at(x, Pre), \\at(K, Pre)); // x cannot be larger than the maximum of its initial value and K's initial value\n*/\n```\n\nThese loop invariants hold true before the loop execution, in every iteration of the loop, and after the loop termination. They also imply the post-condition that x == K after the loop termination.",
+                    "First, let's take note of the variable assignments and pre-conditions:\n\n- K is assigned an unknown integer value.\n- x is assigned an unknown integer value.\n\nNext, let's analyze the loop body and make a note of the loop condition:\n\n- The loop condition is x != K.\n- Inside the loop, if x > K, x is decremented by 1. Otherwise, x is incremented by 1.\n\nNow, let's find the necessary loop invariants:\n\n```\n/*@ \n    loop invariant K >= INT_MIN && K <= INT_MAX;\n    loop invariant x >= INT_MIN && x <= INT_MAX;\n    loop invariant x >= K ==> x - K >= 0;\n    loop invariant x < K ==> K - x >= 1;\n*/\n```",
+                    "Let's analyze the given C program:\n\nPre-conditions and variable assignments:\n1. K and x are assigned non-deterministic integer values.\n\nLoop condition:\n1. x != K\n\nLoop body:\n1. If x > K, then x is decremented by 1.\n2. If x <= K, then x is incremented by 1.\n\nNow let's derive the loop invariants:\n\n1. At the beginning of the loop, x can be any integer value.\n2. During each iteration of the loop, if x > K, x gets closer to K by decrementing its value by 1.\n3. During each iteration of the loop, if x <= K, x gets closer to K by incrementing its value by 1.\n4. After the loop termination, x must be equal to K.\n\nNow we can write the loop invariants:\n\n```\n/*@ \n    loop invariant x <= K ==> \\at(x, Pre) <= x;\n    loop invariant x > K ==> \\at(x, Pre) >= x;\n    loop invariant x != \\at(K, Pre) ==> x != K;\n*/\n```",
+                    "First, let's note the pre-conditions or variable assignments in the program:\n- K and x are assigned unknown_int() values, which means they can have any integer value.\n\nNow, let's analyze the loop body and make a note of the loop condition:\n- The loop condition is x != K.\n\nNext, let's find the loop invariants that are true:\n(i) before the loop execution,\n(ii) in every iteration of the loop, and\n(iii) after the loop termination, such that the loop invariants imply the post-condition.\n\nConsidering these points, we can write the loop invariants as follows:\n\n```\n/*@\n    loop invariant \\true ==> K == \\old(K);\n    loop invariant \\true ==> x >= \\min(\\old(x), \\old(K)) && x <= \\max(\\old(x), \\old(K));\n    loop invariant x > K ==> x == \\at(x, Pre) - 1;\n    loop invariant x < K ==> x == \\at(x, Pre) + 1;\n*/\n```"
+                ],
+                "output": [
+                    "/*@ \n    loop invariant K >= INT_MIN && K <= INT_MAX;\n    loop invariant x >= INT_MIN && x <= INT_MAX;\n    loop invariant (x < K) ==> (x < K + 1);\n    loop invariant (x > K) ==> (x > K - 1);\n*/",
+                    "/*@ \n    loop invariant K == \\at(K, Pre); // K does not change during the loop\n    loop invariant x >= \\min(\\at(x, Pre), \\at(K, Pre)); // x cannot be smaller than the minimum of its initial value and K's initial value\n    loop invariant x <= \\max(\\at(x, Pre), \\at(K, Pre)); // x cannot be larger than the maximum of its initial value and K's initial value\n*/",
+                    "/*@ \n    loop invariant K >= INT_MIN && K <= INT_MAX;\n    loop invariant x >= INT_MIN && x <= INT_MAX;\n    loop invariant x >= K ==> x - K >= 0;\n    loop invariant x < K ==> K - x >= 1;\n*/",
+                    "/*@ \n    loop invariant x <= K ==> \\at(x, Pre) <= x;\n    loop invariant x > K ==> \\at(x, Pre) >= x;\n    loop invariant x != \\at(K, Pre) ==> x != K;\n*/",
+                    "/*@\n    loop invariant \\true ==> K == \\old(K);\n    loop invariant \\true ==> x >= \\min(\\old(x), \\old(K)) && x <= \\max(\\old(x), \\old(K));\n    loop invariant x > K ==> x == \\at(x, Pre) - 1;\n    loop invariant x < K ==> x == \\at(x, Pre) + 1;\n*/"
+                ]
+            },
+            {
+                "step": "Checking individual completion",
+                "solver_calls": 5,
+                "completions": [
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant K >= INT_MIN && K <= INT_MAX;\n    loop invariant x >= INT_MIN && x <= INT_MAX;\n    loop invariant (x < K) ==> (x < K + 1);\n    loop invariant (x > K) ==> (x > K - 1);\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "Annotation error on line 12: unbound logic variable INT_MAX. Ignoring loop annotation"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant K == \\at(K, Pre); // K does not change during the loop\n    loop invariant x >= \\min(\\at(x, Pre), \\at(K, Pre)); // x cannot be smaller than the minimum of its initial value and K's initial value\n    loop invariant x <= \\max(\\at(x, Pre), \\at(K, Pre)); // x cannot be larger than the maximum of its initial value and K's initial value\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "Annotation error on line 12: unbound logic variable K. Ignoring loop annotation"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant K >= INT_MIN && K <= INT_MAX;\n    loop invariant x >= INT_MIN && x <= INT_MAX;\n    loop invariant x >= K ==> x - K >= 0;\n    loop invariant x < K ==> K - x >= 1;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "Annotation error on line 12: unbound logic variable INT_MAX. Ignoring loop annotation"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant x <= K ==> \\at(x, Pre) <= x;\n    loop invariant x > K ==> \\at(x, Pre) >= x;\n    loop invariant x != \\at(K, Pre) ==> x != K;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "Annotation error on line 12: unbound logic variable x. Ignoring loop annotation"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@\n    loop invariant \\true ==> K == \\old(K);\n    loop invariant \\true ==> x >= \\min(\\old(x), \\old(K)) && x <= \\max(\\old(x), \\old(K));\n    loop invariant x > K ==> x == \\at(x, Pre) - 1;\n    loop invariant x < K ==> x == \\at(x, Pre) + 1;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "Annotation error on line 12: \\old undefined in this context. Ignoring loop annotation"
+                    }
+                ],
+                "success": false
+            },
+            {
+                "step": "Houdini for individual completion",
+                "success": true,
+                "completions": [
+                    {
+                        "num_solver_calls": 2,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant K >= INT_MIN && K <= INT_MAX;\n    loop invariant x >= INT_MIN && x <= INT_MAX;\n    loop invariant (x < K) ==> (x < K + 1);\n    loop invariant (x > K) ==> (x > K - 1);\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\ntypedef enum {false, true} bool;\n\nint main() {\n    int K, x;\n    K = unknown_int();\n    x = unknown_int();\n    /*@\n\n\nloop invariant i3: (x < K) ==> (x < K + 1);\nloop invariant i4: (x > K) ==> (x > K - 1);\n*/\nwhile (x != K) {\n        if (x > K) {\n            x = x - 1;\n        } else {\n            x = x + 1;\n        }\n    }\n    return 0;\n}",
+                        "checker_output_after_prune": true
+                    },
+                    {
+                        "num_solver_calls": 4,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant K == \\at(K, Pre); // K does not change during the loop\n    loop invariant x >= \\min(\\at(x, Pre), \\at(K, Pre)); // x cannot be smaller than the minimum of its initial value and K's initial value\n    loop invariant x <= \\max(\\at(x, Pre), \\at(K, Pre)); // x cannot be larger than the maximum of its initial value and K's initial value\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\ntypedef enum {false, true} bool;\n\nint main() {\n    int K, x;\n    K = unknown_int();\n    x = unknown_int();\n    /*@\n\n\n\n*/\nwhile (x != K) {\n        if (x > K) {\n            x = x - 1;\n        } else {\n            x = x + 1;\n        }\n    }\n    return 0;\n}",
+                        "checker_output_after_prune": false
+                    },
+                    {
+                        "num_solver_calls": 2,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant K >= INT_MIN && K <= INT_MAX;\n    loop invariant x >= INT_MIN && x <= INT_MAX;\n    loop invariant x >= K ==> x - K >= 0;\n    loop invariant x < K ==> K - x >= 1;\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\ntypedef enum {false, true} bool;\n\nint main() {\n    int K, x;\n    K = unknown_int();\n    x = unknown_int();\n    /*@\n\n\nloop invariant i3: x >= K ==> x - K >= 0;\nloop invariant i4: x < K ==> K - x >= 1;\n*/\nwhile (x != K) {\n        if (x > K) {\n            x = x - 1;\n        } else {\n            x = x + 1;\n        }\n    }\n    return 0;\n}",
+                        "checker_output_after_prune": true
+                    },
+                    {
+                        "num_solver_calls": 4,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant x <= K ==> \\at(x, Pre) <= x;\n    loop invariant x > K ==> \\at(x, Pre) >= x;\n    loop invariant x != \\at(K, Pre) ==> x != K;\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\ntypedef enum {false, true} bool;\n\nint main() {\n    int K, x;\n    K = unknown_int();\n    x = unknown_int();\n    /*@\n\n\n\n*/\nwhile (x != K) {\n        if (x > K) {\n            x = x - 1;\n        } else {\n            x = x + 1;\n        }\n    }\n    return 0;\n}",
+                        "checker_output_after_prune": false
+                    },
+                    {
+                        "num_solver_calls": 5,
+                        "success": false,
+                        "invariants": "/*@\n    loop invariant \\true ==> K == \\old(K);\n    loop invariant \\true ==> x >= \\min(\\old(x), \\old(K)) && x <= \\max(\\old(x), \\old(K));\n    loop invariant x > K ==> x == \\at(x, Pre) - 1;\n    loop invariant x < K ==> x == \\at(x, Pre) + 1;\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\ntypedef enum {false, true} bool;\n\nint main() {\n    int K, x;\n    K = unknown_int();\n    x = unknown_int();\n    /*@\n\n\n\n\n*/\nwhile (x != K) {\n        if (x > K) {\n            x = x - 1;\n        } else {\n            x = x + 1;\n        }\n    }\n    return 0;\n}",
+                        "checker_output_after_prune": false
+                    }
+                ]
+            },
+            {
+                "step": "Houdini for combined completion",
+                "solver_calls": 12,
+                "success": true,
+                "code_with_combined_invariants": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\ntypedef enum {false, true} bool;\n\nint main() {\n    int K, x;\n    K = unknown_int();\n    x = unknown_int();\n    /*@\n\n\nloop invariant i3: (x < K) ==> (x < K + 1);\nloop invariant i4: (x > K) ==> (x > K - 1);\n\n\n\nloop invariant i10: x >= K ==> x - K >= 0;\nloop invariant i11: x < K ==> K - x >= 1;\n\n\n\n\n\n\n\n*/\nwhile (x != K) {\n        if (x > K) {\n            x = x - 1;\n        } else {\n            x = x + 1;\n        }\n    }\n    return 0;\n}",
+                "checker_output": true
+            },
+            {
+                "step": "Prompting LLM",
+                "generating_annotation": "loop_variants",
+                "success": true,
+                "llm_chat": [
+                    {
+                        "role": "system",
+                        "content": "A ranking function (also called variant) is an expression  over program variables that are live as the loop head. The value of the expression must decrease with every successive iteration of the loop. And the value must be positive for the loop to continue executing. Finding a ranking function helps prove that the loop must terminate.\nLexicographic ranking functions are a generation. They are a sequence of expressions (e1, e2, ...) with the property that the value of each expression must be positive for the loop to execute. Either e1 must decrease or its value remains the same. If its value remains the same then the value of e2 must decrease.\nFind the ranking function for the loop in the following program and explain why it is a valid ranking function.\n\nInstructions:\nOutput the ranking function in one code block, in ACSL syntax. For example,\n```\n/*@\n    loop variant v;\n*/\n```\nIf the ranking function is a sequence of expressions, output them in different lines in their lexicographic order. "
+                    },
+                    {
+                        "role": "user",
+                        "content": "Consider the following C program:  \n```  \n#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\ntypedef enum {false, true} bool;\n\nint main() {\n    int K, x;\n    K = unknown_int();\n    x = unknown_int();\n    while (x != K) {\n        if (x > K) {\n            x = x - 1;\n        } else {\n            x = x + 1;\n        }\n    }\n    return 0;\n}\n```\nFind the ranking function for the loop in the given program and explain why it is a valid ranking function. Let's think step by step. "
+                    },
+                    "First, let's identify the loop in the given program:\n\n```\nwhile (x != K) {\n    if (x > K) {\n        x = x - 1;\n    } else {\n        x = x + 1;\n    }\n}\n```\n\nThe loop continues to execute as long as `x` is not equal to `K`. If `x > K`, it decreases by 1, and if `x < K`, it increases by 1.\n\nNow, let's find the ranking function for this loop. We can use the absolute difference between `x` and `K` as the ranking function, as it will always be positive as long as the loop continues to execute, and will decrease with each iteration.\n\nThe ranking function can be written as `abs(x - K)`.\n\nNow, let's prove that it is a valid ranking function:\n\n1. It is positive for the loop to continue executing: If `x != K`, then `abs(x - K) > 0`.\n\n2. It decreases with each iteration: If `x > K`, then `x` decreases by 1, and if `x < K`, then `x` increases by 1. In both cases, the absolute difference between `x` and `K` will decrease.\n\nIn ACSL syntax, the ranking function can be written as:\n\n```\n/*@\n    loop variant abs(x - K);\n*/\n```\n\nTherefore, `abs(x - K)` is a valid ranking function for the given loop.",
+                    "First, let's analyze the loop. The loop continues executing as long as `x` is not equal to `K`. Inside the loop, if `x` is greater than `K`, we decrement `x` by 1. Otherwise, we increment `x` by 1. This means that `x` is always getting closer to `K` in each iteration.\n\nNow, let's find the ranking function. We can use the absolute difference between `x` and `K` as our ranking function. This is because the value of the expression will always be positive as long as `x` is not equal to `K`, and it will decrease with every successive iteration of the loop.\n\nHere's the ranking function in ACSL syntax:\n\n```\n/*@\n    loop variant abs(x - K);\n*/\n```\n\nThis is a valid ranking function because:\n\n1. The value of the expression `abs(x - K)` is always positive as long as the loop continues executing (i.e., `x != K`).\n2. The value of the expression `abs(x - K)` decreases with every successive iteration of the loop, as `x` is either incremented or decremented in each iteration to get closer to `K`.\n\nBy using this ranking function, we can prove that the loop must terminate.",
+                    "First, let's analyze the loop and its conditions. The loop continues to execute as long as `x != K`. Inside the loop, if `x > K`, then `x` is decreased by 1. Otherwise, `x` is increased by 1.\n\nNow, let's find the ranking function for this loop. We can use the absolute difference between `x` and `K` as the ranking function.\n\n```\n/*@\n    loop variant |x - K|;\n*/\n```\n\nThis is a valid ranking function for the following reasons:\n\n1. The value of the expression `|x - K|` is always non-negative (positive or zero) since it is an absolute difference. This satisfies the condition that the ranking function should have a positive value for the loop to continue executing.\n2. The value of the expression `|x - K|` decreases with every successive iteration of the loop. If `x > K`, `x` is decreased by 1, reducing the absolute difference. If `x < K`, `x` is increased by 1, also reducing the absolute difference.\n3. The loop terminates when `x == K`, which means the value of the ranking function `|x - K|` becomes zero.\n\nTherefore, the given ranking function is a valid ranking function for the loop in the program.",
+                    "First, let's analyze the loop. In this loop, the value of `x` is being updated in each iteration, either by decrementing or incrementing it. The loop continues as long as `x != K`. The goal is to find a ranking function that decreases in every iteration and is positive while the loop is executing.\n\nWe can use the absolute difference between `x` and `K` as the ranking function. This function will always decrease in each iteration since `x` gets closer to `K` in each step. Also, it will be positive as long as `x != K`, which is the loop condition.\n\nNow, let's write the ranking function in ACSL syntax:\n\n```\n/*@\n    loop variant abs(x - K);\n*/\n```\n\nThis ranking function is valid because:\n\n1. It decreases in every iteration: If `x > K`, `x` is decremented, and if `x < K`, `x` is incremented. In both cases, the absolute difference between `x` and `K` decreases.\n2. It is positive while the loop is executing: The loop condition is `x != K`, so as long as the loop is running, `x` and `K` are different, and the absolute difference will be positive.\n\nUsing this ranking function, we can prove that the loop must terminate since the value of the ranking function will eventually reach zero when `x == K`, and the loop will exit.",
+                    "First, let's identify the loop in the program:\n\n```\nwhile (x != K) {\n    if (x > K) {\n        x = x - 1;\n    } else {\n        x = x + 1;\n    }\n}\n```\n\nNow, let's find the ranking function for this loop. We know that the loop will terminate when `x == K`. So, the difference between `x` and `K` is a candidate for the ranking function. We can use the absolute value of the difference `|x - K|` as the ranking function.\n\n```\n/*@\n    loop variant abs(x - K);\n*/\n```\n\nNow, let's prove that it is a valid ranking function.\n\n1. The value of `abs(x - K)` must be positive for the loop to continue executing.\n\n   This is true because the loop condition is `x != K`, which means `x - K != 0`, and thus `abs(x - K) > 0`.\n\n2. The value of `abs(x - K)` must decrease with every successive iteration of the loop.\n\n   In each iteration, either `x` is incremented by 1 (when `x < K`) or decremented by 1 (when `x > K`). In both cases, the value of `abs(x - K)` will decrease by 1.\n\nTherefore, `abs(x - K)` is a valid ranking function for the given loop."
+                ],
+                "output": [
+                    "/*@\n    loop variant abs(x - K);\n*/",
+                    "/*@\n    loop variant abs(x - K);\n*/",
+                    "/*@\n    loop variant |x - K|;\n*/",
+                    "/*@\n    loop variant abs(x - K);\n*/",
+                    "/*@\n    loop variant abs(x - K);\n*/"
+                ]
+            },
+            {
+                "step": "Checking individual completion",
+                "solver_calls": 5,
+                "completions": [
+                    {
+                        "candidate_with_combined_invariants_and_variant": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\ntypedef enum {false, true} bool;\n\nint main() {\n    int K, x;\n    K = unknown_int();\n    x = unknown_int();\n    /*@\nloop invariant i3: (x < K) ==> (x < K + 1);\nloop invariant i4: (x > K) ==> (x > K - 1);\nloop invariant i10: x >= K ==> x - K >= 0;\nloop invariant i11: x < K ==> K - x >= 1;\nloop variant abs(x - K);\n*/\nwhile (x != K) {\n        if (x > K) {\n            x = x - 1;\n        } else {\n            x = x + 1;\n        }\n    }\n    return 0;\n}",
+                        "checker_output": false,
+                        "checker_message": "Annotation error on line 16: unbound logic function abs. Ignoring loop annotation"
+                    },
+                    {
+                        "candidate_with_combined_invariants_and_variant": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\ntypedef enum {false, true} bool;\n\nint main() {\n    int K, x;\n    K = unknown_int();\n    x = unknown_int();\n    /*@\nloop invariant i3: (x < K) ==> (x < K + 1);\nloop invariant i4: (x > K) ==> (x > K - 1);\nloop invariant i10: x >= K ==> x - K >= 0;\nloop invariant i11: x < K ==> K - x >= 1;\nloop variant abs(x - K);\n*/\nwhile (x != K) {\n        if (x > K) {\n            x = x - 1;\n        } else {\n            x = x + 1;\n        }\n    }\n    return 0;\n}",
+                        "checker_output": false,
+                        "checker_message": "Annotation error on line 16: unbound logic function abs. Ignoring loop annotation"
+                    },
+                    {
+                        "candidate_with_combined_invariants_and_variant": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\ntypedef enum {false, true} bool;\n\nint main() {\n    int K, x;\n    K = unknown_int();\n    x = unknown_int();\n    /*@\nloop invariant i3: (x < K) ==> (x < K + 1);\nloop invariant i4: (x > K) ==> (x > K - 1);\nloop invariant i10: x >= K ==> x - K >= 0;\nloop invariant i11: x < K ==> K - x >= 1;\nloop variant |x - K|;\n*/\nwhile (x != K) {\n        if (x > K) {\n            x = x - 1;\n        } else {\n            x = x + 1;\n        }\n    }\n    return 0;\n}",
+                        "checker_output": false,
+                        "checker_message": "Annotation error on line 16: unexpected token '|'"
+                    },
+                    {
+                        "candidate_with_combined_invariants_and_variant": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\ntypedef enum {false, true} bool;\n\nint main() {\n    int K, x;\n    K = unknown_int();\n    x = unknown_int();\n    /*@\nloop invariant i3: (x < K) ==> (x < K + 1);\nloop invariant i4: (x > K) ==> (x > K - 1);\nloop invariant i10: x >= K ==> x - K >= 0;\nloop invariant i11: x < K ==> K - x >= 1;\nloop variant abs(x - K);\n*/\nwhile (x != K) {\n        if (x > K) {\n            x = x - 1;\n        } else {\n            x = x + 1;\n        }\n    }\n    return 0;\n}",
+                        "checker_output": false,
+                        "checker_message": "Annotation error on line 16: unbound logic function abs. Ignoring loop annotation"
+                    },
+                    {
+                        "candidate_with_combined_invariants_and_variant": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\ntypedef enum {false, true} bool;\n\nint main() {\n    int K, x;\n    K = unknown_int();\n    x = unknown_int();\n    /*@\nloop invariant i3: (x < K) ==> (x < K + 1);\nloop invariant i4: (x > K) ==> (x > K - 1);\nloop invariant i10: x >= K ==> x - K >= 0;\nloop invariant i11: x < K ==> K - x >= 1;\nloop variant abs(x - K);\n*/\nwhile (x != K) {\n        if (x > K) {\n            x = x - 1;\n        } else {\n            x = x + 1;\n        }\n    }\n    return 0;\n}",
+                        "checker_output": false,
+                        "checker_message": "Annotation error on line 16: unbound logic function abs. Ignoring loop annotation"
+                    }
+                ],
+                "success": false
+            }
+        ]
+    },
+    "stats": {
+        "success": [
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/PastaB7.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/BrockschmidtCookFuhs-CAV2013-Introduction_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/genady_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_b.12.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/WhileDecr.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_a.09_assume.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex3.04_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/AliasDarteFeautrierGonnord-SAS2010-speedpldi2_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Bangalore_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_java_Break.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/PastaB2.c"
+        ],
+        "failure": [
+            "../data/benchmarks/tpdb/C_Integer/Ton_Chanh_15/Hanoi_plus_false-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/UrbanMine-ESOP2014-Fig3_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Factorial.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Swingers.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex2.07_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Piecewise_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/PodelskiRybalchenko-LICS2004-Fig2-TACAS2011-Fig3_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex1.03_true-termination.c",
+            "../data/benchmarks/tpdb/C/Ultimate/Lobnya-Boolean-Reordered_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/ChenFlurMukhopadhyay-SAS2012-Ex2.22_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex2.08_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/CookSeeZuleger-TACAS2013-Fig8a-modified_true-termination.c"
+        ],
+        "skipped": [],
+        "total": 23,
+        "success_count": 11,
+        "failure_count": 12,
+        "success_rate": 0.4782608695652174
+    }
+}

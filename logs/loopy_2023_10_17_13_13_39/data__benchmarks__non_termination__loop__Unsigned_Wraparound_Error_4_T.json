@@ -1,0 +1,315 @@
+{
+    "logs": {
+        "file": "../data/benchmarks/non_termination/loop/Unsigned_Wraparound_Error_4_T.c",
+        "benchmark_code": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern unsigned int unknown_uint(void);\n\nint main()\n{\n    unsigned int n = unknown_uint();\n    while( n > 0 )\n    {\n        unsigned int len = n;\n        if( len > 16 )\n            len = 16;\n        n -= len;\n    }\n    return 0;\n}",
+        "success": true,
+        "log": [
+            {
+                "step": "Prompting LLM",
+                "generating_annotation": "loop_invariants",
+                "success": true,
+                "llm_chat": [
+                    {
+                        "role": "system",
+                        "content": "You are a helpful AI software assistant that reasons about how code behaves. Given a program, you can find loop invariants, which can then be used to verify some property in the program. \nFrama-C is a software verification tool for C programs. The input to Frama-C is a C program file with ACSL (ANSI/ISO C Specification Language) annotations.\nFor the given program, find the necessary loop invariants of the while loop to help Frama-C verify the post-condition.\n\nInstructions:\n- Make a note of the pre-conditions or variable assignments in the program.\n- Analyze the loop body and make a note of the loop condition. \n- Output loop invariants that are true \n(i) before the loop execution, \n(ii) in every iteration of the loop and \n(iii) after the loop termination, \nsuch that the loop invariants imply the post condition.\n- If a loop invariant is a conjunction, split it into its parts.\n- Output all the loop invariants in one code block. For example:\n```\n/*@ \n    loop invariant i1;\n    loop invariant i2;\n*/\n```\nRules:\n- **Do not use variables or functions that are not declared in the program.** \n- **Do not make any assumptions about functions whose definitions are not given.**\n- **All undefined variables contain garbage values. Do not use variables that have garbage values.**\n- **Do not use keywords that are not supported in ACSL annotations for loops.**\n- **Variables that are not explicitly initialized, could have garbage values. Do not make any assumptions about such values.**\n- **Do not use the \\at(x, Pre) notation for any variable x.**\n- **Do not use non-deterministic function calls.**"
+                    },
+                    {
+                        "role": "user",
+                        "content": "\nConsider the following C program:\n```\n#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern unsigned int unknown_uint(void);\n\nint main()\n{\n    unsigned int n = unknown_uint();\n    while( n > 0 )\n    {\n        unsigned int len = n;\n        if( len > 16 )\n            len = 16;\n        n -= len;\n    }\n    return 0;\n}\n```\n\nYou are allowed to use implication to take care of the conditional nature of the code. Use implication (==>) instead of using if-then.\n\nFor all variables, add conjunctions that bound the maximum and minimum values that they can take, if such bounds exist.\n\nIf a variable is always equal to or smaller or larger than another variable, add a conjunction for their relation.\n\nIf the assertion is guarded by a condition, use the guard condition in an implication.\n\nIf certain variables are non-deterministic at the beginning or end of the loop, use an implication to make the invariant trivially true at that location. \n\nOutput the loop invariants for the loop in the program above. Let's think step by step."
+                    },
+                    "First, let's note the pre-conditions and variable assignments in the program:\n- n is an unsigned int and is assigned a non-deterministic value.\n- len is an unsigned int and is assigned the value of n in each iteration.\n\nNow, let's analyze the loop body and note the loop condition:\n- The loop continues as long as n > 0.\n- In each iteration, len is set to n, and if len is greater than 16, it is set to 16.\n- Then, n is decremented by len.\n\nWe can now derive the loop invariants:\n\n```\n/*@ \n    loop invariant n <= \\at(n, Pre); // n is always less than or equal to its initial value\n    loop invariant len <= 16; // len is always less than or equal to 16\n    loop invariant 0 <= len; // len is always greater than or equal to 0\n    loop invariant (n > 0) ==> (len > 0); // if n > 0, then len is also greater than 0\n*/\n```",
+                    "First, let's note the initial assignments and pre-conditions:\n\n1. `unsigned int n = unknown_uint();` - n is assigned a non-negative unsigned integer value.\n\nNow, analyze the loop body and make a note of the loop condition:\n\n1. Loop condition: `n > 0`\n\nLet's determine the loop invariants that hold before the loop execution, in every iteration of the loop, and after the loop termination:\n\n1. Since `n` is an unsigned integer, it is always non-negative.\n2. The `len` variable is assigned the value of `n` initially in each iteration.\n3. If `len` is greater than 16, it is set to 16.\n4. The `n` variable is decremented by `len` in each iteration.\n\nNow, let's write down the loop invariants as ACSL annotations:\n\n```\n/*@\n    loop invariant n >= 0;\n    loop invariant 0 <= len <= 16;\n    loop invariant len <= n;\n*/\n```\n\nThese loop invariants hold before the loop execution, in every iteration of the loop, and after the loop termination.",
+                    "First, let's make a note of the pre-conditions or variable assignments in the program:\n- `unsigned int n` is initialized with an unknown unsigned integer value.\n- The loop condition is `n > 0`.\n\nNow, let's analyze the loop body:\n- `unsigned int len` is assigned the value of `n`.\n- If `len > 16`, `len` is set to `16`.\n- `n` is decremented by the value of `len`.\n\nNow, let's output the loop invariants:\n\n```\n/*@ \n    loop invariant 0 <= n;\n    loop invariant 0 <= len <= 16;\n    loop invariant len <= n + 16;\n    loop invariant (n > 0) ==> (n >= len);\n    loop invariant (len == 16) ==> (n > 0);\n*/\n```",
+                    "First, we note the variable assignments and the loop condition:\n- `unsigned int n = unknown_uint();`\n- `while( n > 0 )`\n\nNow, we analyze the loop body and find the loop invariants.\n\nLoop invariants should hold:\n(i) before the loop execution,\n(ii) in every iteration of the loop, and\n(iii) after the loop termination.\n\nLet's consider the following loop invariants:\n\n1. The value of `n` is non-negative (as it is an unsigned integer).\n2. The value of `len` is non-negative and at most 16.\n3. The value of `n` is always non-increasing.\n\nWe can write these loop invariants as follows:\n\n```\n/*@ \n    loop invariant n >= 0;\n    loop invariant \\forall unsigned int len; 0 <= len && len <= 16 ==> (n >= len || n == 0);\n    loop invariant n <= \\at(n, Pre);\n*/\n```",
+                    "First, let's note the variable assignments and the loop condition:\n- `unsigned int n = unknown_uint();`\n- `while( n > 0 )`\n\nNow, let's analyze the loop body and determine the loop invariants:\n\n1. Before the loop execution:\n    - `n` is a non-negative integer, since it is an unsigned int.\n\n2. In every iteration of the loop:\n    - `len` is a non-negative integer, since it is an unsigned int.\n    - `len` is always less than or equal to `n` before the assignment `len = 16;`\n    - `len` is always less than or equal to 16 after the assignment `len = 16;`\n    - `n` is non-increasing, since `n` is decremented by `len`.\n\n3. After the loop termination:\n    - `n` is equal to 0, since the loop condition is `n > 0`.\n\nNow, let's put it all together into loop invariants:\n\n```\n/*@ \n    loop invariant 0 <= n;\n    loop invariant 0 <= len <= n;\n    loop invariant 0 <= len <= 16;\n    loop invariant \\forall integer k; 0 <= k < \\loop_iteration_count ==> n >= k * 16;\n*/\n```"
+                ],
+                "output": [
+                    "/*@ \n    loop invariant n <= \\at(n, Pre); // n is always less than or equal to its initial value\n    loop invariant len <= 16; // len is always less than or equal to 16\n    loop invariant 0 <= len; // len is always greater than or equal to 0\n    loop invariant (n > 0) ==> (len > 0); // if n > 0, then len is also greater than 0\n*/",
+                    "/*@\n    loop invariant n >= 0;\n    loop invariant 0 <= len <= 16;\n    loop invariant len <= n;\n*/",
+                    "/*@ \n    loop invariant 0 <= n;\n    loop invariant 0 <= len <= 16;\n    loop invariant len <= n + 16;\n    loop invariant (n > 0) ==> (n >= len);\n    loop invariant (len == 16) ==> (n > 0);\n*/",
+                    "/*@ \n    loop invariant n >= 0;\n    loop invariant \\forall unsigned int len; 0 <= len && len <= 16 ==> (n >= len || n == 0);\n    loop invariant n <= \\at(n, Pre);\n*/",
+                    "/*@ \n    loop invariant 0 <= n;\n    loop invariant 0 <= len <= n;\n    loop invariant 0 <= len <= 16;\n    loop invariant \\forall integer k; 0 <= k < \\loop_iteration_count ==> n >= k * 16;\n*/"
+                ]
+            },
+            {
+                "step": "Checking individual completion",
+                "solver_calls": 5,
+                "completions": [
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant n <= \\at(n, Pre); // n is always less than or equal to its initial value\n    loop invariant len <= 16; // len is always less than or equal to 16\n    loop invariant 0 <= len; // len is always greater than or equal to 0\n    loop invariant (n > 0) ==> (len > 0); // if n > 0, then len is also greater than 0\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "Annotation error on line 9: unbound logic variable n. Ignoring loop annotation"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@\n    loop invariant n >= 0;\n    loop invariant 0 <= len <= 16;\n    loop invariant len <= n;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "Annotation error on line 10: unbound logic variable len. Ignoring loop annotation"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant 0 <= n;\n    loop invariant 0 <= len <= 16;\n    loop invariant len <= n + 16;\n    loop invariant (n > 0) ==> (n >= len);\n    loop invariant (len == 16) ==> (n > 0);\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "Annotation error on line 10: unbound logic variable len. Ignoring loop annotation"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant n >= 0;\n    loop invariant \\forall unsigned int len; 0 <= len && len <= 16 ==> (n >= len || n == 0);\n    loop invariant n <= \\at(n, Pre);\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "Annotation error on line 11: unbound logic variable n. Ignoring loop annotation"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant 0 <= n;\n    loop invariant 0 <= len <= n;\n    loop invariant 0 <= len <= 16;\n    loop invariant \\forall integer k; 0 <= k < \\loop_iteration_count ==> n >= k * 16;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "Annotation error on line 10: unbound logic variable len. Ignoring loop annotation"
+                    }
+                ],
+                "success": false
+            },
+            {
+                "step": "Houdini for individual completion",
+                "success": true,
+                "completions": [
+                    {
+                        "num_solver_calls": 5,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant n <= \\at(n, Pre); // n is always less than or equal to its initial value\n    loop invariant len <= 16; // len is always less than or equal to 16\n    loop invariant 0 <= len; // len is always greater than or equal to 0\n    loop invariant (n > 0) ==> (len > 0); // if n > 0, then len is also greater than 0\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern unsigned int unknown_uint(void);\n\nint main()\n{\n    unsigned int n = unknown_uint();\n    /*@\n\n\n\n\n*/\nwhile( n > 0 )\n    {\n        unsigned int len = n;\n        if( len > 16 )\n            len = 16;\n        n -= len;\n    }\n    return 0;\n}",
+                        "checker_output_after_prune": false
+                    },
+                    {
+                        "num_solver_calls": 2,
+                        "success": false,
+                        "invariants": "/*@\n    loop invariant n >= 0;\n    loop invariant 0 <= len <= 16;\n    loop invariant len <= n;\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern unsigned int unknown_uint(void);\n\nint main()\n{\n    unsigned int n = unknown_uint();\n    /*@\nloop invariant i1: n >= 0;\n\n\n*/\nwhile( n > 0 )\n    {\n        unsigned int len = n;\n        if( len > 16 )\n            len = 16;\n        n -= len;\n    }\n    return 0;\n}",
+                        "checker_output_after_prune": true
+                    },
+                    {
+                        "num_solver_calls": 4,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant 0 <= n;\n    loop invariant 0 <= len <= 16;\n    loop invariant len <= n + 16;\n    loop invariant (n > 0) ==> (n >= len);\n    loop invariant (len == 16) ==> (n > 0);\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern unsigned int unknown_uint(void);\n\nint main()\n{\n    unsigned int n = unknown_uint();\n    /*@\nloop invariant i1: 0 <= n;\n\n\n\n\n*/\nwhile( n > 0 )\n    {\n        unsigned int len = n;\n        if( len > 16 )\n            len = 16;\n        n -= len;\n    }\n    return 0;\n}",
+                        "checker_output_after_prune": true
+                    },
+                    {
+                        "num_solver_calls": 2,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant n >= 0;\n    loop invariant \\forall unsigned int len; 0 <= len && len <= 16 ==> (n >= len || n == 0);\n    loop invariant n <= \\at(n, Pre);\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern unsigned int unknown_uint(void);\n\nint main()\n{\n    unsigned int n = unknown_uint();\n    /*@\nloop invariant i1: n >= 0;\n\n\n*/\nwhile( n > 0 )\n    {\n        unsigned int len = n;\n        if( len > 16 )\n            len = 16;\n        n -= len;\n    }\n    return 0;\n}",
+                        "checker_output_after_prune": true
+                    },
+                    {
+                        "num_solver_calls": 3,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant 0 <= n;\n    loop invariant 0 <= len <= n;\n    loop invariant 0 <= len <= 16;\n    loop invariant \\forall integer k; 0 <= k < \\loop_iteration_count ==> n >= k * 16;\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern unsigned int unknown_uint(void);\n\nint main()\n{\n    unsigned int n = unknown_uint();\n    /*@\nloop invariant i1: 0 <= n;\n\n\n\n*/\nwhile( n > 0 )\n    {\n        unsigned int len = n;\n        if( len > 16 )\n            len = 16;\n        n -= len;\n    }\n    return 0;\n}",
+                        "checker_output_after_prune": true
+                    }
+                ]
+            },
+            {
+                "step": "Houdini for combined completion",
+                "solver_calls": 12,
+                "success": true,
+                "code_with_combined_invariants": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern unsigned int unknown_uint(void);\n\nint main()\n{\n    unsigned int n = unknown_uint();\n    /*@\n\n\n\n\nloop invariant i5: n >= 0;\n\n\nloop invariant i8: 0 <= n;\n\n\n\n\n\n\n*/\nwhile( n > 0 )\n    {\n        unsigned int len = n;\n        if( len > 16 )\n            len = 16;\n        n -= len;\n    }\n    return 0;\n}",
+                "checker_output": true
+            },
+            {
+                "step": "Prompting LLM",
+                "generating_annotation": "loop_variants",
+                "success": true,
+                "llm_chat": [
+                    {
+                        "role": "system",
+                        "content": "A ranking function (also called variant) is an expression  over program variables that are live as the loop head. The value of the expression must decrease with every successive iteration of the loop. And the value must be positive for the loop to continue executing. Finding a ranking function helps prove that the loop must terminate.\nLexicographic ranking functions are a generation. They are a sequence of expressions (e1, e2, ...) with the property that the value of each expression must be positive for the loop to execute. Either e1 must decrease or its value remains the same. If its value remains the same then the value of e2 must decrease.\nFind the ranking function for the loop in the following program and explain why it is a valid ranking function.\n\nInstructions:\nOutput the ranking function in one code block, in ACSL syntax. For example,\n```\n/*@\n    loop variant v;\n*/\n```\nIf the ranking function is a sequence of expressions, output them in different lines in their lexicographic order. "
+                    },
+                    {
+                        "role": "user",
+                        "content": "Consider the following C program:  \n```  \n#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern unsigned int unknown_uint(void);\n\nint main()\n{\n    unsigned int n = unknown_uint();\n    while( n > 0 )\n    {\n        unsigned int len = n;\n        if( len > 16 )\n            len = 16;\n        n -= len;\n    }\n    return 0;\n}\n```\nFind the ranking function for the loop in the given program and explain why it is a valid ranking function. Let's think step by step. "
+                    },
+                    "First, let's identify the loop in the program:\n\n```\nwhile( n > 0 )\n{\n    unsigned int len = n;\n    if( len > 16 )\n        len = 16;\n    n -= len;\n}\n```\n\nNow, let's find the ranking function for this loop. We want a function that decreases with every iteration and is positive as long as the loop executes.\n\nIn this case, the ranking function is simply the value of `n`. This is because `n` decreases with every iteration (due to the `n -= len;` statement) and the loop continues executing as long as `n > 0`.\n\nSo, the ranking function is:\n\n```\n/*@\n    loop variant n;\n*/\n```\n\nThis is a valid ranking function because:\n\n1. It is an expression over the program variable `n`, which is live at the loop head.\n2. The value of `n` decreases with every successive iteration of the loop, as `n` is reduced by `len` in each iteration.\n3. The value of `n` must be positive for the loop to continue executing, as the loop condition is `n > 0`.\n\nHence, this ranking function proves that the loop must terminate.",
+                    "First, let's identify the loop:\n\n```c\nwhile( n > 0 )\n{\n    unsigned int len = n;\n    if( len > 16 )\n        len = 16;\n    n -= len;\n}\n```\n\nThe loop continues executing while `n > 0`. In each iteration, `n` is reduced by `len`. The value of `len` is the minimum of `n` and `16`. Therefore, `n` is always decreased by at least `1` and at most `16` in each iteration.\n\nNow, let's find the ranking function for this loop. Since `n` is an unsigned integer and it is decreased by at least `1` in each iteration, we can use `n` as the ranking function.\n\n```\n/*@\n    loop variant n;\n*/\n```\n\nThis ranking function is valid because:\n\n1. The value of `n` is always positive for the loop to continue executing (`n > 0`).\n2. The value of `n` decreases with every successive iteration of the loop, as `n` is reduced by `len`, which is always between `1` and `16`.\n\nThus, the ranking function `n` ensures that the loop must terminate.",
+                    "First, let's analyze the loop. The loop continues to execute as long as `n > 0`. In each iteration, the value of `len` is either `n` or `16` depending on whether `n` is greater than `16` or not. Then, `n` is decremented by `len`. It is clear that `n` decreases in each iteration, and we need to show that it will eventually become zero or negative, ensuring termination of the loop.\n\nThe ranking function for this loop is `n`. Let's write this in ACSL syntax:\n\n```\n/*@\n    loop variant n;\n*/\n```\n\nNow, let's explain why this is a valid ranking function:\n\n1. The value of the expression `n` must be positive for the loop to continue executing. This is true, as the loop condition is `n > 0`.\n\n2. The value of the expression `n` must decrease with every successive iteration of the loop. In each iteration, `n` is decremented by `len`, which is always a positive value (`len` is either `n` or `16`, both positive). Hence, `n` decreases in each iteration.\n\nSince the ranking function `n` satisfies both conditions, it is a valid ranking function, and we can conclude that the loop must terminate.",
+                    "First, let's identify the loop in the program:\n\n```c\nwhile( n > 0 )\n{\n    unsigned int len = n;\n    if( len > 16 )\n        len = 16;\n    n -= len;\n}\n```\n\nThe loop continues to execute as long as `n > 0`. In each iteration of the loop, the value of `n` is decreased by `len`. The value of `len` is either equal to `n` or set to 16 if `n > 16`. Thus, the value of `n` decreases by at least 1 and at most 16 in each iteration.\n\nNow, let's find a ranking function for the loop. Since the value of `n` is always decreasing in each iteration, we can use `n` as the ranking function.\n\n```\n/*@\n    loop variant n;\n*/\n```\n\nThis is a valid ranking function because:\n\n1. The value of `n` is positive for the loop to execute: `n > 0`.\n2. The value of `n` decreases with every successive iteration: `n` is decreased by `len`, which is between 1 and 16.\n3. The value of `n` must reach 0 eventually, as it is an unsigned integer and is decreasing in each iteration.\n\nThus, the ranking function `n` helps prove that the loop terminates.",
+                    "First, let's identify the loop in the given program:\n\n```  \nwhile( n > 0 )\n{\n    unsigned int len = n;\n    if( len > 16 )\n        len = 16;\n    n -= len;\n}\n```\n\nNow, let's find the ranking function for this loop. The value of the expression must decrease with every successive iteration of the loop, and the value must be positive for the loop to continue executing.\n\nWe can use `n` as the ranking function since it decreases with each iteration and must be positive for the loop to continue executing.\n\nHere's the ranking function in ACSL syntax:\n\n```\n/*@\n    loop variant n;\n*/\n```\n\nThis ranking function is valid because `n` is always positive as long as the loop executes, and its value decreases with each iteration since `n` is updated as `n -= len;`. The loop must terminate since the value of `n` eventually becomes 0 or negative, at which point the loop condition `n > 0` is no longer satisfied."
+                ],
+                "output": [
+                    "/*@\n    loop variant n;\n*/",
+                    "/*@\n    loop variant n;\n*/",
+                    "/*@\n    loop variant n;\n*/",
+                    "/*@\n    loop variant n;\n*/",
+                    "/*@\n    loop variant n;\n*/"
+                ]
+            },
+            {
+                "step": "Checking individual completion",
+                "solver_calls": 5,
+                "completions": [
+                    {
+                        "candidate_with_combined_invariants_and_variant": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern unsigned int unknown_uint(void);\n\nint main()\n{\n    unsigned int n = unknown_uint();\n    /*@\nloop invariant i5: n >= 0;\nloop invariant i8: 0 <= n;\nloop variant n;\n*/\nwhile( n > 0 )\n    {\n        unsigned int len = n;\n        if( len > 16 )\n            len = 16;\n        n -= len;\n    }\n    return 0;\n}",
+                        "checker_output": true,
+                        "checker_message": "loop invariant n >= 0 is inductive.\nloop invariant 0 <= n is inductive.\n\nLoop variant is Valid.\n"
+                    },
+                    {
+                        "candidate_with_combined_invariants_and_variant": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern unsigned int unknown_uint(void);\n\nint main()\n{\n    unsigned int n = unknown_uint();\n    /*@\nloop invariant i5: n >= 0;\nloop invariant i8: 0 <= n;\nloop variant n;\n*/\nwhile( n > 0 )\n    {\n        unsigned int len = n;\n        if( len > 16 )\n            len = 16;\n        n -= len;\n    }\n    return 0;\n}",
+                        "checker_output": true,
+                        "checker_message": "loop invariant n >= 0 is inductive.\nloop invariant 0 <= n is inductive.\n\nLoop variant is Valid.\n"
+                    },
+                    {
+                        "candidate_with_combined_invariants_and_variant": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern unsigned int unknown_uint(void);\n\nint main()\n{\n    unsigned int n = unknown_uint();\n    /*@\nloop invariant i5: n >= 0;\nloop invariant i8: 0 <= n;\nloop variant n;\n*/\nwhile( n > 0 )\n    {\n        unsigned int len = n;\n        if( len > 16 )\n            len = 16;\n        n -= len;\n    }\n    return 0;\n}",
+                        "checker_output": true,
+                        "checker_message": "loop invariant n >= 0 is inductive.\nloop invariant 0 <= n is inductive.\n\nLoop variant is Valid.\n"
+                    },
+                    {
+                        "candidate_with_combined_invariants_and_variant": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern unsigned int unknown_uint(void);\n\nint main()\n{\n    unsigned int n = unknown_uint();\n    /*@\nloop invariant i5: n >= 0;\nloop invariant i8: 0 <= n;\nloop variant n;\n*/\nwhile( n > 0 )\n    {\n        unsigned int len = n;\n        if( len > 16 )\n            len = 16;\n        n -= len;\n    }\n    return 0;\n}",
+                        "checker_output": true,
+                        "checker_message": "loop invariant n >= 0 is inductive.\nloop invariant 0 <= n is inductive.\n\nLoop variant is Valid.\n"
+                    },
+                    {
+                        "candidate_with_combined_invariants_and_variant": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern unsigned int unknown_uint(void);\n\nint main()\n{\n    unsigned int n = unknown_uint();\n    /*@\nloop invariant i5: n >= 0;\nloop invariant i8: 0 <= n;\nloop variant n;\n*/\nwhile( n > 0 )\n    {\n        unsigned int len = n;\n        if( len > 16 )\n            len = 16;\n        n -= len;\n    }\n    return 0;\n}",
+                        "checker_output": true,
+                        "checker_message": "loop invariant n >= 0 is inductive.\nloop invariant 0 <= n is inductive.\n\nLoop variant is Valid.\n"
+                    }
+                ],
+                "success": true
+            }
+        ]
+    },
+    "stats": {
+        "success": [
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/PastaB7.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/BrockschmidtCookFuhs-CAV2013-Introduction_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/genady_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_b.12.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/WhileDecr.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_a.09_assume.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex3.04_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/AliasDarteFeautrierGonnord-SAS2010-speedpldi2_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Bangalore_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_java_Break.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/PastaB2.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/LogMult.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/KroeningSharyginaTsitovichWintersteiger-CAV2010-Ex_true-termination.c",
+            "../data/benchmarks/non_termination/loop/Signed_Overflow_Error_3_T.c",
+            "../data/benchmarks/tpdb/C/Ultimate/Parallel_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_ex2.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/HeizmannHoenickeLeikePodelski-ATVA2013-Fig6_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex2.10_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/PastaC7.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChawdharyCookGulwaniSagivYang-ESOP2008-random1d_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_b.11.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/genady_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Nyala-2lex_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_ex3b.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_b.05.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex2.20_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_ex1.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_a.05.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/ChenFlurMukhopadhyay-SAS2012-Ex2.10_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_a.04.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/HeizmannHoenickeLeikePodelski-ATVA2013-Fig9_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/PastaA7.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/HeizmannHoenickeLeikePodelski-ATVA2013-Fig6_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/HeizmannHoenickeLeikePodelski-ATVA2013-Fig8_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_java_Continue1.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/AliasDarteFeautrierGonnord-SAS2010-random2d_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/aaron2_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/aaron2_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/ChenFlurMukhopadhyay-SAS2012-Ex1.04_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChawdharyCookGulwaniSagivYang-ESOP2008-random2d_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/PastaA4.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_fermat.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Overflow.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/Toulouse-BranchesToLoop_true-termination.c",
+            "../data/benchmarks/non_termination/loop/Signed_Overflow_Error_2_T.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/PastaC3.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_b.13.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/GulavaniGulwani-CAV2008-Fig1a_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_a.06.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/AliasDarteFeautrierGonnord-SAS2010-ndecr_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/PodelskiRybalchenko-TACAS2011-Fig1_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/HeizmannHoenickeLeikePodelski-ATVA2013-Fig9_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/PastaA8.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/HeizmannHoenickeLeikePodelski-ATVA2013-Fig5_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/KroeningSharyginaTsitovichWintersteiger-CAV2010-Ex_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/AliasDarteFeautrierGonnord-SAS2010-random1d_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/PastaC9.c",
+            "../data/benchmarks/non_termination/loop/Unsigned_Wraparound_Error_4_T.c"
+        ],
+        "failure": [
+            "../data/benchmarks/tpdb/C_Integer/Ton_Chanh_15/Hanoi_plus_false-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/UrbanMine-ESOP2014-Fig3_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Factorial.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Swingers.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex2.07_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Piecewise_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/PodelskiRybalchenko-LICS2004-Fig2-TACAS2011-Fig3_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex1.03_true-termination.c",
+            "../data/benchmarks/tpdb/C/Ultimate/Lobnya-Boolean-Reordered_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/ChenFlurMukhopadhyay-SAS2012-Ex2.22_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex2.08_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/CookSeeZuleger-TACAS2013-Fig8a-modified_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex2.09_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/LeikeHeizmann-WST2014-Ex5_false-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex2.18_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex4.01_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Ton_Chanh_15/Benghazi_nondet_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex1.02_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/GulwaniJainKoskinen-PLDI2009-Fig1_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/ChenFlurMukhopadhyay-SAS2012-Ex2.16_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Pure2Phase_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/PodelskiRybalchenko-LICS2004-Fig2_true-termination.c",
+            "../data/benchmarks/tpdb/C/Ultimate/Cairo_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/LeikeHeizmann-TACAS2014-Fig1_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Pure3Phase_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_c.07.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex3.03_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/PlusSwap.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/AliasDarteFeautrierGonnord-SAS2010-counterex1a_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/aaron3_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Toulouse-MultiBranchesToLoop_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/AliasDarteFeautrierGonnord-SAS2010-counterex1a_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex1.01_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/LeikeHeizmann-TACAS2014-Ex9_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/min_rf_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Et1.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/2Nested_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/ChenFlurMukhopadhyay-SAS2012-Ex2.08_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Masse-VMCAI2014-Fig1b_true-termination.c",
+            "../data/benchmarks/tpdb/C/Ultimate/Gothenburg_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/NoriSharma-FSE2013-Fig8_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/CookSeeZuleger-TACAS2013-Fig8b_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Toulouse-BranchesToLoop_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/MenloPark_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex2.13_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/AliasDarteFeautrierGonnord-SAS2010-rsd_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/TelAviv-Amir-Minimum_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex3.09_true-termination.c",
+            "../data/benchmarks/non_termination/loop/Signed_Overflow_Error_1_T.c",
+            "../data/benchmarks/non_termination/loop/Incorrect_Bit_Calculation_3_T.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex2.06_false-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_b.03-no-inv_assume.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/GopanReps-CAV2006-Fig1a_true-termination.c.c",
+            "../data/benchmarks/non_termination/loop/Incorrect_Bit_Calculation_2_T.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Gothenburg_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Thun_true-termination.c",
+            "../data/benchmarks/tpdb/C/Ultimate/Pure3Phase_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/PastaA10.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/AliasDarteFeautrierGonnord-SAS2010-speedpldi2_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Stockholm_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/IntPath.c"
+        ],
+        "skipped": [],
+        "total": 119,
+        "success_count": 58,
+        "failure_count": 61,
+        "success_rate": 0.48739495798319327
+    }
+}

@@ -1,0 +1,223 @@
+{
+    "logs": {
+        "file": "../data/benchmarks/non_termination/loop/Signed_Overflow_Error_3_T.c",
+        "benchmark_code": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern unsigned int unknown_uint(void);\n\nint main()\n{\n    unsigned int number = unknown_uint();\n    int width;\n    for( width = 1; number >= 10 ; width++ )\n        number /= 10;\n    return 0;\n}",
+        "success": true,
+        "log": [
+            {
+                "step": "Prompting LLM",
+                "generating_annotation": "loop_invariants",
+                "success": true,
+                "llm_chat": [
+                    {
+                        "role": "system",
+                        "content": "You are a helpful AI software assistant that reasons about how code behaves. Given a program, you can find loop invariants, which can then be used to verify some property in the program. \nFrama-C is a software verification tool for C programs. The input to Frama-C is a C program file with ACSL (ANSI/ISO C Specification Language) annotations.\nFor the given program, find the necessary loop invariants of the while loop to help Frama-C verify the post-condition.\n\nInstructions:\n- Make a note of the pre-conditions or variable assignments in the program.\n- Analyze the loop body and make a note of the loop condition. \n- Output loop invariants that are true \n(i) before the loop execution, \n(ii) in every iteration of the loop and \n(iii) after the loop termination, \nsuch that the loop invariants imply the post condition.\n- If a loop invariant is a conjunction, split it into its parts.\n- Output all the loop invariants in one code block. For example:\n```\n/*@ \n    loop invariant i1;\n    loop invariant i2;\n*/\n```\nRules:\n- **Do not use variables or functions that are not declared in the program.** \n- **Do not make any assumptions about functions whose definitions are not given.**\n- **All undefined variables contain garbage values. Do not use variables that have garbage values.**\n- **Do not use keywords that are not supported in ACSL annotations for loops.**\n- **Variables that are not explicitly initialized, could have garbage values. Do not make any assumptions about such values.**\n- **Do not use the \\at(x, Pre) notation for any variable x.**\n- **Do not use non-deterministic function calls.**"
+                    },
+                    {
+                        "role": "user",
+                        "content": "\nConsider the following C program:\n```\n#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern unsigned int unknown_uint(void);\n\nint main()\n{\n    unsigned int number = unknown_uint();\n    int width;\n    for( width = 1; number >= 10 ; width++ )\n        number /= 10;\n    return 0;\n}\n```\n\nYou are allowed to use implication to take care of the conditional nature of the code. Use implication (==>) instead of using if-then.\n\nFor all variables, add conjunctions that bound the maximum and minimum values that they can take, if such bounds exist.\n\nIf a variable is always equal to or smaller or larger than another variable, add a conjunction for their relation.\n\nIf the assertion is guarded by a condition, use the guard condition in an implication.\n\nIf certain variables are non-deterministic at the beginning or end of the loop, use an implication to make the invariant trivially true at that location. \n\nOutput the loop invariants for the loop in the program above. Let's think step by step."
+                    },
+                    "First, let's identify the pre-conditions and variable assignments:\n\n1. `unsigned int number = unknown_uint();` - `number` is assigned a non-deterministic unsigned integer value.\n2. `int width;` - `width` is an uninitialized integer variable.\n\nNext, analyze the loop body and make a note of the loop condition:\n\n- The loop condition is `number >= 10`.\n\nNow, let's find the loop invariants that are true before the loop execution, in every iteration of the loop, and after the loop termination, such that the loop invariants imply the post-condition:\n\n- `number` is always non-negative (since it's an unsigned integer).\n- `width` is always non-negative (since it starts at 1 and only increases).\n- In each iteration, `number` is divided by 10.\n- The loop terminates when `number` is less than 10.\n\nTaking all of this into account, we can derive the following loop invariants:\n\n```\n/*@ \n    loop invariant number >= 0;\n    loop invariant width >= 1;\n    loop invariant width <= (int)(sizeof(unsigned int) * 8) + 1; // Considering the max possible width of an unsigned int in bits\n*/\n```",
+                    "First, let's note the pre-conditions and variable assignments:\n\n1. `number` is a non-deterministic unsigned integer.\n2. `width` is initialized to 1.\n\nNow, let's analyze the loop body and loop condition:\n\nThe loop condition is `number >= 10`, and the loop body updates `number` and `width` as follows:\n1. `number` is divided by 10.\n2. `width` is incremented by 1.\n\nNow, we can write the loop invariants:\n\n```\n/*@ \n    loop invariant width >= 1;\n    loop invariant width <= sizeof(unsigned int) * 8;\n    loop invariant number < pow(10, width);\n    loop invariant number >= pow(10, width - 1);\n*/\n```\n\nThese loop invariants hold:\n1. Before the loop execution: `width` is initialized to 1, and `number` is a non-deterministic unsigned integer, so it can be any value between 0 and the maximum unsigned int.\n2. In every iteration of the loop: `width` increases by 1, and `number` is divided by 10. So, the invariants still hold.\n3. After the loop termination: When the loop terminates, `number` is less than 10, and the invariants still hold, implying the post-condition.",
+                    "First, let's note the pre-conditions and variable assignments in the program:\n\n1. `unsigned int number = unknown_uint();` - `number` is a non-negative integer value assigned by the `unknown_uint()` function.\n2. `int width;` - `width` is an integer, uninitialized, and can have garbage values initially.\n\nNow, let's analyze the loop body and make a note of the loop condition:\n\n`for( width = 1; number >= 10 ; width++ )`\n\n1. `width` is initialized to 1.\n2. Loop condition: `number >= 10`\n3. Loop body: `number` is divided by 10, and `width` is incremented by 1 in each iteration.\n\nNow, let's output the loop invariants that are true:\n\n(i) before the loop execution,\n(ii) in every iteration of the loop, and\n(iii) after the loop termination, such that the loop invariants imply the post condition.\n\n```\n/*@ \n    loop invariant width >= 1;\n    loop invariant width <= number + 1;\n    loop invariant number >= 0;\n*/\n```",
+                    "First, let's note the pre-conditions or variable assignments in the program:\n\n1. `unsigned int number = unknown_uint();` assigns a non-negative value to `number`.\n2. `int width;` does not have an initial value, so we cannot assume anything about it before the loop starts.\n\nNow, let's analyze the loop body and make a note of the loop condition:\n\n1. The loop condition is `number >= 10`.\n2. Inside the loop, `width` is incremented by 1, and `number` is divided by 10.\n\nFinally, let's output the loop invariants:\n\n```\n/*@ \n    loop invariant number >= 0;\n    loop invariant width >= 1;\n    loop invariant width <= (int)(sizeof(unsigned int) * 8 + 1);\n    loop invariant \\forall int i; 0 <= i < width ==> (number / (int)(\\pow(10, i))) > 0;\n*/\n```\n\nThese loop invariants hold:\n\n1. Before the loop execution, since `number` is non-negative and `width` is initialized to 1.\n2. In every iteration of the loop, as `number` remains non-negative and `width` increases by 1.\n3. After the loop termination, when the loop condition `number >= 10` is no longer true, and the invariants still hold.",
+                    "First, let's make a note of the pre-conditions or variable assignments in the program:\n\n1. `unsigned int number = unknown_uint();` assigns a non-negative integer to `number`.\n2. `int width;` initializes the integer `width`.\n\nNext, let's analyze the loop body and make a note of the loop condition:\n\n`for( width = 1; number >= 10 ; width++ )` with the loop body `number /= 10;`.\n\nNow let's find the loop invariants that are true before the loop execution, in every iteration of the loop, and after the loop termination, such that the loop invariants imply the post condition.\n\nWe can find the following loop invariants:\n\n```\n/*@ \n    loop invariant number >= 0;\n    loop invariant width >= 1;\n    loop invariant \\forall int k; 0 <= k < width ==> (number / (int)(pow(10, k))) >= 10;\n    loop invariant \\forall int k; width <= k ==> (number / (int)(pow(10, k))) < 10;\n*/\n```\n\nExplanation:\n\n1. `number >= 0;` as `number` is an unsigned integer.\n2. `width >= 1;` as `width` starts from 1 and only increments in the loop.\n3. `\\forall int k; 0 <= k < width ==> (number / (int)(pow(10, k))) >= 10;` states that for all values of `k` between 0 and `width` (excluding `width`), `number` divided by 10 to the power of `k` is greater than or equal to 10. This condition holds true during the loop execution.\n4. `\\forall int k; width <= k ==> (number / (int)(pow(10, k))) < 10;` states that for all values of `k` greater than or equal to `width`, `number` divided by 10 to the power of `k` is less than 10. This condition holds true during the loop execution and after the loop termination."
+                ],
+                "output": [
+                    "/*@ \n    loop invariant number >= 0;\n    loop invariant width >= 1;\n    loop invariant width <= (int)(sizeof(unsigned int) * 8) + 1; // Considering the max possible width of an unsigned int in bits\n*/",
+                    "/*@ \n    loop invariant width >= 1;\n    loop invariant width <= sizeof(unsigned int) * 8;\n    loop invariant number < pow(10, width);\n    loop invariant number >= pow(10, width - 1);\n*/",
+                    "/*@ \n    loop invariant width >= 1;\n    loop invariant width <= number + 1;\n    loop invariant number >= 0;\n*/",
+                    "/*@ \n    loop invariant number >= 0;\n    loop invariant width >= 1;\n    loop invariant width <= (int)(sizeof(unsigned int) * 8 + 1);\n    loop invariant \\forall int i; 0 <= i < width ==> (number / (int)(\\pow(10, i))) > 0;\n*/",
+                    "/*@ \n    loop invariant number >= 0;\n    loop invariant width >= 1;\n    loop invariant \\forall int k; 0 <= k < width ==> (number / (int)(pow(10, k))) >= 10;\n    loop invariant \\forall int k; width <= k ==> (number / (int)(pow(10, k))) < 10;\n*/"
+                ]
+            },
+            {
+                "step": "Checking individual completion",
+                "solver_calls": 5,
+                "completions": [
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant number >= 0;\n    loop invariant width >= 1;\n    loop invariant width <= (int)(sizeof(unsigned int) * 8) + 1; // Considering the max possible width of an unsigned int in bits\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant number >= 0 is inductive.\nloop invariant width >= 1 is inductive.\nloop invariant width <= (int)(sizeof(unsigned int) * 8) + 1 is established but not preserved.\n\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant width >= 1;\n    loop invariant width <= sizeof(unsigned int) * 8;\n    loop invariant number < pow(10, width);\n    loop invariant number >= pow(10, width - 1);\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "Annotation error on line 12: invalid implicit conversion from ℤ to double. Ignoring loop annotation"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant width >= 1;\n    loop invariant width <= number + 1;\n    loop invariant number >= 0;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant width >= 1 is inductive.\nloop invariant width <= number + 1 is established but not preserved.\nloop invariant number >= 0 is inductive.\n\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant number >= 0;\n    loop invariant width >= 1;\n    loop invariant width <= (int)(sizeof(unsigned int) * 8 + 1);\n    loop invariant \\forall int i; 0 <= i < width ==> (number / (int)(\\pow(10, i))) > 0;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant number >= 0 is inductive.\nloop invariant width >= 1 is inductive.\nloop invariant width <= (int)(sizeof(unsigned int) * 8 + 1) is established but not preserved.\nloop invariant \\forall int i; 0 <= i < width ==> (number / (int)(\\pow(10, i))) > 0 is neither established nor preserved.\n\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant number >= 0;\n    loop invariant width >= 1;\n    loop invariant \\forall int k; 0 <= k < width ==> (number / (int)(pow(10, k))) >= 10;\n    loop invariant \\forall int k; width <= k ==> (number / (int)(pow(10, k))) < 10;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "Annotation error on line 12: invalid implicit conversion from ℤ to double. Ignoring loop annotation"
+                    }
+                ],
+                "success": false
+            },
+            {
+                "step": "Houdini for individual completion",
+                "success": true,
+                "completions": [
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant number >= 0;\n    loop invariant width >= 1;\n    loop invariant width <= (int)(sizeof(unsigned int) * 8) + 1; // Considering the max possible width of an unsigned int in bits\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern unsigned int unknown_uint(void);\n\nint main()\n{\n    unsigned int number = unknown_uint();\n    int width;\n    /*@\nloop invariant i1: number >= 0;\nloop invariant i2: width >= 1;\n\n*/\nfor( width = 1; number >= 10 ; width++ )\n        number /= 10;\n    return 0;\n}",
+                        "checker_output_after_prune": true
+                    },
+                    {
+                        "num_solver_calls": 3,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant width >= 1;\n    loop invariant width <= sizeof(unsigned int) * 8;\n    loop invariant number < pow(10, width);\n    loop invariant number >= pow(10, width - 1);\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern unsigned int unknown_uint(void);\n\nint main()\n{\n    unsigned int number = unknown_uint();\n    int width;\n    /*@\nloop invariant i1: width >= 1;\n\n\n\n*/\nfor( width = 1; number >= 10 ; width++ )\n        number /= 10;\n    return 0;\n}",
+                        "checker_output_after_prune": true
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant width >= 1;\n    loop invariant width <= number + 1;\n    loop invariant number >= 0;\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern unsigned int unknown_uint(void);\n\nint main()\n{\n    unsigned int number = unknown_uint();\n    int width;\n    /*@\nloop invariant i1: width >= 1;\n\nloop invariant i3: number >= 0;\n*/\nfor( width = 1; number >= 10 ; width++ )\n        number /= 10;\n    return 0;\n}",
+                        "checker_output_after_prune": true
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant number >= 0;\n    loop invariant width >= 1;\n    loop invariant width <= (int)(sizeof(unsigned int) * 8 + 1);\n    loop invariant \\forall int i; 0 <= i < width ==> (number / (int)(\\pow(10, i))) > 0;\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern unsigned int unknown_uint(void);\n\nint main()\n{\n    unsigned int number = unknown_uint();\n    int width;\n    /*@\nloop invariant i1: number >= 0;\nloop invariant i2: width >= 1;\n\n\n*/\nfor( width = 1; number >= 10 ; width++ )\n        number /= 10;\n    return 0;\n}",
+                        "checker_output_after_prune": true
+                    },
+                    {
+                        "num_solver_calls": 2,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant number >= 0;\n    loop invariant width >= 1;\n    loop invariant \\forall int k; 0 <= k < width ==> (number / (int)(pow(10, k))) >= 10;\n    loop invariant \\forall int k; width <= k ==> (number / (int)(pow(10, k))) < 10;\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern unsigned int unknown_uint(void);\n\nint main()\n{\n    unsigned int number = unknown_uint();\n    int width;\n    /*@\nloop invariant i1: number >= 0;\nloop invariant i2: width >= 1;\n\n\n*/\nfor( width = 1; number >= 10 ; width++ )\n        number /= 10;\n    return 0;\n}",
+                        "checker_output_after_prune": true
+                    }
+                ]
+            },
+            {
+                "step": "Houdini for combined completion",
+                "solver_calls": 7,
+                "success": true,
+                "code_with_combined_invariants": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern unsigned int unknown_uint(void);\n\nint main()\n{\n    unsigned int number = unknown_uint();\n    int width;\n    /*@\nloop invariant i1: number >= 0;\nloop invariant i2: width >= 1;\n\n\n\n\n\n\n\n\n\n*/\nfor( width = 1; number >= 10 ; width++ )\n        number /= 10;\n    return 0;\n}",
+                "checker_output": true
+            },
+            {
+                "step": "Prompting LLM",
+                "generating_annotation": "loop_variants",
+                "success": true,
+                "llm_chat": [
+                    {
+                        "role": "system",
+                        "content": "A ranking function (also called variant) is an expression  over program variables that are live as the loop head. The value of the expression must decrease with every successive iteration of the loop. And the value must be positive for the loop to continue executing. Finding a ranking function helps prove that the loop must terminate.\nLexicographic ranking functions are a generation. They are a sequence of expressions (e1, e2, ...) with the property that the value of each expression must be positive for the loop to execute. Either e1 must decrease or its value remains the same. If its value remains the same then the value of e2 must decrease.\nFind the ranking function for the loop in the following program and explain why it is a valid ranking function.\n\nInstructions:\nOutput the ranking function in one code block, in ACSL syntax. For example,\n```\n/*@\n    loop variant v;\n*/\n```\nIf the ranking function is a sequence of expressions, output them in different lines in their lexicographic order. "
+                    },
+                    {
+                        "role": "user",
+                        "content": "Consider the following C program:  \n```  \n#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern unsigned int unknown_uint(void);\n\nint main()\n{\n    unsigned int number = unknown_uint();\n    int width;\n    for( width = 1; number >= 10 ; width++ )\n        number /= 10;\n    return 0;\n}\n```\nFind the ranking function for the loop in the given program and explain why it is a valid ranking function. Let's think step by step. "
+                    },
+                    "First, let's identify the loop variables and their conditions:\n\n- Loop variable: `number`\n- Loop condition: `number >= 10`\n- Loop update: `number /= 10`\n- Additional variable: `width`\n\nNow, we will find a ranking function for the loop. Since the value of `number` is being divided by 10 in each iteration, the value of `number` decreases with every successive iteration. Therefore, a valid ranking function for this loop is simply `number`.\n\nHere is the ranking function in ACSL syntax:\n\n```\n/*@\n    loop variant number;\n*/\n```\n\nThis ranking function is valid because:\n\n1. The value of `number` is positive as long as the loop condition `number >= 10` holds.\n2. The value of `number` decreases with every successive iteration (`number /= 10`).\n3. As the value of `number` decreases and becomes less than 10, the loop terminates.\n\nTherefore, the ranking function `number` is valid and proves that the loop must terminate.",
+                    "First, we need to identify the loop invariant. In this case, it is `number >= 10`. The loop continues to execute as long as `number` is greater than or equal to 10. \n\nNext, we need to find an expression that decreases with each iteration of the loop. In this loop, the value of `number` is divided by 10 in each iteration. So, the value of `number` is decreasing in every iteration.\n\nThus, we can use `number` as the ranking function. In ACSL syntax, it would be:\n\n```\n/*@ \n    loop variant number;\n*/\n```\n\nThis is a valid ranking function because:\n\n1. The value of `number` is always positive, as it is an unsigned integer. The loop invariant also ensures that `number >= 10` during each iteration.\n2. The value of `number` is decreasing in every iteration, as it is divided by 10.\n\nSince the value of the ranking function is always positive and decreasing with each iteration, we can conclude that the loop will eventually terminate.",
+                    "First, we need to identify the loop in the given program. The loop is:\n\n```\nfor( width = 1; number >= 10 ; width++ )\n    number /= 10;\n```\n\nNow we need to find a ranking function for this loop. Let's analyze the loop.\n\nThe loop iterates while `number >= 10`. In each iteration, `width` is incremented by 1, and `number` is divided by 10.\n\nThe loop will terminate when `number < 10`. Since `number` is an unsigned integer and we are dividing it by 10 in each iteration, the value of `number` will keep decreasing until it becomes less than 10.\n\nBased on this analysis, we can use `number` as the ranking function.\n\nSo the ranking function for this loop is:\n\n```\n/*@\n    loop variant number;\n*/\n```\n\nThis ranking function is valid because:\n\n1. `number` is an expression over the live program variables at the loop head.\n2. The value of `number` decreases with every successive iteration of the loop, as it is divided by 10 in each iteration.\n3. The value of `number` must be positive (greater than or equal to 10) for the loop to continue executing.\n\nTherefore, the ranking function `number` helps prove that the loop must terminate.",
+                    "First, let's analyze the loop in the given program. The loop iterates as long as `number >= 10`. In each iteration, the variable `width` is incremented by 1, and the variable `number` is divided by 10.\n\nThe loop will terminate when `number` becomes less than 10. We can see that `number` is decreasing in each iteration, as it is divided by 10. The value of `width` increases, but it does not affect the termination condition directly.\n\nNow, let's find the ranking function for this loop. Since `number` is an unsigned integer and decreases in each iteration, we can use it as the ranking function:\n\n```c\n/*@\n    loop variant number;\n*/\n```\n\nThis is a valid ranking function because:\n\n1. The value of `number` is positive (non-negative, as it is an unsigned integer) for the loop to continue executing.\n2. The value of `number` decreases with every successive iteration of the loop, as it is divided by 10.\n\nHence, the ranking function `number` helps prove that the loop must terminate.",
+                    "First, let's identify the loop in the given program:\n\n```\nfor( width = 1; number >= 10 ; width++ )\n    number /= 10;\n```\n\nNow, we need to find an expression that decreases with each iteration of the loop. In this case, the variable `number` is being divided by 10 in each iteration. So, the expression `number` itself can be a ranking function since its value decreases with each iteration of the loop.\n\nHere's the ranking function in ACSL syntax:\n\n```\n/*@\n    loop variant number;\n*/\n```\n\nThis ranking function is valid because:\n\n1. The value of `number` decreases with each iteration of the loop, as it's divided by 10.\n2. The loop executes as long as `number >= 10`, which means the value of `number` must be positive for the loop to continue executing.\n\nSince the ranking function's value decreases with each iteration, and it must be positive for the loop to execute, this ranking function proves that the loop must terminate."
+                ],
+                "output": [
+                    "/*@\n    loop variant number;\n*/",
+                    "/*@ \n    loop variant number;\n*/",
+                    "/*@\n    loop variant number;\n*/",
+                    "/*@\n    loop variant number;\n*/",
+                    "/*@\n    loop variant number;\n*/"
+                ]
+            },
+            {
+                "step": "Checking individual completion",
+                "solver_calls": 5,
+                "completions": [
+                    {
+                        "candidate_with_combined_invariants_and_variant": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern unsigned int unknown_uint(void);\n\nint main()\n{\n    unsigned int number = unknown_uint();\n    int width;\n    /*@\nloop invariant i1: number >= 0;\nloop invariant i2: width >= 1;\nloop variant number;\n*/\nfor( width = 1; number >= 10 ; width++ )\n        number /= 10;\n    return 0;\n}",
+                        "checker_output": true,
+                        "checker_message": "loop invariant number >= 0 is inductive.\nloop invariant width >= 1 is inductive.\n\nLoop variant is Valid.\n"
+                    },
+                    {
+                        "candidate_with_combined_invariants_and_variant": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern unsigned int unknown_uint(void);\n\nint main()\n{\n    unsigned int number = unknown_uint();\n    int width;\n    /*@\nloop invariant i1: number >= 0;\nloop invariant i2: width >= 1;\nloop variant number;\n*/\nfor( width = 1; number >= 10 ; width++ )\n        number /= 10;\n    return 0;\n}",
+                        "checker_output": true,
+                        "checker_message": "loop invariant number >= 0 is inductive.\nloop invariant width >= 1 is inductive.\n\nLoop variant is Valid.\n"
+                    },
+                    {
+                        "candidate_with_combined_invariants_and_variant": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern unsigned int unknown_uint(void);\n\nint main()\n{\n    unsigned int number = unknown_uint();\n    int width;\n    /*@\nloop invariant i1: number >= 0;\nloop invariant i2: width >= 1;\nloop variant number;\n*/\nfor( width = 1; number >= 10 ; width++ )\n        number /= 10;\n    return 0;\n}",
+                        "checker_output": true,
+                        "checker_message": "loop invariant number >= 0 is inductive.\nloop invariant width >= 1 is inductive.\n\nLoop variant is Valid.\n"
+                    },
+                    {
+                        "candidate_with_combined_invariants_and_variant": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern unsigned int unknown_uint(void);\n\nint main()\n{\n    unsigned int number = unknown_uint();\n    int width;\n    /*@\nloop invariant i1: number >= 0;\nloop invariant i2: width >= 1;\nloop variant number;\n*/\nfor( width = 1; number >= 10 ; width++ )\n        number /= 10;\n    return 0;\n}",
+                        "checker_output": true,
+                        "checker_message": "loop invariant number >= 0 is inductive.\nloop invariant width >= 1 is inductive.\n\nLoop variant is Valid.\n"
+                    },
+                    {
+                        "candidate_with_combined_invariants_and_variant": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern unsigned int unknown_uint(void);\n\nint main()\n{\n    unsigned int number = unknown_uint();\n    int width;\n    /*@\nloop invariant i1: number >= 0;\nloop invariant i2: width >= 1;\nloop variant number;\n*/\nfor( width = 1; number >= 10 ; width++ )\n        number /= 10;\n    return 0;\n}",
+                        "checker_output": true,
+                        "checker_message": "loop invariant number >= 0 is inductive.\nloop invariant width >= 1 is inductive.\n\nLoop variant is Valid.\n"
+                    }
+                ],
+                "success": true
+            }
+        ]
+    },
+    "stats": {
+        "success": [
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/PastaB7.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/BrockschmidtCookFuhs-CAV2013-Introduction_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/genady_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_b.12.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/WhileDecr.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_a.09_assume.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex3.04_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/AliasDarteFeautrierGonnord-SAS2010-speedpldi2_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Bangalore_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_java_Break.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/PastaB2.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/LogMult.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/KroeningSharyginaTsitovichWintersteiger-CAV2010-Ex_true-termination.c",
+            "../data/benchmarks/non_termination/loop/Signed_Overflow_Error_3_T.c"
+        ],
+        "failure": [
+            "../data/benchmarks/tpdb/C_Integer/Ton_Chanh_15/Hanoi_plus_false-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/UrbanMine-ESOP2014-Fig3_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Factorial.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Swingers.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex2.07_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Piecewise_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/PodelskiRybalchenko-LICS2004-Fig2-TACAS2011-Fig3_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex1.03_true-termination.c",
+            "../data/benchmarks/tpdb/C/Ultimate/Lobnya-Boolean-Reordered_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/ChenFlurMukhopadhyay-SAS2012-Ex2.22_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex2.08_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/CookSeeZuleger-TACAS2013-Fig8a-modified_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex2.09_true-termination.c"
+        ],
+        "skipped": [],
+        "total": 27,
+        "success_count": 14,
+        "failure_count": 13,
+        "success_rate": 0.5185185185185185
+    }
+}

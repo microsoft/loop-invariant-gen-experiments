@@ -1,0 +1,211 @@
+{
+    "logs": {
+        "file": "../data/benchmarks/tpdb/C/Ultimate/Lobnya-Boolean-Reordered_true-termination.c",
+        "benchmark_code": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\nint main ()\n{\n\tint x = unknown_int();\n\tint b = unknown_int();\n\twhile (1) {\n\t\tif (!b) {\n\t\t\tbreak;\n\t\t}\n\t\tb = unknown_int();\n\t\tx = x - 1;\n\t\tb = (x >= 0);\n\t}\n\treturn 0;\n}",
+        "success": false,
+        "log": [
+            {
+                "step": "Prompting LLM",
+                "generating_annotation": "loop_invariants",
+                "success": true,
+                "llm_chat": [
+                    {
+                        "role": "system",
+                        "content": "You are a helpful AI software assistant that reasons about how code behaves. Given a program, you can find loop invariants, which can then be used to verify some property in the program. \nFrama-C is a software verification tool for C programs. The input to Frama-C is a C program file with ACSL (ANSI/ISO C Specification Language) annotations.\nFor the given program, find the necessary loop invariants of the while loop to help Frama-C verify the post-condition.\n\nInstructions:\n- Make a note of the pre-conditions or variable assignments in the program.\n- Analyze the loop body and make a note of the loop condition. \n- Output loop invariants that are true \n(i) before the loop execution, \n(ii) in every iteration of the loop and \n(iii) after the loop termination, \nsuch that the loop invariants imply the post condition.\n- If a loop invariant is a conjunction, split it into its parts.\n- Output all the loop invariants in one code block. For example:\n```\n/*@ \n    loop invariant i1;\n    loop invariant i2;\n*/\n```\nRules:\n- **Do not use variables or functions that are not declared in the program.** \n- **Do not make any assumptions about functions whose definitions are not given.**\n- **All undefined variables contain garbage values. Do not use variables that have garbage values.**\n- **Do not use keywords that are not supported in ACSL annotations for loops.**\n- **Variables that are not explicitly initialized, could have garbage values. Do not make any assumptions about such values.**\n- **Do not use the \\at(x, Pre) notation for any variable x.**\n- **Do not use non-deterministic function calls.**"
+                    },
+                    {
+                        "role": "user",
+                        "content": "\nConsider the following C program:\n```\n#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\nint main ()\n{\n\tint x = unknown_int();\n\tint b = unknown_int();\n\twhile (1) {\n\t\tif (!b) {\n\t\t\tbreak;\n\t\t}\n\t\tb = unknown_int();\n\t\tx = x - 1;\n\t\tb = (x >= 0);\n\t}\n\treturn 0;\n}\n```\n\nYou are allowed to use implication to take care of the conditional nature of the code. Use implication (==>) instead of using if-then.\n\nFor all variables, add conjunctions that bound the maximum and minimum values that they can take, if such bounds exist.\n\nIf a variable is always equal to or smaller or larger than another variable, add a conjunction for their relation.\n\nIf the assertion is guarded by a condition, use the guard condition in an implication.\n\nIf certain variables are non-deterministic at the beginning or end of the loop, use an implication to make the invariant trivially true at that location. \n\nOutput the loop invariants for the loop in the program above. Let's think step by step."
+                    },
+                    "First, let's make a note of the pre-conditions or variable assignments in the program:\n- int x = unknown_int(); // x is assigned a non-deterministic integer value\n- int b = unknown_int(); // b is assigned a non-deterministic integer value\n\nNext, let's analyze the loop body and make a note of the loop condition:\n- The loop is an infinite loop (while(1)) with a break statement inside the loop body\n- The break statement is executed when b is equal to 0 (if (!b) { break; })\n\nNow, let's find the necessary loop invariants of the while loop to help Frama-C verify the post-condition:\n\n```\n/*@\n    loop invariant x >= 0 ==> b == 1;\n    loop invariant x < 0 ==> b == 0;\n*/\n```",
+                    "First, let's note the pre-conditions and variable assignments in the program:\n- x is assigned an unknown integer value.\n- b is assigned an unknown integer value.\n\nNow, let's analyze the loop body and make a note of the loop condition:\n- The loop is a while(1) loop, which means it will run indefinitely until a break statement is encountered.\n- The break statement is inside the if(!b) block, so the loop will continue as long as b is non-zero.\n- In each iteration, the value of b is updated with an unknown integer, and x is decremented by 1.\n- After that, b is updated with the result of (x >= 0), which means b will be 1 if x is non-negative, and 0 otherwise.\n\nNow, let's find the necessary loop invariants for the while loop:\n\n```\n/*@ \n    loop invariant x <= \\at(x, Pre);\n    loop invariant b == 0 || b == 1;\n    loop invariant b == 1 ==> x >= 0;\n*/\n```\n\nExplanation:\n1. x cannot increase in the loop because it is always decremented by 1 in each iteration. Therefore, x is always less than or equal to its initial value.\n2. b can only take values 0 or 1 because it is updated as the result of (x >= 0) in each iteration.\n3. If b is 1, it implies that x is non-negative (x >= 0).",
+                    "First, let's identify the pre-conditions or variable assignments in the program:\n- int x = unknown_int();\n- int b = unknown_int();\n\nNext, analyze the loop body and make a note of the loop condition:\n- The loop has a condition \"while (1)\", which is an infinite loop, but it can be broken by the \"break\" statement when \"b\" is zero (not true).\n\nNow, let's determine the loop invariants:\n1. Loop invariant for the value of x: x is non-negative when the loop continues.\n2. Loop invariant for the value of b: b is either 0 or 1, as it is assigned the result of a boolean expression.\n\nGiven these invariants, we can now output the loop invariants for the given program:\n\n```\n/*@ \n    loop invariant x >= 0;\n    loop invariant b == 0 || b == 1;\n*/\n```",
+                    "Pre-conditions and variable assignments:\n1. `int x = unknown_int();` initializes x with a non-deterministic integer value.\n2. `int b = unknown_int();` initializes b with a non-deterministic integer value.\n\nLoop condition:\n- The loop continues as long as `1` is true (an infinite loop), but breaks if `!b` is true.\n\nLoop invariants:\nLet's analyze the loop body to find loop invariants.\n\n1. At the beginning of the loop, b is non-deterministic, so we cannot make any assumption about its value. But we can assume that b is either 0 or non-zero.\n2. In every iteration of the loop, x decreases by 1 and b is set to 1 if x >= 0, otherwise, it is set to 0.\n3. After the loop termination, we know that b is 0, implying x < 0.\n\nNow, let's write the loop invariants:\n\n```\n/*@ \n    loop invariant b == 0 || b != 0;\n    loop invariant x >= -1;\n    loop invariant b != 0 ==> x >= 0;\n    loop invariant b == 0 ==> x < 0;\n*/\n```\n\nThese loop invariants are true before the loop execution, in every iteration of the loop, and after the loop termination. They also help Frama-C verify the post-condition that the program returns 0.",
+                    "First, let's analyze the program and the loop:\n\n1. Pre-conditions or variable assignments in the program:\n   - `int x = unknown_int();`\n   - `int b = unknown_int();`\n\n2. Loop condition and body:\n   - The loop is an infinite loop (`while(1)`), but the `if(!b)` statement with the `break` inside allows it to terminate.\n   - The loop body updates the values of `x` and `b`:\n     - `x` is decremented by 1 in each iteration.\n     - `b` is set to 1 if `x >= 0`, and 0 otherwise.\n\nNow let's find the loop invariants:\n\n1. Before the loop execution:\n   - `x` and `b` can have any integer values.\n\n2. In every iteration of the loop:\n   - `x` is always decreasing.\n\n3. After the loop termination:\n   - The loop terminates when `b` becomes 0, which implies that `x < 0`.\n\nConsidering these observations, we can provide the following loop invariants:\n\n```\n/*@ \n    loop invariant x <= \\at(x, Pre);\n    loop invariant b == 0 ==> x < 0;\n*/\n```"
+                ],
+                "output": [
+                    "/*@\n    loop invariant x >= 0 ==> b == 1;\n    loop invariant x < 0 ==> b == 0;\n*/",
+                    "/*@ \n    loop invariant x <= \\at(x, Pre);\n    loop invariant b == 0 || b == 1;\n    loop invariant b == 1 ==> x >= 0;\n*/",
+                    "/*@ \n    loop invariant x >= 0;\n    loop invariant b == 0 || b == 1;\n*/",
+                    "/*@ \n    loop invariant b == 0 || b != 0;\n    loop invariant x >= -1;\n    loop invariant b != 0 ==> x >= 0;\n    loop invariant b == 0 ==> x < 0;\n*/",
+                    "/*@ \n    loop invariant x <= \\at(x, Pre);\n    loop invariant b == 0 ==> x < 0;\n*/"
+                ]
+            },
+            {
+                "step": "Checking individual completion",
+                "solver_calls": 5,
+                "completions": [
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@\n    loop invariant x >= 0 ==> b == 1;\n    loop invariant x < 0 ==> b == 0;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant x >= 0 ==> b == 1 is preserved but not established.\nloop invariant x < 0 ==> b == 0 is preserved but not established.\n\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant x <= \\at(x, Pre);\n    loop invariant b == 0 || b == 1;\n    loop invariant b == 1 ==> x >= 0;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "Annotation error on line 10: unbound logic variable x. Ignoring loop annotation"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant x >= 0;\n    loop invariant b == 0 || b == 1;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant x >= 0 is neither established nor preserved.\nloop invariant b == 0 || b == 1 is preserved but not established.\n\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant b == 0 || b != 0;\n    loop invariant x >= -1;\n    loop invariant b != 0 ==> x >= 0;\n    loop invariant b == 0 ==> x < 0;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant b == 0 || b != 0 is inductive.\nloop invariant x >= -1 is preserved but not established.\nloop invariant b != 0 ==> x >= 0 is preserved but not established.\nloop invariant b == 0 ==> x < 0 is preserved but not established.\n\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant x <= \\at(x, Pre);\n    loop invariant b == 0 ==> x < 0;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "Annotation error on line 10: unbound logic variable x. Ignoring loop annotation"
+                    }
+                ],
+                "success": false
+            },
+            {
+                "step": "Houdini for individual completion",
+                "success": true,
+                "completions": [
+                    {
+                        "num_solver_calls": 2,
+                        "success": false,
+                        "invariants": "/*@\n    loop invariant x >= 0 ==> b == 1;\n    loop invariant x < 0 ==> b == 0;\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\nint main ()\n{\n\tint x = unknown_int();\n\tint b = unknown_int();\n\t/*@\n\n\n*/\nwhile (1) {\n\t\tif (!b) {\n\t\t\tbreak;\n\t\t}\n\t\tb = unknown_int();\n\t\tx = x - 1;\n\t\tb = (x >= 0);\n\t}\n\treturn 0;\n}",
+                        "checker_output_after_prune": false
+                    },
+                    {
+                        "num_solver_calls": 3,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant x <= \\at(x, Pre);\n    loop invariant b == 0 || b == 1;\n    loop invariant b == 1 ==> x >= 0;\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\nint main ()\n{\n\tint x = unknown_int();\n\tint b = unknown_int();\n\t/*@\n\n\n\n*/\nwhile (1) {\n\t\tif (!b) {\n\t\t\tbreak;\n\t\t}\n\t\tb = unknown_int();\n\t\tx = x - 1;\n\t\tb = (x >= 0);\n\t}\n\treturn 0;\n}",
+                        "checker_output_after_prune": false
+                    },
+                    {
+                        "num_solver_calls": 2,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant x >= 0;\n    loop invariant b == 0 || b == 1;\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\nint main ()\n{\n\tint x = unknown_int();\n\tint b = unknown_int();\n\t/*@\n\n\n*/\nwhile (1) {\n\t\tif (!b) {\n\t\t\tbreak;\n\t\t}\n\t\tb = unknown_int();\n\t\tx = x - 1;\n\t\tb = (x >= 0);\n\t}\n\treturn 0;\n}",
+                        "checker_output_after_prune": false
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant b == 0 || b != 0;\n    loop invariant x >= -1;\n    loop invariant b != 0 ==> x >= 0;\n    loop invariant b == 0 ==> x < 0;\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\nint main ()\n{\n\tint x = unknown_int();\n\tint b = unknown_int();\n\t/*@\nloop invariant i1: b == 0 || b != 0;\n\n\n\n*/\nwhile (1) {\n\t\tif (!b) {\n\t\t\tbreak;\n\t\t}\n\t\tb = unknown_int();\n\t\tx = x - 1;\n\t\tb = (x >= 0);\n\t}\n\treturn 0;\n}",
+                        "checker_output_after_prune": true
+                    },
+                    {
+                        "num_solver_calls": 3,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant x <= \\at(x, Pre);\n    loop invariant b == 0 ==> x < 0;\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\nint main ()\n{\n\tint x = unknown_int();\n\tint b = unknown_int();\n\t/*@\n\n\n*/\nwhile (1) {\n\t\tif (!b) {\n\t\t\tbreak;\n\t\t}\n\t\tb = unknown_int();\n\t\tx = x - 1;\n\t\tb = (x >= 0);\n\t}\n\treturn 0;\n}",
+                        "checker_output_after_prune": false
+                    }
+                ]
+            },
+            {
+                "step": "Houdini for combined completion",
+                "solver_calls": 3,
+                "success": true,
+                "code_with_combined_invariants": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\nint main ()\n{\n\tint x = unknown_int();\n\tint b = unknown_int();\n\t/*@\n\n\n\n\n\n\nloop invariant i8: b == 0 || b != 0;\n\n\n\n*/\nwhile (1) {\n\t\tif (!b) {\n\t\t\tbreak;\n\t\t}\n\t\tb = unknown_int();\n\t\tx = x - 1;\n\t\tb = (x >= 0);\n\t}\n\treturn 0;\n}",
+                "checker_output": true
+            },
+            {
+                "step": "Prompting LLM",
+                "generating_annotation": "loop_variants",
+                "success": true,
+                "llm_chat": [
+                    {
+                        "role": "system",
+                        "content": "A ranking function (also called variant) is an expression  over program variables that are live as the loop head. The value of the expression must decrease with every successive iteration of the loop. And the value must be positive for the loop to continue executing. Finding a ranking function helps prove that the loop must terminate.\nLexicographic ranking functions are a generation. They are a sequence of expressions (e1, e2, ...) with the property that the value of each expression must be positive for the loop to execute. Either e1 must decrease or its value remains the same. If its value remains the same then the value of e2 must decrease.\nFind the ranking function for the loop in the following program and explain why it is a valid ranking function.\n\nInstructions:\nOutput the ranking function in one code block, in ACSL syntax. For example,\n```\n/*@\n    loop variant v;\n*/\n```\nIf the ranking function is a sequence of expressions, output them in different lines in their lexicographic order. "
+                    },
+                    {
+                        "role": "user",
+                        "content": "Consider the following C program:  \n```  \n#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\nint main ()\n{\n\tint x = unknown_int();\n\tint b = unknown_int();\n\twhile (1) {\n\t\tif (!b) {\n\t\t\tbreak;\n\t\t}\n\t\tb = unknown_int();\n\t\tx = x - 1;\n\t\tb = (x >= 0);\n\t}\n\treturn 0;\n}\n```\nFind the ranking function for the loop in the given program and explain why it is a valid ranking function. Let's think step by step. "
+                    },
+                    "First, let's analyze the loop. The loop continues executing until `b` is false (0). Inside the loop, the value of `x` is decreased by 1 in each iteration, and `b` is assigned a value based on whether `x` is greater than or equal to 0.\n\nNow we can identify the ranking function:\n\n```c\n/*@\n    loop variant x;\n*/\n```\n\nThe ranking function is `x`. This is a valid ranking function because:\n\n1. It is an expression over the program variable `x`, which is live at the loop head.\n2. The value of `x` decreases in every iteration (`x = x - 1`), ensuring that the loop will eventually terminate.\n3. The value of `x` must be positive for the loop to continue executing, as `b` is assigned a value based on whether `x` is greater than or equal to 0. When `x` is no longer positive, `b` becomes false, and the loop terminates.",
+                    "First, let's identify the loop and its conditions. In this program, the loop is a while(1) loop, which means it will continue executing until it encounters a break statement. The break statement occurs when the condition \"if (!b)\" is true.\n\nNow, let's identify the variables that change within the loop. In this case, the variables x and b change their values inside the loop. Specifically, x is decremented by 1 in each iteration, and b is updated based on the condition (x >= 0).\n\nNow, let's find the ranking function. Since x decreases in each iteration and its value must be positive for the loop to continue executing, we can use x as the ranking function.\n\nHere is the ranking function in ACSL syntax:\n\n```\n/*@\n    loop variant x;\n*/\n```\n\nThis ranking function is valid because the value of x decreases in each iteration and is always non-negative (x >= 0) for the loop to continue executing. When x becomes negative, b is set to false (0), causing the loop to break and ensuring the loop's termination.",
+                    "First, let's analyze the loop in the given program. The loop continues executing as long as `b` is non-zero. The value of `b` is updated based on the value of `x`. Specifically, `b` is set to 1 if `x >= 0` and 0 otherwise. The value of `x` decreases by 1 in each iteration of the loop.\n\nNow, let's find the ranking function:\n\nThe value of `x` is a good candidate for the ranking function, as it decreases with each iteration and the loop continues executing as long as `x >= 0`. So, the ranking function is `x`.\n\nNow, let's explain why it is a valid ranking function:\n\n1. The value of the ranking function `x` is positive for the loop to continue executing, as `b` is set to 1 only if `x >= 0`.\n2. The value of `x` decreases with every successive iteration of the loop, as `x` is updated with `x - 1` in each iteration.\n\nHence, the ranking function `x` is valid for the given loop.\n\nIn ACSL syntax, the ranking function would be:\n\n```\n/*@\n    loop variant x;\n*/\n```",
+                    "First, let's simplify the loop and its conditions:\n\n```\nint main ()\n{\n\tint x = unknown_int();\n\tint b = unknown_int();\n\twhile (b) {\n\t\tx = x - 1;\n\t\tb = (x >= 0);\n\t}\n\treturn 0;\n}\n```\n\nNow, let's find the ranking function for this loop:\n\n```\nint main ()\n{\n\tint x = unknown_int();\n\tint b = unknown_int();\n\t/*@\n\t\tloop invariant x >= 0;\n\t\tloop variant x;\n\t*/\n\twhile (b) {\n\t\tx = x - 1;\n\t\tb = (x >= 0);\n\t}\n\treturn 0;\n}\n```\n\nThe ranking function for this loop is `x`. It is a valid ranking function because:\n\n1. The value of `x` is positive for the loop to continue executing (as `b` is true only if `x >= 0`).\n\n2. The value of `x` decreases with every successive iteration of the loop (as `x` is decremented by 1 in each iteration).\n\nSince the value of `x` is positive for the loop to execute and it decreases with every iteration, the loop must terminate, proving that `x` is a valid ranking function.",
+                    "First, let's analyze the loop in the program:\n\n```\nwhile (1) {\n    if (!b) {\n        break;\n    }\n    b = unknown_int();\n    x = x - 1;\n    b = (x >= 0);\n}\n```\n\nHere, the loop continues to execute until the condition `!b` is true. During each iteration of the loop, `x` is decreased by 1 and `b` is set to 1 if `x >= 0` and 0 otherwise. So, the loop terminates when `x < 0`.\n\nA suitable ranking function for this loop would be the value of `x`, as it decreases with every iteration and must be positive for the loop to continue executing. In ACSL syntax, the ranking function would be:\n\n```\n/*@\n    loop variant x;\n*/\n```\n\nThis is a valid ranking function because, in each iteration of the loop, the value of `x` is decreased by 1 (x = x - 1), ensuring that the loop will eventually terminate when `x` becomes negative, and `b` is set to 0."
+                ],
+                "output": [
+                    "/*@\n    loop variant x;\n*/",
+                    "/*@\n    loop variant x;\n*/",
+                    "/*@\n    loop variant x;\n*/",
+                    "int main ()\n{\n\tint x = unknown_int();\n\tint b = unknown_int();\n\t/*@\n\t\tloop invariant x >= 0;\n\t\tloop variant x;\n\t*/\n\twhile (b) {\n\t\tx = x - 1;\n\t\tb = (x >= 0);\n\t}\n\treturn 0;\n}",
+                    "/*@\n    loop variant x;\n*/"
+                ]
+            },
+            {
+                "step": "Checking individual completion",
+                "solver_calls": 5,
+                "completions": [
+                    {
+                        "candidate_with_combined_invariants_and_variant": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\nint main ()\n{\n\tint x = unknown_int();\n\tint b = unknown_int();\n\t/*@\nloop invariant i8: b == 0 || b != 0;\nloop variant x;\n*/\nwhile (1) {\n\t\tif (!b) {\n\t\t\tbreak;\n\t\t}\n\t\tb = unknown_int();\n\t\tx = x - 1;\n\t\tb = (x >= 0);\n\t}\n\treturn 0;\n}",
+                        "checker_output": false,
+                        "checker_message": "loop invariant b == 0 || b != 0 is inductive.\n\nLoop variant is Invalid.\n"
+                    },
+                    {
+                        "candidate_with_combined_invariants_and_variant": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\nint main ()\n{\n\tint x = unknown_int();\n\tint b = unknown_int();\n\t/*@\nloop invariant i8: b == 0 || b != 0;\nloop variant x;\n*/\nwhile (1) {\n\t\tif (!b) {\n\t\t\tbreak;\n\t\t}\n\t\tb = unknown_int();\n\t\tx = x - 1;\n\t\tb = (x >= 0);\n\t}\n\treturn 0;\n}",
+                        "checker_output": false,
+                        "checker_message": "loop invariant b == 0 || b != 0 is inductive.\n\nLoop variant is Invalid.\n"
+                    },
+                    {
+                        "candidate_with_combined_invariants_and_variant": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\nint main ()\n{\n\tint x = unknown_int();\n\tint b = unknown_int();\n\t/*@\nloop invariant i8: b == 0 || b != 0;\nloop variant x;\n*/\nwhile (1) {\n\t\tif (!b) {\n\t\t\tbreak;\n\t\t}\n\t\tb = unknown_int();\n\t\tx = x - 1;\n\t\tb = (x >= 0);\n\t}\n\treturn 0;\n}",
+                        "checker_output": false,
+                        "checker_message": "loop invariant b == 0 || b != 0 is inductive.\n\nLoop variant is Invalid.\n"
+                    },
+                    {
+                        "candidate_with_combined_invariants_and_variant": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\nint main ()\n{\n\tint x = unknown_int();\n\tint b = unknown_int();\n\t/*@\nloop invariant i8: b == 0 || b != 0;\nloop variant x;\n*/\nwhile (1) {\n\t\tif (!b) {\n\t\t\tbreak;\n\t\t}\n\t\tb = unknown_int();\n\t\tx = x - 1;\n\t\tb = (x >= 0);\n\t}\n\treturn 0;\n}",
+                        "checker_output": false,
+                        "checker_message": "loop invariant b == 0 || b != 0 is inductive.\n\nLoop variant is Invalid.\n"
+                    },
+                    {
+                        "candidate_with_combined_invariants_and_variant": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\nint main ()\n{\n\tint x = unknown_int();\n\tint b = unknown_int();\n\t/*@\nloop invariant i8: b == 0 || b != 0;\nloop variant x;\n*/\nwhile (1) {\n\t\tif (!b) {\n\t\t\tbreak;\n\t\t}\n\t\tb = unknown_int();\n\t\tx = x - 1;\n\t\tb = (x >= 0);\n\t}\n\treturn 0;\n}",
+                        "checker_output": false,
+                        "checker_message": "loop invariant b == 0 || b != 0 is inductive.\n\nLoop variant is Invalid.\n"
+                    }
+                ],
+                "success": false
+            }
+        ]
+    },
+    "stats": {
+        "success": [
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/PastaB7.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/BrockschmidtCookFuhs-CAV2013-Introduction_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/genady_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_b.12.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/WhileDecr.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_a.09_assume.c"
+        ],
+        "failure": [
+            "../data/benchmarks/tpdb/C_Integer/Ton_Chanh_15/Hanoi_plus_false-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/UrbanMine-ESOP2014-Fig3_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Factorial.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Swingers.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex2.07_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Piecewise_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/PodelskiRybalchenko-LICS2004-Fig2-TACAS2011-Fig3_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex1.03_true-termination.c",
+            "../data/benchmarks/tpdb/C/Ultimate/Lobnya-Boolean-Reordered_true-termination.c"
+        ],
+        "skipped": [],
+        "total": 15,
+        "success_count": 6,
+        "failure_count": 9,
+        "success_rate": 0.4
+    }
+}

@@ -1,0 +1,364 @@
+{
+    "logs": {
+        "file": "../data/benchmarks/tpdb/C_Integer/Stroeder_15/PastaA6.c",
+        "benchmark_code": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\ntypedef enum {false,true} bool;\n\nint main() {\n    int x;\n    int y;\n    int z;\n    x = unknown_int();\n    y = unknown_int();\n    z = unknown_int();\n    \n    while (x > y + z) {\n        y = y+1;\n        z = z+1;\n    }\n    \n    return 0;\n}",
+        "success": true,
+        "log": [
+            {
+                "step": "Prompting LLM",
+                "generating_annotation": "loop_invariants",
+                "success": true,
+                "llm_chat": [
+                    {
+                        "role": "system",
+                        "content": "You are a helpful AI software assistant that reasons about how code behaves. Given a program, you can find loop invariants, which can then be used to verify some property in the program. \nFrama-C is a software verification tool for C programs. The input to Frama-C is a C program file with ACSL (ANSI/ISO C Specification Language) annotations.\nFor the given program, find the necessary loop invariants of the while loop to help Frama-C verify the post-condition.\n\nInstructions:\n- Make a note of the pre-conditions or variable assignments in the program.\n- Analyze the loop body and make a note of the loop condition. \n- Output loop invariants that are true \n(i) before the loop execution, \n(ii) in every iteration of the loop and \n(iii) after the loop termination, \nsuch that the loop invariants imply the post condition.\n- If a loop invariant is a conjunction, split it into its parts.\n- Output all the loop invariants in one code block. For example:\n```\n/*@ \n    loop invariant i1;\n    loop invariant i2;\n*/\n```\nRules:\n- **Do not use variables or functions that are not declared in the program.** \n- **Do not make any assumptions about functions whose definitions are not given.**\n- **All undefined variables contain garbage values. Do not use variables that have garbage values.**\n- **Do not use keywords that are not supported in ACSL annotations for loops.**\n- **Variables that are not explicitly initialized, could have garbage values. Do not make any assumptions about such values.**\n- **Do not use the \\at(x, Pre) notation for any variable x.**\n- **Do not use non-deterministic function calls.**"
+                    },
+                    {
+                        "role": "user",
+                        "content": "\nConsider the following C program:\n```\n#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\ntypedef enum {false,true} bool;\n\nint main() {\n    int x;\n    int y;\n    int z;\n    x = unknown_int();\n    y = unknown_int();\n    z = unknown_int();\n    \n    while (x > y + z) {\n        y = y+1;\n        z = z+1;\n    }\n    \n    return 0;\n}\n```\n\nYou are allowed to use implication to take care of the conditional nature of the code. Use implication (==>) instead of using if-then.\n\nFor all variables, add conjunctions that bound the maximum and minimum values that they can take, if such bounds exist.\n\nIf a variable is always equal to or smaller or larger than another variable, add a conjunction for their relation.\n\nIf the assertion is guarded by a condition, use the guard condition in an implication.\n\nIf certain variables are non-deterministic at the beginning or end of the loop, use an implication to make the invariant trivially true at that location. \n\nOutput the loop invariants for the loop in the program above. Let's think step by step."
+                    },
+                    "First, let's make a note of the pre-conditions or variable assignments in the program:\n- x, y, and z are assigned non-deterministic integer values using unknown_int().\n\nNext, let's analyze the loop body and make a note of the loop condition:\n- The loop condition is (x > y + z), and in each iteration, y and z are incremented by 1.\n\nNow, let's find the loop invariants that are true:\n(i) before the loop execution,\n(ii) in every iteration of the loop, and\n(iii) after the loop termination,\nsuch that the loop invariants imply the post-condition.\n\nHere are the loop invariants for the given program:\n\n```\n/*@ \n    loop invariant x >= y + z;\n    loop invariant y == \\at(y, Pre) + (\\at(z, Pre) - z);\n*/\n```\n\nExplanation:\n1. loop invariant x >= y + z: This invariant is true before the loop execution, in every iteration of the loop, and after the loop termination. It ensures that the loop condition (x > y + z) holds true for every iteration. When the loop terminates, the condition becomes false, and x will be less than or equal to y + z.\n\n2. loop invariant y == \\at(y, Pre) + (\\at(z, Pre) - z): This invariant shows the relationship between y and z, as they are incremented by 1 in each iteration. It's true before the loop execution, in every iteration, and after the loop termination. It ensures that the difference between the initial values of y and z remains constant throughout the loop execution.",
+                    "First, let's make a note of the pre-conditions and variable assignments in the program:\n- x, y, and z are assigned non-deterministic integer values using unknown_int().\n\nNext, let's analyze the loop body and make a note of the loop condition:\n- Loop condition: x > y + z\n- Loop body: y = y + 1; z = z + 1;\n\nNow, let's find the loop invariants that are true before the loop execution, in every iteration of the loop, and after the loop termination, such that the loop invariants imply the post condition.\n\nLoop invariants:\n```\n/*@ \n    loop invariant y <= x;\n    loop invariant z <= x;\n    loop invariant x >= y + z;\n*/\n```\n\nHere, the loop invariants are:\n1. y <= x: This is true before the loop execution, in every iteration of the loop, and after the loop termination.\n2. z <= x: This is true before the loop execution, in every iteration of the loop, and after the loop termination.\n3. x >= y + z: This is true before the loop execution, in every iteration of the loop, and after the loop termination.",
+                    "First, note the pre-conditions and variable assignments:\n\n- x, y, and z are assigned values from unknown_int() function. We don't know the values assigned and cannot make any assumptions about them.\n- The loop condition is (x > y + z).\n\nNow, let's analyze the loop body and identify the loop invariants:\n\n1. The values of x, y, and z are integers (bounds of int in C).\n2. y and z are incremented by 1 in each iteration.\n3. The value of x remains constant throughout the loop.\n4. The loop terminates when x <= y + z.\n\nConsidering these properties, we can write the following loop invariants:\n\n```\n/*@\n    loop invariant x == \\at(x, Pre);\n    loop invariant y <= x;\n    loop invariant z <= x;\n    loop invariant y >= \\at(y, Pre);\n    loop invariant z >= \\at(z, Pre);\n*/\n```\n\nExplanation:\n\n1. The value of x remains constant throughout the loop (x == \\at(x, Pre)).\n2. Since x > y + z is the loop condition, y and z cannot be greater than x (y <= x and z <= x).\n3. y and z are incremented in each iteration, so their values are always greater than or equal to their initial values (y >= \\at(y, Pre) and z >= \\at(z, Pre)).",
+                    "First, let's note the pre-conditions or variable assignments in the program:\n\n- x, y, and z are assigned non-deterministic integer values using the `unknown_int()` function.\n\nNext, let's analyze the loop condition and body:\n\n- The loop condition is `x > y + z`.\n- In every iteration of the loop, y and z are incremented by 1.\n\nNow, let's find the loop invariants:\n\n1. Since y and z are incremented by 1 in every iteration, the difference between their values remains constant throughout the loop execution. Let's denote this difference as d, where d = y_initial - z_initial, where y_initial and z_initial are the initial values of y and z before the loop starts.\n\n2. The loop terminates when x <= y + z. So, at the end of the loop, we have x <= y_final + z_final, where y_final and z_final are the values of y and z after the loop terminates.\n\nNow, let's write down the loop invariants:\n\n```\n/*@ \n    loop invariant d == y - z;\n    loop invariant x > y + z ==> x > y + d;\n*/\n```",
+                    "We start by analyzing the given program:\n\n1. Pre-conditions or variable assignments: \n    - x, y, and z are assigned non-deterministic integer values.\n\n2. Loop condition: \n    - The loop continues to execute as long as x > y + z.\n\n3. Post-condition: \n    - There is no explicit post-condition, but we can assume that the program terminates and returns 0.\n\nNow, we can derive the loop invariants that hold true before the loop execution, in every iteration, and after the loop termination:\n\n```\n/*@ \n    loop invariant x >= y + z;\n    loop invariant y == \\at(y, LoopEntry) + (\\at(z, LoopCurrent) - \\at(z, LoopEntry));\n*/\n```\n\nExplanation:\n\n- The first loop invariant `x >= y + z` holds true before the loop execution (since it's the loop condition), during every iteration, and after the loop termination (when x <= y + z).\n\n- The second loop invariant `y == \\at(y, LoopEntry) + (\\at(z, LoopCurrent) - \\at(z, LoopEntry))` captures the relationship between y and z. As y and z are both incremented by 1 in each iteration, the difference between their current values and their initial values will be equal."
+                ],
+                "output": [
+                    "/*@ \n    loop invariant x >= y + z;\n    loop invariant y == \\at(y, Pre) + (\\at(z, Pre) - z);\n*/",
+                    "/*@ \n    loop invariant y <= x;\n    loop invariant z <= x;\n    loop invariant x >= y + z;\n*/",
+                    "/*@\n    loop invariant x == \\at(x, Pre);\n    loop invariant y <= x;\n    loop invariant z <= x;\n    loop invariant y >= \\at(y, Pre);\n    loop invariant z >= \\at(z, Pre);\n*/",
+                    "/*@ \n    loop invariant d == y - z;\n    loop invariant x > y + z ==> x > y + d;\n*/",
+                    "/*@ \n    loop invariant x >= y + z;\n    loop invariant y == \\at(y, LoopEntry) + (\\at(z, LoopCurrent) - \\at(z, LoopEntry));\n*/"
+                ]
+            },
+            {
+                "step": "Checking individual completion",
+                "solver_calls": 5,
+                "completions": [
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant x >= y + z;\n    loop invariant y == \\at(y, Pre) + (\\at(z, Pre) - z);\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "Annotation error on line 17: unbound logic variable y. Ignoring loop annotation"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant y <= x;\n    loop invariant z <= x;\n    loop invariant x >= y + z;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant y <= x is neither established nor preserved.\nloop invariant z <= x is neither established nor preserved.\nloop invariant x >= y + z is neither established nor preserved.\n\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@\n    loop invariant x == \\at(x, Pre);\n    loop invariant y <= x;\n    loop invariant z <= x;\n    loop invariant y >= \\at(y, Pre);\n    loop invariant z >= \\at(z, Pre);\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "Annotation error on line 16: unbound logic variable x. Ignoring loop annotation"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant d == y - z;\n    loop invariant x > y + z ==> x > y + d;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "Annotation error on line 16: unbound logic variable d. Ignoring loop annotation"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant x >= y + z;\n    loop invariant y == \\at(y, LoopEntry) + (\\at(z, LoopCurrent) - \\at(z, LoopEntry));\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant x >= y + z is neither established nor preserved.\nloop invariant y == \\at(y, LoopEntry) + (\\at(z, LoopCurrent) - \\at(z, LoopEntry)) is inductive.\n\n"
+                    }
+                ],
+                "success": false
+            },
+            {
+                "step": "Houdini for individual completion",
+                "success": true,
+                "completions": [
+                    {
+                        "num_solver_calls": 3,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant x >= y + z;\n    loop invariant y == \\at(y, Pre) + (\\at(z, Pre) - z);\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\ntypedef enum {false,true} bool;\n\nint main() {\n    int x;\n    int y;\n    int z;\n    x = unknown_int();\n    y = unknown_int();\n    z = unknown_int();\n    \n    /*@\n\n\n*/\nwhile (x > y + z) {\n        y = y+1;\n        z = z+1;\n    }\n    \n    return 0;\n}",
+                        "checker_output_after_prune": false
+                    },
+                    {
+                        "num_solver_calls": 2,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant y <= x;\n    loop invariant z <= x;\n    loop invariant x >= y + z;\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\ntypedef enum {false,true} bool;\n\nint main() {\n    int x;\n    int y;\n    int z;\n    x = unknown_int();\n    y = unknown_int();\n    z = unknown_int();\n    \n    /*@\n\n\n\n*/\nwhile (x > y + z) {\n        y = y+1;\n        z = z+1;\n    }\n    \n    return 0;\n}",
+                        "checker_output_after_prune": false
+                    },
+                    {
+                        "num_solver_calls": 5,
+                        "success": false,
+                        "invariants": "/*@\n    loop invariant x == \\at(x, Pre);\n    loop invariant y <= x;\n    loop invariant z <= x;\n    loop invariant y >= \\at(y, Pre);\n    loop invariant z >= \\at(z, Pre);\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\ntypedef enum {false,true} bool;\n\nint main() {\n    int x;\n    int y;\n    int z;\n    x = unknown_int();\n    y = unknown_int();\n    z = unknown_int();\n    \n    /*@\n\n\n\n\n\n*/\nwhile (x > y + z) {\n        y = y+1;\n        z = z+1;\n    }\n    \n    return 0;\n}",
+                        "checker_output_after_prune": false
+                    },
+                    {
+                        "num_solver_calls": 3,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant d == y - z;\n    loop invariant x > y + z ==> x > y + d;\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\ntypedef enum {false,true} bool;\n\nint main() {\n    int x;\n    int y;\n    int z;\n    x = unknown_int();\n    y = unknown_int();\n    z = unknown_int();\n    \n    /*@\n\n\n*/\nwhile (x > y + z) {\n        y = y+1;\n        z = z+1;\n    }\n    \n    return 0;\n}",
+                        "checker_output_after_prune": false
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant x >= y + z;\n    loop invariant y == \\at(y, LoopEntry) + (\\at(z, LoopCurrent) - \\at(z, LoopEntry));\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\ntypedef enum {false,true} bool;\n\nint main() {\n    int x;\n    int y;\n    int z;\n    x = unknown_int();\n    y = unknown_int();\n    z = unknown_int();\n    \n    /*@\n\nloop invariant i2: y == \\at(y, LoopEntry) + (\\at(z, LoopCurrent) - \\at(z, LoopEntry));\n*/\nwhile (x > y + z) {\n        y = y+1;\n        z = z+1;\n    }\n    \n    return 0;\n}",
+                        "checker_output_after_prune": true
+                    }
+                ]
+            },
+            {
+                "step": "Houdini for combined completion",
+                "solver_calls": 7,
+                "success": true,
+                "code_with_combined_invariants": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\ntypedef enum {false,true} bool;\n\nint main() {\n    int x;\n    int y;\n    int z;\n    x = unknown_int();\n    y = unknown_int();\n    z = unknown_int();\n    \n    /*@\n\n\n\n\n\n\n\n\n\nloop invariant i14: y == \\at(y, LoopEntry) + (\\at(z, LoopCurrent) - \\at(z, LoopEntry));\n*/\nwhile (x > y + z) {\n        y = y+1;\n        z = z+1;\n    }\n    \n    return 0;\n}",
+                "checker_output": true
+            },
+            {
+                "step": "Prompting LLM",
+                "generating_annotation": "loop_variants",
+                "success": true,
+                "llm_chat": [
+                    {
+                        "role": "system",
+                        "content": "A ranking function (also called variant) is an expression  over program variables that are live as the loop head. The value of the expression must decrease with every successive iteration of the loop. And the value must be positive for the loop to continue executing. Finding a ranking function helps prove that the loop must terminate.\nLexicographic ranking functions are a generation. They are a sequence of expressions (e1, e2, ...) with the property that the value of each expression must be positive for the loop to execute. Either e1 must decrease or its value remains the same. If its value remains the same then the value of e2 must decrease.\nFind the ranking function for the loop in the following program and explain why it is a valid ranking function.\n\nInstructions:\nOutput the ranking function in one code block, in ACSL syntax. For example,\n```\n/*@\n    loop variant v;\n*/\n```\nIf the ranking function is a sequence of expressions, output them in different lines in their lexicographic order. "
+                    },
+                    {
+                        "role": "user",
+                        "content": "Consider the following C program:  \n```  \n#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\ntypedef enum {false,true} bool;\n\nint main() {\n    int x;\n    int y;\n    int z;\n    x = unknown_int();\n    y = unknown_int();\n    z = unknown_int();\n    \n    while (x > y + z) {\n        y = y+1;\n        z = z+1;\n    }\n    \n    return 0;\n}\n```\nFind the ranking function for the loop in the given program and explain why it is a valid ranking function. Let's think step by step. "
+                    },
+                    "First, let's analyze the loop conditions and the variables involved. The loop continues executing as long as `x > y + z`. In each iteration, `y` and `z` are incremented by 1. We need to find an expression that decreases with every iteration and is positive when the loop continues executing.\n\nIn this case, the ranking function is `x - y - z`. Let's analyze why it is a valid ranking function:\n\n1. Positivity: When the loop continues executing, we have `x > y + z`. Thus, `x - y - z > 0`, which means the ranking function is positive.\n\n2. Decreasing: In each iteration, both `y` and `z` are incremented by 1. Therefore, the value of the expression `x - y - z` decreases by 2 in each iteration.\n\nSo, the ranking function for the given loop is:\n\n```\n/*@\n    loop variant x - y - z;\n*/\n```\n\nThis ranking function is valid because it is positive while the loop continues executing and decreases with every successive iteration, ensuring the loop's termination.",
+                    "First, let's analyze the loop:\n\n```\nwhile (x > y + z) {\n    y = y+1;\n    z = z+1;\n}\n```\n\nThe loop continues as long as `x > y + z`. In each iteration, both `y` and `z` are incremented by 1. To find a ranking function, we need an expression that decreases with each iteration of the loop and remains positive as long as the loop continues executing.\n\nA possible ranking function for this loop is `x - (y + z)`. Let's see if it meets the criteria:\n\n1. The value of the expression decreases with each iteration: In each iteration, `y` and `z` are incremented by 1, so the value of `y + z` increases. Since `x` remains constant, the value of `x - (y + z)` decreases.\n\n2. The value of the expression is positive for the loop to continue executing: The loop condition is `x > y + z`, so as long as the loop continues executing, the value of `x - (y + z)` is positive.\n\nTherefore, the ranking function is valid for this loop. In ACSL syntax, we can express it as:\n\n```\n/*@\n    loop variant x - (y + z);\n*/\n```",
+                    "First, let's identify the loop in the given program:\n\n```c\nwhile (x > y + z) {\n    y = y+1;\n    z = z+1;\n}\n```\n\nNow let's find the ranking function for this loop. We can use the expression `x - y - z` as the ranking function. Let's explain why it is a valid ranking function.\n\n1. The value of the expression is positive for the loop to continue executing: The loop condition is `x > y + z`, so as long as the loop is executing, `x - y - z > 0`.\n\n2. The value of the expression must decrease with every successive iteration of the loop: In each iteration, both `y` and `z` are incremented by 1. Therefore, the value of `x - y - z` will decrease by 2 in each iteration.\n\nSince the ranking function is positive and decreases with each loop iteration, it is a valid ranking function. Now let's write it in ACSL syntax:\n\n```c\n/*@\n    loop variant x - y - z;\n*/\n```",
+                    "First, let's identify the loop in the given program:\n\n```\nwhile (x > y + z) {\n    y = y+1;\n    z = z+1;\n}\n```\n\nNow, let's find the ranking function for this loop. We can use the expression `x - (y + z)` as the ranking function.\n\nHere's why it is a valid ranking function:\n\n1. The value of the expression `x - (y + z)` is positive for the loop to continue executing, as the loop condition is `x > y + z`.\n\n2. With every iteration of the loop, the value of `y` and `z` increase by 1, which means the value of `y + z` increases. As a result, the value of the expression `x - (y + z)` decreases.\n\nSo, the ranking function for this loop is `x - (y + z)`. In ACSL syntax, the ranking function would be:\n\n```\n/*@\n    loop variant x - (y + z);\n*/\n```\n\nThis ranking function is valid because it satisfies the conditions for a ranking function: it is positive for the loop to continue executing, and its value decreases with every successive iteration of the loop, ensuring that the loop must eventually terminate.",
+                    "First, let's analyze the loop in the program:\n\n```\nwhile (x > y + z) {\n    y = y+1;\n    z = z+1;\n}\n```\n\nThe loop continues as long as the condition `x > y + z` holds true. In each iteration, both `y` and `z` are incremented by 1. To find a ranking function, we want to identify an expression that decreases with each iteration and is positive for the loop to continue executing.\n\nLet's define the ranking function `v` as `x - y - z`. Now, let's see if this ranking function meets the requirements.\n\n1. The value of the expression must decrease with every successive iteration of the loop: Since `y` and `z` are both incremented by 1 in each iteration, the value of `x - y - z` decreases by 2 in each iteration.\n\n2. The value must be positive for the loop to continue executing: The loop condition `x > y + z` implies that `x - y - z > 0`.\n\nBased on the analysis, the ranking function `v = x - y - z` is a valid ranking function for the given loop. Here's the ranking function in ACSL syntax:\n\n```\n/*@\n    loop variant x - y - z;\n*/\n```"
+                ],
+                "output": [
+                    "/*@\n    loop variant x - y - z;\n*/",
+                    "/*@\n    loop variant x - (y + z);\n*/",
+                    "/*@\n    loop variant x - y - z;\n*/",
+                    "/*@\n    loop variant x - (y + z);\n*/",
+                    "/*@\n    loop variant x - y - z;\n*/"
+                ]
+            },
+            {
+                "step": "Checking individual completion",
+                "solver_calls": 5,
+                "completions": [
+                    {
+                        "candidate_with_combined_invariants_and_variant": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\ntypedef enum {false,true} bool;\n\nint main() {\n    int x;\n    int y;\n    int z;\n    x = unknown_int();\n    y = unknown_int();\n    z = unknown_int();\n    \n    /*@\nloop invariant i14: y == \\at(y, LoopEntry) + (\\at(z, LoopCurrent) - \\at(z, LoopEntry));\nloop variant x - y - z;\n*/\nwhile (x > y + z) {\n        y = y+1;\n        z = z+1;\n    }\n    \n    return 0;\n}",
+                        "checker_output": true,
+                        "checker_message": "loop invariant y == \\at(y, LoopEntry) + (\\at(z, LoopCurrent) - \\at(z, LoopEntry)) is inductive.\n\nLoop variant is Valid.\n"
+                    },
+                    {
+                        "candidate_with_combined_invariants_and_variant": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\ntypedef enum {false,true} bool;\n\nint main() {\n    int x;\n    int y;\n    int z;\n    x = unknown_int();\n    y = unknown_int();\n    z = unknown_int();\n    \n    /*@\nloop invariant i14: y == \\at(y, LoopEntry) + (\\at(z, LoopCurrent) - \\at(z, LoopEntry));\nloop variant x - (y + z);\n*/\nwhile (x > y + z) {\n        y = y+1;\n        z = z+1;\n    }\n    \n    return 0;\n}",
+                        "checker_output": true,
+                        "checker_message": "loop invariant y == \\at(y, LoopEntry) + (\\at(z, LoopCurrent) - \\at(z, LoopEntry)) is inductive.\n\nLoop variant is Valid.\n"
+                    },
+                    {
+                        "candidate_with_combined_invariants_and_variant": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\ntypedef enum {false,true} bool;\n\nint main() {\n    int x;\n    int y;\n    int z;\n    x = unknown_int();\n    y = unknown_int();\n    z = unknown_int();\n    \n    /*@\nloop invariant i14: y == \\at(y, LoopEntry) + (\\at(z, LoopCurrent) - \\at(z, LoopEntry));\nloop variant x - y - z;\n*/\nwhile (x > y + z) {\n        y = y+1;\n        z = z+1;\n    }\n    \n    return 0;\n}",
+                        "checker_output": true,
+                        "checker_message": "loop invariant y == \\at(y, LoopEntry) + (\\at(z, LoopCurrent) - \\at(z, LoopEntry)) is inductive.\n\nLoop variant is Valid.\n"
+                    },
+                    {
+                        "candidate_with_combined_invariants_and_variant": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\ntypedef enum {false,true} bool;\n\nint main() {\n    int x;\n    int y;\n    int z;\n    x = unknown_int();\n    y = unknown_int();\n    z = unknown_int();\n    \n    /*@\nloop invariant i14: y == \\at(y, LoopEntry) + (\\at(z, LoopCurrent) - \\at(z, LoopEntry));\nloop variant x - (y + z);\n*/\nwhile (x > y + z) {\n        y = y+1;\n        z = z+1;\n    }\n    \n    return 0;\n}",
+                        "checker_output": true,
+                        "checker_message": "loop invariant y == \\at(y, LoopEntry) + (\\at(z, LoopCurrent) - \\at(z, LoopEntry)) is inductive.\n\nLoop variant is Valid.\n"
+                    },
+                    {
+                        "candidate_with_combined_invariants_and_variant": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\ntypedef enum {false,true} bool;\n\nint main() {\n    int x;\n    int y;\n    int z;\n    x = unknown_int();\n    y = unknown_int();\n    z = unknown_int();\n    \n    /*@\nloop invariant i14: y == \\at(y, LoopEntry) + (\\at(z, LoopCurrent) - \\at(z, LoopEntry));\nloop variant x - y - z;\n*/\nwhile (x > y + z) {\n        y = y+1;\n        z = z+1;\n    }\n    \n    return 0;\n}",
+                        "checker_output": true,
+                        "checker_message": "loop invariant y == \\at(y, LoopEntry) + (\\at(z, LoopCurrent) - \\at(z, LoopEntry)) is inductive.\n\nLoop variant is Valid.\n"
+                    }
+                ],
+                "success": true
+            }
+        ]
+    },
+    "stats": {
+        "success": [
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/PastaB7.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/BrockschmidtCookFuhs-CAV2013-Introduction_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/genady_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_b.12.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/WhileDecr.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_a.09_assume.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex3.04_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/AliasDarteFeautrierGonnord-SAS2010-speedpldi2_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Bangalore_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_java_Break.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/PastaB2.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/LogMult.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/KroeningSharyginaTsitovichWintersteiger-CAV2010-Ex_true-termination.c",
+            "../data/benchmarks/non_termination/loop/Signed_Overflow_Error_3_T.c",
+            "../data/benchmarks/tpdb/C/Ultimate/Parallel_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_ex2.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/HeizmannHoenickeLeikePodelski-ATVA2013-Fig6_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex2.10_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/PastaC7.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChawdharyCookGulwaniSagivYang-ESOP2008-random1d_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_b.11.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/genady_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Nyala-2lex_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_ex3b.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_b.05.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex2.20_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_ex1.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_a.05.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/ChenFlurMukhopadhyay-SAS2012-Ex2.10_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_a.04.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/HeizmannHoenickeLeikePodelski-ATVA2013-Fig9_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/PastaA7.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/HeizmannHoenickeLeikePodelski-ATVA2013-Fig6_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/HeizmannHoenickeLeikePodelski-ATVA2013-Fig8_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_java_Continue1.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/AliasDarteFeautrierGonnord-SAS2010-random2d_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/aaron2_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/aaron2_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/ChenFlurMukhopadhyay-SAS2012-Ex1.04_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChawdharyCookGulwaniSagivYang-ESOP2008-random2d_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/PastaA4.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_fermat.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Overflow.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/Toulouse-BranchesToLoop_true-termination.c",
+            "../data/benchmarks/non_termination/loop/Signed_Overflow_Error_2_T.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/PastaC3.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_b.13.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/GulavaniGulwani-CAV2008-Fig1a_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_a.06.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/AliasDarteFeautrierGonnord-SAS2010-ndecr_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/PodelskiRybalchenko-TACAS2011-Fig1_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/HeizmannHoenickeLeikePodelski-ATVA2013-Fig9_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/PastaA8.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/HeizmannHoenickeLeikePodelski-ATVA2013-Fig5_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/KroeningSharyginaTsitovichWintersteiger-CAV2010-Ex_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/AliasDarteFeautrierGonnord-SAS2010-random1d_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/PastaC9.c",
+            "../data/benchmarks/non_termination/loop/Unsigned_Wraparound_Error_4_T.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/MinusBuiltIn.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Masse-VMCAI2014-Ex6_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_a.07.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/CookSeeZuleger-TACAS2013-Fig1_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/PastaB6.c",
+            "../data/benchmarks/non_termination/loop/Type_Conversion_in_Comparison_1_T.c",
+            "../data/benchmarks/non_termination/loop/Incorrect_Update_for_Loop_Iterator_1_T.c",
+            "../data/benchmarks/tpdb/C/Ultimate/Bangalore_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/AliasDarteFeautrierGonnord-SAS2010-ndecr_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/BradleyMannaSipma-CAV2005-Fig1_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/MinusMin.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/LeikeHeizmann-WST2014-Ex9_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/AliasDarteFeautrierGonnord-SAS2010-speedFails4_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_b.09-no-inv_assume.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Copenhagen_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_easySum.c",
+            "../data/benchmarks/non_termination/loop/Unsigned_Wraparound_Error_3_T.c",
+            "../data/benchmarks/non_termination/loop/Undefined_Behavior_3_T.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex3.10_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/ChenFlurMukhopadhyay-SAS2012-Ex1.02_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/PastaA6.c"
+        ],
+        "failure": [
+            "../data/benchmarks/tpdb/C_Integer/Ton_Chanh_15/Hanoi_plus_false-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/UrbanMine-ESOP2014-Fig3_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Factorial.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Swingers.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex2.07_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Piecewise_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/PodelskiRybalchenko-LICS2004-Fig2-TACAS2011-Fig3_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex1.03_true-termination.c",
+            "../data/benchmarks/tpdb/C/Ultimate/Lobnya-Boolean-Reordered_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/ChenFlurMukhopadhyay-SAS2012-Ex2.22_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex2.08_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/CookSeeZuleger-TACAS2013-Fig8a-modified_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex2.09_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/LeikeHeizmann-WST2014-Ex5_false-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex2.18_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex4.01_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Ton_Chanh_15/Benghazi_nondet_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex1.02_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/GulwaniJainKoskinen-PLDI2009-Fig1_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/ChenFlurMukhopadhyay-SAS2012-Ex2.16_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Pure2Phase_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/PodelskiRybalchenko-LICS2004-Fig2_true-termination.c",
+            "../data/benchmarks/tpdb/C/Ultimate/Cairo_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/LeikeHeizmann-TACAS2014-Fig1_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Pure3Phase_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_c.07.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex3.03_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/PlusSwap.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/AliasDarteFeautrierGonnord-SAS2010-counterex1a_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/aaron3_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Toulouse-MultiBranchesToLoop_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/AliasDarteFeautrierGonnord-SAS2010-counterex1a_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex1.01_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/LeikeHeizmann-TACAS2014-Ex9_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/min_rf_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Et1.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/2Nested_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/ChenFlurMukhopadhyay-SAS2012-Ex2.08_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Masse-VMCAI2014-Fig1b_true-termination.c",
+            "../data/benchmarks/tpdb/C/Ultimate/Gothenburg_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/NoriSharma-FSE2013-Fig8_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/CookSeeZuleger-TACAS2013-Fig8b_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Toulouse-BranchesToLoop_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/MenloPark_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex2.13_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/AliasDarteFeautrierGonnord-SAS2010-rsd_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/TelAviv-Amir-Minimum_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex3.09_true-termination.c",
+            "../data/benchmarks/non_termination/loop/Signed_Overflow_Error_1_T.c",
+            "../data/benchmarks/non_termination/loop/Incorrect_Bit_Calculation_3_T.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex2.06_false-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_b.03-no-inv_assume.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/GopanReps-CAV2006-Fig1a_true-termination.c.c",
+            "../data/benchmarks/non_termination/loop/Incorrect_Bit_Calculation_2_T.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Gothenburg_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Thun_true-termination.c",
+            "../data/benchmarks/tpdb/C/Ultimate/Pure3Phase_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/PastaA10.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/AliasDarteFeautrierGonnord-SAS2010-speedpldi2_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Stockholm_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/IntPath.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex2.19_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Ben-Amram-LMCS2010-Ex2.3_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Fibonacci.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/CookSeeZuleger-TACAS2013-Fig7b_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/DoubleNeg.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/ChenFlurMukhopadhyay-SAS2012-Ex4.01_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/BradleyMannaSipma-ICALP2005-Fig1_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/ChenFlurMukhopadhyay-SAS2012-Ex2.01_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Masse-VMCAI2014-Fig1a_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ColonSipma-TACAS2001-Fig1_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/AliasDarteFeautrierGonnord-SAS2010-speedpldi4_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/TelAviv-Amir-Minimum_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_flag.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/CookSeeZuleger-TACAS2013-Fig8a_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex2.11_false-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/min_rf_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex2.16_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Mysore_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/PodelskiRybalchenko-VMCAI2004-Ex2_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/ChawdharyCookGulwaniSagivYang-ESOP2008-aaron6_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/Toulouse-MultiBranchesToLoop_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Ton_Chanh_15/McCarthy91_Iteration_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/NO_24.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/AliasDarteFeautrierGonnord-SAS2010-wise_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Ton_Chanh_15/Copenhagen_disj_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/CookSeeZuleger-TACAS2013-Fig7a_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/AliasDarteFeautrierGonnord-SAS2010-wise_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/ChenFlurMukhopadhyay-SAS2012-Ex3.05_true-termination.c"
+        ],
+        "skipped": [],
+        "total": 168,
+        "success_count": 79,
+        "failure_count": 89,
+        "success_rate": 0.47023809523809523
+    }
+}

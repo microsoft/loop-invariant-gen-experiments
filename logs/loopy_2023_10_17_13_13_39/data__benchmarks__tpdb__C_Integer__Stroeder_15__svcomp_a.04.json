@@ -1,0 +1,263 @@
+{
+    "logs": {
+        "file": "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_a.04.c",
+        "benchmark_code": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\ntypedef enum {false, true} bool;\n\nint main() {\n    int c;\n    int x, y;\n    x = unknown_int();\n    y = unknown_int();\n    c = 0;\n    while (x > y) {\n        y = y + 1;\n        c = c + 1;\n    }\n    return 0;\n}",
+        "success": true,
+        "log": [
+            {
+                "step": "Prompting LLM",
+                "generating_annotation": "loop_invariants",
+                "success": true,
+                "llm_chat": [
+                    {
+                        "role": "system",
+                        "content": "You are a helpful AI software assistant that reasons about how code behaves. Given a program, you can find loop invariants, which can then be used to verify some property in the program. \nFrama-C is a software verification tool for C programs. The input to Frama-C is a C program file with ACSL (ANSI/ISO C Specification Language) annotations.\nFor the given program, find the necessary loop invariants of the while loop to help Frama-C verify the post-condition.\n\nInstructions:\n- Make a note of the pre-conditions or variable assignments in the program.\n- Analyze the loop body and make a note of the loop condition. \n- Output loop invariants that are true \n(i) before the loop execution, \n(ii) in every iteration of the loop and \n(iii) after the loop termination, \nsuch that the loop invariants imply the post condition.\n- If a loop invariant is a conjunction, split it into its parts.\n- Output all the loop invariants in one code block. For example:\n```\n/*@ \n    loop invariant i1;\n    loop invariant i2;\n*/\n```\nRules:\n- **Do not use variables or functions that are not declared in the program.** \n- **Do not make any assumptions about functions whose definitions are not given.**\n- **All undefined variables contain garbage values. Do not use variables that have garbage values.**\n- **Do not use keywords that are not supported in ACSL annotations for loops.**\n- **Variables that are not explicitly initialized, could have garbage values. Do not make any assumptions about such values.**\n- **Do not use the \\at(x, Pre) notation for any variable x.**\n- **Do not use non-deterministic function calls.**"
+                    },
+                    {
+                        "role": "user",
+                        "content": "\nConsider the following C program:\n```\n#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\ntypedef enum {false, true} bool;\n\nint main() {\n    int c;\n    int x, y;\n    x = unknown_int();\n    y = unknown_int();\n    c = 0;\n    while (x > y) {\n        y = y + 1;\n        c = c + 1;\n    }\n    return 0;\n}\n```\n\nYou are allowed to use implication to take care of the conditional nature of the code. Use implication (==>) instead of using if-then.\n\nFor all variables, add conjunctions that bound the maximum and minimum values that they can take, if such bounds exist.\n\nIf a variable is always equal to or smaller or larger than another variable, add a conjunction for their relation.\n\nIf the assertion is guarded by a condition, use the guard condition in an implication.\n\nIf certain variables are non-deterministic at the beginning or end of the loop, use an implication to make the invariant trivially true at that location. \n\nOutput the loop invariants for the loop in the program above. Let's think step by step."
+                    },
+                    "First, let's note the pre-conditions and variable assignments:\n- x and y are assigned unknown_int(), which means their initial values are non-deterministic.\n- c is initialized to 0.\n\nNow, let's analyze the loop body and loop condition:\n- Loop condition: x > y\n- Loop body: y is incremented by 1, and c is incremented by 1.\n\nNow, let's find the loop invariants:\n\n1. Before the loop execution and in every iteration of the loop, c is always non-negative.\n2. Before the loop execution and in every iteration of the loop, y is incremented by 1 in each iteration, so the difference between the current value of y and its initial value is equal to the value of c.\n3. After the loop termination, x is no longer greater than y, so x <= y.\n\nHere are the loop invariants:\n\n```\n/*@ \n    loop invariant c >= 0;\n    loop invariant y == \\at(y, Pre) + c;\n    loop variant x - y;\n*/\n```\n\nThis set of loop invariants satisfy the conditions:\n(i) they are true before the loop execution,\n(ii) they are true in every iteration of the loop, and\n(iii) they imply the post condition (x <= y) after the loop termination.",
+                    "First, let's analyze the preconditions and assignments in the given program:\n- x and y are assigned unknown integer values.\n- c is assigned the value 0.\n\nNext, we analyze the loop condition:\n- The loop continues executing as long as x > y.\n\nNow, we need to find the loop invariants that are true before the loop execution, in every iteration of the loop, and after the loop termination. Here are the loop invariants for the given program:\n\n```\n/*@ \n    loop invariant 0 <= c;\n    loop invariant c <= x;\n    loop invariant y == c + \\at(y, Pre);\n*/\n```\n\nThese loop invariants represent the following:\n- c is always non-negative.\n- c is always less than or equal to x.\n- The current value of y is equal to the initial value of y plus the value of c.",
+                    "First, let's make a note of the variable assignments in the program:\n\n- x is assigned an unknown integer value.\n- y is assigned an unknown integer value.\n- c is initially set to 0.\n\nNext, let's analyze the loop body and make a note of the loop condition:\n\n- The loop condition is x > y.\n- In each iteration, y is incremented by 1 and c is incremented by 1.\n\nNow, let's output the loop invariants that are true (i) before the loop execution, (ii) in every iteration of the loop, and (iii) after the loop termination:\n\n```\n/*@ \n    loop invariant x >= y;\n    loop invariant c >= 0;\n    loop invariant c == (y - \\at(y, Pre));\n*/\n```\n\nHere are the loop invariants:\n\n1. x is always greater than or equal to y. This holds true before the loop execution, in every iteration of the loop, and after the loop termination.\n2. c is always greater than or equal to 0. This is true because c is initialized to 0 and is incremented by 1 in each loop iteration.\n3. c is equal to the difference between the current value of y and its initial value. This holds true in every iteration of the loop and after the loop termination, as both y and c are incremented by 1 in each iteration.",
+                    "First, let's note the pre-conditions and variable assignments:\n- x and y are assigned unknown integers.\n- c is initialized to 0.\n\nNow, let's analyze the loop body and make a note of the loop condition:\n- The loop condition is `x > y`.\n- In each iteration, y is incremented by 1 and c is incremented by 1.\n\nNow, let's output the loop invariants:\n```\n/*@ \n    loop invariant 0 <= c;\n    loop invariant c <= x - y;\n    loop invariant x - c <= y;\n*/\n```\n\nExplanation:\n1. `c` is always non-negative since it starts at 0 and only increases.\n2. `c` is incremented each time `y` is incremented, and since `x > y` initially, the difference between `x` and `y` is always greater than or equal to `c`.\n3. `y` is incremented each time the loop iterates, so the difference between `x` and `y` decreases, and `y` is always less than or equal to `x - c`.",
+                    "First, let's analyze the given program:\n\nPre-conditions and variable assignments:\n1. x and y are assigned non-deterministic integer values.\n2. c is initialized to 0.\n\nLoop condition:\n1. The loop continues as long as x > y.\n\nBased on this information, we can determine the following loop invariants:\n\n```\n/*@ \n    loop invariant y <= x ==> c >= 0;\n    loop invariant y <= x ==> c == x - y;\n    loop invariant y > x ==> c == x - y + 1;\n*/\n```\n\nExplanation:\n1. c is always non-negative, and it is only updated when x > y.\n2. When x > y, c is equal to the difference between x and y.\n3. When x <= y (loop termination), c is equal to the difference between x and y minus 1."
+                ],
+                "output": [
+                    "/*@ \n    loop invariant c >= 0;\n    loop invariant y == \\at(y, Pre) + c;\n    loop variant x - y;\n*/",
+                    "/*@ \n    loop invariant 0 <= c;\n    loop invariant c <= x;\n    loop invariant y == c + \\at(y, Pre);\n*/",
+                    "/*@ \n    loop invariant x >= y;\n    loop invariant c >= 0;\n    loop invariant c == (y - \\at(y, Pre));\n*/",
+                    "/*@ \n    loop invariant 0 <= c;\n    loop invariant c <= x - y;\n    loop invariant x - c <= y;\n*/",
+                    "/*@ \n    loop invariant y <= x ==> c >= 0;\n    loop invariant y <= x ==> c == x - y;\n    loop invariant y > x ==> c == x - y + 1;\n*/"
+                ]
+            },
+            {
+                "step": "Checking individual completion",
+                "solver_calls": 5,
+                "completions": [
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant c >= 0;\n    loop invariant y == \\at(y, Pre) + c;\n    loop variant x - y;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "Annotation error on line 15: unbound logic variable y. Ignoring loop annotation"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant 0 <= c;\n    loop invariant c <= x;\n    loop invariant y == c + \\at(y, Pre);\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "Annotation error on line 16: unbound logic variable y. Ignoring loop annotation"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant x >= y;\n    loop invariant c >= 0;\n    loop invariant c == (y - \\at(y, Pre));\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "Annotation error on line 16: unbound logic variable y. Ignoring loop annotation"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant 0 <= c;\n    loop invariant c <= x - y;\n    loop invariant x - c <= y;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant 0 <= c is inductive.\nloop invariant c <= x - y is neither established nor preserved.\nloop invariant x - c <= y is preserved but not established.\n\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant y <= x ==> c >= 0;\n    loop invariant y <= x ==> c == x - y;\n    loop invariant y > x ==> c == x - y + 1;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant y <= x ==> c >= 0 is inductive.\nloop invariant y <= x ==> c == x - y is neither established nor preserved.\nloop invariant y > x ==> c == x - y + 1 is preserved but not established.\n\n"
+                    }
+                ],
+                "success": false
+            },
+            {
+                "step": "Houdini for individual completion",
+                "success": true,
+                "completions": [
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant c >= 0;\n    loop invariant y == \\at(y, Pre) + c;\n    loop variant x - y;\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\ntypedef enum {false, true} bool;\n\nint main() {\n    int c;\n    int x, y;\n    x = unknown_int();\n    y = unknown_int();\n    c = 0;\n    /*@\nloop invariant i1: c >= 0;\n\n*/\nwhile (x > y) {\n        y = y + 1;\n        c = c + 1;\n    }\n    return 0;\n}",
+                        "checker_output_after_prune": true
+                    },
+                    {
+                        "num_solver_calls": 2,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant 0 <= c;\n    loop invariant c <= x;\n    loop invariant y == c + \\at(y, Pre);\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\ntypedef enum {false, true} bool;\n\nint main() {\n    int c;\n    int x, y;\n    x = unknown_int();\n    y = unknown_int();\n    c = 0;\n    /*@\nloop invariant i1: 0 <= c;\n\n\n*/\nwhile (x > y) {\n        y = y + 1;\n        c = c + 1;\n    }\n    return 0;\n}",
+                        "checker_output_after_prune": true
+                    },
+                    {
+                        "num_solver_calls": 2,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant x >= y;\n    loop invariant c >= 0;\n    loop invariant c == (y - \\at(y, Pre));\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\ntypedef enum {false, true} bool;\n\nint main() {\n    int c;\n    int x, y;\n    x = unknown_int();\n    y = unknown_int();\n    c = 0;\n    /*@\n\nloop invariant i2: c >= 0;\n\n*/\nwhile (x > y) {\n        y = y + 1;\n        c = c + 1;\n    }\n    return 0;\n}",
+                        "checker_output_after_prune": true
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant 0 <= c;\n    loop invariant c <= x - y;\n    loop invariant x - c <= y;\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\ntypedef enum {false, true} bool;\n\nint main() {\n    int c;\n    int x, y;\n    x = unknown_int();\n    y = unknown_int();\n    c = 0;\n    /*@\nloop invariant i1: 0 <= c;\n\n\n*/\nwhile (x > y) {\n        y = y + 1;\n        c = c + 1;\n    }\n    return 0;\n}",
+                        "checker_output_after_prune": true
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant y <= x ==> c >= 0;\n    loop invariant y <= x ==> c == x - y;\n    loop invariant y > x ==> c == x - y + 1;\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\ntypedef enum {false, true} bool;\n\nint main() {\n    int c;\n    int x, y;\n    x = unknown_int();\n    y = unknown_int();\n    c = 0;\n    /*@\nloop invariant i1: y <= x ==> c >= 0;\n\n\n*/\nwhile (x > y) {\n        y = y + 1;\n        c = c + 1;\n    }\n    return 0;\n}",
+                        "checker_output_after_prune": true
+                    }
+                ]
+            },
+            {
+                "step": "Houdini for combined completion",
+                "solver_calls": 5,
+                "success": true,
+                "code_with_combined_invariants": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\ntypedef enum {false, true} bool;\n\nint main() {\n    int c;\n    int x, y;\n    x = unknown_int();\n    y = unknown_int();\n    c = 0;\n    /*@\nloop invariant i1: c >= 0;\n\nloop invariant i3: 0 <= c;\n\n\n\n\n\n\nloop invariant i12: y <= x ==> c >= 0;\n\n\n*/\nwhile (x > y) {\n        y = y + 1;\n        c = c + 1;\n    }\n    return 0;\n}",
+                "checker_output": true
+            },
+            {
+                "step": "Prompting LLM",
+                "generating_annotation": "loop_variants",
+                "success": true,
+                "llm_chat": [
+                    {
+                        "role": "system",
+                        "content": "A ranking function (also called variant) is an expression  over program variables that are live as the loop head. The value of the expression must decrease with every successive iteration of the loop. And the value must be positive for the loop to continue executing. Finding a ranking function helps prove that the loop must terminate.\nLexicographic ranking functions are a generation. They are a sequence of expressions (e1, e2, ...) with the property that the value of each expression must be positive for the loop to execute. Either e1 must decrease or its value remains the same. If its value remains the same then the value of e2 must decrease.\nFind the ranking function for the loop in the following program and explain why it is a valid ranking function.\n\nInstructions:\nOutput the ranking function in one code block, in ACSL syntax. For example,\n```\n/*@\n    loop variant v;\n*/\n```\nIf the ranking function is a sequence of expressions, output them in different lines in their lexicographic order. "
+                    },
+                    {
+                        "role": "user",
+                        "content": "Consider the following C program:  \n```  \n#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\ntypedef enum {false, true} bool;\n\nint main() {\n    int c;\n    int x, y;\n    x = unknown_int();\n    y = unknown_int();\n    c = 0;\n    while (x > y) {\n        y = y + 1;\n        c = c + 1;\n    }\n    return 0;\n}\n```\nFind the ranking function for the loop in the given program and explain why it is a valid ranking function. Let's think step by step. "
+                    },
+                    "First, let's identify the loop and the conditions:\n\n```\nwhile (x > y) {\n    y = y + 1;\n    c = c + 1;\n}\n```\n\nThe loop continues executing as long as `x > y`. In each iteration, `y` is incremented by 1 and `c` is incremented by 1.\n\nNow let's find the ranking function:\n\n```\n/*@\n    loop variant x - y;\n*/\n```\n\nWe have chosen `x - y` as the ranking function. Let's check if it's valid:\n\n1. The value of the expression (x - y) must be positive for the loop to continue executing. This is true since the loop condition is `x > y`, which implies that `x - y > 0`.\n\n2. The value of the expression must decrease with every successive iteration of the loop. In each iteration, `y` is incremented by 1, so the value of `x - y` decreases by 1 in each iteration.\n\nSince the chosen ranking function satisfies both conditions, it is a valid ranking function for this loop. This proves that the loop must terminate.",
+                    "First, let's identify the loop in the given program. The loop is:\n\n```C\nwhile (x > y) {\n    y = y + 1;\n    c = c + 1;\n}\n```\n\nNow, let's find a ranking function for this loop. One possible ranking function is `x - y`. Let's explain why this is a valid ranking function:\n\n1. The value of `x - y` is positive when the loop executes because the loop condition is `x > y`. So, `x - y > 0` when the loop executes.\n\n2. The value of `x - y` decreases with every iteration of the loop. In each iteration, `y` is incremented by 1 (`y = y + 1`), while `x` remains constant. So, the value of `x - y` decreases by 1 in each iteration.\n\nSince the value of `x - y` is positive when the loop executes and it decreases with every iteration, it is a valid ranking function. In ACSL syntax, the ranking function would be:\n\n```C\n/*@\n    loop variant x - y;\n*/\n```",
+                    "First, let's identify the loop in the program:\n\n```c\nwhile (x > y) {\n    y = y + 1;\n    c = c + 1;\n}\n```\n\nNow, let's find a ranking function for this loop. We need to find an expression that is positive when the loop executes and decreases with every iteration of the loop. In this case, we can use the difference between `x` and `y` as the ranking function:\n\n```\n/*@\n    loop variant x - y;\n*/\n```\n\nThis is a valid ranking function because:\n\n1. When the loop executes, `x > y`, which means `x - y > 0`. So, the ranking function is positive.\n2. In each iteration of the loop, `y` is incremented by 1 (`y = y + 1`). Therefore, the difference `x - y` decreases by 1 in each iteration.\n\nSince the ranking function is positive during the loop execution and decreases with every iteration, the loop must eventually terminate, proving that the given ranking function is valid.",
+                    "First, let's identify the loop and variables involved in the loop:\n\n```c\nwhile (x > y) {\n    y = y + 1;\n    c = c + 1;\n}\n```\n\nThe variables involved in the loop are `x`, `y`, and `c`. We need to find an expression involving these variables that decreases with every iteration of the loop and is positive while the loop is executing.\n\nA possible ranking function for this loop is `x - y`. Let's explain why it is a valid ranking function:\n\n1. The value of the expression `x - y` is positive when the loop is executing, as the loop condition is `x > y`.\n\n2. With every iteration of the loop, the value of `y` increases by 1 (`y = y + 1`), while the value of `x` remains the same. This means that the value of the expression `x - y` decreases with every iteration.\n\nSo, the ranking function for this loop is `x - y`. In ACSL syntax, the loop variant annotation would look like this:\n\n```c\n/*@\n    loop variant x - y;\n*/\n```\n\nThis ranking function proves that the loop must terminate, as the value of the expression `x - y` will eventually reach 0 or become negative, at which point the loop condition `x > y` will no longer hold, and the loop will exit.",
+                    "First, let's identify the loop in the program:\n\n```c\nwhile (x > y) {\n    y = y + 1;\n    c = c + 1;\n}\n```\n\nThe loop continues to execute as long as `x > y`. In each iteration, `y` is incremented by 1, and `c` is incremented by 1 as well.\n\nNow, let's find the ranking function. We want an expression that decreases with every successive iteration of the loop and must be positive for the loop to continue executing.\n\nA suitable ranking function for this loop is `x - y`. Let's see why this is a valid ranking function:\n\n1. The loop continues to execute as long as `x > y`, which implies that `x - y > 0`. This means the ranking function is positive for the loop to continue executing.\n\n2. In each iteration, `y` is incremented by 1. This means that the value of `x - y` decreases by 1 in each iteration.\n\nSince the ranking function `x - y` is positive for the loop to continue executing and decreases with every successive iteration, it is a valid ranking function.\n\nNow, let's write the ranking function in ACSL syntax:\n\n```\n/*@\n    loop variant x - y;\n*/\n```"
+                ],
+                "output": [
+                    "/*@\n    loop variant x - y;\n*/",
+                    "/*@\n    loop variant x - y;\n*/",
+                    "/*@\n    loop variant x - y;\n*/",
+                    "/*@\n    loop variant x - y;\n*/",
+                    "/*@\n    loop variant x - y;\n*/"
+                ]
+            },
+            {
+                "step": "Checking individual completion",
+                "solver_calls": 5,
+                "completions": [
+                    {
+                        "candidate_with_combined_invariants_and_variant": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\ntypedef enum {false, true} bool;\n\nint main() {\n    int c;\n    int x, y;\n    x = unknown_int();\n    y = unknown_int();\n    c = 0;\n    /*@\nloop invariant i1: c >= 0;\nloop invariant i3: 0 <= c;\nloop invariant i12: y <= x ==> c >= 0;\nloop variant x - y;\n*/\nwhile (x > y) {\n        y = y + 1;\n        c = c + 1;\n    }\n    return 0;\n}",
+                        "checker_output": true,
+                        "checker_message": "loop invariant c >= 0 is inductive.\nloop invariant 0 <= c is inductive.\nloop invariant y <= x ==> c >= 0 is inductive.\n\nLoop variant is Valid.\n"
+                    },
+                    {
+                        "candidate_with_combined_invariants_and_variant": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\ntypedef enum {false, true} bool;\n\nint main() {\n    int c;\n    int x, y;\n    x = unknown_int();\n    y = unknown_int();\n    c = 0;\n    /*@\nloop invariant i1: c >= 0;\nloop invariant i3: 0 <= c;\nloop invariant i12: y <= x ==> c >= 0;\nloop variant x - y;\n*/\nwhile (x > y) {\n        y = y + 1;\n        c = c + 1;\n    }\n    return 0;\n}",
+                        "checker_output": true,
+                        "checker_message": "loop invariant c >= 0 is inductive.\nloop invariant 0 <= c is inductive.\nloop invariant y <= x ==> c >= 0 is inductive.\n\nLoop variant is Valid.\n"
+                    },
+                    {
+                        "candidate_with_combined_invariants_and_variant": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\ntypedef enum {false, true} bool;\n\nint main() {\n    int c;\n    int x, y;\n    x = unknown_int();\n    y = unknown_int();\n    c = 0;\n    /*@\nloop invariant i1: c >= 0;\nloop invariant i3: 0 <= c;\nloop invariant i12: y <= x ==> c >= 0;\nloop variant x - y;\n*/\nwhile (x > y) {\n        y = y + 1;\n        c = c + 1;\n    }\n    return 0;\n}",
+                        "checker_output": true,
+                        "checker_message": "loop invariant c >= 0 is inductive.\nloop invariant 0 <= c is inductive.\nloop invariant y <= x ==> c >= 0 is inductive.\n\nLoop variant is Valid.\n"
+                    },
+                    {
+                        "candidate_with_combined_invariants_and_variant": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\ntypedef enum {false, true} bool;\n\nint main() {\n    int c;\n    int x, y;\n    x = unknown_int();\n    y = unknown_int();\n    c = 0;\n    /*@\nloop invariant i1: c >= 0;\nloop invariant i3: 0 <= c;\nloop invariant i12: y <= x ==> c >= 0;\nloop variant x - y;\n*/\nwhile (x > y) {\n        y = y + 1;\n        c = c + 1;\n    }\n    return 0;\n}",
+                        "checker_output": true,
+                        "checker_message": "loop invariant c >= 0 is inductive.\nloop invariant 0 <= c is inductive.\nloop invariant y <= x ==> c >= 0 is inductive.\n\nLoop variant is Valid.\n"
+                    },
+                    {
+                        "candidate_with_combined_invariants_and_variant": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\ntypedef enum {false, true} bool;\n\nint main() {\n    int c;\n    int x, y;\n    x = unknown_int();\n    y = unknown_int();\n    c = 0;\n    /*@\nloop invariant i1: c >= 0;\nloop invariant i3: 0 <= c;\nloop invariant i12: y <= x ==> c >= 0;\nloop variant x - y;\n*/\nwhile (x > y) {\n        y = y + 1;\n        c = c + 1;\n    }\n    return 0;\n}",
+                        "checker_output": true,
+                        "checker_message": "loop invariant c >= 0 is inductive.\nloop invariant 0 <= c is inductive.\nloop invariant y <= x ==> c >= 0 is inductive.\n\nLoop variant is Valid.\n"
+                    }
+                ],
+                "success": true
+            }
+        ]
+    },
+    "stats": {
+        "success": [
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/PastaB7.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/BrockschmidtCookFuhs-CAV2013-Introduction_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/genady_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_b.12.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/WhileDecr.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_a.09_assume.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex3.04_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/AliasDarteFeautrierGonnord-SAS2010-speedpldi2_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Bangalore_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_java_Break.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/PastaB2.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/LogMult.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/KroeningSharyginaTsitovichWintersteiger-CAV2010-Ex_true-termination.c",
+            "../data/benchmarks/non_termination/loop/Signed_Overflow_Error_3_T.c",
+            "../data/benchmarks/tpdb/C/Ultimate/Parallel_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_ex2.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/HeizmannHoenickeLeikePodelski-ATVA2013-Fig6_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex2.10_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/PastaC7.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChawdharyCookGulwaniSagivYang-ESOP2008-random1d_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_b.11.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/genady_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Nyala-2lex_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_ex3b.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_b.05.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex2.20_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_ex1.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_a.05.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/ChenFlurMukhopadhyay-SAS2012-Ex2.10_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_a.04.c"
+        ],
+        "failure": [
+            "../data/benchmarks/tpdb/C_Integer/Ton_Chanh_15/Hanoi_plus_false-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/UrbanMine-ESOP2014-Fig3_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Factorial.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Swingers.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex2.07_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Piecewise_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/PodelskiRybalchenko-LICS2004-Fig2-TACAS2011-Fig3_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex1.03_true-termination.c",
+            "../data/benchmarks/tpdb/C/Ultimate/Lobnya-Boolean-Reordered_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/ChenFlurMukhopadhyay-SAS2012-Ex2.22_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex2.08_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/CookSeeZuleger-TACAS2013-Fig8a-modified_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex2.09_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/LeikeHeizmann-WST2014-Ex5_false-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex2.18_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex4.01_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Ton_Chanh_15/Benghazi_nondet_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex1.02_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/GulwaniJainKoskinen-PLDI2009-Fig1_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/ChenFlurMukhopadhyay-SAS2012-Ex2.16_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Pure2Phase_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/PodelskiRybalchenko-LICS2004-Fig2_true-termination.c",
+            "../data/benchmarks/tpdb/C/Ultimate/Cairo_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/LeikeHeizmann-TACAS2014-Fig1_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Pure3Phase_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_c.07.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex3.03_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/PlusSwap.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/AliasDarteFeautrierGonnord-SAS2010-counterex1a_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/aaron3_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Toulouse-MultiBranchesToLoop_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/AliasDarteFeautrierGonnord-SAS2010-counterex1a_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex1.01_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/LeikeHeizmann-TACAS2014-Ex9_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/min_rf_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Et1.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/2Nested_true-termination.c"
+        ],
+        "skipped": [],
+        "total": 67,
+        "success_count": 30,
+        "failure_count": 37,
+        "success_rate": 0.44776119402985076
+    }
+}

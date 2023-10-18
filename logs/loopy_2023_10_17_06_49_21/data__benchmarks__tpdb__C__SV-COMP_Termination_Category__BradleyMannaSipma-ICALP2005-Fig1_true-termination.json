@@ -1,0 +1,178 @@
+{
+    "logs": {
+        "file": "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/BradleyMannaSipma-ICALP2005-Fig1_true-termination.c",
+        "benchmark_code": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\nint main() {\n\tint x = unknown_int();\n\tint y = unknown_int();\n\tint N = unknown_int();\n\t\n\tif (N >= 536870912 || x >= 536870912 || y >= 536870912 || x < -1073741824) {\n\t\treturn 0;\n\t}\n\tif (x + y >= 0) {\n\t\twhile (x <= N) {\n\t\t\tif (unknown_int()) {\n\t\t\t\tx = 2*x + y;\n\t\t\t\ty = y + 1;\n\t\t\t} else {\n\t\t\t\tx = x + 1;\n\t\t\t}\n\t\t}\n\t}\n\treturn 0;\n}\n",
+        "success": false,
+        "log": [
+            {
+                "step": "Prompting LLM",
+                "generating_annotation": "loop_invariants",
+                "success": true,
+                "llm_chat": [
+                    {
+                        "role": "system",
+                        "content": "You are a helpful AI software assistant that reasons about how code behaves. Given a program, you can find loop invariants, which can then be used to verify some property in the program. \nFrama-C is a software verification tool for C programs. The input to Frama-C is a C program file with ACSL (ANSI/ISO C Specification Language) annotations.\nFor the given program, find the necessary loop invariants of the while loop to help Frama-C verify the post-condition.\n\nInstructions:\n- Make a note of the pre-conditions or variable assignments in the program.\n- Analyze the loop body and make a note of the loop condition. \n- Output loop invariants that are true \n(i) before the loop execution, \n(ii) in every iteration of the loop and \n(iii) after the loop termination, \nsuch that the loop invariants imply the post condition.\n- If a loop invariant is a conjunction, split it into its parts.\n- Output all the loop invariants in one code block. For example:\n```\n/*@ \n    loop invariant i1;\n    loop invariant i2;\n*/\n```\nRules:\n- **Do not use variables or functions that are not declared in the program.** \n- **Do not make any assumptions about functions whose definitions are not given.**\n- **All undefined variables contain garbage values. Do not use variables that have garbage values.**\n- **Do not use keywords that are not supported in ACSL annotations for loops.**\n- **Variables that are not explicitly initialized, could have garbage values. Do not make any assumptions about such values.**\n- **Do not use the \\at(x, Pre) notation for any variable x.**\n- **Do not use non-deterministic function calls.**"
+                    },
+                    {
+                        "role": "user",
+                        "content": "\nConsider the following C program:\n```\n#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\nint main() {\n\tint x = unknown_int();\n\tint y = unknown_int();\n\tint N = unknown_int();\n\t\n\tif (N >= 536870912 || x >= 536870912 || y >= 536870912 || x < -1073741824) {\n\t\treturn 0;\n\t}\n\tif (x + y >= 0) {\n\t\twhile (x <= N) {\n\t\t\tif (unknown_int()) {\n\t\t\t\tx = 2*x + y;\n\t\t\t\ty = y + 1;\n\t\t\t} else {\n\t\t\t\tx = x + 1;\n\t\t\t}\n\t\t}\n\t}\n\treturn 0;\n}\n\n```\n\nYou are allowed to use implication to take care of the conditional nature of the code. Use implication (==>) instead of using if-then.\n\nFor all variables, add conjunctions that bound the maximum and minimum values that they can take, if such bounds exist.\n\nIf a variable is always equal to or smaller or larger than another variable, add a conjunction for their relation.\n\nIf the assertion is guarded by a condition, use the guard condition in an implication.\n\nIf certain variables are non-deterministic at the beginning or end of the loop, use an implication to make the invariant trivially true at that location. \n\nOutput the loop invariants for the loop in the program above. Let's think step by step."
+                    },
+                    "First, let's note down the pre-conditions and variable assignments in the program:\n\n- x, y, and N are all assigned to unknown_int(), which means their initial values are non-deterministic.\n- The first if statement ensures that x, y, and N are within specific bounds.\n- The second if statement ensures that x + y >= 0.\n\nNow, let's analyze the loop body and make a note of the loop condition:\n\n- The loop condition is x <= N.\n- Inside the loop, there is an if statement with unknown_int() as its condition. This means that the code inside the if block may or may not execute. We can use implication in the loop invariants to account for this.\n- In the if block, x is updated to 2*x + y, and y is incremented by 1.\n- In the else block, x is incremented by 1.\n\nWith this information, we can now output the loop invariants:\n\n```\n/*@ \n    loop invariant x >= -1073741824 && x <= 536870912;\n    loop invariant y >= -1073741824 && y <= 536870912;\n    loop invariant N >= -1073741824 && N <= 536870912;\n    loop invariant x + y >= 0;\n    loop invariant x <= N ==> x + y <= N + 1;\n*/\n```",
+                    "First, let's analyze the program:\n\n1. Pre-conditions and variable assignments:\n- x, y, and N are assigned non-deterministic integer values.\n- The program returns 0 if any of the conditions in the if statement is true.\n- The loop executes only if x + y >= 0.\n\n2. Loop condition:\n- The loop continues as long as x <= N.\n\nNow, let's find the loop invariants:\n\n```\n/*@ \n    loop invariant x + y >= 0;\n    loop invariant x <= N;\n    loop invariant x >= \\at(x, Pre);\n    loop invariant y >= \\at(y, Pre);\n*/\n```\n\nThese invariants hold:\n- (i) before the loop execution, as we know x + y >= 0 from the if statement before the loop, and x and y are at their initial values.\n- (ii) in every iteration of the loop, as x and y are only increased in the loop body.\n- (iii) after the loop termination, as the loop terminates when x > N, and x and y are still non-decreasing.",
+                    "First, let's make a note of the pre-conditions or variable assignments in the program:\n1. x, y, and N are integers with unknown initial values.\n2. The program continues only if N, x, and y are smaller than 536870912 and x is greater than or equal to -1073741824.\n\nNow, let's analyze the loop body and make a note of the loop condition:\n1. The loop condition is x <= N.\n2. In the loop body, x and y are updated depending on the value of unknown_int().\n\nNow, let's output the loop invariants that are true before the loop execution, in every iteration of the loop, and after the loop termination, such that the loop invariants imply the post condition. We will also use implications and bounds as instructed:\n\n```c\n/*@ \n    loop invariant x >= -1073741824;\n    loop invariant x <= 536870912;\n    loop invariant y <= 536870912;\n    loop invariant x <= N;\n    loop invariant x + y >= 0 ==> x >= -y;\n */\n```\n\nThese loop invariants hold true before the loop execution, in every iteration of the loop, and after the loop termination. They are also sufficient for Frama-C to verify the post-condition."
+                ],
+                "output": [
+                    "/*@ \n    loop invariant x >= -1073741824 && x <= 536870912;\n    loop invariant y >= -1073741824 && y <= 536870912;\n    loop invariant N >= -1073741824 && N <= 536870912;\n    loop invariant x + y >= 0;\n    loop invariant x <= N ==> x + y <= N + 1;\n*/",
+                    "/*@ \n    loop invariant x + y >= 0;\n    loop invariant x <= N;\n    loop invariant x >= \\at(x, Pre);\n    loop invariant y >= \\at(y, Pre);\n*/",
+                    "/*@ \n    loop invariant x >= -1073741824;\n    loop invariant x <= 536870912;\n    loop invariant y <= 536870912;\n    loop invariant x <= N;\n    loop invariant x + y >= 0 ==> x >= -y;\n */"
+                ]
+            },
+            {
+                "step": "Checking individual completion",
+                "solver_calls": 3,
+                "completions": [
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant x >= -1073741824 && x <= 536870912;\n    loop invariant y >= -1073741824 && y <= 536870912;\n    loop invariant N >= -1073741824 && N <= 536870912;\n    loop invariant x + y >= 0;\n    loop invariant x <= N ==> x + y <= N + 1;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant x >= -1073741824 && x <= 536870912 is established but not preserved.\nloop invariant y >= -1073741824 && y <= 536870912 is established but not preserved.\nloop invariant N >= -1073741824 && N <= 536870912 is preserved but not established.\nloop invariant x + y >= 0 is inductive.\nloop invariant x <= N ==> x + y <= N + 1 is neither established nor preserved.\n\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant x + y >= 0;\n    loop invariant x <= N;\n    loop invariant x >= \\at(x, Pre);\n    loop invariant y >= \\at(y, Pre);\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "Annotation error on line 17: unbound logic variable x. Ignoring loop annotation"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant x >= -1073741824;\n    loop invariant x <= 536870912;\n    loop invariant y <= 536870912;\n    loop invariant x <= N;\n    loop invariant x + y >= 0 ==> x >= -y;\n */",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant x >= -1073741824 is established but not preserved.\nloop invariant x <= 536870912 is established but not preserved.\nloop invariant y <= 536870912 is established but not preserved.\nloop invariant x <= N is neither established nor preserved.\nloop invariant x + y >= 0 ==> x >= -y is inductive.\n\n"
+                    }
+                ],
+                "success": false
+            },
+            {
+                "step": "Houdini for individual completion",
+                "success": true,
+                "completions": [
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant x >= -1073741824 && x <= 536870912;\n    loop invariant y >= -1073741824 && y <= 536870912;\n    loop invariant N >= -1073741824 && N <= 536870912;\n    loop invariant x + y >= 0;\n    loop invariant x <= N ==> x + y <= N + 1;\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\nint main() {\n\tint x = unknown_int();\n\tint y = unknown_int();\n\tint N = unknown_int();\n\t\n\tif (N >= 536870912 || x >= 536870912 || y >= 536870912 || x < -1073741824) {\n\t\treturn 0;\n\t}\n\tif (x + y >= 0) {\n\t\t/*@\n\n\n\nloop invariant i4: x + y >= 0;\n\n*/\nwhile (x <= N) {\n\t\t\tif (unknown_int()) {\n\t\t\t\tx = 2*x + y;\n\t\t\t\ty = y + 1;\n\t\t\t} else {\n\t\t\t\tx = x + 1;\n\t\t\t}\n\t\t}\n\t}\n\treturn 0;\n}",
+                        "checker_output_after_prune": true
+                    },
+                    {
+                        "num_solver_calls": 3,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant x + y >= 0;\n    loop invariant x <= N;\n    loop invariant x >= \\at(x, Pre);\n    loop invariant y >= \\at(y, Pre);\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\nint main() {\n\tint x = unknown_int();\n\tint y = unknown_int();\n\tint N = unknown_int();\n\t\n\tif (N >= 536870912 || x >= 536870912 || y >= 536870912 || x < -1073741824) {\n\t\treturn 0;\n\t}\n\tif (x + y >= 0) {\n\t\t/*@\nloop invariant i1: x + y >= 0;\n\n\n\n*/\nwhile (x <= N) {\n\t\t\tif (unknown_int()) {\n\t\t\t\tx = 2*x + y;\n\t\t\t\ty = y + 1;\n\t\t\t} else {\n\t\t\t\tx = x + 1;\n\t\t\t}\n\t\t}\n\t}\n\treturn 0;\n}",
+                        "checker_output_after_prune": true
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant x >= -1073741824;\n    loop invariant x <= 536870912;\n    loop invariant y <= 536870912;\n    loop invariant x <= N;\n    loop invariant x + y >= 0 ==> x >= -y;\n */",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\nint main() {\n\tint x = unknown_int();\n\tint y = unknown_int();\n\tint N = unknown_int();\n\t\n\tif (N >= 536870912 || x >= 536870912 || y >= 536870912 || x < -1073741824) {\n\t\treturn 0;\n\t}\n\tif (x + y >= 0) {\n\t\t/*@\n\n\n\n\nloop invariant i5: x + y >= 0 ==> x >= -y;\n*/\nwhile (x <= N) {\n\t\t\tif (unknown_int()) {\n\t\t\t\tx = 2*x + y;\n\t\t\t\ty = y + 1;\n\t\t\t} else {\n\t\t\t\tx = x + 1;\n\t\t\t}\n\t\t}\n\t}\n\treturn 0;\n}",
+                        "checker_output_after_prune": true
+                    }
+                ]
+            },
+            {
+                "step": "Houdini for combined completion",
+                "solver_calls": 4,
+                "success": true,
+                "code_with_combined_invariants": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\nint main() {\n\tint x = unknown_int();\n\tint y = unknown_int();\n\tint N = unknown_int();\n\t\n\tif (N >= 536870912 || x >= 536870912 || y >= 536870912 || x < -1073741824) {\n\t\treturn 0;\n\t}\n\tif (x + y >= 0) {\n\t\t/*@\n\n\n\nloop invariant i4: x + y >= 0;\n\n\n\n\nloop invariant i10: x >= -1073741824;\n\n\nloop invariant i14: x + y >= 0 ==> x >= -y;\n*/\nwhile (x <= N) {\n\t\t\tif (unknown_int()) {\n\t\t\t\tx = 2*x + y;\n\t\t\t\ty = y + 1;\n\t\t\t} else {\n\t\t\t\tx = x + 1;\n\t\t\t}\n\t\t}\n\t}\n\treturn 0;\n}",
+                "checker_output": true
+            },
+            {
+                "step": "Prompting LLM",
+                "generating_annotation": "loop_variants",
+                "success": true,
+                "llm_chat": [
+                    {
+                        "role": "system",
+                        "content": "A ranking function (also called variant) is an expression  over program variables that are live as the loop head. The value of the expression must decrease with every successive iteration of the loop. And the value must be positive for the loop to continue executing. Finding a ranking function helps prove that the loop must terminate.\nLexicographic ranking functions are a generation. They are a sequence of expressions (e1, e2, ...) with the property that the value of each expression must be positive for the loop to execute. Either e1 must decrease or its value remains the same. If its value remains the same then the value of e2 must decrease.\nFind the ranking function for the loop in the following program and explain why it is a valid ranking function.\n\nInstructions:\nOutput the ranking function in one code block, in ACSL syntax. For example,\n```\n/*@\n    loop variant v;\n*/\n```\nIf the ranking function is a sequence of expressions, output them in different lines in their lexicographic order. "
+                    },
+                    {
+                        "role": "user",
+                        "content": "Consider the following C program:  \n```  \n#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\nint main() {\n\tint x = unknown_int();\n\tint y = unknown_int();\n\tint N = unknown_int();\n\t\n\tif (N >= 536870912 || x >= 536870912 || y >= 536870912 || x < -1073741824) {\n\t\treturn 0;\n\t}\n\tif (x + y >= 0) {\n\t\twhile (x <= N) {\n\t\t\tif (unknown_int()) {\n\t\t\t\tx = 2*x + y;\n\t\t\t\ty = y + 1;\n\t\t\t} else {\n\t\t\t\tx = x + 1;\n\t\t\t}\n\t\t}\n\t}\n\treturn 0;\n}\n\n```\nFind the ranking function for the loop in the given program and explain why it is a valid ranking function. Let's think step by step. "
+                    },
+                    "First, let's analyze the loop:\n\n```c\nwhile (x <= N) {\n    if (unknown_int()) {\n        x = 2*x + y;\n        y = y + 1;\n    } else {\n        x = x + 1;\n    }\n}\n```\n\nIn this loop, we have two cases depending on the value of `unknown_int()`:\n\n1. If `unknown_int()` is true, `x` is updated to `2 * x + y`, and `y` is incremented by 1.\n2. If `unknown_int()` is false, `x` is incremented by 1.\n\nIn both cases, the value of `x` is increasing, and the loop will eventually terminate when `x > N`. However, the rate at which `x` increases depends on the value of `unknown_int()`. To find a valid ranking function, we should consider the worst-case scenario, which is when `x` is incremented by 1 in every iteration. In this case, the ranking function can be `N - x`.\n\nNow let's check if `N - x` is a valid ranking function:\n\n1. It is positive for the loop to continue executing: `x <= N` implies `N - x >= 0`.\n2. It decreases with every successive iteration of the loop: In both cases, the value of `x` increases, which means `N - x` decreases.\n\nSo, the ranking function for the loop is `N - x`. Here is the ACSL syntax:\n\n```c\n/*@\n    loop variant N - x;\n*/\n```",
+                    "First, let's analyze the loop in the given program. The loop continues executing as long as `x <= N`. In each iteration, either `x = 2*x + y` and `y = y + 1` or `x = x + 1`. The variables `x`, `y`, and `N` are live as the loop head.\n\nNow, let's find the ranking function for this loop. We can consider two expressions in lexicographic order: `(N - x)` and `(-y)`.\n\nThe ranking function is:\n\n```\n/*@\n    loop variant N - x;\n    loop variant -y;\n*/\n```\n\nLet's verify that this is a valid ranking function:\n\n1. The value of the expressions must be positive for the loop to continue executing: Since the loop condition is `x <= N`, we have `N - x >= 0`. Also, initially, `x + y >= 0`, so `y >= -x`. Therefore, `-y <= x` and `-y` is non-positive.\n\n2. In each iteration, either the value of the first expression decreases or remains the same, and if it remains the same, the value of the second expression must decrease: When `x = 2*x + y`, the value of `N - x` decreases. When `x = x + 1`, the value of `N - x` also decreases. In both cases, the value of the first expression decreases, which satisfies the condition for a lexicographic ranking function.\n\nSince the lexicographic ranking function `(N - x)` and `(-y)` satisfies both conditions, it is a valid ranking function for the loop in the given program. This ranking function helps prove that the loop must terminate."
+                ],
+                "output": [
+                    "/*@\n    loop variant N - x;\n*/",
+                    "/*@\n    loop variant N - x;\n    loop variant -y;\n*/"
+                ]
+            },
+            {
+                "step": "Checking individual completion",
+                "solver_calls": 2,
+                "completions": [
+                    {
+                        "candidate_with_combined_invariants_and_variant": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\nint main() {\n\tint x = unknown_int();\n\tint y = unknown_int();\n\tint N = unknown_int();\n\t\n\tif (N >= 536870912 || x >= 536870912 || y >= 536870912 || x < -1073741824) {\n\t\treturn 0;\n\t}\n\tif (x + y >= 0) {\n\t\t/*@\nloop invariant i4: x + y >= 0;\nloop invariant i10: x >= -1073741824;\nloop invariant i14: x + y >= 0 ==> x >= -y;\nloop variant N - x;\n*/\nwhile (x <= N) {\n\t\t\tif (unknown_int()) {\n\t\t\t\tx = 2*x + y;\n\t\t\t\ty = y + 1;\n\t\t\t} else {\n\t\t\t\tx = x + 1;\n\t\t\t}\n\t\t}\n\t}\n\treturn 0;\n}\n",
+                        "checker_output": false,
+                        "checker_message": "loop invariant x + y >= 0 is inductive.\nloop invariant x >= -1073741824 is inductive.\nloop invariant x + y >= 0 ==> x >= -y is inductive.\n\nLoop variant is Invalid.\n"
+                    },
+                    {
+                        "candidate_with_combined_invariants_and_variant": "\n        typedef struct {\n        int a;\nint b;\n} variant_expression;\n\n/*@ \n            predicate lexicographic(variant_expression v1, variant_expression v2) =\n        (v1.a >= 0 && v1.a > v2.a) ||\n (v1.b >= 0 && v1.a == v2.a && v1.b > v2.b);\n*/\n#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\nint main() {\n\tint x = unknown_int();\n\tint y = unknown_int();\n\tint N = unknown_int();\n\t\n\tif (N >= 536870912 || x >= 536870912 || y >= 536870912 || x < -1073741824) {\n\t\treturn 0;\n\t}\n\tif (x + y >= 0) {\n\t\t//@ ghost variant_expression measure = { N - x, -y };\n/*@\nloop invariant i4: x + y >= 0;\nloop invariant i10: x >= -1073741824;\nloop invariant i14: x + y >= 0 ==> x >= -y;\nloop invariant measure.a == N - x && measure.b == -y;loop variant measure for lexicographic;\n*/\nwhile (x <= N) {\n\t\t\tif (unknown_int()) {\n\t\t\t\tx = 2*x + y;\n\t\t\t\ty = y + 1;\n\t\t\t} else {\n\t\t\t\tx = x + 1;\n\t\t\t}\n\t\t//@ ghost measure.a = N - x;\n//@ ghost measure.b = -y;}\n\t}\n\treturn 0;\n}\n",
+                        "checker_output": false,
+                        "checker_message": "No JSON report found"
+                    }
+                ],
+                "success": false
+            }
+        ]
+    },
+    "stats": {
+        "success": [
+            "../data/benchmarks/non_termination/loop/Adding_Subtracting_Zero_1_T.c",
+            "../data/benchmarks/non_termination/loop/Incorrect_Bit_Calculation_1_T.c",
+            "../data/benchmarks/non_termination/loop/Incorrect_Initialization_4_T.c",
+            "../data/benchmarks/non_termination/loop/Incorrect_Update_for_Loop_Iterator_2_T.c",
+            "../data/benchmarks/non_termination/loop/Missing_Corner-case_Handling_2_T.c",
+            "../data/benchmarks/non_termination/loop/Signed_Overflow_Error_3_T.c",
+            "../data/benchmarks/non_termination/loop/Type_Conversion_in_Comparison_1_T.c",
+            "../data/benchmarks/non_termination/loop/Undefined_Behavior_1_T.c",
+            "../data/benchmarks/non_termination/loop/Undefined_Behavior_3_T.c",
+            "../data/benchmarks/non_termination/loop/Unsigned_Wraparound_Error_1_T.c",
+            "../data/benchmarks/non_termination/loop/Unsigned_Wraparound_Error_2_T.c",
+            "../data/benchmarks/non_termination/loop/Unsigned_Wraparound_Error_3_T.c",
+            "../data/benchmarks/non_termination/loop/Unsigned_Wraparound_Error_4_T.c",
+            "../data/benchmarks/non_termination/loop/Using_Erroneous_Condition_2_T.c",
+            "../data/benchmarks/tpdb/C/AProVE_numeric/svcomp_java_Break.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/aaron2_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/AliasDarteFeautrierGonnord-SAS2010-ndecr_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/AliasDarteFeautrierGonnord-SAS2010-random1d_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/AliasDarteFeautrierGonnord-SAS2010-speedpldi4_true-termination.c"
+        ],
+        "failure": [
+            "../data/benchmarks/non_termination/loop/Incorrect_Bit_Calculation_2_T.c",
+            "../data/benchmarks/non_termination/loop/Incorrect_Bit_Calculation_3_T.c",
+            "../data/benchmarks/non_termination/loop/Incorrect_Update_for_Loop_Iterator_1_T.c",
+            "../data/benchmarks/non_termination/loop/Signed_Overflow_Error_1_T.c",
+            "../data/benchmarks/non_termination/loop/Signed_Overflow_Error_2_T.c",
+            "../data/benchmarks/non_termination/loop/Type_Conversion_in_Comparison_2_T.c",
+            "../data/benchmarks/tpdb/C/AProVE_numeric/svcomp_java_Continue1.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/aaron3_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/AliasDarteFeautrierGonnord-SAS2010-counterex1a_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/AliasDarteFeautrierGonnord-SAS2010-cousot9_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/AliasDarteFeautrierGonnord-SAS2010-rsd_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/AliasDarteFeautrierGonnord-SAS2010-speedpldi2_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/AliasDarteFeautrierGonnord-SAS2010-speedpldi3_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/AliasDarteFeautrierGonnord-SAS2010-terminate_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/AliasDarteFeautrierGonnord-SAS2010-wise_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/BradleyMannaSipma-ICALP2005-Fig1_true-termination.c"
+        ],
+        "skipped": [],
+        "total": 35,
+        "success_count": 19,
+        "failure_count": 16,
+        "success_rate": 0.5428571428571428
+    }
+}

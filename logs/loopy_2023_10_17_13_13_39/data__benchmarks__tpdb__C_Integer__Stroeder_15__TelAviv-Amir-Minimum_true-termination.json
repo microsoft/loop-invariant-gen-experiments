@@ -1,0 +1,330 @@
+{
+    "logs": {
+        "file": "../data/benchmarks/tpdb/C_Integer/Stroeder_15/TelAviv-Amir-Minimum_true-termination.c",
+        "benchmark_code": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\ntypedef enum {false, true} bool;\n\nint main() {\n\tint x;\n\tint y;\n\tx = unknown_int();\n\ty = unknown_int();\n    while (x > 0 && y > 0) {\n    \tif (unknown_int() != 0) {\n    \t\tif (x<y) {\n    \t\t\ty = x - 1;\n    \t\t} else {\n    \t\t\ty = y - 1;\n    \t\t}\n    \t\tx = unknown_int();\n    \t} else {\n    \t\tif (x<y) {\n    \t\t\tx = x - 1;\n    \t\t} else {\n    \t\t\tx = y - 1;\n    \t\t}\n    \t\ty = unknown_int();\n    \t}\n    }\n    return 0;\n}",
+        "success": false,
+        "log": [
+            {
+                "step": "Prompting LLM",
+                "generating_annotation": "loop_invariants",
+                "success": true,
+                "llm_chat": [
+                    {
+                        "role": "system",
+                        "content": "You are a helpful AI software assistant that reasons about how code behaves. Given a program, you can find loop invariants, which can then be used to verify some property in the program. \nFrama-C is a software verification tool for C programs. The input to Frama-C is a C program file with ACSL (ANSI/ISO C Specification Language) annotations.\nFor the given program, find the necessary loop invariants of the while loop to help Frama-C verify the post-condition.\n\nInstructions:\n- Make a note of the pre-conditions or variable assignments in the program.\n- Analyze the loop body and make a note of the loop condition. \n- Output loop invariants that are true \n(i) before the loop execution, \n(ii) in every iteration of the loop and \n(iii) after the loop termination, \nsuch that the loop invariants imply the post condition.\n- If a loop invariant is a conjunction, split it into its parts.\n- Output all the loop invariants in one code block. For example:\n```\n/*@ \n    loop invariant i1;\n    loop invariant i2;\n*/\n```\nRules:\n- **Do not use variables or functions that are not declared in the program.** \n- **Do not make any assumptions about functions whose definitions are not given.**\n- **All undefined variables contain garbage values. Do not use variables that have garbage values.**\n- **Do not use keywords that are not supported in ACSL annotations for loops.**\n- **Variables that are not explicitly initialized, could have garbage values. Do not make any assumptions about such values.**\n- **Do not use the \\at(x, Pre) notation for any variable x.**\n- **Do not use non-deterministic function calls.**"
+                    },
+                    {
+                        "role": "user",
+                        "content": "\nConsider the following C program:\n```\n#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\ntypedef enum {false, true} bool;\n\nint main() {\n\tint x;\n\tint y;\n\tx = unknown_int();\n\ty = unknown_int();\n    while (x > 0 && y > 0) {\n    \tif (unknown_int() != 0) {\n    \t\tif (x<y) {\n    \t\t\ty = x - 1;\n    \t\t} else {\n    \t\t\ty = y - 1;\n    \t\t}\n    \t\tx = unknown_int();\n    \t} else {\n    \t\tif (x<y) {\n    \t\t\tx = x - 1;\n    \t\t} else {\n    \t\t\tx = y - 1;\n    \t\t}\n    \t\ty = unknown_int();\n    \t}\n    }\n    return 0;\n}\n```\n\nYou are allowed to use implication to take care of the conditional nature of the code. Use implication (==>) instead of using if-then.\n\nFor all variables, add conjunctions that bound the maximum and minimum values that they can take, if such bounds exist.\n\nIf a variable is always equal to or smaller or larger than another variable, add a conjunction for their relation.\n\nIf the assertion is guarded by a condition, use the guard condition in an implication.\n\nIf certain variables are non-deterministic at the beginning or end of the loop, use an implication to make the invariant trivially true at that location. \n\nOutput the loop invariants for the loop in the program above. Let's think step by step."
+                    },
+                    "Pre-conditions and variable assignments:\n- x and y are assigned non-deterministic values.\n\nLoop condition:\n- x > 0 && y > 0\n\nNow let's find the loop invariants:\n\n```\n/*@ \n    loop invariant 0 <= x;\n    loop invariant 0 <= y;\n    loop invariant x <= y ==> y >= 1;\n    loop invariant y <= x ==> x >= 1;\n*/\n```",
+                    "Pre-conditions or variable assignments:\n- x and y are assigned non-deterministic values.\n\nLoop condition:\n- x > 0 && y > 0\n\nLoop invariants:\n```\n/*@ \n    loop invariant 0 <= x;\n    loop invariant 0 <= y;\n    loop invariant x <= y ==> x - 1 < y;\n    loop invariant y <= x ==> y - 1 < x;\n*/\n```",
+                    "Pre-conditions and variable assignments in the program:\nx = unknown_int();\ny = unknown_int();\n\nLoop condition: x > 0 && y > 0\n\nLoop invariants:\n\n```\n/*@ \n    loop invariant x >= 0;\n    loop invariant y >= 0;\n    loop invariant \\old(x) >= 0 ==> x <= \\old(x);\n    loop invariant \\old(y) >= 0 ==> y <= \\old(y);\n    loop invariant x <= y ==> \\old(x) <= \\old(y);\n    loop invariant y <= x ==> \\old(y) <= \\old(x);\n*/\n```",
+                    "First, let's make a note of the variable assignments and loop condition in the program:\n\nVariable assignments:\n- x = unknown_int();\n- y = unknown_int();\n\nLoop condition:\n- x > 0 && y > 0\n\nNow, let's write the loop invariants:\n\n```\n/*@ \n    loop invariant x >= 0;\n    loop invariant y >= 0;\n    loop invariant x >= 1 ==> y >= 1;\n    loop invariant y >= 1 ==> x >= 1;\n*/\n```\n\nThese loop invariants hold:\n(i) before the loop execution, since x and y are assigned non-deterministic values and we cannot make any assumptions about their initial values,\n(ii) in every iteration of the loop, as the loop condition ensures that x > 0 and y > 0, and\n(iii) after the loop termination, when either x <= 0 or y <= 0, which implies that the other variable must be greater than or equal to 1 for the loop to have terminated.",
+                    "First, let's note the pre-conditions or variable assignments in the program:\n1. x and y are assigned non-deterministic integer values.\n\nNow, let's analyze the loop condition:\n- The loop condition is (x > 0 && y > 0).\n\nNow, let's derive the loop invariants that are true (i) before the loop execution, (ii) in every iteration of the loop, and (iii) after the loop termination, such that the loop invariants imply the post condition.\n\n```\n/*@ \n    loop invariant 0 <= x;\n    loop invariant 0 <= y;\n    loop invariant x <= INT_MAX;\n    loop invariant y <= INT_MAX;\n*/\n```\nThese loop invariants make sure that x and y are always non-negative and within the range of integer values. The loop condition takes care of the case when x and y are both greater than 0."
+                ],
+                "output": [
+                    "/*@ \n    loop invariant 0 <= x;\n    loop invariant 0 <= y;\n    loop invariant x <= y ==> y >= 1;\n    loop invariant y <= x ==> x >= 1;\n*/",
+                    "/*@ \n    loop invariant 0 <= x;\n    loop invariant 0 <= y;\n    loop invariant x <= y ==> x - 1 < y;\n    loop invariant y <= x ==> y - 1 < x;\n*/",
+                    "/*@ \n    loop invariant x >= 0;\n    loop invariant y >= 0;\n    loop invariant \\old(x) >= 0 ==> x <= \\old(x);\n    loop invariant \\old(y) >= 0 ==> y <= \\old(y);\n    loop invariant x <= y ==> \\old(x) <= \\old(y);\n    loop invariant y <= x ==> \\old(y) <= \\old(x);\n*/",
+                    "/*@ \n    loop invariant x >= 0;\n    loop invariant y >= 0;\n    loop invariant x >= 1 ==> y >= 1;\n    loop invariant y >= 1 ==> x >= 1;\n*/",
+                    "/*@ \n    loop invariant 0 <= x;\n    loop invariant 0 <= y;\n    loop invariant x <= INT_MAX;\n    loop invariant y <= INT_MAX;\n*/"
+                ]
+            },
+            {
+                "step": "Checking individual completion",
+                "solver_calls": 5,
+                "completions": [
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant 0 <= x;\n    loop invariant 0 <= y;\n    loop invariant x <= y ==> y >= 1;\n    loop invariant y <= x ==> x >= 1;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant 0 <= x is neither established nor preserved.\nloop invariant 0 <= y is neither established nor preserved.\nloop invariant x <= y ==> y >= 1 is neither established nor preserved.\nloop invariant y <= x ==> x >= 1 is inductive.\n\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant 0 <= x;\n    loop invariant 0 <= y;\n    loop invariant x <= y ==> x - 1 < y;\n    loop invariant y <= x ==> y - 1 < x;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant 0 <= x is neither established nor preserved.\nloop invariant 0 <= y is neither established nor preserved.\nloop invariant x <= y ==> x - 1 < y is inductive.\nloop invariant y <= x ==> y - 1 < x is inductive.\n\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant x >= 0;\n    loop invariant y >= 0;\n    loop invariant \\old(x) >= 0 ==> x <= \\old(x);\n    loop invariant \\old(y) >= 0 ==> y <= \\old(y);\n    loop invariant x <= y ==> \\old(x) <= \\old(y);\n    loop invariant y <= x ==> \\old(y) <= \\old(x);\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "Annotation error on line 15: \\old undefined in this context. Ignoring loop annotation"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant x >= 0;\n    loop invariant y >= 0;\n    loop invariant x >= 1 ==> y >= 1;\n    loop invariant y >= 1 ==> x >= 1;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant x >= 0 is neither established nor preserved.\nloop invariant y >= 0 is neither established nor preserved.\nloop invariant x >= 1 ==> y >= 1 is neither established nor preserved.\nloop invariant y >= 1 ==> x >= 1 is neither established nor preserved.\n\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant 0 <= x;\n    loop invariant 0 <= y;\n    loop invariant x <= INT_MAX;\n    loop invariant y <= INT_MAX;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "Annotation error on line 15: unbound logic variable INT_MAX. Ignoring loop annotation"
+                    }
+                ],
+                "success": false
+            },
+            {
+                "step": "Houdini for individual completion",
+                "success": true,
+                "completions": [
+                    {
+                        "num_solver_calls": 3,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant 0 <= x;\n    loop invariant 0 <= y;\n    loop invariant x <= y ==> y >= 1;\n    loop invariant y <= x ==> x >= 1;\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\ntypedef enum {false, true} bool;\n\nint main() {\n\tint x;\n\tint y;\n\tx = unknown_int();\n\ty = unknown_int();\n    /*@\n\n\n\n\n*/\nwhile (x > 0 && y > 0) {\n    \tif (unknown_int() != 0) {\n    \t\tif (x<y) {\n    \t\t\ty = x - 1;\n    \t\t} else {\n    \t\t\ty = y - 1;\n    \t\t}\n    \t\tx = unknown_int();\n    \t} else {\n    \t\tif (x<y) {\n    \t\t\tx = x - 1;\n    \t\t} else {\n    \t\t\tx = y - 1;\n    \t\t}\n    \t\ty = unknown_int();\n    \t}\n    }\n    return 0;\n}",
+                        "checker_output_after_prune": false
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant 0 <= x;\n    loop invariant 0 <= y;\n    loop invariant x <= y ==> x - 1 < y;\n    loop invariant y <= x ==> y - 1 < x;\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\ntypedef enum {false, true} bool;\n\nint main() {\n\tint x;\n\tint y;\n\tx = unknown_int();\n\ty = unknown_int();\n    /*@\n\n\nloop invariant i3: x <= y ==> x - 1 < y;\nloop invariant i4: y <= x ==> y - 1 < x;\n*/\nwhile (x > 0 && y > 0) {\n    \tif (unknown_int() != 0) {\n    \t\tif (x<y) {\n    \t\t\ty = x - 1;\n    \t\t} else {\n    \t\t\ty = y - 1;\n    \t\t}\n    \t\tx = unknown_int();\n    \t} else {\n    \t\tif (x<y) {\n    \t\t\tx = x - 1;\n    \t\t} else {\n    \t\t\tx = y - 1;\n    \t\t}\n    \t\ty = unknown_int();\n    \t}\n    }\n    return 0;\n}",
+                        "checker_output_after_prune": true
+                    },
+                    {
+                        "num_solver_calls": 6,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant x >= 0;\n    loop invariant y >= 0;\n    loop invariant \\old(x) >= 0 ==> x <= \\old(x);\n    loop invariant \\old(y) >= 0 ==> y <= \\old(y);\n    loop invariant x <= y ==> \\old(x) <= \\old(y);\n    loop invariant y <= x ==> \\old(y) <= \\old(x);\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\ntypedef enum {false, true} bool;\n\nint main() {\n\tint x;\n\tint y;\n\tx = unknown_int();\n\ty = unknown_int();\n    /*@\n\n\n\n\n\n\n*/\nwhile (x > 0 && y > 0) {\n    \tif (unknown_int() != 0) {\n    \t\tif (x<y) {\n    \t\t\ty = x - 1;\n    \t\t} else {\n    \t\t\ty = y - 1;\n    \t\t}\n    \t\tx = unknown_int();\n    \t} else {\n    \t\tif (x<y) {\n    \t\t\tx = x - 1;\n    \t\t} else {\n    \t\t\tx = y - 1;\n    \t\t}\n    \t\ty = unknown_int();\n    \t}\n    }\n    return 0;\n}",
+                        "checker_output_after_prune": false
+                    },
+                    {
+                        "num_solver_calls": 2,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant x >= 0;\n    loop invariant y >= 0;\n    loop invariant x >= 1 ==> y >= 1;\n    loop invariant y >= 1 ==> x >= 1;\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\ntypedef enum {false, true} bool;\n\nint main() {\n\tint x;\n\tint y;\n\tx = unknown_int();\n\ty = unknown_int();\n    /*@\n\n\n\n\n*/\nwhile (x > 0 && y > 0) {\n    \tif (unknown_int() != 0) {\n    \t\tif (x<y) {\n    \t\t\ty = x - 1;\n    \t\t} else {\n    \t\t\ty = y - 1;\n    \t\t}\n    \t\tx = unknown_int();\n    \t} else {\n    \t\tif (x<y) {\n    \t\t\tx = x - 1;\n    \t\t} else {\n    \t\t\tx = y - 1;\n    \t\t}\n    \t\ty = unknown_int();\n    \t}\n    }\n    return 0;\n}",
+                        "checker_output_after_prune": false
+                    },
+                    {
+                        "num_solver_calls": 4,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant 0 <= x;\n    loop invariant 0 <= y;\n    loop invariant x <= INT_MAX;\n    loop invariant y <= INT_MAX;\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\ntypedef enum {false, true} bool;\n\nint main() {\n\tint x;\n\tint y;\n\tx = unknown_int();\n\ty = unknown_int();\n    /*@\n\n\n\n\n*/\nwhile (x > 0 && y > 0) {\n    \tif (unknown_int() != 0) {\n    \t\tif (x<y) {\n    \t\t\ty = x - 1;\n    \t\t} else {\n    \t\t\ty = y - 1;\n    \t\t}\n    \t\tx = unknown_int();\n    \t} else {\n    \t\tif (x<y) {\n    \t\t\tx = x - 1;\n    \t\t} else {\n    \t\t\tx = y - 1;\n    \t\t}\n    \t\ty = unknown_int();\n    \t}\n    }\n    return 0;\n}",
+                        "checker_output_after_prune": false
+                    }
+                ]
+            },
+            {
+                "step": "Houdini for combined completion",
+                "solver_calls": 8,
+                "success": true,
+                "code_with_combined_invariants": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\ntypedef enum {false, true} bool;\n\nint main() {\n\tint x;\n\tint y;\n\tx = unknown_int();\n\ty = unknown_int();\n    /*@\n\n\n\n\nloop invariant i7: x <= y ==> x - 1 < y;\nloop invariant i8: y <= x ==> y - 1 < x;\n\n\n\n\n\n\n\n\n\n\n*/\nwhile (x > 0 && y > 0) {\n    \tif (unknown_int() != 0) {\n    \t\tif (x<y) {\n    \t\t\ty = x - 1;\n    \t\t} else {\n    \t\t\ty = y - 1;\n    \t\t}\n    \t\tx = unknown_int();\n    \t} else {\n    \t\tif (x<y) {\n    \t\t\tx = x - 1;\n    \t\t} else {\n    \t\t\tx = y - 1;\n    \t\t}\n    \t\ty = unknown_int();\n    \t}\n    }\n    return 0;\n}",
+                "checker_output": true
+            },
+            {
+                "step": "Prompting LLM",
+                "generating_annotation": "loop_variants",
+                "success": true,
+                "llm_chat": [
+                    {
+                        "role": "system",
+                        "content": "A ranking function (also called variant) is an expression  over program variables that are live as the loop head. The value of the expression must decrease with every successive iteration of the loop. And the value must be positive for the loop to continue executing. Finding a ranking function helps prove that the loop must terminate.\nLexicographic ranking functions are a generation. They are a sequence of expressions (e1, e2, ...) with the property that the value of each expression must be positive for the loop to execute. Either e1 must decrease or its value remains the same. If its value remains the same then the value of e2 must decrease.\nFind the ranking function for the loop in the following program and explain why it is a valid ranking function.\n\nInstructions:\nOutput the ranking function in one code block, in ACSL syntax. For example,\n```\n/*@\n    loop variant v;\n*/\n```\nIf the ranking function is a sequence of expressions, output them in different lines in their lexicographic order. "
+                    },
+                    {
+                        "role": "user",
+                        "content": "Consider the following C program:  \n```  \n#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\ntypedef enum {false, true} bool;\n\nint main() {\n\tint x;\n\tint y;\n\tx = unknown_int();\n\ty = unknown_int();\n    while (x > 0 && y > 0) {\n    \tif (unknown_int() != 0) {\n    \t\tif (x<y) {\n    \t\t\ty = x - 1;\n    \t\t} else {\n    \t\t\ty = y - 1;\n    \t\t}\n    \t\tx = unknown_int();\n    \t} else {\n    \t\tif (x<y) {\n    \t\t\tx = x - 1;\n    \t\t} else {\n    \t\t\tx = y - 1;\n    \t\t}\n    \t\ty = unknown_int();\n    \t}\n    }\n    return 0;\n}\n```\nFind the ranking function for the loop in the given program and explain why it is a valid ranking function. Let's think step by step. "
+                    },
+                    "First, let's analyze the loop. The loop continues executing as long as both `x` and `y` are positive. Inside the loop, there are two branches controlled by the condition `unknown_int() != 0`. In both branches, either `x` or `y` is decreased by 1, and the other variable is assigned a new unknown value. \n\nNow, we need to find a ranking function that decreases with every iteration of the loop and is positive as long as the loop executes. Since both `x` and `y` are positive inside the loop, we can consider a lexicographic ranking function with two expressions: `x` and `y`. \n\nThe ranking function for the loop can be written as:\n\n```\n/*@\n    loop variant x;\n    loop variant y;\n*/\n```\n\nLet's justify why this is a valid ranking function:\n\n1. The value of both expressions `x` and `y` are positive inside the loop, as the loop condition is `x > 0 && y > 0`.\n\n2. In every iteration of the loop, either `x` or `y` is decreased by 1, and the other variable is assigned a new unknown value. Since the new unknown value can be smaller, equal, or larger than the old value, the lexicographic ranking function `(x, y)` can either decrease or remain the same in the first expression. If the first expression remains the same, the second expression must decrease.\n\nTherefore, the ranking function `(x, y)` is valid, as it is positive inside the loop and decreases with every iteration, ensuring the loop's termination.",
+                    "First, let's identify the loop in the program. The loop is:\n\n```\nwhile (x > 0 && y > 0) {\n    ...\n}\n```\n\nNow, let's find the ranking function for this loop. We can see that in each iteration of the loop, either `x` or `y` decreases by 1. Therefore, we can define the ranking function as `x + y`. This means that the value of `x + y` will decrease with every successive iteration of the loop. \n\nNow, let's see if this is a valid ranking function. For a ranking function to be valid, it must satisfy the following conditions:\n\n1. The value of the ranking function must be positive for the loop to continue executing.\n2. The value of the ranking function must decrease with every successive iteration of the loop.\n\nIn our case, the loop continues executing as long as `x > 0` and `y > 0`. Since both `x` and `y` are positive, their sum `x + y` will also be positive, satisfying condition 1.\n\nIn each iteration of the loop, either `x` or `y` decreases by 1. As a result, the value of `x + y` also decreases by 1 in each iteration, satisfying condition 2.\n\nTherefore, the ranking function `x + y` is a valid ranking function for the given loop. In ACSL syntax, the ranking function can be written as:\n\n```\n/*@\n    loop variant x + y;\n*/\n```",
+                    "First, let's analyze the loop:\n\nThe loop condition is `x > 0 && y > 0`, so the loop continues to execute as long as both x and y are positive.\n\nInside the loop, there are two branches. In both branches, either x or y will be updated by subtracting 1 from the minimum of x and y. Then, either x or y will be assigned a new value from the `unknown_int()` function.\n\nNow, let's find the ranking function:\n\nSince both x and y are positive and are being decreased in every iteration, we can consider them as part of the lexicographic ranking function:\n\n```\n/*@\n    loop variant x;\n    loop variant y;\n*/\n```\n\nNow let's explain why this is a valid ranking function:\n\n1. The values of x and y are positive for the loop to execute, as given by the loop condition `x > 0 && y > 0`.\n\n2. In each iteration, either x or y is decreased by at least 1, ensuring that the values of x and y are decreasing.\n\n3. The value of x or y is updated with `unknown_int()` in each iteration. However, this does not affect the validity of the ranking function, because as long as x and y are positive, the loop will continue to execute. And since x or y is decreased in every iteration, it ensures that the loop will eventually terminate when either x or y becomes non-positive.\n\nTherefore, the lexicographic ranking function `(x, y)` is a valid ranking function for this loop as it ensures the termination of the loop.",
+                    "First, let's analyze the loop:\n\nThe loop continues executing as long as `x > 0 && y > 0`. In each iteration, either `x` or `y` is decreased by at least 1. Moreover, their new values are always non-negative, as they are assigned as the difference of two non-negative integers.\n\nNow, let's find the ranking function:\n\nWe can use the sum `x + y` as the ranking function. This is because:\n\n1. It is positive when the loop executes: Since `x > 0 && y > 0`, we have `x + y > 0`.\n2. It decreases with every successive iteration: In each iteration, either `x` or `y` is decreased by at least 1, so the sum `x + y` decreases by at least 1 as well.\n\nTherefore, the ranking function is:\n\n```\n/*@\n    loop variant x + y;\n*/\n```\n\nThis ranking function is valid because it satisfies the required properties: its value is positive when the loop executes, and it decreases with every successive iteration. This ensures that the loop must eventually terminate.",
+                    "First, let's identify the loop invariant conditions. The loop continues to execute as long as both `x` and `y` are positive (i.e., `x > 0 && y > 0`). Now let's analyze the loop body.\n\nInside the loop, there are two branches depending on the result of `unknown_int()`. In each branch, either `x` or `y` is updated, and the other variable is assigned a new value from `unknown_int()`. In both branches, the updated variable is decreased by at least 1.\n\nNow, let's find the ranking function:\n\n```C\n/*@\n    loop variant x + y;\n*/\n```\n\nThis ranking function is valid for several reasons:\n\n1. The value of the ranking function is positive for the loop to execute: The loop continues as long as both `x` and `y` are positive, so their sum `x + y` must also be positive.\n\n2. The value of the ranking function decreases with every successive iteration: In each iteration, either `x` or `y` is decreased by at least 1, while the other variable is assigned a new value from `unknown_int()`. Since the loop condition requires both `x` and `y` to be positive, the new value assigned to the other variable must also be positive. Therefore, the sum `x + y` must decrease with each iteration.\n\nThus, this ranking function helps prove that the loop must terminate."
+                ],
+                "output": [
+                    "/*@\n    loop variant x;\n    loop variant y;\n*/",
+                    "/*@\n    loop variant x + y;\n*/",
+                    "/*@\n    loop variant x;\n    loop variant y;\n*/",
+                    "/*@\n    loop variant x + y;\n*/",
+                    "/*@\n    loop variant x + y;\n*/"
+                ]
+            },
+            {
+                "step": "Checking individual completion",
+                "solver_calls": 5,
+                "completions": [
+                    {
+                        "candidate_with_combined_invariants_and_variant": "\n        typedef struct {\n        int a;\nint b;\n} variant_expression;\n\n/*@ \n            predicate lexicographic(variant_expression v1, variant_expression v2) =\n        (v1.a >= 0 && v1.a > v2.a) ||\n (v1.b >= 0 && v1.a == v2.a && v1.b > v2.b);\n*/\n#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\ntypedef enum {false, true} bool;\n\nint main() {\n\tint x;\n\tint y;\n\tx = unknown_int();\n\ty = unknown_int();\n    //@ ghost variant_expression measure = { x, y };\n/*@\nloop invariant i7: x <= y ==> x - 1 < y;\nloop invariant i8: y <= x ==> y - 1 < x;\nloop invariant measure.a == x && measure.b == y;\nloop variant measure for lexicographic;\n*/\nwhile (x > 0 && y > 0) {\n    \tif (unknown_int() != 0) {\n    \t\tif (x<y) {\n    \t\t\ty = x - 1;\n    \t\t} else {\n    \t\t\ty = y - 1;\n    \t\t}\n    \t\tx = unknown_int();\n    \t} else {\n    \t\tif (x<y) {\n    \t\t\tx = x - 1;\n    \t\t} else {\n    \t\t\tx = y - 1;\n    \t\t}\n    \t\ty = unknown_int();\n    \t}\n    \n//@ ghost measure.a = x;\n//@ ghost measure.b = y;\n}\n    return 0;\n}",
+                        "checker_output": false,
+                        "checker_message": "loop invariant x <= y ==> x - 1 < y is inductive.\nloop invariant y <= x ==> y - 1 < x is inductive.\n\nLoop variant is Invalid.\n"
+                    },
+                    {
+                        "candidate_with_combined_invariants_and_variant": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\ntypedef enum {false, true} bool;\n\nint main() {\n\tint x;\n\tint y;\n\tx = unknown_int();\n\ty = unknown_int();\n    /*@\nloop invariant i7: x <= y ==> x - 1 < y;\nloop invariant i8: y <= x ==> y - 1 < x;\nloop variant x + y;\n*/\nwhile (x > 0 && y > 0) {\n    \tif (unknown_int() != 0) {\n    \t\tif (x<y) {\n    \t\t\ty = x - 1;\n    \t\t} else {\n    \t\t\ty = y - 1;\n    \t\t}\n    \t\tx = unknown_int();\n    \t} else {\n    \t\tif (x<y) {\n    \t\t\tx = x - 1;\n    \t\t} else {\n    \t\t\tx = y - 1;\n    \t\t}\n    \t\ty = unknown_int();\n    \t}\n    }\n    return 0;\n}",
+                        "checker_output": false,
+                        "checker_message": "loop invariant x <= y ==> x - 1 < y is inductive.\nloop invariant y <= x ==> y - 1 < x is inductive.\n\nLoop variant is Invalid.\n"
+                    },
+                    {
+                        "candidate_with_combined_invariants_and_variant": "\n        typedef struct {\n        int a;\nint b;\n} variant_expression;\n\n/*@ \n            predicate lexicographic(variant_expression v1, variant_expression v2) =\n        (v1.a >= 0 && v1.a > v2.a) ||\n (v1.b >= 0 && v1.a == v2.a && v1.b > v2.b);\n*/\n#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\ntypedef enum {false, true} bool;\n\nint main() {\n\tint x;\n\tint y;\n\tx = unknown_int();\n\ty = unknown_int();\n    //@ ghost variant_expression measure = { x, y };\n/*@\nloop invariant i7: x <= y ==> x - 1 < y;\nloop invariant i8: y <= x ==> y - 1 < x;\nloop invariant measure.a == x && measure.b == y;\nloop variant measure for lexicographic;\n*/\nwhile (x > 0 && y > 0) {\n    \tif (unknown_int() != 0) {\n    \t\tif (x<y) {\n    \t\t\ty = x - 1;\n    \t\t} else {\n    \t\t\ty = y - 1;\n    \t\t}\n    \t\tx = unknown_int();\n    \t} else {\n    \t\tif (x<y) {\n    \t\t\tx = x - 1;\n    \t\t} else {\n    \t\t\tx = y - 1;\n    \t\t}\n    \t\ty = unknown_int();\n    \t}\n    \n//@ ghost measure.a = x;\n//@ ghost measure.b = y;\n}\n    return 0;\n}",
+                        "checker_output": false,
+                        "checker_message": "loop invariant x <= y ==> x - 1 < y is inductive.\nloop invariant y <= x ==> y - 1 < x is inductive.\n\nLoop variant is Invalid.\n"
+                    },
+                    {
+                        "candidate_with_combined_invariants_and_variant": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\ntypedef enum {false, true} bool;\n\nint main() {\n\tint x;\n\tint y;\n\tx = unknown_int();\n\ty = unknown_int();\n    /*@\nloop invariant i7: x <= y ==> x - 1 < y;\nloop invariant i8: y <= x ==> y - 1 < x;\nloop variant x + y;\n*/\nwhile (x > 0 && y > 0) {\n    \tif (unknown_int() != 0) {\n    \t\tif (x<y) {\n    \t\t\ty = x - 1;\n    \t\t} else {\n    \t\t\ty = y - 1;\n    \t\t}\n    \t\tx = unknown_int();\n    \t} else {\n    \t\tif (x<y) {\n    \t\t\tx = x - 1;\n    \t\t} else {\n    \t\t\tx = y - 1;\n    \t\t}\n    \t\ty = unknown_int();\n    \t}\n    }\n    return 0;\n}",
+                        "checker_output": false,
+                        "checker_message": "loop invariant x <= y ==> x - 1 < y is inductive.\nloop invariant y <= x ==> y - 1 < x is inductive.\n\nLoop variant is Invalid.\n"
+                    },
+                    {
+                        "candidate_with_combined_invariants_and_variant": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\ntypedef enum {false, true} bool;\n\nint main() {\n\tint x;\n\tint y;\n\tx = unknown_int();\n\ty = unknown_int();\n    /*@\nloop invariant i7: x <= y ==> x - 1 < y;\nloop invariant i8: y <= x ==> y - 1 < x;\nloop variant x + y;\n*/\nwhile (x > 0 && y > 0) {\n    \tif (unknown_int() != 0) {\n    \t\tif (x<y) {\n    \t\t\ty = x - 1;\n    \t\t} else {\n    \t\t\ty = y - 1;\n    \t\t}\n    \t\tx = unknown_int();\n    \t} else {\n    \t\tif (x<y) {\n    \t\t\tx = x - 1;\n    \t\t} else {\n    \t\t\tx = y - 1;\n    \t\t}\n    \t\ty = unknown_int();\n    \t}\n    }\n    return 0;\n}",
+                        "checker_output": false,
+                        "checker_message": "loop invariant x <= y ==> x - 1 < y is inductive.\nloop invariant y <= x ==> y - 1 < x is inductive.\n\nLoop variant is Invalid.\n"
+                    }
+                ],
+                "success": false
+            }
+        ]
+    },
+    "stats": {
+        "success": [
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/PastaB7.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/BrockschmidtCookFuhs-CAV2013-Introduction_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/genady_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_b.12.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/WhileDecr.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_a.09_assume.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex3.04_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/AliasDarteFeautrierGonnord-SAS2010-speedpldi2_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Bangalore_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_java_Break.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/PastaB2.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/LogMult.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/KroeningSharyginaTsitovichWintersteiger-CAV2010-Ex_true-termination.c",
+            "../data/benchmarks/non_termination/loop/Signed_Overflow_Error_3_T.c",
+            "../data/benchmarks/tpdb/C/Ultimate/Parallel_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_ex2.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/HeizmannHoenickeLeikePodelski-ATVA2013-Fig6_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex2.10_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/PastaC7.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChawdharyCookGulwaniSagivYang-ESOP2008-random1d_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_b.11.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/genady_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Nyala-2lex_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_ex3b.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_b.05.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex2.20_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_ex1.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_a.05.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/ChenFlurMukhopadhyay-SAS2012-Ex2.10_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_a.04.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/HeizmannHoenickeLeikePodelski-ATVA2013-Fig9_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/PastaA7.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/HeizmannHoenickeLeikePodelski-ATVA2013-Fig6_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/HeizmannHoenickeLeikePodelski-ATVA2013-Fig8_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_java_Continue1.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/AliasDarteFeautrierGonnord-SAS2010-random2d_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/aaron2_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/aaron2_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/ChenFlurMukhopadhyay-SAS2012-Ex1.04_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChawdharyCookGulwaniSagivYang-ESOP2008-random2d_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/PastaA4.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_fermat.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Overflow.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/Toulouse-BranchesToLoop_true-termination.c",
+            "../data/benchmarks/non_termination/loop/Signed_Overflow_Error_2_T.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/PastaC3.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_b.13.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/GulavaniGulwani-CAV2008-Fig1a_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_a.06.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/AliasDarteFeautrierGonnord-SAS2010-ndecr_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/PodelskiRybalchenko-TACAS2011-Fig1_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/HeizmannHoenickeLeikePodelski-ATVA2013-Fig9_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/PastaA8.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/HeizmannHoenickeLeikePodelski-ATVA2013-Fig5_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/KroeningSharyginaTsitovichWintersteiger-CAV2010-Ex_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/AliasDarteFeautrierGonnord-SAS2010-random1d_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/PastaC9.c",
+            "../data/benchmarks/non_termination/loop/Unsigned_Wraparound_Error_4_T.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/MinusBuiltIn.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Masse-VMCAI2014-Ex6_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_a.07.c"
+        ],
+        "failure": [
+            "../data/benchmarks/tpdb/C_Integer/Ton_Chanh_15/Hanoi_plus_false-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/UrbanMine-ESOP2014-Fig3_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Factorial.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Swingers.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex2.07_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Piecewise_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/PodelskiRybalchenko-LICS2004-Fig2-TACAS2011-Fig3_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex1.03_true-termination.c",
+            "../data/benchmarks/tpdb/C/Ultimate/Lobnya-Boolean-Reordered_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/ChenFlurMukhopadhyay-SAS2012-Ex2.22_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex2.08_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/CookSeeZuleger-TACAS2013-Fig8a-modified_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex2.09_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/LeikeHeizmann-WST2014-Ex5_false-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex2.18_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex4.01_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Ton_Chanh_15/Benghazi_nondet_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex1.02_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/GulwaniJainKoskinen-PLDI2009-Fig1_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/ChenFlurMukhopadhyay-SAS2012-Ex2.16_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Pure2Phase_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/PodelskiRybalchenko-LICS2004-Fig2_true-termination.c",
+            "../data/benchmarks/tpdb/C/Ultimate/Cairo_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/LeikeHeizmann-TACAS2014-Fig1_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Pure3Phase_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_c.07.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex3.03_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/PlusSwap.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/AliasDarteFeautrierGonnord-SAS2010-counterex1a_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/aaron3_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Toulouse-MultiBranchesToLoop_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/AliasDarteFeautrierGonnord-SAS2010-counterex1a_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex1.01_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/LeikeHeizmann-TACAS2014-Ex9_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/min_rf_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Et1.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/2Nested_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/ChenFlurMukhopadhyay-SAS2012-Ex2.08_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Masse-VMCAI2014-Fig1b_true-termination.c",
+            "../data/benchmarks/tpdb/C/Ultimate/Gothenburg_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/NoriSharma-FSE2013-Fig8_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/CookSeeZuleger-TACAS2013-Fig8b_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Toulouse-BranchesToLoop_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/MenloPark_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex2.13_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/AliasDarteFeautrierGonnord-SAS2010-rsd_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/TelAviv-Amir-Minimum_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex3.09_true-termination.c",
+            "../data/benchmarks/non_termination/loop/Signed_Overflow_Error_1_T.c",
+            "../data/benchmarks/non_termination/loop/Incorrect_Bit_Calculation_3_T.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex2.06_false-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_b.03-no-inv_assume.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/GopanReps-CAV2006-Fig1a_true-termination.c.c",
+            "../data/benchmarks/non_termination/loop/Incorrect_Bit_Calculation_2_T.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Gothenburg_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Thun_true-termination.c",
+            "../data/benchmarks/tpdb/C/Ultimate/Pure3Phase_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/PastaA10.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/AliasDarteFeautrierGonnord-SAS2010-speedpldi2_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Stockholm_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/IntPath.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex2.19_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Ben-Amram-LMCS2010-Ex2.3_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Fibonacci.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/CookSeeZuleger-TACAS2013-Fig7b_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/DoubleNeg.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/ChenFlurMukhopadhyay-SAS2012-Ex4.01_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/BradleyMannaSipma-ICALP2005-Fig1_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/ChenFlurMukhopadhyay-SAS2012-Ex2.01_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Masse-VMCAI2014-Fig1a_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ColonSipma-TACAS2001-Fig1_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/AliasDarteFeautrierGonnord-SAS2010-speedpldi4_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/TelAviv-Amir-Minimum_true-termination.c"
+        ],
+        "skipped": [],
+        "total": 134,
+        "success_count": 61,
+        "failure_count": 73,
+        "success_rate": 0.4552238805970149
+    }
+}
