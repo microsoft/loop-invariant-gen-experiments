@@ -1984,7 +1984,6 @@ class LoopyPipeline:
                 "file": benchmark_file,
                 "benchmark_code": self.benchmark.get_code(benchmark_file),
                 "success": False,
-                "log": [],
             }
 
             try:
@@ -2011,17 +2010,30 @@ class LoopyPipeline:
 
                 for variant in variants:
                     variant_log_json = {}
+                    inductive_invariants = "[]"
                     checker_input_with_only_variant = (
                         self.benchmark.combine_llm_outputs(
                             self.benchmark.get_code(benchmark_file),
-                            ("", ["loop variant " + x + ";\n" for x in variant]),
+                            (
+                                "",
+                                [
+                                    "\n".join(
+                                        ["loop variant " + x + ";" for x in variant]
+                                    )
+                                ],
+                            ),
                             "termination_one_loop_one_method",
                         )
                     )
+
+                    assert (
+                        len(checker_input_with_only_variant) == 1
+                    ), "More than 1 checker input with variant found"
+
+                    checker_input_with_only_variant = checker_input_with_only_variant[0]
                     Logger.log_info(
                         f"Checking variant: {variant} for benchmark: {start_index + benchmark_index + 1}/{len(sliced_benchmarks)}"
                     )
-
                     success, checker_message = self.checker.check(
                         checker_input_with_only_variant,
                         check_variant=True,
@@ -2122,7 +2134,7 @@ class LoopyPipeline:
                         self.benchmark.get_code(benchmark_file),
                         (
                             inductive_invariants,
-                            ["loop variant " + x + ";\n" for x in variant],
+                            ["\n".join(["loop variant " + x + ";" for x in variant])],
                         ),
                         "termination_one_loop_one_method",
                     )
@@ -2160,15 +2172,6 @@ class LoopyPipeline:
 
                 instance_log_json["success"] = success
 
-                if instance_log_json["success"]:
-                    Logger.log_success(
-                        f"Benchmark {start_index + benchmark_index + 1}/{len(sliced_benchmarks)} succeeded"
-                    )
-                else:
-                    Logger.log_error(
-                        f"Benchmark {start_index + benchmark_index + 1}/{len(sliced_benchmarks)} failed"
-                    )
-
             except Exception as e:
                 Logger.log_error(traceback.format_exc())
                 if isinstance(e, KeyboardInterrupt):
@@ -2204,7 +2207,7 @@ class LoopyPipeline:
 
             if instance_log_json["success"]:
                 Logger.log_success(
-                    f"Benchmark {start_index + benchmark_index + 1}/{len(sliced_benchmarks)} succeeded"
+                    f"Benchmark {start_index + benchmark_index + 1}/{len(sliced_benchmarks)} succeeded: variant {variant} and invariants {inductive_invariants}"
                 )
                 stats["success"].append(benchmark_file)
 
