@@ -2010,7 +2010,7 @@ class LoopyPipeline:
                     ) = self.llm.generate_annotation(
                         input={
                             "code": self.benchmark.get_code(benchmark_file),
-                            "loop_variant": "( " + ", ".join(variant) + " )",
+                            "loop_variant": "(" + ", ".join(variant) + ")",
                         },
                         prompt=invariants_prompt,
                         extraction_filter=self.checker.is_invariant,
@@ -2067,6 +2067,10 @@ class LoopyPipeline:
                         ),
                         "termination_one_loop_one_method",
                     )
+                    assert (
+                        len(checker_input_with_variants) == 1
+                    ), "More than 1 checker input with variant found"
+                    checker_input_with_variants = checker_input_with_variants[0]
 
                     variant_log_json[
                         "final_checker_input"
