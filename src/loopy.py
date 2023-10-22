@@ -1539,7 +1539,9 @@ class LoopyPipeline:
                                 ]
                             )
                             generated_code_blocks = []
-                            for output in local_llm_outputs[step_index]["output"]:
+                            for output in local_llm_outputs[step_index][
+                                benchmark_index
+                            ]["output"]:
                                 code_block = self.llm.extract_code(
                                     output["content"],
                                     extraction_filter=extraction_filter,
