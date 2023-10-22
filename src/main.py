@@ -201,7 +201,7 @@ def main(args):
     p = p.load_config(args.config_file)
 
     if args.termination_analysis:
-        p.run_termination_analysis(
+        p.termination_analysis(
             max_benchmarks=args.max_benchmarks,
             start_index=args.start_index,
         )
