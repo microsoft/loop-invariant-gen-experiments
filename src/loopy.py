@@ -1993,7 +1993,17 @@ class LoopyPipeline:
                     prompt=variants_prompt,
                     extraction_filter=self.checker.is_variant,
                 )
-                variants = self.checker.get_variant_expressions(variant_code_blocks)
+                variants = self.checker.get_variant_expressions(
+                    [
+                        code_block
+                        for code_block in variant_code_blocks
+                        if not (
+                            len(code_block) == 2
+                            and code_block[0]
+                            == "ERROR: Output does not contain at least 1 complete code block"
+                        )
+                    ]
+                )
 
                 instance_log_json["variants"] = variants
                 instance_log_json["variant_llm_output"] = variant_llm_output
