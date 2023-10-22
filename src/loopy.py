@@ -1965,13 +1965,13 @@ class LoopyPipeline:
         ]
 
         variants_prompt = Prompt(
-            system_text_file="../templates/termination_variants_system.txt",
-            prompt_text_file="../templates/termination_variants_prompt.txt",
+            system_text_file="templates/termination_variants_system.txt",
+            prompt_text_file="templates/termination_variants_prompt.txt",
             num_completions=5,
         )
         invariants_prompt = Prompt(
-            system_text_file="../templates/termination_invariants_system.txt",
-            prompt_text_file="../templates/termination_invariants_prompt.txt",
+            system_text_file="templates/termination_invariants_system.txt",
+            prompt_text_file="templates/termination_invariants_prompt.txt",
             num_completions=5,
         )
 
