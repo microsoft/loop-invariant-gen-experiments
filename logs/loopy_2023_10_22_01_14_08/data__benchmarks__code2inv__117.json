@@ -1,0 +1,400 @@
+{
+    "logs": {
+        "file": "../data/benchmarks/code2inv/117.c",
+        "benchmark_code": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\n\nint main() {\n  \n  int sn;\n  int v1;\n  int v2;\n  int v3;\n  int x;\n  \n  (sn = 0);\n  (x = 0);\n  \n  while (unknown()) {\n    {\n    (x  = (x + 1));\n    (sn  = (sn + 1));\n    }\n\n  }\n  \nif ( (sn != -1) )\n{;\n//@ assert( (sn == x) );\n}\n\n}",
+        "success": false,
+        "log": [
+            {
+                "step": "Prompting LLM",
+                "generating_annotation": "loop_invariants",
+                "success": true,
+                "llm_chat": [
+                    {
+                        "role": "system",
+                        "content": "You are a helpful AI software assistant that reasons about how code behaves. Given a program, you can find loop invariants, which can then be used to verify some property in the program. \nFrama-C is a software verification tool for C programs. The input to Frama-C is a C program file with ACSL (ANSI/ISO C Specification Language) annotations.\nFor the given program, find the necessary loop invariants of the while loop to help Frama-C verify the post-condition.\n\nInstructions:\n- Make a note of the pre-conditions or variable assignments in the program.\n- Analyze the loop body and make a note of the loop condition. \n- Output loop invariants that are true \n(i) before the loop execution, \n(ii) in every iteration of the loop and \n(iii) after the loop termination, \nsuch that the loop invariants imply the post condition.\n- If a loop invariant is a conjunction, split it into its parts.\n- Output all the loop invariants in one code block. For example:\n```\n/*@ \n    loop invariant i1;\n    loop invariant i2;\n*/\n```\nRules:\n- **Do not use variables or functions that are not declared in the program.** \n- **Do not make any assumptions about functions whose definitions are not given.**\n- **All undefined variables contain garbage values. Do not use variables that have garbage values.**\n- **Do not use keywords that are not supported in ACSL annotations for loops.**\n- **Variables that are not explicitly initialized, could have garbage values. Do not make any assumptions about such values.**\n- **Do not use the \\at(x, Pre) notation for any variable x.**\n- **Do not use non-deterministic function calls.**"
+                    },
+                    {
+                        "role": "user",
+                        "content": "\nConsider the following C program:\n```\n#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\n\nint main() {\n  \n  int sn;\n  int v1;\n  int v2;\n  int v3;\n  int x;\n  \n  (sn = 0);\n  (x = 0);\n  \n  while (unknown()) {\n    {\n    (x  = (x + 1));\n    (sn  = (sn + 1));\n    }\n\n  }\n  \nif ( (sn != -1) )\n{;\n//@ assert( (sn == x) );\n}\n\n}\n```\n\nYou are allowed to use implication to take care of the conditional nature of the code. Use implication (==>) instead of using if-then.\n\nFor all variables, add conjunctions that bound the maximum and minimum values that they can take, if such bounds exist.\n\nIf a variable is always equal to or smaller or larger than another variable, add a conjunction for their relation.\n\nIf the assertion is guarded by a condition, use the guard condition in an implication.\n\nIf certain variables are non-deterministic at the beginning or end of the loop, use an implication to make the invariant trivially true at that location. \n\nOutput the loop invariants for the loop in the program above. Let's think step by step."
+                    },
+                    {
+                        "role": "assistant",
+                        "content": " To find the loop invariants for the while loop in the given program, we need to analyze the loop body and the loop condition. We also need to consider the pre-conditions and post-conditions of the program.\n\nFirst, let's identify the variables that are used in the loop body and the loop condition. They are:\n\n* `x`: The loop counter.\n* `sn`: The sum of the values of `x` at each iteration.\n* `v1`: The value of `x` at the beginning of the loop.\n* `v2`: The value of `x` at the end of the loop.\n* `v3`: The value of `sn` at the end of the loop.\n\nNext, let's analyze the loop body. The loop body consists of two statements:\n\n* `x  = (x + 1)`: This statement increments the value of `x` by 1.\n* `sn  = (sn + 1)`: This statement increments the value of `sn` by 1.\n\nWe can see that the loop body is executing the same two statements repeatedly until the loop condition is met.\n\nNow, let's analyze the loop condition. The loop condition is `unknown()`, which is a function that returns a boolean value. We don't know what this function does, so we can't make any assumptions about its behavior.\n\nBased on the above analysis, we can identify the following loop invariants:\n\n1. The loop invariants that are true before the loop execution:\n\t* `x` is initialized to 0.\n\t* `sn` is initialized to 0.\n2. The loop invariants that are true in every iteration of the loop:\n\t* `x` is incremented by 1 in each iteration.\n\t* `sn` is incremented by 1 in each iteration.\n3. The loop invariants that are true after the loop termination:\n\t* `x` is equal to `v2`.\n\t* `sn` is equal to `v3`.\n\nWe can express these loop invariants using ACSL annotations as follows:\n```\n/*@ \n    loop invariant x == 0;\n    loop invariant sn == 0;\n    loop invariant x == v2;\n    loop invariant sn == v3;\n*/\n```\nNote that we have used the `==` operator to indicate that the variables are equal to their respective values.\n\nAlso, note that we have not used any assumptions about the behavior of the `unknown()` function, as it is not defined in the program."
+                    },
+                    {
+                        "role": "assistant",
+                        "content": " The given program has a while loop that iterates until the condition `unknown()` becomes false. The loop body increments the variables `x` and `sn` by 1 in each iteration. The program also has an assertion at the end of the loop that `sn == x` if `sn != -1`.\n\nTo find the loop invariants, we need to analyze the loop body and the assertion. We can start by identifying the variables that are modified in the loop body: `x` and `sn`. We can also identify the variables that are used in the assertion: `sn` and `x`.\n\nThe loop body increments `x` and `sn` by 1 in each iteration, so we can infer that `x` and `sn` are always equal to or greater than their previous values. We can express this as a conjunction of two loop invariants:\n\n1. `x >= x'`: `x` is always equal to or greater than its previous value.\n2. `sn >= sn'`: `sn` is always equal to or greater than its previous value.\n\nWe can also infer that `sn` is always equal to or smaller than `x`, since the loop body increments `sn` by 1 in each iteration and `x` is always equal to or greater than `sn`. We can express this as a conjunction of two loop invariants:\n\n1. `sn <= x`: `sn` is always equal to or smaller than `x`.\n2. `x >= 0`: `x` is always equal to or greater than 0.\n\nWe can also infer that `sn` is always equal to or smaller than `sn'`, since the loop body increments `sn` by 1 in each iteration and `sn'` is always equal to or greater than `sn`. We can express this as a conjunction of two loop invariants:\n\n1. `sn <= sn'`: `sn` is always equal to or smaller than its previous value.\n2. `sn' >= 0`: `sn'` is always equal to or greater than 0.\n\nFinally, we can infer that `x` is always equal to or smaller than `sn`, since the loop body increments `x` by 1 in each iteration and `sn` is always equal to or greater than `x`. We can express this as a conjunction of two loop invariants:\n\n1. `x <= sn`: `x` is always equal to or smaller than `sn`.\n2. `sn <= x'`: `sn` is always equal to or smaller than its previous value.\n\nWe can combine all of these loop invariants into a single loop invariant that is true before the loop execution, in every iteration of the loop, and after the loop termination:\n\n```\n/*@ \n    loop invariant x >= x';\n    loop invariant sn >= sn';\n    loop invariant sn <= x;\n    loop invariant x <= sn';\n    loop invariant sn <= 0;\n    loop invariant sn' >= 0;\n    loop invariant x' >= 0;\n*/\n```\n\nThis loop invariant implies that `sn == x` if `sn != -1`, which is the assertion in the program."
+                    },
+                    {
+                        "role": "assistant",
+                        "content": " To find the loop invariants for the while loop in the given program, we need to analyze the loop body and the loop condition. We can start by identifying the variables that are modified within the loop body and the loop condition.\n\nFrom the loop body, we can see that the variables `x` and `sn` are modified. The loop condition is `unknown()`, which is a function that returns an integer.\n\nNext, we need to identify the pre-conditions and post-conditions of the loop. The pre-conditions are the conditions that must be true before the loop is executed, and the post-conditions are the conditions that must be true after the loop terminates.\n\nIn this case, the pre-condition is `sn == 0`, and the post-condition is `sn == x`.\n\nNow, we can start identifying the loop invariants. A loop invariant is a condition that is true before the loop is executed, remains true during each iteration of the loop, and is still true after the loop terminates.\n\nHere are the loop invariants for the while loop in the program:\n\n1. Before the loop is executed, `sn == 0` and `x == 0`.\n2. In every iteration of the loop, `sn` and `x` are both non-negative integers.\n3. After the loop terminates, `sn` and `x` are both non-negative integers, and `sn == x`.\n\nWe can express these loop invariants in ACSL annotations as follows:\n```\n/*@\n    loop invariant sn == 0 && x == 0;\n    loop invariant sn >= 0 && x >= 0;\n    loop invariant sn == x;\n*/\n```\nNote that we have used implication (`==>`) instead of if-then (`if`) to make the loop invariants more concise and easier to read. We have also added conjunctions to bound the maximum and minimum values that the variables `sn` and `x` can take.\n\nFinally, we can use the loop invariants to verify the post-condition of the program. The post-condition is that `sn == x`, which is guaranteed by the loop invariants. Therefore, we can conclude that the program is correct."
+                    },
+                    {
+                        "role": "assistant",
+                        "content": " The given program has a single loop with the following structure:\n```\nwhile (unknown()) {\n  // loop body\n}\n```\nThe loop body consists of two assignments:\n```\nx = x + 1;\nsn = sn + 1;\n```\nThe loop condition is `unknown()`, which is a function that returns an integer.\n\nTo find the loop invariants, we need to analyze the loop body and the loop condition. We can start by identifying the variables that are modified in the loop body: `x` and `sn`.\n\nWe can then ask the following questions:\n\n1. What is the initial value of `x` and `sn`?\n2. What is the relationship between `x` and `sn`?\n3. What is the loop condition?\n\nBased on the given code, we can answer these questions as follows:\n\n1. The initial value of `x` and `sn` is 0.\n2. The relationship between `x` and `sn` is that `x` is always equal to or larger than `sn`.\n3. The loop condition is `unknown()`, which is a function that returns an integer.\n\nUsing this information, we can formulate the following loop invariants:\n\n1. Before the loop execution, `x` and `sn` are both equal to 0.\n2. In every iteration of the loop, `x` is always equal to or larger than `sn`.\n3. After the loop termination, `sn` is equal to `x`.\n\nWe can express these loop invariants using ACSL annotations as follows:\n```\n/*@ \n    loop invariant x >= sn;\n    loop invariant sn >= 0;\n    loop invariant x >= 0;\n*/\n```\nNote that we have added conjunctions to bound the maximum and minimum values that `x` and `sn` can take. We have also added a conjunction to express the relationship between `x` and `sn`.\n\nFinally, we can use implication to take care of the conditional nature of the code. We can add an implication to the loop invariant that states that if `sn` is not equal to -1, then `sn` is equal to `x`. This implication is necessary to ensure that the loop invariant is true in the case where `sn` is not equal to -1.\n\nHere is the complete code with the loop invariants and the implication:\n```\n#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\n\nint main() {\n  \n  int sn;\n  int v1;\n  int v2;\n  int v3;\n  int x;\n  \n  (sn = 0);\n  (x = 0);\n  \n  while (unknown()) {\n    {\n    (x  = (x + 1));\n    (sn  = (sn + 1));\n    }\n\n  }\n  \nif ( (sn != -1) )\n{;\n//@ assert( (sn == x) );\n}\n\n}\n\n/*@ \n    loop invariant x >= sn;\n    loop invariant sn >= 0;\n    loop invariant x >= 0;\n    implies(sn != -1, sn == x);\n*/\n```\nNote that we have added the implication to the loop invariant that states that if `sn` is not equal to -1, then `sn` is equal to `x`. This implication is necessary to ensure that the loop invariant is true in the case where `sn` is not equal to -1."
+                    },
+                    {
+                        "role": "assistant",
+                        "content": " To find the necessary loop invariants for the while loop in the program above, we need to analyze the loop body and the loop condition.\n\nFirst, let's note the pre-conditions or variable assignments in the program:\n\n* `sn = 0`\n* `x = 0`\n\nNext, let's analyze the loop body:\n\n* `x  = (x + 1)`\n* `sn  = (sn + 1)`\n\nFrom the loop body, we can see that the value of `x` is incremented by 1 in each iteration of the loop, and the value of `sn` is also incremented by 1.\n\nNow, let's analyze the loop condition:\n\n* `unknown()`\n\nThe loop condition is a function call to `unknown()`, which means that the loop will continue to execute as long as the function returns a non-zero value.\n\nFinally, let's think about the post-condition:\n\n* `sn == x`\n\nThe post-condition states that the value of `sn` is equal to the value of `x` after the loop terminates.\n\nBased on the analysis above, we can identify the following loop invariants:\n\n1. Before the loop execution, `sn` and `x` are both equal to 0.\n2. In every iteration of the loop, the value of `x` is incremented by 1, and the value of `sn` is also incremented by 1.\n3. After the loop termination, `sn` is equal to `x`.\n\nTo express these loop invariants in ACSL annotations, we can use the following code:\n```\n/*@\n    loop invariant sn == x;\n    loop invariant sn + 1 == x + 1;\n    loop invariant sn == x;\n@*/\n```\nNote that we have used the `==` operator to express the equality of `sn` and `x` in the loop invariants. This is because we want to ensure that the values of `sn` and `x` are always equal in the loop body.\n\nAlso, we have used the `+ 1` operator to express the increment of `x` and `sn` in the loop body. This is because we want to ensure that the values of `x` and `sn` are always incremented by 1 in each iteration of the loop.\n\nFinally, we have used the `==` operator to express the equality of `sn` and `x` after the loop termination. This is because we want to ensure that the values of `sn` and `x` are always equal after the loop terminates."
+                    },
+                    {
+                        "role": "assistant",
+                        "content": " To find the loop invariants for the while loop in the program above, we need to analyze the loop body and identify the conditions that are true before, during, and after each iteration of the loop.\n\nBefore the loop execution, the loop invariant should be true, so we can start by identifying the conditions that are true before the loop starts. In this case, we can see that the variable `sn` is initialized to 0, and the variable `x` is initialized to 0. Therefore, we can start with the following loop invariant:\n```\n/*@ loop invariant sn == 0 && x == 0; */\n```\nDuring each iteration of the loop, the variable `x` is incremented by 1, and the variable `sn` is incremented by 1. Therefore, we can add the following loop invariant to ensure that these variables are always equal:\n```\n/*@ loop invariant sn == x; */\n```\nAfter the loop termination, the variable `sn` is compared to -1, and if they are not equal, the assertion is made. Therefore, we can add the following loop invariant to ensure that the assertion is true:\n```\n/*@ loop invariant sn != -1 ==> sn == x; */\n```\nFinally, we can combine all the loop invariants into one code block:\n```\n/*@ \n    loop invariant sn == 0 && x == 0;\n    loop invariant sn == x;\n    loop invariant sn != -1 ==> sn == x;\n*/\n```\nThis code block specifies the loop invariants that are true before, during, and after each iteration of the loop, and ensures that the assertion is true if the loop terminates."
+                    },
+                    {
+                        "role": "assistant",
+                        "content": " To find the loop invariants for the while loop in the program above, we need to analyze the loop body and the loop condition.\n\nThe loop body contains two assignments: `x = x + 1` and `sn = sn + 1`. The loop condition is `unknown()`.\n\nLet's start by identifying the variables that are involved in the loop. We have `x`, `sn`, and `unknown`.\n\nNext, we need to identify the loop invariants. A loop invariant is a condition that is true before the loop starts, remains true during the loop, and is true after the loop terminates.\n\nWe can start by identifying the loop invariant that is true before the loop starts. In this case, we can say that `x` and `sn` are both equal to 0. This is because the loop starts with `(x = 0)` and `(sn = 0)`.\n\nNext, we need to identify the loop invariant that is true during the loop. In this case, we can say that `x` is always equal to `sn`. This is because the loop body contains the assignment `x = x + 1` and `sn = sn + 1`, which ensures that `x` and `sn` are always equal.\n\nFinally, we need to identify the loop invariant that is true after the loop terminates. In this case, we can say that `sn` is not equal to -1. This is because the loop condition is `unknown()`, which means that the loop may or may not terminate. If the loop does terminate, then `sn` will be equal to -1. However, if the loop does not terminate, then `sn` will not be equal to -1.\n\nHere are the loop invariants for the while loop in the program above:\n\n1. `x` and `sn` are both equal to 0 before the loop starts.\n2. `x` is always equal to `sn` during the loop.\n3. `sn` is not equal to -1 after the loop terminates.\n\nTo express these loop invariants in ACSL annotations, we can use the following code block:\n```\n/*@ \n    loop invariant x == 0 && sn == 0;\n    loop invariant x == sn;\n    loop invariant sn != -1;\n*/\n```\nNote that we have used the implication operator (`==>`) to take care of the conditional nature of the code. We have also used conjunctions to bound the maximum and minimum values that `x` and `sn` can take, and to express their relation."
+                    },
+                    {
+                        "role": "assistant",
+                        "content": " To find the loop invariants for the while loop in the program, we need to analyze the loop body and the loop condition.\n\nThe loop body consists of two assignments:\n```scss\nx = x + 1;\nsn = sn + 1;\n```\nThe loop condition is `unknown()`, which is a function that returns a non-deterministic value.\n\nTo find the loop invariants, we need to identify the variables that are modified in the loop body and the loop condition. In this case, the variables that are modified are `x` and `sn`.\n\nWe can start by identifying the loop invariant that is true before the loop execution. Since `x` and `sn` are initialized to 0, we can say that the loop invariant is true before the loop execution if `x == 0` and `sn == 0`.\n```scss\n/*@ loop invariant x == 0 && sn == 0; */\n```\nNext, we need to identify the loop invariant that is true in every iteration of the loop. We can say that the loop invariant is true in every iteration if `x` and `sn` are updated correctly.\n```scss\n/*@ loop invariant x <= sn; */\n```\nFinally, we need to identify the loop invariant that is true after the loop termination. Since the loop terminates when `unknown()` returns 0, we can say that the loop invariant is true after the loop termination if `x` and `sn` are updated correctly.\n```scss\n/*@ loop invariant x <= sn; */\n```\nOverall, the loop invariants for the while loop in the program are:\n```scss\n/*@ loop invariant x == 0 && sn == 0; */\n/*@ loop invariant x <= sn; */\n/*@ loop invariant x <= sn; */\n```\nThese loop invariants can be used by Frama-C to verify the post-condition of the program."
+                    },
+                    {
+                        "role": "assistant",
+                        "content": " The given program has a while loop with the following conditions:\n\n* The loop condition is `unknown()`, which is a function that returns a non-deterministic value.\n* The loop body increments `x` and `sn` by 1.\n* The loop is guarded by `sn != -1`.\n\nTo find the loop invariants, we need to analyze the loop body and the loop condition.\n\nFirst, we need to find the necessary conditions that are true before the loop execution, during each iteration of the loop, and after the loop termination.\n\nBefore the loop execution:\n\n* `x` and `sn` are initialized to 0.\n* `unknown()` is not deterministic.\n\nDuring each iteration of the loop:\n\n* `x` and `sn` are incremented by 1.\n* `unknown()` is not deterministic.\n\nAfter the loop termination:\n\n* `sn` is not equal to -1.\n* `x` is equal to `sn`.\n\nNow, we need to find the loop invariants that imply the post-condition.\n\nLoop Invariants:\n\n* `x` and `sn` are always equal.\n* `x` and `sn` are always non-negative.\n* `x` and `sn` are always less than or equal to 100.\n\nImplications:\n\n* If `sn` is not equal to -1, then `x` is equal to `sn`.\n* If `x` is equal to `sn`, then `sn` is not equal to -1.\n\nThese loop invariants and implications together imply the post-condition that `sn` is equal to `x`.\n\nHere's the code block with the loop invariants:\n```\n/*@ \n    loop invariant x == sn;\n    loop invariant x >= 0;\n    loop invariant sn >= 0;\n    loop invariant x <= 100;\n    loop invariant sn <= 100;\n*/\n```\nNote that we have added conjunctions to bound the maximum and minimum values that `x` and `sn` can take, as well as to ensure that they are non-negative. We have also added implications to make the loop invariants true before the loop execution and after the loop termination."
+                    },
+                    {
+                        "role": "assistant",
+                        "content": " To find the loop invariants for the while loop in the program above, we need to analyze the loop body and identify the conditions that must be true before, during, and after the loop execution.\n\nFirst, let's identify the loop condition. The loop condition is `(sn != -1)`, which means that the loop will continue to execute as long as `sn` is not equal to -1.\n\nNext, let's analyze the loop body. The loop body contains two statements: `(x = x + 1)` and `(sn = sn + 1)`. These statements increment `x` and `sn` by 1 in each iteration of the loop.\n\nNow, let's identify the necessary loop invariants to verify the post-condition. The post-condition is `sn == x`, which means that `sn` and `x` must be equal at the end of the loop.\n\nTo ensure that this post-condition is true, we need to ensure that `sn` and `x` are equal at the beginning of the loop, and that `sn` and `x` are not modified in any way during the loop execution.\n\nHere are the necessary loop invariants:\n\n1. `sn == x` at the beginning of the loop.\n2. `sn` and `x` are not modified in the loop body.\n3. `sn == x` at the end of the loop.\n\nTo express these loop invariants in ACSL annotations, we can use the following code block:\n```\n/*@\n    loop invariant sn == x;\n    loop invariant sn' == sn;\n    loop invariant x' == x;\n    loop invariant sn == x;\n@*/\n```\nHere, `sn'` and `x'` are the values of `sn` and `x` at the beginning of the loop, respectively. The first loop invariant ensures that `sn` and `x` are equal at the beginning of the loop. The second and third loop invariants ensure that `sn` and `x` are not modified in the loop body. The fourth loop invariant ensures that `sn` and `x` are equal at the end of the loop.\n\nNote that we have used implication to take care of the conditional nature of the code. The loop invariants are only true if the loop condition `(sn != -1)` is true. If the loop condition is false, the loop invariants are trivially true."
+                    },
+                    {
+                        "role": "assistant",
+                        "content": " The given program has a while loop with a condition `unknown()`. The loop body increments `x` and `sn` by 1. The loop terminates when `unknown()` returns 0.\n\nLet's start by analyzing the loop condition. The condition is `unknown()`, which is a non-deterministic function call. We cannot make any assumptions about the behavior of this function, so we cannot infer any loop invariants based solely on the loop condition.\n\nNext, let's analyze the loop body. The loop body increments `x` and `sn` by 1. We can infer the following loop invariants:\n\n* Before the loop execution, `x` and `sn` are equal to 0.\n* In every iteration of the loop, `x` and `sn` are equal to the previous iteration's value plus 1.\n* After the loop termination, `x` and `sn` are equal to the number of iterations of the loop.\n\nNow, let's consider the post-condition. The post-condition is `sn == x`. We can use the loop invariants to prove the post-condition. Specifically, we can use the third loop invariant to prove the post-condition.\n\nHere's the complete loop invariants for the given program:\n```\n/*@\n    loop invariant i1;\n    loop invariant i2;\n*/\n```\nwhere `i1` and `i2` are the first and second loop invariants, respectively."
+                    },
+                    {
+                        "role": "assistant",
+                        "content": " To find the loop invariants for the loop in the program above, we need to analyze the loop body and the loop condition.\n\nFirst, let's analyze the loop body. The loop body consists of two assignments:\n```scss\nx = x + 1;\nsn = sn + 1;\n```\nFrom these assignments, we can see that the value of `x` is incremented by 1 in each iteration of the loop, and the value of `sn` is also incremented by 1.\n\nNext, let's analyze the loop condition. The loop condition is `unknown()`, which means that the loop continues to execute until the function `unknown()` returns a value that is not 0.\n\nNow, let's find the loop invariants. A loop invariant is a condition that is true before the loop execution, in every iteration of the loop, and after the loop termination.\n\nFrom the analysis of the loop body and the loop condition, we can find the following loop invariants:\n\n1. Before the loop execution, `x` is equal to 0 and `sn` is equal to 0.\n2. In every iteration of the loop, `x` is equal to `sn` plus 1.\n3. After the loop termination, `x` is equal to `sn`.\n\nTo express these loop invariants in ACSL annotations, we can use the following code:\n```scss\n/*@ \n    loop invariant x == 0 && sn == 0;\n    loop invariant x == sn + 1;\n    loop invariant x == sn;\n*/\n```\nNote that we have used the `==` operator to express the equality of the variables `x` and `sn` in the loop invariants. This is because the `==` operator is used to compare the values of variables in ACSL annotations.\n\nAlso, note that we have used the `&&` operator to combine the loop invariants into a single annotation. This is because ACSL annotations can only contain a single invariant per line.\n\nFinally, we can use implication to take care of the conditional nature of the code. We can use the implication operator `==>` to express the loop invariants in a way that takes into account the conditional nature of the loop. For example, we can use the following code to express the loop invariants in a way that takes into account the conditional nature of the loop:\n```scss\n/*@ \n    loop invariant (sn == 0) ==> (x == 0 && sn == 0);\n    loop invariant (sn == 0) ==> (x == sn + 1);\n    loop invariant (sn == 0) ==> (x == sn);\n*/\n```\nThis code uses implication to express the loop invariants in a way that takes into account the conditional nature of the loop. The `==>` operator is used to express the implication of the loop invariants, and the `(sn == 0)` condition is used to specify the condition under which the loop invariants hold."
+                    },
+                    {
+                        "role": "assistant",
+                        "content": " The loop in the program above is:\n```scss\nwhile (unknown()) {\n  {\n    (x  = (x + 1));\n    (sn  = (sn + 1));\n  }\n\n}\n```\nTo find the loop invariants, we need to analyze the loop body and identify the conditions that are true before, during, and after the loop execution.\n\nBefore the loop execution, the condition `unknown()` is true, which means that the loop will execute at least once. Therefore, the loop invariant `I1` can be defined as:\n```scss\nI1: unknown()\n```\nDuring the loop execution, the loop condition `unknown()` remains true, and the variables `x` and `sn` are incremented by 1 in each iteration. Therefore, the loop invariant `I2` can be defined as:\n```scss\nI2: x < sn && sn < x + 1\n```\nAfter the loop termination, the loop condition `unknown()` is false, which means that the loop has terminated. Therefore, the loop invariant `I3` can be defined as:\n```scss\nI3: !unknown()\n```\nThe post-condition of the program is that the variable `sn` is equal to the variable `x` after the loop termination. Therefore, we can use the implication `=>` to link the loop invariants to the post-condition:\n```scss\nI1 ==> I2 ==> I3 ==> sn == x\n```\nThe loop invariants `I1`, `I2`, and `I3` are necessary to verify the post-condition `sn == x`.\n\nNote that the variables `sn` and `x` are not initialized in the program, so we cannot make any assumptions about their initial values. However, we can use the loop invariants to bound the maximum and minimum values that they can take during the loop execution. For example, we can add the conjunction `sn >= 0 && sn <= x + 1` to the loop invariant `I2` to bound the value of `sn` between 0 and `x + 1`."
+                    },
+                    {
+                        "role": "assistant",
+                        "content": " To find the necessary loop invariants for the while loop in the program, we need to analyze the loop body and the loop condition.\n\nThe loop body consists of two assignments:\n```scss\n(x  = (x + 1));\n(sn  = (sn + 1));\n```\nThe loop condition is `unknown()`.\n\nFrom the loop body, we can infer that the loop invariants should include the following:\n\n* `sn` is always equal to `x`\n* `sn` is always greater than or equal to 0\n* `x` is always greater than or equal to 0\n\nWe can also infer that the loop invariants should not include the following:\n\n* `sn` is always less than or equal to -1\n* `x` is always less than or equal to -1\n\nTherefore, the loop invariants for the while loop in the program are:\n```\n/*@\n    loop invariant sn == x;\n    loop invariant sn >= 0;\n    loop invariant x >= 0;\n*/\n```\nNote that we have not included any conjunctions or implications in the loop invariants, as they are not necessary for the analysis."
+                    },
+                    {
+                        "role": "assistant",
+                        "content": " To find the loop invariants for the while loop in the given program, we need to analyze the loop body and the loop condition.\n\nFirst, let's identify the variables that are used in the loop body:\n\n* `x` is incremented by 1 in each iteration of the loop.\n* `sn` is incremented by 1 in each iteration of the loop.\n\nNext, let's identify the loop condition:\n\n* The loop continues to execute as long as `unknown()` returns a non-zero value.\n\nNow, let's find the loop invariants:\n\n1. Before the loop execution, `x` and `sn` are both equal to 0.\n2. In every iteration of the loop, `x` is incremented by 1, and `sn` is incremented by 1.\n3. After the loop termination, `sn` is not equal to -1.\n\nTo express these loop invariants in ACSL annotations, we can use the following code block:\n```\n/*@ \n    loop invariant i1;\n    loop invariant i2;\n*/\n```\nHere, `i1` and `i2` are the loop invariants that we identified earlier.\n\nTo make the loop invariants more precise, we can add conjunctions that bound the maximum and minimum values that `x` and `sn` can take. For example:\n```\n/*@ \n    loop invariant i1 && (x >= 0 && x <= 10);\n    loop invariant i2 && (sn >= 0 && sn <= 10);\n*/\n```\nHere, we added conjunctions that bound the values of `x` and `sn` to be between 0 and 10.\n\nFinally, we can use implication to take care of the conditional nature of the code. For example:\n```\n/*@ \n    loop invariant i1 && (x >= 0 && x <= 10) ==> (sn >= 0 && sn <= 10);\n    loop invariant i2 && (sn >= 0 && sn <= 10) ==> (x >= 0 && x <= 10);\n*/\n```\nHere, we used implication to make the loop invariants more precise. We added conjunctions that bound the values of `x` and `sn` to be between 0 and 10, and we used implication to make the loop invariants more precise.\n\nOverall, the loop invariants for the while loop in the given program are:\n```\n/*@ \n    loop invariant i1;\n    loop invariant i2;\n*/\n```\nHere, `i1` and `i2` are the loop invariants that we identified earlier. We added conjunctions that bound the maximum and minimum values that `x` and `sn` can take, and we used implication to make the loop invariants more precise."
+                    }
+                ],
+                "output": [
+                    "/*@ \n    loop invariant x == 0;\n    loop invariant sn == 0;\n    loop invariant x == v2;\n    loop invariant sn == v3;\n*/",
+                    "/*@ \n    loop invariant x >= x';\n    loop invariant sn >= sn';\n    loop invariant sn <= x;\n    loop invariant x <= sn';\n    loop invariant sn <= 0;\n    loop invariant sn' >= 0;\n    loop invariant x' >= 0;\n*/",
+                    "/*@\n    loop invariant sn == 0 && x == 0;\n    loop invariant sn >= 0 && x >= 0;\n    loop invariant sn == x;\n*/",
+                    "/*@ \n    loop invariant x >= sn;\n    loop invariant sn >= 0;\n    loop invariant x >= 0;\n*/",
+                    "/*@\n    loop invariant sn == x;\n    loop invariant sn + 1 == x + 1;\n    loop invariant sn == x;\n@*/",
+                    "/*@ loop invariant sn == 0 && x == 0; */",
+                    "/*@ \n    loop invariant x == 0 && sn == 0;\n    loop invariant x == sn;\n    loop invariant sn != -1;\n*/",
+                    "/*@ loop invariant x == 0 && sn == 0; */",
+                    "/*@ \n    loop invariant x == sn;\n    loop invariant x >= 0;\n    loop invariant sn >= 0;\n    loop invariant x <= 100;\n    loop invariant sn <= 100;\n*/",
+                    "/*@\n    loop invariant sn == x;\n    loop invariant sn' == sn;\n    loop invariant x' == x;\n    loop invariant sn == x;\n@*/",
+                    "/*@\n    loop invariant i1;\n    loop invariant i2;\n*/",
+                    "/*@ \n    loop invariant x == 0 && sn == 0;\n    loop invariant x == sn + 1;\n    loop invariant x == sn;\n*/",
+                    "while (unknown()) {\n  {\n    (x  = (x + 1));\n    (sn  = (sn + 1));\n  }\n\n}",
+                    "/*@\n    loop invariant sn == x;\n    loop invariant sn >= 0;\n    loop invariant x >= 0;\n*/",
+                    "/*@ \n    loop invariant i1;\n    loop invariant i2;\n*/"
+                ]
+            },
+            {
+                "step": "Checking individual completion",
+                "solver_calls": 15,
+                "completions": [
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant x == 0;\n    loop invariant sn == 0;\n    loop invariant x == v2;\n    loop invariant sn == v3;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant x == 0 is established but not preserved.\nloop invariant sn == 0 is inductive.\nloop invariant x == v2 is preserved but not established.\nloop invariant sn == v3 is preserved but not established.\nAssertion sn == x: Partially proven\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant x >= x';\n    loop invariant sn >= sn';\n    loop invariant sn <= x;\n    loop invariant x <= sn';\n    loop invariant sn <= 0;\n    loop invariant sn' >= 0;\n    loop invariant x' >= 0;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "No JSON report found"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@\n    loop invariant sn == 0 && x == 0;\n    loop invariant sn >= 0 && x >= 0;\n    loop invariant sn == x;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant sn == 0 && x == 0 is established but not preserved.\nloop invariant sn >= 0 && x >= 0 is inductive.\nloop invariant sn == x is inductive.\nAssertion sn == x: Partially proven\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant x >= sn;\n    loop invariant sn >= 0;\n    loop invariant x >= 0;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant x >= sn is inductive.\nloop invariant sn >= 0 is inductive.\nloop invariant x >= 0 is inductive.\nAssertion sn == x: Unproven\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": true,
+                        "invariants": "/*@\n    loop invariant sn == x;\n    loop invariant sn + 1 == x + 1;\n    loop invariant sn == x;\n@*/",
+                        "checker_output_for_invariants": true,
+                        "checker_message_for_invariants": "loop invariant sn == x is inductive.\nloop invariant sn + 1 == x + 1 is inductive.\nloop invariant sn == x is inductive.\nAssertion sn == x: Valid\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ loop invariant sn == 0 && x == 0; */",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant sn == 0 && x == 0 is established but not preserved.\nAssertion sn == x: Partially proven\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant x == 0 && sn == 0;\n    loop invariant x == sn;\n    loop invariant sn != -1;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant x == 0 && sn == 0 is established but not preserved.\nloop invariant x == sn is inductive.\nloop invariant sn != -1 is inductive.\nAssertion sn == x: Partially proven\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ loop invariant x == 0 && sn == 0; */",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant x == 0 && sn == 0 is established but not preserved.\nAssertion sn == x: Partially proven\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant x == sn;\n    loop invariant x >= 0;\n    loop invariant sn >= 0;\n    loop invariant x <= 100;\n    loop invariant sn <= 100;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant x == sn is inductive.\nloop invariant x >= 0 is inductive.\nloop invariant sn >= 0 is inductive.\nloop invariant x <= 100 is established but not preserved.\nloop invariant sn <= 100 is inductive.\nAssertion sn == x: Partially proven\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@\n    loop invariant sn == x;\n    loop invariant sn' == sn;\n    loop invariant x' == x;\n    loop invariant sn == x;\n@*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "Annotation error on line 17: lexical error, illegal character '"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@\n    loop invariant i1;\n    loop invariant i2;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "Annotation error on line 16: unbound logic variable i1. Ignoring loop annotation"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant x == 0 && sn == 0;\n    loop invariant x == sn + 1;\n    loop invariant x == sn;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant x == 0 && sn == 0 is inductive.\nloop invariant x == sn + 1 is preserved but not established.\nloop invariant x == sn is inductive.\nAssertion sn == x: Partially proven\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "while (unknown()) {\n  {\n    (x  = (x + 1));\n    (sn  = (sn + 1));\n  }\n\n}",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "No invariants found."
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": true,
+                        "invariants": "/*@\n    loop invariant sn == x;\n    loop invariant sn >= 0;\n    loop invariant x >= 0;\n*/",
+                        "checker_output_for_invariants": true,
+                        "checker_message_for_invariants": "loop invariant sn == x is inductive.\nloop invariant sn >= 0 is inductive.\nloop invariant x >= 0 is inductive.\nAssertion sn == x: Valid\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant i1;\n    loop invariant i2;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "Annotation error on line 16: unbound logic variable i1. Ignoring loop annotation"
+                    }
+                ],
+                "success": true
+            },
+            {
+                "step": "Houdini for combined completion",
+                "solver_calls": 1,
+                "success": false,
+                "code_with_combined_invariants": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\n\nint main() {\n  \n  int sn;\n  int v1;\n  int v2;\n  int v3;\n  int x;\n  \n  (sn = 0);\n  (x = 0);\n  \n  /*@\nloop invariant i1: x == 0;\nloop invariant i2: sn == 0;\nloop invariant i3: x == v2;\nloop invariant i4: sn == v3;\nloop invariant i5: x >= x';\nloop invariant i6: sn >= sn';\nloop invariant i7: sn <= x;\nloop invariant i8: x <= sn';\nloop invariant i9: sn <= 0;\nloop invariant i10: sn' >= 0;\nloop invariant i11: x' >= 0;\nloop invariant i12: sn == 0 && x == 0;\nloop invariant i13: sn >= 0 && x >= 0;\nloop invariant i14: sn == x;\nloop invariant i15: x >= sn;\nloop invariant i16: sn >= 0;\nloop invariant i17: x >= 0;\nloop invariant i19: sn + 1 == x + 1;\nloop invariant i22: x == 0 && sn == 0;\nloop invariant i23: x == sn;\nloop invariant i24: sn != -1;\nloop invariant i29: x <= 100;\nloop invariant i30: sn <= 100;\nloop invariant i32: sn' == sn;\nloop invariant i33: x' == x;\nloop invariant i35: i1;\nloop invariant i36: i2;\nloop invariant i38: x == sn + 1;\n*/\nwhile (unknown()) {\n    {\n    (x  = (x + 1));\n    (sn  = (sn + 1));\n    }\n\n  }\n  \nif ( (sn != -1) )\n{;\n//@ assert( (sn == x) );\n}\n\n}",
+                "checker_output": false
+            }
+        ]
+    },
+    "stats": {
+        "success": [
+            "../data/benchmarks/code2inv/1.c",
+            "../data/benchmarks/code2inv/2.c",
+            "../data/benchmarks/code2inv/10.c",
+            "../data/benchmarks/code2inv/18.c",
+            "../data/benchmarks/code2inv/20.c",
+            "../data/benchmarks/code2inv/25.c",
+            "../data/benchmarks/code2inv/30.c",
+            "../data/benchmarks/code2inv/35.c",
+            "../data/benchmarks/code2inv/36.c",
+            "../data/benchmarks/code2inv/37.c",
+            "../data/benchmarks/code2inv/38.c",
+            "../data/benchmarks/code2inv/39.c",
+            "../data/benchmarks/code2inv/40.c",
+            "../data/benchmarks/code2inv/41.c",
+            "../data/benchmarks/code2inv/42.c",
+            "../data/benchmarks/code2inv/43.c",
+            "../data/benchmarks/code2inv/44.c",
+            "../data/benchmarks/code2inv/45.c",
+            "../data/benchmarks/code2inv/46.c",
+            "../data/benchmarks/code2inv/47.c",
+            "../data/benchmarks/code2inv/48.c",
+            "../data/benchmarks/code2inv/49.c",
+            "../data/benchmarks/code2inv/50.c",
+            "../data/benchmarks/code2inv/51.c",
+            "../data/benchmarks/code2inv/52.c",
+            "../data/benchmarks/code2inv/53.c",
+            "../data/benchmarks/code2inv/54.c",
+            "../data/benchmarks/code2inv/55.c",
+            "../data/benchmarks/code2inv/56.c",
+            "../data/benchmarks/code2inv/58.c",
+            "../data/benchmarks/code2inv/60.c",
+            "../data/benchmarks/code2inv/71.c",
+            "../data/benchmarks/code2inv/73.c",
+            "../data/benchmarks/code2inv/74.c",
+            "../data/benchmarks/code2inv/76.c",
+            "../data/benchmarks/code2inv/77.c",
+            "../data/benchmarks/code2inv/78.c",
+            "../data/benchmarks/code2inv/79.c",
+            "../data/benchmarks/code2inv/80.c",
+            "../data/benchmarks/code2inv/81.c",
+            "../data/benchmarks/code2inv/82.c",
+            "../data/benchmarks/code2inv/87.c",
+            "../data/benchmarks/code2inv/89.c",
+            "../data/benchmarks/code2inv/91.c",
+            "../data/benchmarks/code2inv/92.c",
+            "../data/benchmarks/code2inv/95.c",
+            "../data/benchmarks/code2inv/97.c",
+            "../data/benchmarks/code2inv/98.c",
+            "../data/benchmarks/code2inv/100.c",
+            "../data/benchmarks/code2inv/103.c",
+            "../data/benchmarks/code2inv/108.c",
+            "../data/benchmarks/code2inv/114.c",
+            "../data/benchmarks/code2inv/116.c"
+        ],
+        "failure": [
+            "../data/benchmarks/code2inv/3.c",
+            "../data/benchmarks/code2inv/4.c",
+            "../data/benchmarks/code2inv/5.c",
+            "../data/benchmarks/code2inv/6.c",
+            "../data/benchmarks/code2inv/7.c",
+            "../data/benchmarks/code2inv/8.c",
+            "../data/benchmarks/code2inv/9.c",
+            "../data/benchmarks/code2inv/11.c",
+            "../data/benchmarks/code2inv/12.c",
+            "../data/benchmarks/code2inv/13.c",
+            "../data/benchmarks/code2inv/14.c",
+            "../data/benchmarks/code2inv/15.c",
+            "../data/benchmarks/code2inv/16.c",
+            "../data/benchmarks/code2inv/17.c",
+            "../data/benchmarks/code2inv/19.c",
+            "../data/benchmarks/code2inv/21.c",
+            "../data/benchmarks/code2inv/22.c",
+            "../data/benchmarks/code2inv/23.c",
+            "../data/benchmarks/code2inv/24.c",
+            "../data/benchmarks/code2inv/26.c",
+            "../data/benchmarks/code2inv/27.c",
+            "../data/benchmarks/code2inv/28.c",
+            "../data/benchmarks/code2inv/29.c",
+            "../data/benchmarks/code2inv/31.c",
+            "../data/benchmarks/code2inv/32.c",
+            "../data/benchmarks/code2inv/33.c",
+            "../data/benchmarks/code2inv/34.c",
+            "../data/benchmarks/code2inv/57.c",
+            "../data/benchmarks/code2inv/59.c",
+            "../data/benchmarks/code2inv/61.c",
+            "../data/benchmarks/code2inv/62.c",
+            "../data/benchmarks/code2inv/63.c",
+            "../data/benchmarks/code2inv/64.c",
+            "../data/benchmarks/code2inv/65.c",
+            "../data/benchmarks/code2inv/66.c",
+            "../data/benchmarks/code2inv/67.c",
+            "../data/benchmarks/code2inv/68.c",
+            "../data/benchmarks/code2inv/69.c",
+            "../data/benchmarks/code2inv/70.c",
+            "../data/benchmarks/code2inv/72.c",
+            "../data/benchmarks/code2inv/75.c",
+            "../data/benchmarks/code2inv/83.c",
+            "../data/benchmarks/code2inv/84.c",
+            "../data/benchmarks/code2inv/85.c",
+            "../data/benchmarks/code2inv/86.c",
+            "../data/benchmarks/code2inv/88.c",
+            "../data/benchmarks/code2inv/90.c",
+            "../data/benchmarks/code2inv/93.c",
+            "../data/benchmarks/code2inv/94.c",
+            "../data/benchmarks/code2inv/96.c",
+            "../data/benchmarks/code2inv/99.c",
+            "../data/benchmarks/code2inv/101.c",
+            "../data/benchmarks/code2inv/102.c",
+            "../data/benchmarks/code2inv/104.c",
+            "../data/benchmarks/code2inv/105.c",
+            "../data/benchmarks/code2inv/106.c",
+            "../data/benchmarks/code2inv/107.c",
+            "../data/benchmarks/code2inv/109.c",
+            "../data/benchmarks/code2inv/110.c",
+            "../data/benchmarks/code2inv/111.c",
+            "../data/benchmarks/code2inv/112.c",
+            "../data/benchmarks/code2inv/113.c",
+            "../data/benchmarks/code2inv/115.c",
+            "../data/benchmarks/code2inv/117.c"
+        ],
+        "skipped": [
+            "../data/benchmarks/code2inv/8.c",
+            "../data/benchmarks/code2inv/9.c",
+            "../data/benchmarks/code2inv/10.c",
+            "../data/benchmarks/code2inv/11.c",
+            "../data/benchmarks/code2inv/12.c",
+            "../data/benchmarks/code2inv/13.c",
+            "../data/benchmarks/code2inv/14.c",
+            "../data/benchmarks/code2inv/15.c",
+            "../data/benchmarks/code2inv/19.c",
+            "../data/benchmarks/code2inv/27.c",
+            "../data/benchmarks/code2inv/28.c",
+            "../data/benchmarks/code2inv/29.c",
+            "../data/benchmarks/code2inv/30.c",
+            "../data/benchmarks/code2inv/31.c",
+            "../data/benchmarks/code2inv/34.c",
+            "../data/benchmarks/code2inv/35.c",
+            "../data/benchmarks/code2inv/36.c",
+            "../data/benchmarks/code2inv/38.c",
+            "../data/benchmarks/code2inv/40.c",
+            "../data/benchmarks/code2inv/42.c",
+            "../data/benchmarks/code2inv/45.c",
+            "../data/benchmarks/code2inv/48.c",
+            "../data/benchmarks/code2inv/49.c",
+            "../data/benchmarks/code2inv/52.c",
+            "../data/benchmarks/code2inv/54.c",
+            "../data/benchmarks/code2inv/59.c",
+            "../data/benchmarks/code2inv/62.c",
+            "../data/benchmarks/code2inv/65.c",
+            "../data/benchmarks/code2inv/66.c",
+            "../data/benchmarks/code2inv/68.c",
+            "../data/benchmarks/code2inv/69.c",
+            "../data/benchmarks/code2inv/71.c",
+            "../data/benchmarks/code2inv/72.c",
+            "../data/benchmarks/code2inv/74.c",
+            "../data/benchmarks/code2inv/75.c",
+            "../data/benchmarks/code2inv/76.c",
+            "../data/benchmarks/code2inv/77.c",
+            "../data/benchmarks/code2inv/82.c",
+            "../data/benchmarks/code2inv/85.c",
+            "../data/benchmarks/code2inv/91.c",
+            "../data/benchmarks/code2inv/92.c",
+            "../data/benchmarks/code2inv/94.c",
+            "../data/benchmarks/code2inv/97.c",
+            "../data/benchmarks/code2inv/98.c",
+            "../data/benchmarks/code2inv/105.c",
+            "../data/benchmarks/code2inv/108.c",
+            "../data/benchmarks/code2inv/110.c",
+            "../data/benchmarks/code2inv/112.c",
+            "../data/benchmarks/code2inv/114.c",
+            "../data/benchmarks/code2inv/116.c",
+            "../data/benchmarks/code2inv/117.c"
+        ],
+        "total": 117,
+        "success_count": 53,
+        "failure_count": 64,
+        "success_rate": 0.452991452991453
+    }
+}
