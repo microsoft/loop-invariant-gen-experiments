@@ -1463,7 +1463,9 @@ class LoopyPipeline:
                             for instance in sliced_benchmarks
                         ]
 
-                        outputs = self.llm.generate_annotations_local(sliced_benchmarks)
+                        outputs = self.llm.generate_annotations_local(
+                            inputs=sliced_benchmarks, prompt=prompt
+                        )
                         local_llm_outputs[step_index] = outputs
 
                 except (Exception, KeyboardInterrupt) as e:
