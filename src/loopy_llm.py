@@ -211,7 +211,7 @@ class LLM:
             system_message = {"role": "system", "content": system_text}
             user_message = {
                 "role": "user",
-                "content": prompt.get_user_text(input),
+                "content": prompt.get_user_text(input[1]),
             }
             dataset_dump.append(
                 {"file": input[0], "input": [system_message, user_message]}
