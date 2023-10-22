@@ -2011,6 +2011,46 @@ class LoopyPipeline:
 
                 for variant in variants:
                     variant_log_json = {}
+                    checker_input_with_only_variant = (
+                        self.benchmark.combine_llm_outputs(
+                            self.benchmark.get_code(benchmark_file),
+                            (
+                                [],
+                                ["loop variant " + x + ";\n" for x in variant],
+                            ),
+                            "termination_one_loop_one_method",
+                        )
+                    )
+                    Logger.log_info(
+                        f"Checking variant: {variant} for benchmark: {start_index + benchmark_index + 1}/{len(sliced_benchmarks)}"
+                    )
+
+                    success, checker_message = self.checker.check(
+                        checker_input_with_only_variant,
+                        check_variant=True,
+                        use_json_output=self.use_json_output,
+                    )
+                    if success:
+                        Logger.log_success(
+                            f"Found variant: {variant} for benchmark: {start_index + benchmark_index + 1}/{len(sliced_benchmarks)}"
+                        )
+                        variant_log_json["invariant_code_blocks"] = []
+                        variant_log_json["invariant_llm_output"] = []
+                        variant_log_json["inductive_invariants"] = [
+                            "Invariants not needed"
+                        ]
+                        variant_log_json[
+                            "final_checker_input"
+                        ] = checker_input_with_only_variant
+                        variant_log_json["success"] = success
+
+                        instance_log_json["variant_log"].append(variant_log_json)
+                        break
+                    else:
+                        Logger.log_error(
+                            f"Checking failed for variant: {variant} for benchmark: {start_index + benchmark_index + 1}/{len(sliced_benchmarks)}"
+                        )
+
                     Logger.log_info(
                         f"Getting invariants for variant: {variant} for benchmark: {start_index + benchmark_index + 1}/{len(sliced_benchmarks)}"
                     )
@@ -2086,6 +2126,10 @@ class LoopyPipeline:
                         "final_checker_input"
                     ] = checker_input_with_variants
 
+                    Logger.log_info(
+                        f"Checking invariants and variant for benchmark: {start_index + benchmark_index + 1}/{len(sliced_benchmarks)}"
+                    )
+
                     (
                         success,
                         checker_message,
@@ -2100,6 +2144,10 @@ class LoopyPipeline:
                     instance_log_json["variant_log"].append(variant_log_json)
                     if success:
                         break
+                    else:
+                        Logger.log_error(
+                            f"Checking inductive invariants and variant failed for benchmark: {start_index + benchmark_index + 1}/{len(sliced_benchmarks)}"
+                        )
 
                 instance_log_json["success"] = success
 
