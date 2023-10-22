@@ -2014,10 +2014,7 @@ class LoopyPipeline:
                     checker_input_with_only_variant = (
                         self.benchmark.combine_llm_outputs(
                             self.benchmark.get_code(benchmark_file),
-                            (
-                                [],
-                                ["loop variant " + x + ";\n" for x in variant],
-                            ),
+                            ("", ["loop variant " + x + ";\n" for x in variant]),
                             "termination_one_loop_one_method",
                         )
                     )
