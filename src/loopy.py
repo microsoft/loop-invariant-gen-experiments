@@ -1458,13 +1458,13 @@ class LoopyPipeline:
                             f"[Step {step_index + 1}] Prompting Local LLM for {annotation_type}"
                         )
 
-                        sliced_benchmarks = [
+                        sliced_benchmark_inputs = [
                             (instance, {"code": self.benchmark.get_code(instance)})
-                            for instance in sliced_benchmarks
+                            for instance in sliced_benchmark_inputs
                         ]
 
                         outputs = self.llm.generate_annotations_local(
-                            inputs=sliced_benchmarks, prompt=prompt
+                            inputs=sliced_benchmark_inputs, prompt=prompt
                         )
                         local_llm_outputs[step_index] = outputs
 
