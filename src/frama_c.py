@@ -294,6 +294,16 @@ class FramaCChecker(Checker):
                     variants.append(inv)
         return variants
 
+    def get_variant_expressions(self, completions):
+        variants = []
+        for c in completions:
+            for line in c.split("\n"):
+                if self.is_variant(line):
+                    inv = re.findall(r"loop variant (.+);", line)[0]
+                    if inv not in variants:
+                        variants.append(inv)
+        return variants
+
     def get_non_inductive_invariant_line_nos(self, checker_message, checker_input):
         lines = checker_message.splitlines()
         non_inductive_invariants = []
