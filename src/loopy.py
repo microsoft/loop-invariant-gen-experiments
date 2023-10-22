@@ -1544,7 +1544,7 @@ class LoopyPipeline:
                             ]["output"]:
                                 code_block = self.llm.extract_code(
                                     output["content"],
-                                    extraction_filter=extraction_filter,
+                                    filter=extraction_filter,
                                 )
                                 generated_code_blocks.append(code_block)
 
