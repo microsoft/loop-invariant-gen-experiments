@@ -88,9 +88,7 @@ def main(args):
             output_log_dir,
             input["file"].replace(".c", ".json").replace("../", "").replace("/", "__"),
         )
-        with open(
-            os.path.join(output_log_dir, benchmark_log_file), "w", encoding="utf-8"
-        ) as f:
+        with open(benchmark_log_file, "w", encoding="utf-8") as f:
             json.dump(benchmark_log, f, indent=4, ensure_ascii=False)
 
         output_log.append(benchmark_log)
