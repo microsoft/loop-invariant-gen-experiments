@@ -1,0 +1,408 @@
+{
+    "logs": {
+        "file": "../data/benchmarks/code2inv/92.c",
+        "benchmark_code": "#define assume(e) if(!(e)) return 0;\n\nint main(){\n    int z1,z2,z3;\n\n    int x = 0;\n    int y = 0;\n\n    while(y >= 0){\n        y = y + x;\n    }\n\n    {;\n//@ assert( y>= 0);\n}\n}",
+        "success": true,
+        "log": [
+            {
+                "step": "Prompting LLM",
+                "generating_annotation": "loop_invariants",
+                "success": true,
+                "llm_chat": [
+                    {
+                        "role": "system",
+                        "content": "You are a helpful AI software assistant that reasons about how code behaves. Given a program, you can find loop invariants, which can then be used to verify some property in the program. \nFrama-C is a software verification tool for C programs. The input to Frama-C is a C program file with ACSL (ANSI/ISO C Specification Language) annotations.\nFor the given program, find the necessary loop invariants of the while loop to help Frama-C verify the post-condition.\n\nInstructions:\n- Make a note of the pre-conditions or variable assignments in the program.\n- Analyze the loop body and make a note of the loop condition. \n- Output loop invariants that are true \n(i) before the loop execution, \n(ii) in every iteration of the loop and \n(iii) after the loop termination, \nsuch that the loop invariants imply the post condition.\n- If a loop invariant is a conjunction, split it into its parts.\n- Output all the loop invariants in one code block. For example:\n```\n/*@ \n    loop invariant i1;\n    loop invariant i2;\n*/\n```\nRules:\n- **Do not use variables or functions that are not declared in the program.** \n- **Do not make any assumptions about functions whose definitions are not given.**\n- **All undefined variables contain garbage values. Do not use variables that have garbage values.**\n- **Do not use keywords that are not supported in ACSL annotations for loops.**\n- **Variables that are not explicitly initialized, could have garbage values. Do not make any assumptions about such values.**\n- **Do not use the \\at(x, Pre) notation for any variable x.**\n- **Do not use non-deterministic function calls.**"
+                    },
+                    {
+                        "role": "user",
+                        "content": "\nConsider the following C program:\n```\n#define assume(e) if(!(e)) return 0;\n\nint main(){\n    int z1,z2,z3;\n\n    int x = 0;\n    int y = 0;\n\n    while(y >= 0){\n        y = y + x;\n    }\n\n    {;\n//@ assert( y>= 0);\n}\n}\n```\n\nYou are allowed to use implication to take care of the conditional nature of the code. Use implication (==>) instead of using if-then.\n\nFor all variables, add conjunctions that bound the maximum and minimum values that they can take, if such bounds exist.\n\nIf a variable is always equal to or smaller or larger than another variable, add a conjunction for their relation.\n\nIf the assertion is guarded by a condition, use the guard condition in an implication.\n\nIf certain variables are non-deterministic at the beginning or end of the loop, use an implication to make the invariant trivially true at that location. \n\nOutput the loop invariants for the loop in the program above. Let's think step by step."
+                    },
+                    "Pre-conditions:\n- The program does not take any input.\n- The macro `assume(e)` takes a boolean expression `e` and returns 0 if `e` is false.\n\nVariable Assignments:\n- `z1`, `z2`, `z3`: uninitialized integer variables.\n- `x`: initialized to 0.\n- `y`: initialized to 0.\n\nLoop Condition:\n- `y >= 0`\n\nLoop Invariants:\n- `y >= 0` (true before the loop execution)\n- If `x >= 0`, then `y >= 0` (true in every iteration of the loop)\n- `y >= 0` (true after the loop termination)\n\nExplanation:\n- Before the loop execution, `y` is initialized to 0, which satisfies the first loop invariant.\n- In every iteration of the loop, `y` is updated by adding `x`. Since the loop condition is `y >= 0`, we need to ensure that `y` remains non-negative after each iteration. This is satisfied by the second loop invariant. If `x >= 0`, then `y` can only increase or stay the same in each iteration, ensuring that `y` remains non-negative.\n- After the loop termination, `y` is guaranteed to be negative. Therefore, the third loop invariant is simply `y >= 0`.\n\nPutting it all together:\n```\n/*@ \n    loop invariant y >= 0;\n    loop invariant x >= 0 ==> y >= 0;\n*/\nwhile(y >= 0){\n    y = y + x;\n}\n/*@ \n    assert y >= 0;\n*/\n```\n\nNote that we don't need to add any implications for non-deterministic variables, as the loop does not modify any variables other than `x` and `y`, which are initialized to 0. We also don't need to add any bounds on the variables, as they are unconstrained in the program.",
+                    "Pre-conditions or variable assignments:\n- z1, z2, z3 are uninitialized and may contain garbage values.\n- x is initialized to 0.\n- y is initialized to 0.\n\nLoop condition:\n- y >= 0\n\nPost-condition:\n- y >= 0\n\nLoop invariants:\n- Before the loop execution, y >= 0.\n- In every iteration of the loop, y >= 0 and y >= \\old(y).\n- After the loop termination, y >= 0.\n\nExplanation:\n- Before the loop execution, y is initialized to 0, which satisfies y >= 0.\n- In every iteration of the loop, y is incremented by x, which can be any integer value. Since x is initialized to 0, y is always non-negative in every iteration. Therefore, y >= 0 is true in every iteration. The second part of the invariant, y >= \\old(y), ensures that y is non-decreasing in every iteration. This is because the only operation that modifies y in the loop is the addition of x, which is non-negative. Therefore, y can only increase or stay the same in every iteration.\n- After the loop termination, y can only be non-negative since the loop condition is y >= 0. Therefore, y >= 0 is true after the loop termination.",
+                    "First, let's note the pre-conditions and variable assignments:\n- Pre-condition: None\n- Variable assignments: `x` is assigned the value `0`, `y` is assigned the value `0`\n\nNow, let's analyze the loop body and the loop condition:\n- Loop body: `y = y + x;`\n- Loop condition: `y >= 0`\n\nNext, let's find the loop invariants. We need to find loop invariants that are true:\n- Before the loop execution\n- In every iteration of the loop\n- After the loop termination\nsuch that the loop invariants imply the post-condition.\n\nLet's start with the loop invariant before the loop execution. Since `y` is assigned `0` before the loop, `y` is always greater than or equal to `0` before the loop. Hence, we can have the following loop invariant before the loop execution:\n```\n/*@ \n    loop invariant y >= 0;\n*/\n```\n\nNow, let's find the loop invariant that holds for every iteration of the loop. Since `y` is incremented by `x` in each iteration of the loop, and `x` is always `0`, `y` remains the same in every iteration. Hence, we can have the following loop invariant that holds for every iteration of the loop:\n```\n/*@ \n    loop invariant y == \\at(y, Pre);\n*/\n```\n\nFinally, let's find the loop invariant that holds after the loop termination. Since the loop terminates when `y` becomes negative, `y` is always greater than or equal to `0` after the loop termination. Hence, we can have the following loop invariant after the loop termination:\n```\n/*@ \n    loop invariant y < 0 ==> \\false;\n*/\n```\n\nNow, let's combine all the loop invariants into one code block:\n```\n/*@ \n    loop invariant y >= 0;\n    loop invariant y == \\at(y, Pre);\n    loop invariant y < 0 ==> \\false;\n*/\n```\n\nThis is the final set of loop invariants that can be used to help Frama-C verify the post-condition.",
+                    "We can start by analyzing the given program and making notes of the pre-conditions, variable assignments, and the loop condition.\n\n- Pre-conditions: None\n- Variable assignments:\n    - `x` is assigned the value `0`\n    - `y` is assigned the value `0`\n- Loop condition: `y >= 0`\n\nNow, let's find the necessary loop invariants.\n\n- Before the loop execution:\n    - `x == 0`\n    - `y == 0`\n- In every iteration of the loop:\n    - `y >= 0`\n    - `y >= \\old(y)`\n- After the loop termination:\n    - `y >= 0`\n    - `y >= \\old(y)`\n\nLet's explain why these invariants hold.\n\n- Before the loop execution:\n    - Since `x` is assigned the value `0`, `x` is always equal to `0` before the loop execution.\n    - Similarly, since `y` is assigned the value `0`, `y` is always equal to `0` before the loop execution.\n- In every iteration of the loop:\n    - Since the loop condition is `y >= 0`, `y` is always non-negative during the loop execution.\n    - Since `y` is being updated by adding `x` to it, `y` is always greater than or equal to its previous value (`\\old(y)`).\n- After the loop termination:\n    - Since the loop condition is `y >= 0`, `y` is always non-negative at the end of the loop execution.\n    - Since `y` is being updated by adding `x` to it, `y` is always greater than or equal to its initial value (`\\old(y)`).\n\nTherefore, the loop invariants are:\n\n```\n/*@ \n    loop invariant x == 0;\n    loop invariant y == 0;\n    loop invariant y >= 0;\n    loop invariant y >= \\old(y);\n*/\n``` \n\nNote that there are no non-deterministic variables in this program, so we do not need to use any implications to make the loop invariants trivially true. Also, since there are no bounds on the values of `z1`, `z2`, and `z3`, we do not need to add any conjunctions to bound their values.",
+                    "Pre-conditions: \n- None\n\nVariable assignments:\n- x = 0\n- y = 0\n\nLoop Condition:\n- y >= 0\n\nWe need to find loop invariants that are true:\n(i) before the loop execution,\n(ii) in every iteration of the loop, and\n(iii) after the loop termination, such that the loop invariants imply the post-condition.\n\nSince the loop condition is y >= 0, we know that y is non-negative before entering the loop. Therefore, we can add the following loop invariant before the loop execution:\n```\n/*@ loop invariant y >= 0; */\n```\n\nIn each iteration of the loop, y is updated by adding x to it. Therefore, we can add the following loop invariant in every iteration of the loop:\n```\n/*@ loop invariant y >= 0;\n    loop invariant y >= \\at(y,Pre) + x; */\n```\nThe second loop invariant states that the value of y in the current iteration is equal to the value of y in the previous iteration plus x.\n\nSince the loop condition is y >= 0, we know that the loop terminates when y becomes negative. Therefore, after the loop termination, we can add the following loop invariant:\n```\n/*@ loop invariant y < 0 ==> y >= 0; */\n```\nThis loop invariant states that if y is negative after the loop termination, then it must have been non-negative before the loop execution.\n\nCombining all the loop invariants, we get the following code block:\n```\n/*@ loop invariant y >= 0;\n    loop invariant y >= \\at(y,Pre) + x;\n    loop invariant y < 0 ==> y >= 0; */\nwhile(y >= 0){\n    y = y + x;\n}\n/*@ assert y >= 0; */\n```\nThese loop invariants ensure that y is always non-negative during the loop execution and negative after the loop termination. Therefore, the assertion after the loop is true.",
+                    "Preconditions:\n- None\n\nVariable Assignments:\n- x = 0\n- y = 0\n\nLoop Condition:\n- y >= 0\n\nLoop Invariants:\n- Before the loop execution:\n    - x == 0\n    - y == 0\n- In every iteration of the loop:\n    - x >= 0\n    - y >= 0\n    - y >= \\old(y)\n    - y >= x\n- After the loop termination:\n    - y >= 0 ==> y >= \\old(y)\n\nExplanation:\n- Before the loop execution, both x and y are assigned the value 0.\n- In every iteration of the loop, x and y are always greater than or equal to 0.\n- Also, y is always greater than or equal to its previous value (\\old(y)) and greater than or equal to x.\n- After the loop termination, if y is greater than or equal to 0, then it must be greater than or equal to its previous value.",
+                    "We start by noting the pre-conditions and variable assignments in the program:\n\nPre-conditions:\nNone\n\nVariable Assignments:\n- `int x = 0;`\n- `int y = 0;`\n\nNext, we analyze the loop body and make a note of the loop condition:\n- `while(y >= 0)`\n\nNow, we can find the necessary loop invariants:\n- `y >= 0` (before loop execution)\n- `y >= 0` (in every iteration of the loop)\n- `y >= 0` (after loop termination)\n\nWe can combine these into one code block as follows:\n\n```\n/*@ \n    loop invariant y >= 0;\n*/\n```\n\nSince the loop condition is `y >= 0`, the loop invariant `y >= 0` is sufficient to prove that the loop terminates. \n\nFinally, we need to verify the post-condition. The assertion is not guarded by any condition, so we can simply use the loop invariant to prove it:\n- `(y >= 0) ==> (y >= 0)` (assertion holds after loop termination)\n\nWe can add this implication to the loop invariant block as follows:\n\n```\n/*@ \n    loop invariant y >= 0;\n    loop variant 0;\n    loop assigns y;\n    ensures (y >= 0) ==> (y >= 0);\n*/\n```\n\nNote that we also added `loop variant 0;` to indicate that the loop variant is not changing during the loop execution, and `loop assigns y;` to indicate that the only variable being modified in the loop is `y`.",
+                    "Pre-conditions:\n- None\n\nVariable assignments:\n- x = 0\n- y = 0\n\nLoop condition:\n- y >= 0\n\nPost-condition:\n- y >= 0\n\nLoop Invariants:\n- Before the loop execution: y >= 0\n- In every iteration of the loop: y >= 0 && y >= \\old(y) && x >= 0\n- After the loop termination: y >= 0\n\nExplanation:\n- Before the loop execution, y is initialized to 0, so y >= 0.\n- In every iteration of the loop, y is increased by x, which is non-negative (initialized to 0 and not modified within the loop). Therefore, y >= 0 && y >= \\old(y) && x >= 0.\n- After the loop termination, y >= 0 because the loop condition is y >= 0. \n\nPutting everything together, we get the following loop invariants:\n```\n/*@ \n    loop invariant y >= 0;\n    loop invariant y >= \\old(y);\n    loop invariant x >= 0;\n*/\n```",
+                    "Pre-conditions:\n- The program does not have any pre-conditions.\n- All undefined variables contain garbage values. Do not use variables that have garbage values.\n\nVariable assignments:\n- x is initialized to 0.\n- y is initialized to 0.\n\nLoop condition:\n- The loop runs while y is greater than or equal to 0.\n\nLoop invariants:\n- Before the loop execution: Since y is initialized to 0, y is greater than or equal to 0 before the loop execution. So, the following loop invariant holds:\n```\n/*@ \n    loop invariant y >= 0;\n*/\n```\n- In every iteration of the loop: \n    - The loop only updates y by adding x to it. So, we can infer that after every iteration of the loop, y will be greater than or equal to its previous value. \n    - Since x is not modified inside the loop, x remains 0 throughout the loop. \n    - Therefore, the following loop invariant holds:\n```\n/*@ \n    loop invariant y >= 0;\n    loop invariant x == 0;\n*/\n```\n- After the loop termination: Since the loop only terminates when y becomes negative, we can infer that y is negative after the loop termination. Therefore, the following loop invariant holds:\n```\n/*@ \n    loop invariant y < 0 ==> y >= 0;\n    loop invariant x == 0;\n*/\n```\n\nPost-condition:\n- The assertion `y >= 0` should hold at the end of the loop. However, the assertion is not guarded by any condition, so we can directly use it in the loop invariant. Therefore, the final loop invariant is:\n```\n/*@ \n    loop invariant y >= 0;\n    loop invariant y >= \\old(y);\n    loop invariant x == 0;\n    loop invariant y < 0 ==> y >= 0;\n    loop invariant y >= 0 ==> y >= 0;\n*/\n```",
+                    "First, let's look at the pre-conditions and variable assignments in the program:\n\n- The program defines a macro `assume` that takes an expression `e` and returns 0 if `e` is false.\n- The program declares three integer variables `z1`, `z2`, and `z3`.\n- The program initializes two integer variables `x` and `y` to 0.\n\nNext, let's analyze the loop body:\n\n- The loop body assigns `y + x` to `y`.\n\nNow, let's find the loop invariants:\n\n- Before the loop execution, `y` is non-negative. This is because the loop condition is `y >= 0`, so if `y` was negative initially, the loop would not execute at all. Therefore, we can write the following loop invariant:\n```\n/*@ \n    loop invariant y >= 0;\n*/\n```\n- In every iteration of the loop, `y` is non-negative. This is because the loop body only adds `x` to `y`, and `x` is a non-negative integer. Therefore, we can add the following loop invariant:\n```\n/*@ \n    loop invariant y >= 0;\n    loop invariant x >= 0;\n*/\n```\n- After the loop termination, `y` is non-negative. This is because the loop condition is `y >= 0`, so the loop must terminate when `y` becomes negative. Therefore, we can add the following loop invariant:\n```\n/*@ \n    loop invariant y >= 0;\n    loop invariant x >= 0;\n    loop invariant y < 0 ==> \\false;\n*/\n```\n- Finally, we need to show that the loop invariants imply the post-condition of the program, which is `y >= 0`. Since the loop invariant `y >= 0` holds throughout the loop execution, and the loop terminates when `y` becomes negative, we can use implication to show that the post-condition holds:\n```\n/*@ \n    loop invariant y >= 0;\n    loop invariant x >= 0;\n    loop invariant y < 0 ==> \\false;\n    loop assigns x, y;\n    ensures y >= 0;\n*/\n```\nNote that we also added the `loop assigns` clause to specify which variables are modified by the loop. In this case, only `x` and `y` are assigned values within the loop.",
+                    "Pre-conditions:\n- The program does not take any input.\n- All variables are initialized to garbage values.\n\nLoop condition:\n- The loop executes as long as y is greater than or equal to 0.\n\nLoop invariants:\n- Before the loop execution: Since both x and y are initialized to 0, we can assert that y is greater than or equal to 0 before entering the loop.\n```\n/*@ \n    loop invariant y >= 0;\n*/\n```\n\n- In every iteration of the loop: The loop body updates the value of y by adding x to it. Since the loop condition checks if y is greater than or equal to 0, and y only increases in every iteration, we can assert that y remains greater than or equal to 0 in every iteration.\n```\n/*@ \n    loop invariant y >= 0;\n*/\n```\n\n- After the loop termination: Since the loop condition checks if y is greater than or equal to 0, and the loop only terminates when y becomes negative, we can assert that y is negative after the loop terminates.\n```\n/*@ \n    loop invariant y >= 0;\n    loop invariant !(y >= 0) ==> y < 0;\n*/\n```\n\n- Maximum and minimum bounds for variables: Since x is never changed within the loop, we can add a conjunction to bound its maximum and minimum values. Since y is only increased by adding x, we can also add a conjunction to bound its maximum value.\n```\n/*@ \n    loop invariant y >= 0;\n    loop invariant !(y >= 0) ==> y < 0;\n    loop invariant x >= 0 && x <= INT_MAX;\n    loop invariant y <= INT_MAX - x;\n*/\n```\n\n- Non-deterministic variables: There are no non-deterministic variables in this program.\n\n- Using implication for guarded assertion: There are no guarded assertions in this program.\n\nPutting it all together, we get the following loop invariants:\n```\n/*@ \n    loop invariant y >= 0;\n    loop invariant !(y >= 0) ==> y < 0;\n    loop invariant x >= 0 && x <= INT_MAX;\n    loop invariant y <= INT_MAX - x;\n*/\n```",
+                    "Pre-conditions: None.\n\nVariable Assignments: \n- x is assigned the value 0. \n- y is assigned the value 0. \n\nLoop Condition: y >= 0\n\nLoop Body: y = y + x\n\nPost-condition: y >= 0\n\nLoop Invariants:\n- Before the loop, y is greater than or equal to 0.\n- In every iteration of the loop, y is greater than or equal to 0.\n- After the loop termination, y is greater than or equal to 0.\n- The value of x remains 0 throughout the loop.\n\nExplanation:\n- Before the loop, y is initialized to 0, so y >= 0.\n- In every iteration of the loop, y is updated by adding x to it. Since x is always 0, y remains the same or increases. Therefore, y >= 0.\n- After the loop termination, y >= 0 because the loop terminates only when y becomes negative. Since y is always non-negative, the loop will run indefinitely and hence the post-condition will never be met. Therefore, the post-condition implies that y >= 0.\n- Since x is never updated in the loop, it remains 0 throughout the loop.\n\nTherefore, the necessary loop invariants are:\n```\n/*@ \n    loop invariant y >= 0;\n    loop invariant x == 0;\n*/\n```",
+                    "Pre-conditions:\n- The program does not have any pre-conditions.\n- `x` and `y` are initialized to 0.\n- `z1`, `z2`, and `z3` are declared but not initialized. \n\nLoop condition:\n- The loop runs while `y >= 0`.\n\nPost-condition:\n- `y >= 0`.\n\nLoop invariants:\n- Before the loop execution: `y == 0 ==> y >= 0`\n- In every iteration of the loop: `y >= 0`\n- After the loop termination: `y < 0 ==> y >= 0`\n\nExplanation:\n- Before the loop execution, if `y` is equal to `0`, then the implication `y == 0 ==> y >= 0` is true. This makes the invariant hold even if `y` is non-deterministic before the loop.\n- In every iteration of the loop, `y` is increased by `x`. Since `x` is always non-negative, `y` can only remain the same or increase. Therefore, `y >= 0` is true in every iteration.\n- After the loop termination, if `y` is negative, then the implication `y < 0 ==> y >= 0` is true. This makes the invariant hold even if `y` is non-deterministic after the loop.\n\nPutting it all together, the loop invariants are:\n```\n/*@ \n    loop invariant y == 0 ==> y >= 0;\n    loop invariant y >= 0;\n    loop invariant y < 0 ==> y >= 0;\n*/\n```",
+                    "Pre-conditions:\n- None\n\nVariable assignments:\n- x = 0\n- y = 0\n\nLoop condition:\n- y >= 0\n\nWe need to find loop invariants that are true:\n(i) before the loop execution,\n(ii) in every iteration of the loop, and\n(iii) after the loop termination, such that the loop invariants imply the post condition.\n\nBefore the loop execution:\n- y >= 0 (since y is initialized to 0)\n\nIn every iteration of the loop:\n- x >= 0 (since x is initialized to 0 and never decremented)\n- y >= 0 (since the loop condition is y >= 0 and y is only incremented by a non-negative value)\n- y >= \\old(y) (since y is only incremented and never decremented)\n\nAfter the loop termination:\n- y >= 0 (since the loop condition is y >= 0)\n- y >= \\old(y) (since the loop only increments y)\n\nPutting all of these together, the loop invariants are:\n```\n/*@ \nloop invariant y >= 0;\nloop invariant x >= 0;\nloop invariant y >= \\old(y);\n*/\n```\nNote: Since there are no non-deterministic variables, we do not need to use any implications to make the invariants trivially true at the beginning or end of the loop. The loop invariants are sufficient to imply the post-condition, since the post-condition is simply y >= 0, which is already included in the loop invariants.",
+                    "Pre-conditions: None\n\nVariable assignments: \n- x = 0\n- y = 0\n\nLoop condition: y >= 0\n\nWe need to find loop invariants that hold true:\n(i) before the loop execution,\n(ii) in every iteration of the loop, and\n(iii) after the loop termination.\n\nLet's begin by analyzing the loop body:\n\n```\ny = y + x;\n```\n\nSince x is always 0, this reduces to:\n\n```\ny = y + 0;\ny = y;\n```\n\nTherefore, y remains unchanged in every iteration of the loop.\n\nLoop invariants:\n```\n/*@ \n    loop invariant y >= 0; // (i) holds true before loop execution\n    loop invariant y >= 0 ==> y >= 0; // (ii) holds true in every iteration of the loop\n    loop invariant !(y >= 0); // (iii) holds true after the loop termination\n*/\n```\n\nLet's verify if these loop invariants imply the post-condition:\n\n```\n/*@ \n    loop invariant y >= 0; // (i) holds true before loop execution\n    loop invariant y >= 0 ==> y >= 0; // (ii) holds true in every iteration of the loop\n    loop invariant !(y >= 0); // (iii) holds true after the loop termination\n\n    loop invariant !(y >= 0) ==> y >= 0; // Trivially true\n    loop invariant y >= 0 && y >= 0 ==> y >= 0; // Combine (i) and (ii)\n    loop invariant y >= 0 ==> y >= 0; // Simplify\n    loop invariant y >= 0; // Simplify\n\n    // Implication using guard condition\n    loop invariant !(y >= 0) || y >= 0; \n    loop invariant (y >= 0 ==> y >= 0) || !(y >= 0); // Combine (ii) and (iii)\n    loop invariant y >= 0 || !(y >= 0); // Simplify\n    loop invariant 1; // This is always true, but needed to make the last implication trivially true\n*/\n\n//@ assert( y>= 0);\n```\n\nTherefore, the necessary loop invariants are:\n```\n/*@ \n    loop invariant y >= 0; \n    loop invariant 1;\n*/\n```"
+                ],
+                "output": [
+                    "/*@ \n    loop invariant y >= 0;\n    loop invariant x >= 0 ==> y >= 0;\n*/\nwhile(y >= 0){\n    y = y + x;\n}\n/*@ \n    assert y >= 0;\n*/",
+                    [
+                        "ERROR: Output does not contain at least 1 complete code block",
+                        "Pre-conditions or variable assignments:\n- z1, z2, z3 are uninitialized and may contain garbage values.\n- x is initialized to 0.\n- y is initialized to 0.\n\nLoop condition:\n- y >= 0\n\nPost-condition:\n- y >= 0\n\nLoop invariants:\n- Before the loop execution, y >= 0.\n- In every iteration of the loop, y >= 0 and y >= \\old(y).\n- After the loop termination, y >= 0.\n\nExplanation:\n- Before the loop execution, y is initialized to 0, which satisfies y >= 0.\n- In every iteration of the loop, y is incremented by x, which can be any integer value. Since x is initialized to 0, y is always non-negative in every iteration. Therefore, y >= 0 is true in every iteration. The second part of the invariant, y >= \\old(y), ensures that y is non-decreasing in every iteration. This is because the only operation that modifies y in the loop is the addition of x, which is non-negative. Therefore, y can only increase or stay the same in every iteration.\n- After the loop termination, y can only be non-negative since the loop condition is y >= 0. Therefore, y >= 0 is true after the loop termination."
+                    ],
+                    "/*@ \n    loop invariant y >= 0;\n*/",
+                    "/*@ \n    loop invariant x == 0;\n    loop invariant y == 0;\n    loop invariant y >= 0;\n    loop invariant y >= \\old(y);\n*/",
+                    "/*@ loop invariant y >= 0; */",
+                    [
+                        "ERROR: Output does not contain at least 1 complete code block",
+                        "Preconditions:\n- None\n\nVariable Assignments:\n- x = 0\n- y = 0\n\nLoop Condition:\n- y >= 0\n\nLoop Invariants:\n- Before the loop execution:\n    - x == 0\n    - y == 0\n- In every iteration of the loop:\n    - x >= 0\n    - y >= 0\n    - y >= \\old(y)\n    - y >= x\n- After the loop termination:\n    - y >= 0 ==> y >= \\old(y)\n\nExplanation:\n- Before the loop execution, both x and y are assigned the value 0.\n- In every iteration of the loop, x and y are always greater than or equal to 0.\n- Also, y is always greater than or equal to its previous value (\\old(y)) and greater than or equal to x.\n- After the loop termination, if y is greater than or equal to 0, then it must be greater than or equal to its previous value."
+                    ],
+                    "/*@ \n    loop invariant y >= 0;\n*/",
+                    "/*@ \n    loop invariant y >= 0;\n    loop invariant y >= \\old(y);\n    loop invariant x >= 0;\n*/",
+                    "/*@ \n    loop invariant y >= 0;\n*/",
+                    "/*@ \n    loop invariant y >= 0;\n*/",
+                    "/*@ \n    loop invariant y >= 0;\n*/",
+                    "/*@ \n    loop invariant y >= 0;\n    loop invariant x == 0;\n*/",
+                    "/*@ \n    loop invariant y == 0 ==> y >= 0;\n    loop invariant y >= 0;\n    loop invariant y < 0 ==> y >= 0;\n*/",
+                    "/*@ \nloop invariant y >= 0;\nloop invariant x >= 0;\nloop invariant y >= \\old(y);\n*/",
+                    "/*@ \n    loop invariant y >= 0; // (i) holds true before loop execution\n    loop invariant y >= 0 ==> y >= 0; // (ii) holds true in every iteration of the loop\n    loop invariant !(y >= 0); // (iii) holds true after the loop termination\n*/"
+                ]
+            },
+            {
+                "step": "Checking individual completion",
+                "solver_calls": 13,
+                "completions": [
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant y >= 0;\n    loop invariant x >= 0 ==> y >= 0;\n*/\nwhile(y >= 0){\n    y = y + x;\n}\n/*@ \n    assert y >= 0;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant y >= 0 is established but not preserved.\nloop invariant x >= 0 ==> y >= 0 is inductive.\nAssertion y >= 0: Partially proven\n"
+                    },
+                    {
+                        "num_solver_calls": 0,
+                        "success": false,
+                        "llm_output": "Pre-conditions or variable assignments:\n- z1, z2, z3 are uninitialized and may contain garbage values.\n- x is initialized to 0.\n- y is initialized to 0.\n\nLoop condition:\n- y >= 0\n\nPost-condition:\n- y >= 0\n\nLoop invariants:\n- Before the loop execution, y >= 0.\n- In every iteration of the loop, y >= 0 and y >= \\old(y).\n- After the loop termination, y >= 0.\n\nExplanation:\n- Before the loop execution, y is initialized to 0, which satisfies y >= 0.\n- In every iteration of the loop, y is incremented by x, which can be any integer value. Since x is initialized to 0, y is always non-negative in every iteration. Therefore, y >= 0 is true in every iteration. The second part of the invariant, y >= \\old(y), ensures that y is non-decreasing in every iteration. This is because the only operation that modifies y in the loop is the addition of x, which is non-negative. Therefore, y can only increase or stay the same in every iteration.\n- After the loop termination, y can only be non-negative since the loop condition is y >= 0. Therefore, y >= 0 is true after the loop termination.",
+                        "error": "Output does not contain at least 1 code block"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant y >= 0;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant y >= 0 is established but not preserved.\nAssertion y >= 0: Partially proven\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant x == 0;\n    loop invariant y == 0;\n    loop invariant y >= 0;\n    loop invariant y >= \\old(y);\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "Annotation error on line 13: \\old undefined in this context. Ignoring loop annotation"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ loop invariant y >= 0; */",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant y >= 0 is established but not preserved.\nAssertion y >= 0: Partially proven\n"
+                    },
+                    {
+                        "num_solver_calls": 0,
+                        "success": false,
+                        "llm_output": "Preconditions:\n- None\n\nVariable Assignments:\n- x = 0\n- y = 0\n\nLoop Condition:\n- y >= 0\n\nLoop Invariants:\n- Before the loop execution:\n    - x == 0\n    - y == 0\n- In every iteration of the loop:\n    - x >= 0\n    - y >= 0\n    - y >= \\old(y)\n    - y >= x\n- After the loop termination:\n    - y >= 0 ==> y >= \\old(y)\n\nExplanation:\n- Before the loop execution, both x and y are assigned the value 0.\n- In every iteration of the loop, x and y are always greater than or equal to 0.\n- Also, y is always greater than or equal to its previous value (\\old(y)) and greater than or equal to x.\n- After the loop termination, if y is greater than or equal to 0, then it must be greater than or equal to its previous value.",
+                        "error": "Output does not contain at least 1 code block"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant y >= 0;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant y >= 0 is established but not preserved.\nAssertion y >= 0: Partially proven\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant y >= 0;\n    loop invariant y >= \\old(y);\n    loop invariant x >= 0;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "Annotation error on line 11: \\old undefined in this context. Ignoring loop annotation"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant y >= 0;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant y >= 0 is established but not preserved.\nAssertion y >= 0: Partially proven\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant y >= 0;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant y >= 0 is established but not preserved.\nAssertion y >= 0: Partially proven\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant y >= 0;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant y >= 0 is established but not preserved.\nAssertion y >= 0: Partially proven\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": true,
+                        "invariants": "/*@ \n    loop invariant y >= 0;\n    loop invariant x == 0;\n*/",
+                        "checker_output_for_invariants": true,
+                        "checker_message_for_invariants": "loop invariant y >= 0 is inductive.\nloop invariant x == 0 is inductive.\nAssertion y >= 0: Valid\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant y == 0 ==> y >= 0;\n    loop invariant y >= 0;\n    loop invariant y < 0 ==> y >= 0;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant y == 0 ==> y >= 0 is inductive.\nloop invariant y >= 0 is established but not preserved.\nloop invariant y < 0 ==> y >= 0 is inductive.\nAssertion y >= 0: Partially proven\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \nloop invariant y >= 0;\nloop invariant x >= 0;\nloop invariant y >= \\old(y);\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "Annotation error on line 12: \\old undefined in this context. Ignoring loop annotation"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant y >= 0; // (i) holds true before loop execution\n    loop invariant y >= 0 ==> y >= 0; // (ii) holds true in every iteration of the loop\n    loop invariant !(y >= 0); // (iii) holds true after the loop termination\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant y >= 0 is inductive.\nloop invariant y >= 0 ==> y >= 0 is inductive.\nloop invariant !(y >= 0) is preserved but not established.\nAssertion y >= 0: Partially proven\n"
+                    }
+                ],
+                "success": true
+            },
+            {
+                "step": "Houdini for individual completion",
+                "success": true,
+                "completions": [
+                    {
+                        "num_solver_calls": 2,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant y >= 0;\n    loop invariant x >= 0 ==> y >= 0;\n*/\nwhile(y >= 0){\n    y = y + x;\n}\n/*@ \n    assert y >= 0;\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\n\nint main(){\n    int z1,z2,z3;\n\n    int x = 0;\n    int y = 0;\n\n    /*@\n\n\n*/\nwhile(y >= 0){\n        y = y + x;\n    }\n\n    {;\n//@ assert( y>= 0);\n}\n}",
+                        "checker_output_after_prune": false
+                    },
+                    {
+                        "num_solver_calls": 0,
+                        "success": false,
+                        "llm_output": "Pre-conditions or variable assignments:\n- z1, z2, z3 are uninitialized and may contain garbage values.\n- x is initialized to 0.\n- y is initialized to 0.\n\nLoop condition:\n- y >= 0\n\nPost-condition:\n- y >= 0\n\nLoop invariants:\n- Before the loop execution, y >= 0.\n- In every iteration of the loop, y >= 0 and y >= \\old(y).\n- After the loop termination, y >= 0.\n\nExplanation:\n- Before the loop execution, y is initialized to 0, which satisfies y >= 0.\n- In every iteration of the loop, y is incremented by x, which can be any integer value. Since x is initialized to 0, y is always non-negative in every iteration. Therefore, y >= 0 is true in every iteration. The second part of the invariant, y >= \\old(y), ensures that y is non-decreasing in every iteration. This is because the only operation that modifies y in the loop is the addition of x, which is non-negative. Therefore, y can only increase or stay the same in every iteration.\n- After the loop termination, y can only be non-negative since the loop condition is y >= 0. Therefore, y >= 0 is true after the loop termination.",
+                        "error": "Output does not contain at least 1 code block"
+                    },
+                    {
+                        "num_solver_calls": 2,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant y >= 0;\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\n\nint main(){\n    int z1,z2,z3;\n\n    int x = 0;\n    int y = 0;\n\n    /*@\n\n*/\nwhile(y >= 0){\n        y = y + x;\n    }\n\n    {;\n//@ assert( y>= 0);\n}\n}",
+                        "checker_output_after_prune": false
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant x == 0;\n    loop invariant y == 0;\n    loop invariant y >= 0;\n    loop invariant y >= \\old(y);\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\n\nint main(){\n    int z1,z2,z3;\n\n    int x = 0;\n    int y = 0;\n\n    /*@\nloop invariant i1: x == 0;\nloop invariant i2: y == 0;\nloop invariant i3: y >= 0;\n\n*/\nwhile(y >= 0){\n        y = y + x;\n    }\n\n    {;\n//@ assert( y>= 0);\n}\n}",
+                        "checker_output_after_prune": true
+                    },
+                    {
+                        "num_solver_calls": 2,
+                        "success": false,
+                        "invariants": "/*@ loop invariant y >= 0; */",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\n\nint main(){\n    int z1,z2,z3;\n\n    int x = 0;\n    int y = 0;\n\n    /*@\n\n*/\nwhile(y >= 0){\n        y = y + x;\n    }\n\n    {;\n//@ assert( y>= 0);\n}\n}",
+                        "checker_output_after_prune": false
+                    },
+                    {
+                        "num_solver_calls": 0,
+                        "success": false,
+                        "llm_output": "Preconditions:\n- None\n\nVariable Assignments:\n- x = 0\n- y = 0\n\nLoop Condition:\n- y >= 0\n\nLoop Invariants:\n- Before the loop execution:\n    - x == 0\n    - y == 0\n- In every iteration of the loop:\n    - x >= 0\n    - y >= 0\n    - y >= \\old(y)\n    - y >= x\n- After the loop termination:\n    - y >= 0 ==> y >= \\old(y)\n\nExplanation:\n- Before the loop execution, both x and y are assigned the value 0.\n- In every iteration of the loop, x and y are always greater than or equal to 0.\n- Also, y is always greater than or equal to its previous value (\\old(y)) and greater than or equal to x.\n- After the loop termination, if y is greater than or equal to 0, then it must be greater than or equal to its previous value.",
+                        "error": "Output does not contain at least 1 code block"
+                    },
+                    {
+                        "num_solver_calls": 2,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant y >= 0;\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\n\nint main(){\n    int z1,z2,z3;\n\n    int x = 0;\n    int y = 0;\n\n    /*@\n\n*/\nwhile(y >= 0){\n        y = y + x;\n    }\n\n    {;\n//@ assert( y>= 0);\n}\n}",
+                        "checker_output_after_prune": false
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant y >= 0;\n    loop invariant y >= \\old(y);\n    loop invariant x >= 0;\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\n\nint main(){\n    int z1,z2,z3;\n\n    int x = 0;\n    int y = 0;\n\n    /*@\nloop invariant i1: y >= 0;\n\nloop invariant i3: x >= 0;\n*/\nwhile(y >= 0){\n        y = y + x;\n    }\n\n    {;\n//@ assert( y>= 0);\n}\n}",
+                        "checker_output_after_prune": true
+                    },
+                    {
+                        "num_solver_calls": 2,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant y >= 0;\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\n\nint main(){\n    int z1,z2,z3;\n\n    int x = 0;\n    int y = 0;\n\n    /*@\n\n*/\nwhile(y >= 0){\n        y = y + x;\n    }\n\n    {;\n//@ assert( y>= 0);\n}\n}",
+                        "checker_output_after_prune": false
+                    },
+                    {
+                        "num_solver_calls": 2,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant y >= 0;\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\n\nint main(){\n    int z1,z2,z3;\n\n    int x = 0;\n    int y = 0;\n\n    /*@\n\n*/\nwhile(y >= 0){\n        y = y + x;\n    }\n\n    {;\n//@ assert( y>= 0);\n}\n}",
+                        "checker_output_after_prune": false
+                    },
+                    {
+                        "num_solver_calls": 2,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant y >= 0;\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\n\nint main(){\n    int z1,z2,z3;\n\n    int x = 0;\n    int y = 0;\n\n    /*@\n\n*/\nwhile(y >= 0){\n        y = y + x;\n    }\n\n    {;\n//@ assert( y>= 0);\n}\n}",
+                        "checker_output_after_prune": false
+                    },
+                    {
+                        "num_solver_calls": 0,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant y >= 0;\n    loop invariant x == 0;\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\n\nint main(){\n    int z1,z2,z3;\n\n    int x = 0;\n    int y = 0;\n\n    /*@\nloop invariant i1: y >= 0;\nloop invariant i2: x == 0;\n*/\nwhile(y >= 0){\n        y = y + x;\n    }\n\n    {;\n//@ assert( y>= 0);\n}\n}",
+                        "checker_output_after_prune": true
+                    },
+                    {
+                        "num_solver_calls": 2,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant y == 0 ==> y >= 0;\n    loop invariant y >= 0;\n    loop invariant y < 0 ==> y >= 0;\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\n\nint main(){\n    int z1,z2,z3;\n\n    int x = 0;\n    int y = 0;\n\n    /*@\n\n\n\n*/\nwhile(y >= 0){\n        y = y + x;\n    }\n\n    {;\n//@ assert( y>= 0);\n}\n}",
+                        "checker_output_after_prune": false
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \nloop invariant y >= 0;\nloop invariant x >= 0;\nloop invariant y >= \\old(y);\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\n\nint main(){\n    int z1,z2,z3;\n\n    int x = 0;\n    int y = 0;\n\n    /*@\nloop invariant i1: y >= 0;\nloop invariant i2: x >= 0;\n\n*/\nwhile(y >= 0){\n        y = y + x;\n    }\n\n    {;\n//@ assert( y>= 0);\n}\n}",
+                        "checker_output_after_prune": true
+                    },
+                    {
+                        "num_solver_calls": 3,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant y >= 0; // (i) holds true before loop execution\n    loop invariant y >= 0 ==> y >= 0; // (ii) holds true in every iteration of the loop\n    loop invariant !(y >= 0); // (iii) holds true after the loop termination\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\n\nint main(){\n    int z1,z2,z3;\n\n    int x = 0;\n    int y = 0;\n\n    /*@\n\n\n\n*/\nwhile(y >= 0){\n        y = y + x;\n    }\n\n    {;\n//@ assert( y>= 0);\n}\n}",
+                        "checker_output_after_prune": false
+                    }
+                ]
+            },
+            {
+                "step": "Houdini for combined completion",
+                "solver_calls": 2,
+                "success": true,
+                "code_with_combined_invariants": "#define assume(e) if(!(e)) return 0;\n\nint main(){\n    int z1,z2,z3;\n\n    int x = 0;\n    int y = 0;\n\n    /*@\nloop invariant i1: y >= 0;\nloop invariant i2: x >= 0 ==> y >= 0;\nloop invariant i4: x == 0;\nloop invariant i5: y == 0;\n\nloop invariant i12: x >= 0;\nloop invariant i18: y == 0 ==> y >= 0;\nloop invariant i20: y < 0 ==> y >= 0;\nloop invariant i25: y >= 0 ==> y >= 0;\n\n*/\nwhile(y >= 0){\n        y = y + x;\n    }\n\n    {;\n//@ assert( y>= 0);\n}\n}",
+                "checker_output": true
+            }
+        ]
+    },
+    "stats": {
+        "success": [
+            "../data/benchmarks/code2inv/1.c",
+            "../data/benchmarks/code2inv/2.c",
+            "../data/benchmarks/code2inv/9.c",
+            "../data/benchmarks/code2inv/10.c",
+            "../data/benchmarks/code2inv/12.c",
+            "../data/benchmarks/code2inv/14.c",
+            "../data/benchmarks/code2inv/15.c",
+            "../data/benchmarks/code2inv/16.c",
+            "../data/benchmarks/code2inv/17.c",
+            "../data/benchmarks/code2inv/18.c",
+            "../data/benchmarks/code2inv/19.c",
+            "../data/benchmarks/code2inv/20.c",
+            "../data/benchmarks/code2inv/25.c",
+            "../data/benchmarks/code2inv/30.c",
+            "../data/benchmarks/code2inv/35.c",
+            "../data/benchmarks/code2inv/36.c",
+            "../data/benchmarks/code2inv/38.c",
+            "../data/benchmarks/code2inv/42.c",
+            "../data/benchmarks/code2inv/46.c",
+            "../data/benchmarks/code2inv/49.c",
+            "../data/benchmarks/code2inv/53.c",
+            "../data/benchmarks/code2inv/55.c",
+            "../data/benchmarks/code2inv/56.c",
+            "../data/benchmarks/code2inv/59.c",
+            "../data/benchmarks/code2inv/70.c",
+            "../data/benchmarks/code2inv/71.c",
+            "../data/benchmarks/code2inv/77.c",
+            "../data/benchmarks/code2inv/78.c",
+            "../data/benchmarks/code2inv/79.c",
+            "../data/benchmarks/code2inv/80.c",
+            "../data/benchmarks/code2inv/81.c",
+            "../data/benchmarks/code2inv/82.c",
+            "../data/benchmarks/code2inv/87.c",
+            "../data/benchmarks/code2inv/89.c",
+            "../data/benchmarks/code2inv/90.c",
+            "../data/benchmarks/code2inv/91.c",
+            "../data/benchmarks/code2inv/92.c"
+        ],
+        "failure": [
+            "../data/benchmarks/code2inv/3.c",
+            "../data/benchmarks/code2inv/4.c",
+            "../data/benchmarks/code2inv/5.c",
+            "../data/benchmarks/code2inv/6.c",
+            "../data/benchmarks/code2inv/7.c",
+            "../data/benchmarks/code2inv/8.c",
+            "../data/benchmarks/code2inv/11.c",
+            "../data/benchmarks/code2inv/13.c",
+            "../data/benchmarks/code2inv/21.c",
+            "../data/benchmarks/code2inv/22.c",
+            "../data/benchmarks/code2inv/23.c",
+            "../data/benchmarks/code2inv/24.c",
+            "../data/benchmarks/code2inv/26.c",
+            "../data/benchmarks/code2inv/27.c",
+            "../data/benchmarks/code2inv/28.c",
+            "../data/benchmarks/code2inv/29.c",
+            "../data/benchmarks/code2inv/31.c",
+            "../data/benchmarks/code2inv/32.c",
+            "../data/benchmarks/code2inv/33.c",
+            "../data/benchmarks/code2inv/34.c",
+            "../data/benchmarks/code2inv/37.c",
+            "../data/benchmarks/code2inv/39.c",
+            "../data/benchmarks/code2inv/40.c",
+            "../data/benchmarks/code2inv/41.c",
+            "../data/benchmarks/code2inv/43.c",
+            "../data/benchmarks/code2inv/44.c",
+            "../data/benchmarks/code2inv/45.c",
+            "../data/benchmarks/code2inv/47.c",
+            "../data/benchmarks/code2inv/48.c",
+            "../data/benchmarks/code2inv/50.c",
+            "../data/benchmarks/code2inv/51.c",
+            "../data/benchmarks/code2inv/52.c",
+            "../data/benchmarks/code2inv/54.c",
+            "../data/benchmarks/code2inv/57.c",
+            "../data/benchmarks/code2inv/58.c",
+            "../data/benchmarks/code2inv/60.c",
+            "../data/benchmarks/code2inv/61.c",
+            "../data/benchmarks/code2inv/62.c",
+            "../data/benchmarks/code2inv/63.c",
+            "../data/benchmarks/code2inv/64.c",
+            "../data/benchmarks/code2inv/65.c",
+            "../data/benchmarks/code2inv/66.c",
+            "../data/benchmarks/code2inv/67.c",
+            "../data/benchmarks/code2inv/68.c",
+            "../data/benchmarks/code2inv/69.c",
+            "../data/benchmarks/code2inv/72.c",
+            "../data/benchmarks/code2inv/73.c",
+            "../data/benchmarks/code2inv/74.c",
+            "../data/benchmarks/code2inv/75.c",
+            "../data/benchmarks/code2inv/76.c",
+            "../data/benchmarks/code2inv/83.c",
+            "../data/benchmarks/code2inv/84.c",
+            "../data/benchmarks/code2inv/85.c",
+            "../data/benchmarks/code2inv/86.c",
+            "../data/benchmarks/code2inv/88.c"
+        ],
+        "skipped": [
+            "../data/benchmarks/code2inv/1.c",
+            "../data/benchmarks/code2inv/3.c",
+            "../data/benchmarks/code2inv/5.c",
+            "../data/benchmarks/code2inv/7.c",
+            "../data/benchmarks/code2inv/9.c",
+            "../data/benchmarks/code2inv/14.c",
+            "../data/benchmarks/code2inv/44.c",
+            "../data/benchmarks/code2inv/45.c",
+            "../data/benchmarks/code2inv/49.c",
+            "../data/benchmarks/code2inv/59.c",
+            "../data/benchmarks/code2inv/71.c",
+            "../data/benchmarks/code2inv/76.c",
+            "../data/benchmarks/code2inv/77.c",
+            "../data/benchmarks/code2inv/79.c",
+            "../data/benchmarks/code2inv/82.c",
+            "../data/benchmarks/code2inv/87.c"
+        ],
+        "total": 92,
+        "success_count": 37,
+        "failure_count": 55,
+        "success_rate": 0.40217391304347827
+    }
+}

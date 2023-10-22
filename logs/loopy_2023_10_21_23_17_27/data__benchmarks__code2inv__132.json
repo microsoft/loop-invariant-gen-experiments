@@ -1,0 +1,456 @@
+{
+    "logs": {
+        "file": "../data/benchmarks/code2inv/132.c",
+        "benchmark_code": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\n\nint main() {\n    int i = 0;\n    int j, c, t;\n\n    while( unknown() ) {\n        if(c > 48) {\n            if (c < 57) {\n                j = i + i;\n                t = c - 48;\n                i = j + t;\n            }\n        }\n    } \n    {;\n//@ assert(i >= 0);\n}\n}",
+        "success": true,
+        "log": [
+            {
+                "step": "Prompting LLM",
+                "generating_annotation": "loop_invariants",
+                "success": true,
+                "llm_chat": [
+                    {
+                        "role": "system",
+                        "content": "You are a helpful AI software assistant that reasons about how code behaves. Given a program, you can find loop invariants, which can then be used to verify some property in the program. \nFrama-C is a software verification tool for C programs. The input to Frama-C is a C program file with ACSL (ANSI/ISO C Specification Language) annotations.\nFor the given program, find the necessary loop invariants of the while loop to help Frama-C verify the post-condition.\n\nInstructions:\n- Make a note of the pre-conditions or variable assignments in the program.\n- Analyze the loop body and make a note of the loop condition. \n- Output loop invariants that are true \n(i) before the loop execution, \n(ii) in every iteration of the loop and \n(iii) after the loop termination, \nsuch that the loop invariants imply the post condition.\n- If a loop invariant is a conjunction, split it into its parts.\n- Output all the loop invariants in one code block. For example:\n```\n/*@ \n    loop invariant i1;\n    loop invariant i2;\n*/\n```\nRules:\n- **Do not use variables or functions that are not declared in the program.** \n- **Do not make any assumptions about functions whose definitions are not given.**\n- **All undefined variables contain garbage values. Do not use variables that have garbage values.**\n- **Do not use keywords that are not supported in ACSL annotations for loops.**\n- **Variables that are not explicitly initialized, could have garbage values. Do not make any assumptions about such values.**\n- **Do not use the \\at(x, Pre) notation for any variable x.**\n- **Do not use non-deterministic function calls.**"
+                    },
+                    {
+                        "role": "user",
+                        "content": "\nConsider the following C program:\n```\n#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\n\nint main() {\n    int i = 0;\n    int j, c, t;\n\n    while( unknown() ) {\n        if(c > 48) {\n            if (c < 57) {\n                j = i + i;\n                t = c - 48;\n                i = j + t;\n            }\n        }\n    } \n    {;\n//@ assert(i >= 0);\n}\n}\n```\n\nYou are allowed to use implication to take care of the conditional nature of the code. Use implication (==>) instead of using if-then.\n\nFor all variables, add conjunctions that bound the maximum and minimum values that they can take, if such bounds exist.\n\nIf a variable is always equal to or smaller or larger than another variable, add a conjunction for their relation.\n\nIf the assertion is guarded by a condition, use the guard condition in an implication.\n\nIf certain variables are non-deterministic at the beginning or end of the loop, use an implication to make the invariant trivially true at that location. \n\nOutput the loop invariants for the loop in the program above. Let's think step by step."
+                    },
+                    "Pre-conditions:\n- The program does not have any explicit pre-conditions.\n- All variables except `i` have garbage values.\n\nLoop condition:\n- The loop runs as long as the non-deterministic function `unknown()` returns a non-zero value.\n\nLoop invariants:\n- `i` is greater than or equal to 0.\n- If `c` is greater than 48, then `c` is greater than or equal to 49.\n- If `c` is less than 57, then `c` is less than or equal to 56.\n- If `c` is less than or equal to 48 or greater than or equal to 57, then `i` remains unchanged.\n- If `c` is greater than 48 and less than 57, then `i` is updated as `i + i + (c - 48)`.\n- If `j` is equal to `i + i`, and `c` is greater than 48 and less than 57, then `j` is greater than or equal to `i`.\n- If `t` is equal to `c - 48`, and `c` is greater than 48 and less than 57, then `t` is greater than or equal to 1 and less than or equal to 9.\n\nPost-condition:\n- `i` is greater than or equal to 0.\n\nPutting all the loop invariants together, we get:\n```\n/*@ \n    loop invariant i >= 0;\n    loop invariant (c > 48 && c >= 49) ==> true;\n    loop invariant (c < 57 && c <= 56) ==> true;\n    loop invariant (c <= 48 || c >= 57) ==> (i == \\old(i));\n    loop invariant (c > 48 && c < 57) ==> (i == \\old(i) + \\old(i) + (c - 48));\n    loop invariant (j == i + i && c > 48 && c < 57) ==> (j >= i);\n    loop invariant (t == c - 48 && c > 48 && c < 57) ==> (t >= 1 && t <= 9);\n*/\n```",
+                    "Pre-conditions: None.\n\nVariable assignments: \n- i is initialized to 0.\n- j, c, and t are uninitialized and contain garbage values.\n\nLoop condition: \n- The loop executes as long as the result of the function unknown() is non-zero.\n\nLoop invariants:\n- Before the loop execution: None.\n- In every iteration of the loop:\n    - i is greater than or equal to 0.\n    - j is greater than or equal to 0.\n    - c is less than or equal to 57.\n    - t is greater than or equal to 0 and less than or equal to 9.\n    - If c is greater than 48, then j is greater than or equal to i and t is greater than or equal to 0.\n    - If c is less than or equal to 48, then j and t can take any value.\n- After the loop termination:\n    - i is greater than or equal to 0.\n\nWe can represent the loop invariants in ACSL annotations as follows:\n```\n/*@ \n    loop invariant i >= 0;\n    loop invariant j >= 0;\n    loop invariant c <= 57;\n    loop invariant t >= 0 && t <= 9;\n    loop invariant (c > 48 && j >= i && t >= 0) ==> i >= 0;\n    loop invariant (c <= 48) ==> \\true; // Trivially true implication\n*/\n``` \n\nNote that we don't need to add any implications for the loop invariants since all variables are initialized at the beginning of the loop and the assertion is unguarded.",
+                    "Pre-conditions:\n- None\n\nVariable assignments:\n- int i = 0;\n- int j, c, t;\n\nLoop condition:\n- while( unknown() )\n\nLoop invariants:\n- i >= 0\n- c <= 57 ==> c >= 48 ==> i >= 0\n- j == 2 * i ==> j >= 0\n- t == c - 48 ==> t >= 0\n- (c > 57 || c < 48) ==> i >= 0\n\nExplanation:\n- The first invariant ensures that i remains non-negative throughout the loop.\n- The second invariant ensures that c remains between 48 and 57 (inclusive) throughout the loop, and if it does, i remains non-negative.\n- The third invariant ensures that j is always twice the value of i.\n- The fourth invariant ensures that t is always equal to c - 48, and hence non-negative.\n- The fifth invariant ensures that if c is not between 48 and 57 (inclusive), then i remains non-negative. \n\nCombining all the loop invariants, we get:\n```\n/*@ \n    loop invariant i >= 0;\n    loop invariant c <= 57 ==> c >= 48 ==> i >= 0;\n    loop invariant j == 2 * i;\n    loop invariant t == c - 48 ==> t >= 0;\n    loop invariant (c > 57 || c < 48) ==> i >= 0;\n*/\n```\n\nThe loop invariants imply the post-condition of the program because after the loop terminates, i is non-negative and all the other variables have unknown values, so the conjunction of the loop invariants is still true.",
+                    "Pre-conditions:\n- The function `unknown()` returns a non-zero value an unknown number of times during program execution.\n- The variable `i` is initialized to 0.\n- The variables `j`, `c`, and `t` are uninitialized and may contain garbage values.\n\nLoop condition:\n- The loop continues as long as `unknown()` returns a non-zero value.\n\nLoop invariants:\n- `i >= 0` (initialized before the loop and implied by the assertion)\n- `c <= 57 ==> c >= 48 ==> j == i + i /\\ t == c - 48 ==> i == j + t` (holds in every iteration of the loop)\n- `c > 57 ==> i == i_old` (holds in every iteration of the loop, where `i_old` is the value of `i` at the start of the iteration)\n- `j >= 0 /\\ t >= 0` (holds in every iteration of the loop, as `c` is constrained to be between 48 and 57)\n- `j <= i` (holds in every iteration of the loop, as `j` is always assigned the value of `i+i`)\n- `t <= 9` (holds in every iteration of the loop, as `c` is constrained to be between 48 and 57)\n\nCombining the loop invariants, we get:\n```\n/*@ \n    loop invariant i >= 0;\n    loop invariant c <= 57 ==> c >= 48 ==> j == i + i /\\ t == c - 48 ==> i == j + t;\n    loop invariant c > 57 ==> i == i_old;\n    loop invariant j >= 0 /\\ t >= 0;\n    loop invariant j <= i;\n    loop invariant t <= 9;\n*/\n```\nNote that the loop invariants use implication to handle the conditional nature of the code. For example, the second loop invariant uses the implication `c <= 57 ==> c >= 48 ==> j == i + i /\\ t == c - 48 ==> i == j + t`, which means that if `c` is between 48 and 57, then `j` is equal to `i+i` and `t` is equal to `c-48`, which implies that `i` is equal to `j+t`.",
+                    "Pre-conditions:\n- None\n\nVariable assignments:\n- i = 0\n\nLoop condition:\n- unknown()\n\nLoop invariants:\n- i >= 0 (true before the loop execution)\n- For every iteration of the loop, if `c <= 48`, then `i >= 0`. (Implication: `c <= 48 ==> i >= 0`)\n- For every iteration of the loop, if `c > 48` and `c < 57`, then `i >= 0` and `j >= 0` and `t >= 0` and `j + t >= i`. (Implication: `c > 48 && c < 57 ==> i >= 0 && j >= 0 && t >= 0 && j + t >= i`)\n- After the loop termination, if the assertion is executed, then `i >= 0`. (Implication: `unknown() == 0 ==> i >= 0`) \n\nNote that we have used an implication to handle the conditional nature of the code. We have also added conjunctions to bound the minimum values that the variables can take. Since there are no maximum bounds that can be determined for the variables, we have not added any such conjunctions. Finally, we have used an implication to handle the non-deterministic nature of the `unknown()` function. \n\nPutting it all together, the loop invariants for the program are:\n```\n/*@ \n    loop invariant i >= 0;\n    loop invariant c <= 48 ==> i >= 0;\n    loop invariant (c > 48 && c < 57) ==> (i >= 0 && j >= 0 && t >= 0 && j + t >= i);\n*/\n``` \n\nNote that we have combined the first two loop invariants into one line for simplicity.",
+                    "The pre-condition of the program is trivially true. \n\nBefore the loop execution, we have `i = 0`.\n\nThe loop condition is `unknown()`, which means we do not know how many times the loop will execute. \n\nIn every iteration of the loop, we need to maintain the following loop invariants:\n\n1. `i >= 0`: This invariant is true before the loop execution and needs to be maintained throughout the loop. \n\n2. `c <= 48 || c >= 57 ==> i >= 0`: This invariant implies that if `c` is not between 48 and 57, then `i` should be greater than or equal to 0. We need to maintain this invariant because otherwise, `i` could become negative. \n\n3. `i == j + t`: This invariant implies that `i` is always equal to `j + t`, where `j` is the previous value of `i` and `t` is the difference between the current value of `c` and 48. We need to maintain this invariant because `i` is updated based on the previous value of `i` and the current value of `c`.\n\n4. `j >= 0`: This invariant implies that `j` is always greater than or equal to 0. We need to maintain this invariant because `j` is computed as `i + i` and `i` is always greater than or equal to 0.\n\n5. `t >= 0`: This invariant implies that `t` is always greater than or equal to 0. We need to maintain this invariant because `t` is computed as `c - 48` and `c` is always greater than or equal to 0.\n\nAfter the loop termination, we need to show that the post-condition `i >= 0` is true. This is already one of our loop invariants, so we do not need to add anything else.\n\nPutting it all together, the loop invariants are:\n```\n/*@ \n    loop invariant i >= 0;\n    loop invariant c <= 48 || c >= 57 ==> i >= 0;\n    loop invariant i == j + t;\n    loop invariant j >= 0;\n    loop invariant t >= 0;\n*/\n```",
+                    "Pre-conditions:\n- None\n\nVariable Assignments:\n- i = 0\n\nLoop Condition:\n- unknown()\n\nLoop Invariants:\n- i >= 0\n- c <= 57 ==> c >= 48 ==> j >= 0\n- c <= 57 ==> c >= 48 ==> t >= 0\n- c <= 57 ==> c >= 48 ==> j + t >= i\n- c > 57 || c < 48 ==> i >= \\old(i)\n\nExplanation:\n- The first loop invariant is the post-condition that needs to be verified.\n- Since the values of c, j, and t are not known beforehand, we need to add loop invariants to bound them. From the code, we can see that c is a character that is being converted to an integer value. The character '0' has an ASCII value of 48, and the character '9' has an ASCII value of 57. Hence, we can add a loop invariant that bounds the value of c between 48 and 57.\n- If c is between 48 and 57, then the code inside the if statement will execute. From the code, we can see that j is assigned the value of i + i, and t is assigned the value of c - 48. Since i is also being used to compute the new value of i, we can add a loop invariant that ensures that j and t are both non-negative. Also, since i is being updated to the new value of j + t, we can add a loop invariant that ensures that j + t is greater than or equal to i after the update.\n- If c is not between 48 and 57, then i is not updated. Hence, we can add a loop invariant that ensures that i is greater than or equal to its old value if c is not between 48 and 57.\n- Since there are no non-deterministic variables in the program, we don't need to add any additional loop invariants to handle them.\n\nPutting everything together, we get the following loop invariants:\n```\n/*@ \n    loop invariant i >= 0;\n    loop invariant c <= 57 ==> c >= 48 ==> j >= 0;\n    loop invariant c <= 57 ==> c >= 48 ==> t >= 0;\n    loop invariant c <= 57 ==> c >= 48 ==> j + t >= i;\n    loop invariant c > 57 || c < 48 ==> i >= \\old(i);\n*/\n```",
+                    "Pre-conditions:\n- None\n\nVariable Assignments:\n- i = 0\n\nLoop Condition:\n- unknown()\n\nLoop Invariants:\n- i >= 0\n- j >= 0\n- c >= 0\n- t >= 0\n- t <= 9\n- (c > 48 && c < 57) ==> (i >= i + (c - 48))\n- (c <= 48 || c >= 57) ==> (i >= i)\n\nExplanation:\n- Since i is initially assigned to 0 and only incremented in the loop, i is always greater than or equal to 0.\n- Since j is only assigned to i + i in the loop and i is always non-negative, j is always non-negative.\n- Since c is not initialized and could have a garbage value, we cannot make any assumptions about its range. Therefore, we must add a lower bound of 0 for c.\n- Since t is assigned to c - 48, and c is assumed to be greater than or equal to 48, t is always non-negative. Also, since t is at most a single digit, its maximum value is 9.\n- The loop body contains a conditional statement where i is updated only if c is between 48 and 57 (inclusive). We can split this into two implications: one for the case where the condition is true and another for when the condition is false. When the condition is true, we can use the updated value of i to establish a lower bound for i. When the condition is false, i is not updated and we can use i's current value to establish a lower bound for i.\n- Finally, the assertion is guarded by no condition, so we can simply add it as a loop invariant.\n\nPutting it all together:\n\n```\n/*@ \n    loop invariant i >= 0;\n    loop invariant j >= 0;\n    loop invariant c >= 0;\n    loop invariant t >= 0 && t <= 9;\n    loop invariant (c > 48 && c < 57) ==> (i >= i + (c - 48));\n    loop invariant (c <= 48 || c >= 57) ==> (i >= i);\n*/\nwhile( unknown() ) {\n    if(c > 48) {\n        if (c < 57) {\n            j = i + i;\n            t = c - 48;\n            i = j + t;\n        }\n    }\n} \n{;\n    //@ assert i >= 0;\n}\n```",
+                    "Pre-conditions:\n- The program does not have any pre-conditions.\n- The variable `i` is initialized to 0.\n\nLoop condition:\n- The loop executes as long as the function `unknown()` returns a non-zero value.\n\nLoop invariants:\n- Before the loop: `i >= 0` (since `i` is initialized to 0)\n- In every iteration:\n    - `c <= 48 || c >= 57 || (c > 48 && c < 57 && i == 2*j + (c-48))`\n        - If `c` is less than or equal to 48, or greater than or equal to 57, then the condition inside the loop is not executed, and the invariant trivially holds.\n        - If `c` is between 48 and 57 (inclusive), then the condition inside the loop is executed. In this case, `j` is equal to `i+i`, `t` is equal to `c-48`, and `i` is updated to `j+t`. Therefore, the new value of `i` is `2*i + (c-48)`. Hence, `i == 2*j + (c-48)`.\n    - `i >= 0` (since `i` is not modified inside the loop)\n- After the loop: `i >= 0 ==> i >= 0` (trivially true)\n\nPutting everything together, the loop invariants are:\n```\n/*@ \n    loop invariant i >= 0;\n    loop invariant c <= 48 || c >= 57 || (c > 48 && c < 57 && i == 2*j + (c-48));\n    loop invariant i >= 0;\n*/\n```",
+                    "First, let's look at the pre-conditions and variable assignments in the program:\n\n- The variable `i` is initialized to 0.\n- The variables `j`, `c`, and `t` are declared but not initialized.\n- There is a macro `assume(e)` which returns 0 if the expression `e` is false.\n- There is an external function `unknown()` which returns an unknown integer value.\n\nNow, let's analyze the loop body:\n\n- The loop runs as long as the value returned by `unknown()` is non-zero.\n- Inside the loop, there is an `if` statement with a condition `c > 48`.\n- If the condition is true, there is another `if` statement with a condition `c < 57`.\n- If both conditions are true, `j` is assigned the value of `i + i`, `t` is assigned the value of `c - 48`, and `i` is assigned the value of `j + t`.\n\nBased on this analysis, we can derive the following loop invariants:\n\n```\n/*@ \n    loop invariant i >= 0;\n    loop invariant c >= 0 && c <= 127;   // assuming ASCII values\n    loop invariant j == 2 * i;\n    loop invariant t >= 0 && t <= 9;\n    loop invariant i >= j;\n    loop invariant i >= t;\n    loop invariant (c <= 48 || c >= 57) ==> (j == \\old(j) && t == \\old(t));\n*/\n```\n\nExplanation of loop invariants:\n\n- The first loop invariant `i >= 0` is implied by the post-condition assertion and is true before the loop execution.\n- The second loop invariant `c >= 0 && c <= 127` bounds the value of `c` to the range of ASCII values. This is necessary because the program uses the characters '0' to '9', whose ASCII values lie in this range.\n- The third loop invariant `j == 2 * i` expresses the relationship between `i` and `j` after every iteration of the loop. This is true because `j` is assigned the value of `i + i`.\n- The fourth loop invariant `t >= 0 && t <= 9` bounds the value of `t` to the range 0 to 9. This is necessary because the program subtracts the ASCII value of '0' from `c` to obtain the integer value of `t`.\n- The fifth loop invariant `i >= j` expresses the relationship between `i` and `j` after every iteration of the loop. This is true because `j` is assigned the value of `i + i`.\n- The sixth loop invariant `i >= t` expresses the relationship between `i` and `t` after every iteration of the loop. This is true because `i` is assigned the value of `j + t`, and `j` is always non-negative (as `i` is non-negative), so `i` is always greater than or equal to `t`.\n- The seventh loop invariant uses an implication to handle the conditional nature of the code. If the condition `c > 48` is false or the condition `c < 57` is false, then `j` and `t` are not updated and their values remain the same as in the previous iteration (i.e., `\\old(j)` and `\\old(t)`). This is necessary because the loop invariants must hold true in every iteration of the loop, even if the conditions inside the loop are not satisfied.",
+                    "Pre-conditions:\n- None\n\nVariable Assignments:\n- `i` is assigned the value 0.\n\nLoop Condition:\n- The loop executes as long as the function `unknown()` returns a non-zero value.\n\nLoop Invariants:\n- `i` is always non-negative.\n- `j` is always non-negative.\n- `c` is a character variable that can take any value.\n- `t` is always non-negative.\n- If the condition `c > 48` is true, then `c` is greater than or equal to the ASCII value of the character '0'.\n- If the condition `c < 57` is true, then `c` is less than or equal to the ASCII value of the character '9'.\n- If `c` is less than or equal to the ASCII value of the character '0' or greater than or equal to the ASCII value of the character '9', then `i` does not change.\n- If `c` is greater than the ASCII value of the character '0' and less than the ASCII value of the character '9', then `i` is equal to `2*i + (c-48)`.\n\nUsing these loop invariants, we can show that the post-condition `i >= 0` is always true after the loop terminates. \n\nLoop Invariants:\n```\n/*@ \n    loop invariant i >= 0;\n    loop invariant j >= 0;\n    loop invariant t >= 0;\n    loop invariant \\valid(&c);\n    loop invariant c <= 57 ==> c >= 48;\n    loop invariant c >= 48 ==> c <= 57;\n    loop invariant (c <= 48 || c >= 57) ==> \\old(i) == i;\n    loop invariant (c > 48 && c < 57) ==> i == 2*\\old(i) + (c-48);\n*/\n```",
+                    "First, let's look at the pre-conditions and variable assignments in the program:\n- The program defines a macro `assume` that takes a boolean expression and returns 0 if the expression is false.\n- The program declares an external function `unknown` that returns an integer value.\n- The program initializes variables `i`, `j`, `c`, and `t` to 0.\n\nNext, let's analyze the loop body and make a note of the loop condition:\n- The loop condition is `unknown()`, which means the loop will execute an unknown number of times until `unknown()` returns 0.\n\nNow, let's output the loop invariants that are true before the loop execution, in every iteration of the loop, and after the loop termination such that the loop invariants imply the post-condition:\n```\n/*@ \n    loop invariant i >= 0;\n    loop invariant c >= 0 && c <= 127;\n    loop invariant t >= 0 && t <= 9;\n    loop invariant j >= 0;\n*/\n```\n\nExplanation:\n- The first loop invariant `i >= 0` ensures that the variable `i` is always non-negative.\n- The second loop invariant `c >= 0 && c <= 127` ensures that the variable `c` is always within the ASCII range of valid characters.\n- The third loop invariant `t >= 0 && t <= 9` ensures that the variable `t` is always within the range of valid digits.\n- The fourth loop invariant `j >= 0` ensures that the variable `j` is always non-negative.\n\nNote that we do not need to add any loop invariants for the variable `unknown()` as it is non-deterministic and we cannot make any assumptions about its behavior.\n\nAlso note that we do not need to add any loop invariants for the variable `i` after the loop termination, as the post-condition already implies that `i >= 0`.\n\nFinally, since the assertion is not guarded by any condition, we do not need to use any implications.",
+                    "Pre-conditions:\n- The program does not take any input.\n- The `unknown()` function returns a non-deterministic integer value.\n\nVariable assignments:\n- `i` is initialized to 0.\n- `j`, `c`, and `t` are uninitialized and contain garbage values.\n\nLoop condition:\n- The loop executes as long as the `unknown()` function returns a non-zero value.\n\nLoop invariants:\n- Before the loop execution: `i >= 0`\n- In every iteration of the loop:\n    - `c <= 48 ==> i >= 0`\n    - `c >= 57 ==> i >= 0`\n    - `c > 48 ==> (c < 57 ==> (j == i + i /\\ t == c - 48) ==> i == j + t)`\n    - `c <= 48 \\/ c >= 57 \\/ c <= 48 \\/ (c >= 57 /\\ (j != i + i \\/ t != c - 48))`\n    - `j >= 0`\n    - `t >= 0`\n- After the loop termination: `i >= 0`\n\nExplanation:\n- Before the loop execution, `i` is initialized to 0, so `i >= 0`.\n- In every iteration of the loop, the value of `c` is non-deterministic. However, we can add invariants based on the conditionals in the loop body:\n    - If `c` is less than or equal to 48, then the loop body is not executed, so `i` remains the same. Hence, `c <= 48 ==> i >= 0`.\n    - If `c` is greater than or equal to 57, then the loop body is not executed, so `i` remains the same. Hence, `c >= 57 ==> i >= 0`.\n    - If `c` is between 48 and 57 (inclusive), then the loop body is executed. If `c < 57`, then `j` is assigned the value of `i + i` and `t` is assigned the value of `c - 48`. Then, `i` is assigned the value of `j + t`. Hence, `c > 48 ==> (c < 57 ==> (j == i + i /\\ t == c - 48) ==> i == j + t)`.\n    - If `c` is not between 48 and 57 (inclusive), then either the loop body is not executed or it is executed but the assignments to `j` and `t` are not made. Hence, `c <= 48 \\/ c >= 57 \\/ c <= 48 \\/ (c >= 57 /\\ (j != i + i \\/ t != c - 48))`.\n    - Since `j` is assigned the value of `i + i` in the loop body, `j` is always greater than or equal to 0. Hence, `j >= 0`.\n    - Since `t` is assigned the value of `c - 48` in the loop body, `t` is always greater than or equal to 0. Hence, `t >= 0`.\n- After the loop termination, the only constraint we have is that `i >= 0`.",
+                    "Pre-conditions:\n- The program takes no input.\n- The function `unknown()` returns a non-deterministic value.\n\nVariable assignments:\n- `i` is assigned the value 0 at the beginning of the program.\n- `j`, `c`, and `t` are uninitialized and contain garbage values.\n\nLoop condition:\n- The loop will execute as long as the value returned by `unknown()` is non-zero.\n\nLoop invariants:\n- `i` is always non-negative.\n- `j` is always even.\n- `c` is always between 0 and 127 (ASCII range).\n- `t` is always between 0 and 9.\n\nLoop invariant code block:\n```\n/*@ \n    loop invariant i >= 0;\n    loop invariant j % 2 == 0;\n    loop invariant 0 <= c <= 127;\n    loop invariant 0 <= t <= 9;\n*/\n```\n\nPost-condition:\n- `i` is greater than or equal to 0.\n\nSince the loop invariant `i >= 0` holds throughout the loop, and the loop continues until the loop condition is false, the post-condition is guaranteed to hold after the loop terminates. Therefore, no additional loop invariant needs to be added to ensure the post-condition.",
+                    "Pre-conditions:\n- `i` is initialized to 0.\n\nLoop condition:\n- The loop executes while the return value of the function `unknown()` is non-zero. \n\nLoop invariants:\n- Before the loop execution, `i >= 0`.\n- In every iteration of the loop, `i >= 0`.\n- After the loop termination, `i >= 0`.\n- Before the loop execution, `j >= 0`.\n- In every iteration of the loop, `j >= 0`.\n- Before the loop execution, `c` could have any value. \n- In every iteration of the loop, if `c > 48` then `c` could have any value between 49 and 2147483647.\n- In every iteration of the loop, if `c > 48 && c < 57` then `t = c - 48` and `t` is between 1 and 9.\n- In every iteration of the loop, if `c > 48 && c < 57` then `i = j + t`.\n- After the loop termination, `i >= 0`. \n\nUsing the implication, we can write the loop invariants as follows:\n```\n/*@ \n    loop invariant i >= 0;\n    loop invariant j >= 0;\n    loop invariant \\forall integer k; 0 <= k < i; j == 2*k;\n    loop invariant \\forall integer k; 0 <= k < i; c[k] > 48 ==> 49 <= c[k] <= 2147483647;\n    loop invariant \\forall integer k; 0 <= k < i; c[k] > 48 && c[k] < 57 ==> 1 <= t[k] <= 9 && i == j + t[k];\n    loop invariant i >= 0 ==> (c <= 48 || c >= 57);\n    loop assigns i, j, c, t;\n    loop variant 0;\n*/\n```\nNote that we have used the array notation `c[k]`, `t[k]` to refer to the value of `c` and `t` in the k-th iteration of the loop. Also, we have included the loop assigns clause to indicate which variables are modified by the loop and the loop variant clause to indicate that the loop terminates."
+                ],
+                "output": [
+                    "/*@ \n    loop invariant i >= 0;\n    loop invariant (c > 48 && c >= 49) ==> true;\n    loop invariant (c < 57 && c <= 56) ==> true;\n    loop invariant (c <= 48 || c >= 57) ==> (i == \\old(i));\n    loop invariant (c > 48 && c < 57) ==> (i == \\old(i) + \\old(i) + (c - 48));\n    loop invariant (j == i + i && c > 48 && c < 57) ==> (j >= i);\n    loop invariant (t == c - 48 && c > 48 && c < 57) ==> (t >= 1 && t <= 9);\n*/",
+                    "/*@ \n    loop invariant i >= 0;\n    loop invariant j >= 0;\n    loop invariant c <= 57;\n    loop invariant t >= 0 && t <= 9;\n    loop invariant (c > 48 && j >= i && t >= 0) ==> i >= 0;\n    loop invariant (c <= 48) ==> \\true; // Trivially true implication\n*/",
+                    "/*@ \n    loop invariant i >= 0;\n    loop invariant c <= 57 ==> c >= 48 ==> i >= 0;\n    loop invariant j == 2 * i;\n    loop invariant t == c - 48 ==> t >= 0;\n    loop invariant (c > 57 || c < 48) ==> i >= 0;\n*/",
+                    "/*@ \n    loop invariant i >= 0;\n    loop invariant c <= 57 ==> c >= 48 ==> j == i + i /\\ t == c - 48 ==> i == j + t;\n    loop invariant c > 57 ==> i == i_old;\n    loop invariant j >= 0 /\\ t >= 0;\n    loop invariant j <= i;\n    loop invariant t <= 9;\n*/",
+                    "/*@ \n    loop invariant i >= 0;\n    loop invariant c <= 48 ==> i >= 0;\n    loop invariant (c > 48 && c < 57) ==> (i >= 0 && j >= 0 && t >= 0 && j + t >= i);\n*/",
+                    "/*@ \n    loop invariant i >= 0;\n    loop invariant c <= 48 || c >= 57 ==> i >= 0;\n    loop invariant i == j + t;\n    loop invariant j >= 0;\n    loop invariant t >= 0;\n*/",
+                    "/*@ \n    loop invariant i >= 0;\n    loop invariant c <= 57 ==> c >= 48 ==> j >= 0;\n    loop invariant c <= 57 ==> c >= 48 ==> t >= 0;\n    loop invariant c <= 57 ==> c >= 48 ==> j + t >= i;\n    loop invariant c > 57 || c < 48 ==> i >= \\old(i);\n*/",
+                    "/*@ \n    loop invariant i >= 0;\n    loop invariant j >= 0;\n    loop invariant c >= 0;\n    loop invariant t >= 0 && t <= 9;\n    loop invariant (c > 48 && c < 57) ==> (i >= i + (c - 48));\n    loop invariant (c <= 48 || c >= 57) ==> (i >= i);\n*/\nwhile( unknown() ) {\n    if(c > 48) {\n        if (c < 57) {\n            j = i + i;\n            t = c - 48;\n            i = j + t;\n        }\n    }\n} \n{;\n    //@ assert i >= 0;\n}",
+                    "/*@ \n    loop invariant i >= 0;\n    loop invariant c <= 48 || c >= 57 || (c > 48 && c < 57 && i == 2*j + (c-48));\n    loop invariant i >= 0;\n*/",
+                    "/*@ \n    loop invariant i >= 0;\n    loop invariant c >= 0 && c <= 127;   // assuming ASCII values\n    loop invariant j == 2 * i;\n    loop invariant t >= 0 && t <= 9;\n    loop invariant i >= j;\n    loop invariant i >= t;\n    loop invariant (c <= 48 || c >= 57) ==> (j == \\old(j) && t == \\old(t));\n*/",
+                    "/*@ \n    loop invariant i >= 0;\n    loop invariant j >= 0;\n    loop invariant t >= 0;\n    loop invariant \\valid(&c);\n    loop invariant c <= 57 ==> c >= 48;\n    loop invariant c >= 48 ==> c <= 57;\n    loop invariant (c <= 48 || c >= 57) ==> \\old(i) == i;\n    loop invariant (c > 48 && c < 57) ==> i == 2*\\old(i) + (c-48);\n*/",
+                    "/*@ \n    loop invariant i >= 0;\n    loop invariant c >= 0 && c <= 127;\n    loop invariant t >= 0 && t <= 9;\n    loop invariant j >= 0;\n*/",
+                    [
+                        "ERROR: Output does not contain at least 1 complete code block",
+                        "Pre-conditions:\n- The program does not take any input.\n- The `unknown()` function returns a non-deterministic integer value.\n\nVariable assignments:\n- `i` is initialized to 0.\n- `j`, `c`, and `t` are uninitialized and contain garbage values.\n\nLoop condition:\n- The loop executes as long as the `unknown()` function returns a non-zero value.\n\nLoop invariants:\n- Before the loop execution: `i >= 0`\n- In every iteration of the loop:\n    - `c <= 48 ==> i >= 0`\n    - `c >= 57 ==> i >= 0`\n    - `c > 48 ==> (c < 57 ==> (j == i + i /\\ t == c - 48) ==> i == j + t)`\n    - `c <= 48 \\/ c >= 57 \\/ c <= 48 \\/ (c >= 57 /\\ (j != i + i \\/ t != c - 48))`\n    - `j >= 0`\n    - `t >= 0`\n- After the loop termination: `i >= 0`\n\nExplanation:\n- Before the loop execution, `i` is initialized to 0, so `i >= 0`.\n- In every iteration of the loop, the value of `c` is non-deterministic. However, we can add invariants based on the conditionals in the loop body:\n    - If `c` is less than or equal to 48, then the loop body is not executed, so `i` remains the same. Hence, `c <= 48 ==> i >= 0`.\n    - If `c` is greater than or equal to 57, then the loop body is not executed, so `i` remains the same. Hence, `c >= 57 ==> i >= 0`.\n    - If `c` is between 48 and 57 (inclusive), then the loop body is executed. If `c < 57`, then `j` is assigned the value of `i + i` and `t` is assigned the value of `c - 48`. Then, `i` is assigned the value of `j + t`. Hence, `c > 48 ==> (c < 57 ==> (j == i + i /\\ t == c - 48) ==> i == j + t)`.\n    - If `c` is not between 48 and 57 (inclusive), then either the loop body is not executed or it is executed but the assignments to `j` and `t` are not made. Hence, `c <= 48 \\/ c >= 57 \\/ c <= 48 \\/ (c >= 57 /\\ (j != i + i \\/ t != c - 48))`.\n    - Since `j` is assigned the value of `i + i` in the loop body, `j` is always greater than or equal to 0. Hence, `j >= 0`.\n    - Since `t` is assigned the value of `c - 48` in the loop body, `t` is always greater than or equal to 0. Hence, `t >= 0`.\n- After the loop termination, the only constraint we have is that `i >= 0`."
+                    ],
+                    "/*@ \n    loop invariant i >= 0;\n    loop invariant j % 2 == 0;\n    loop invariant 0 <= c <= 127;\n    loop invariant 0 <= t <= 9;\n*/",
+                    "/*@ \n    loop invariant i >= 0;\n    loop invariant j >= 0;\n    loop invariant \\forall integer k; 0 <= k < i; j == 2*k;\n    loop invariant \\forall integer k; 0 <= k < i; c[k] > 48 ==> 49 <= c[k] <= 2147483647;\n    loop invariant \\forall integer k; 0 <= k < i; c[k] > 48 && c[k] < 57 ==> 1 <= t[k] <= 9 && i == j + t[k];\n    loop invariant i >= 0 ==> (c <= 48 || c >= 57);\n    loop assigns i, j, c, t;\n    loop variant 0;\n*/"
+                ]
+            },
+            {
+                "step": "Checking individual completion",
+                "solver_calls": 14,
+                "completions": [
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant i >= 0;\n    loop invariant (c > 48 && c >= 49) ==> true;\n    loop invariant (c < 57 && c <= 56) ==> true;\n    loop invariant (c <= 48 || c >= 57) ==> (i == \\old(i));\n    loop invariant (c > 48 && c < 57) ==> (i == \\old(i) + \\old(i) + (c - 48));\n    loop invariant (j == i + i && c > 48 && c < 57) ==> (j >= i);\n    loop invariant (t == c - 48 && c > 48 && c < 57) ==> (t >= 1 && t <= 9);\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "Annotation error on line 10: unbound logic variable true. Ignoring loop annotation"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant i >= 0;\n    loop invariant j >= 0;\n    loop invariant c <= 57;\n    loop invariant t >= 0 && t <= 9;\n    loop invariant (c > 48 && j >= i && t >= 0) ==> i >= 0;\n    loop invariant (c <= 48) ==> \\true; // Trivially true implication\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant i >= 0 is inductive.\nloop invariant j >= 0 is preserved but not established.\nloop invariant c <= 57 is preserved but not established.\nloop invariant t >= 0 && t <= 9 is preserved but not established.\nloop invariant (c > 48 && j >= i && t >= 0) ==> i >= 0 is inductive.\nloop invariant (c <= 48) ==> \\true is inductive.\nAssertion i >= 0: Partially proven\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant i >= 0;\n    loop invariant c <= 57 ==> c >= 48 ==> i >= 0;\n    loop invariant j == 2 * i;\n    loop invariant t == c - 48 ==> t >= 0;\n    loop invariant (c > 57 || c < 48) ==> i >= 0;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant i >= 0 is inductive.\nloop invariant c <= 57 ==> c >= 48 ==> i >= 0 is inductive.\nloop invariant j == 2 * i is neither established nor preserved.\nloop invariant t == c - 48 ==> t >= 0 is preserved but not established.\nloop invariant (c > 57 || c < 48) ==> i >= 0 is inductive.\nAssertion i >= 0: Partially proven\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant i >= 0;\n    loop invariant c <= 57 ==> c >= 48 ==> j == i + i /\\ t == c - 48 ==> i == j + t;\n    loop invariant c > 57 ==> i == i_old;\n    loop invariant j >= 0 /\\ t >= 0;\n    loop invariant j <= i;\n    loop invariant t <= 9;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "Annotation error on line 10: lexical error, illegal character \\"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant i >= 0;\n    loop invariant c <= 48 ==> i >= 0;\n    loop invariant (c > 48 && c < 57) ==> (i >= 0 && j >= 0 && t >= 0 && j + t >= i);\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant i >= 0 is inductive.\nloop invariant c <= 48 ==> i >= 0 is inductive.\nloop invariant (c > 48 && c < 57) ==> (i >= 0 && j >= 0 && t >= 0 && j + t >= i) is preserved but not established.\nAssertion i >= 0: Partially proven\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant i >= 0;\n    loop invariant c <= 48 || c >= 57 ==> i >= 0;\n    loop invariant i == j + t;\n    loop invariant j >= 0;\n    loop invariant t >= 0;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant i >= 0 is inductive.\nloop invariant c <= 48 || c >= 57 ==> i >= 0 is inductive.\nloop invariant i == j + t is preserved but not established.\nloop invariant j >= 0 is preserved but not established.\nloop invariant t >= 0 is preserved but not established.\nAssertion i >= 0: Partially proven\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant i >= 0;\n    loop invariant c <= 57 ==> c >= 48 ==> j >= 0;\n    loop invariant c <= 57 ==> c >= 48 ==> t >= 0;\n    loop invariant c <= 57 ==> c >= 48 ==> j + t >= i;\n    loop invariant c > 57 || c < 48 ==> i >= \\old(i);\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "Annotation error on line 13: \\old undefined in this context. Ignoring loop annotation"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant i >= 0;\n    loop invariant j >= 0;\n    loop invariant c >= 0;\n    loop invariant t >= 0 && t <= 9;\n    loop invariant (c > 48 && c < 57) ==> (i >= i + (c - 48));\n    loop invariant (c <= 48 || c >= 57) ==> (i >= i);\n*/\nwhile( unknown() ) {\n    if(c > 48) {\n        if (c < 57) {\n            j = i + i;\n            t = c - 48;\n            i = j + t;\n        }\n    }\n} \n{;\n    //@ assert i >= 0;\n}",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant i >= 0 is inductive.\nloop invariant j >= 0 is preserved but not established.\nloop invariant c >= 0 is preserved but not established.\nloop invariant t >= 0 && t <= 9 is preserved but not established.\nloop invariant (c > 48 && c < 57) ==> (i >= i + (c - 48)) is preserved but not established.\nloop invariant (c <= 48 || c >= 57) ==> (i >= i) is inductive.\nAssertion i >= 0: Partially proven\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant i >= 0;\n    loop invariant c <= 48 || c >= 57 || (c > 48 && c < 57 && i == 2*j + (c-48));\n    loop invariant i >= 0;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant i >= 0 is inductive.\nloop invariant c <= 48 || c >= 57 || (c > 48 && c < 57 && i == 2*j + (c-48)) is neither established nor preserved.\nloop invariant i >= 0 is inductive.\nAssertion i >= 0: Partially proven\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant i >= 0;\n    loop invariant c >= 0 && c <= 127;   // assuming ASCII values\n    loop invariant j == 2 * i;\n    loop invariant t >= 0 && t <= 9;\n    loop invariant i >= j;\n    loop invariant i >= t;\n    loop invariant (c <= 48 || c >= 57) ==> (j == \\old(j) && t == \\old(t));\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "Annotation error on line 15: \\old undefined in this context. Ignoring loop annotation"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant i >= 0;\n    loop invariant j >= 0;\n    loop invariant t >= 0;\n    loop invariant \\valid(&c);\n    loop invariant c <= 57 ==> c >= 48;\n    loop invariant c >= 48 ==> c <= 57;\n    loop invariant (c <= 48 || c >= 57) ==> \\old(i) == i;\n    loop invariant (c > 48 && c < 57) ==> i == 2*\\old(i) + (c-48);\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "Annotation error on line 15: \\old undefined in this context. Ignoring loop annotation"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant i >= 0;\n    loop invariant c >= 0 && c <= 127;\n    loop invariant t >= 0 && t <= 9;\n    loop invariant j >= 0;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant i >= 0 is inductive.\nloop invariant c >= 0 && c <= 127 is preserved but not established.\nloop invariant t >= 0 && t <= 9 is preserved but not established.\nloop invariant j >= 0 is preserved but not established.\nAssertion i >= 0: Partially proven\n"
+                    },
+                    {
+                        "num_solver_calls": 0,
+                        "success": false,
+                        "llm_output": "Pre-conditions:\n- The program does not take any input.\n- The `unknown()` function returns a non-deterministic integer value.\n\nVariable assignments:\n- `i` is initialized to 0.\n- `j`, `c`, and `t` are uninitialized and contain garbage values.\n\nLoop condition:\n- The loop executes as long as the `unknown()` function returns a non-zero value.\n\nLoop invariants:\n- Before the loop execution: `i >= 0`\n- In every iteration of the loop:\n    - `c <= 48 ==> i >= 0`\n    - `c >= 57 ==> i >= 0`\n    - `c > 48 ==> (c < 57 ==> (j == i + i /\\ t == c - 48) ==> i == j + t)`\n    - `c <= 48 \\/ c >= 57 \\/ c <= 48 \\/ (c >= 57 /\\ (j != i + i \\/ t != c - 48))`\n    - `j >= 0`\n    - `t >= 0`\n- After the loop termination: `i >= 0`\n\nExplanation:\n- Before the loop execution, `i` is initialized to 0, so `i >= 0`.\n- In every iteration of the loop, the value of `c` is non-deterministic. However, we can add invariants based on the conditionals in the loop body:\n    - If `c` is less than or equal to 48, then the loop body is not executed, so `i` remains the same. Hence, `c <= 48 ==> i >= 0`.\n    - If `c` is greater than or equal to 57, then the loop body is not executed, so `i` remains the same. Hence, `c >= 57 ==> i >= 0`.\n    - If `c` is between 48 and 57 (inclusive), then the loop body is executed. If `c < 57`, then `j` is assigned the value of `i + i` and `t` is assigned the value of `c - 48`. Then, `i` is assigned the value of `j + t`. Hence, `c > 48 ==> (c < 57 ==> (j == i + i /\\ t == c - 48) ==> i == j + t)`.\n    - If `c` is not between 48 and 57 (inclusive), then either the loop body is not executed or it is executed but the assignments to `j` and `t` are not made. Hence, `c <= 48 \\/ c >= 57 \\/ c <= 48 \\/ (c >= 57 /\\ (j != i + i \\/ t != c - 48))`.\n    - Since `j` is assigned the value of `i + i` in the loop body, `j` is always greater than or equal to 0. Hence, `j >= 0`.\n    - Since `t` is assigned the value of `c - 48` in the loop body, `t` is always greater than or equal to 0. Hence, `t >= 0`.\n- After the loop termination, the only constraint we have is that `i >= 0`.",
+                        "error": "Output does not contain at least 1 code block"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant i >= 0;\n    loop invariant j % 2 == 0;\n    loop invariant 0 <= c <= 127;\n    loop invariant 0 <= t <= 9;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant i >= 0 is inductive.\nloop invariant j % 2 == 0 is preserved but not established.\nloop invariant 0 <= c <= 127 is preserved but not established.\nloop invariant 0 <= t <= 9 is preserved but not established.\nAssertion i >= 0: Partially proven\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant i >= 0;\n    loop invariant j >= 0;\n    loop invariant \\forall integer k; 0 <= k < i; j == 2*k;\n    loop invariant \\forall integer k; 0 <= k < i; c[k] > 48 ==> 49 <= c[k] <= 2147483647;\n    loop invariant \\forall integer k; 0 <= k < i; c[k] > 48 && c[k] < 57 ==> 1 <= t[k] <= 9 && i == j + t[k];\n    loop invariant i >= 0 ==> (c <= 48 || c >= 57);\n    loop assigns i, j, c, t;\n    loop variant 0;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "Annotation error on line 11: unexpected token 'j'"
+                    }
+                ],
+                "success": false
+            },
+            {
+                "step": "Houdini for individual completion",
+                "success": true,
+                "completions": [
+                    {
+                        "num_solver_calls": 4,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant i >= 0;\n    loop invariant (c > 48 && c >= 49) ==> true;\n    loop invariant (c < 57 && c <= 56) ==> true;\n    loop invariant (c <= 48 || c >= 57) ==> (i == \\old(i));\n    loop invariant (c > 48 && c < 57) ==> (i == \\old(i) + \\old(i) + (c - 48));\n    loop invariant (j == i + i && c > 48 && c < 57) ==> (j >= i);\n    loop invariant (t == c - 48 && c > 48 && c < 57) ==> (t >= 1 && t <= 9);\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\n\nint main() {\n    int i = 0;\n    int j, c, t;\n\n    /*@\nloop invariant i1: i >= 0;\n\n\n\n\nloop invariant i6: (j == i + i && c > 48 && c < 57) ==> (j >= i);\nloop invariant i7: (t == c - 48 && c > 48 && c < 57) ==> (t >= 1 && t <= 9);\n*/\nwhile( unknown() ) {\n        if(c > 48) {\n            if (c < 57) {\n                j = i + i;\n                t = c - 48;\n                i = j + t;\n            }\n        }\n    } \n    {;\n//@ assert(i >= 0);\n}\n}",
+                        "checker_output_after_prune": true
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant i >= 0;\n    loop invariant j >= 0;\n    loop invariant c <= 57;\n    loop invariant t >= 0 && t <= 9;\n    loop invariant (c > 48 && j >= i && t >= 0) ==> i >= 0;\n    loop invariant (c <= 48) ==> \\true; // Trivially true implication\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\n\nint main() {\n    int i = 0;\n    int j, c, t;\n\n    /*@\nloop invariant i1: i >= 0;\n\n\n\nloop invariant i5: (c > 48 && j >= i && t >= 0) ==> i >= 0;\nloop invariant i6: (c <= 48) ==> \\true;\n*/\nwhile( unknown() ) {\n        if(c > 48) {\n            if (c < 57) {\n                j = i + i;\n                t = c - 48;\n                i = j + t;\n            }\n        }\n    } \n    {;\n//@ assert(i >= 0);\n}\n}",
+                        "checker_output_after_prune": true
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant i >= 0;\n    loop invariant c <= 57 ==> c >= 48 ==> i >= 0;\n    loop invariant j == 2 * i;\n    loop invariant t == c - 48 ==> t >= 0;\n    loop invariant (c > 57 || c < 48) ==> i >= 0;\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\n\nint main() {\n    int i = 0;\n    int j, c, t;\n\n    /*@\nloop invariant i1: i >= 0;\nloop invariant i2: c <= 57 ==> c >= 48 ==> i >= 0;\n\n\nloop invariant i5: (c > 57 || c < 48) ==> i >= 0;\n*/\nwhile( unknown() ) {\n        if(c > 48) {\n            if (c < 57) {\n                j = i + i;\n                t = c - 48;\n                i = j + t;\n            }\n        }\n    } \n    {;\n//@ assert(i >= 0);\n}\n}",
+                        "checker_output_after_prune": true
+                    },
+                    {
+                        "num_solver_calls": 4,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant i >= 0;\n    loop invariant c <= 57 ==> c >= 48 ==> j == i + i /\\ t == c - 48 ==> i == j + t;\n    loop invariant c > 57 ==> i == i_old;\n    loop invariant j >= 0 /\\ t >= 0;\n    loop invariant j <= i;\n    loop invariant t <= 9;\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\n\nint main() {\n    int i = 0;\n    int j, c, t;\n\n    /*@\nloop invariant i1: i >= 0;\n\n\n\n\n\n*/\nwhile( unknown() ) {\n        if(c > 48) {\n            if (c < 57) {\n                j = i + i;\n                t = c - 48;\n                i = j + t;\n            }\n        }\n    } \n    {;\n//@ assert(i >= 0);\n}\n}",
+                        "checker_output_after_prune": true
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant i >= 0;\n    loop invariant c <= 48 ==> i >= 0;\n    loop invariant (c > 48 && c < 57) ==> (i >= 0 && j >= 0 && t >= 0 && j + t >= i);\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\n\nint main() {\n    int i = 0;\n    int j, c, t;\n\n    /*@\nloop invariant i1: i >= 0;\nloop invariant i2: c <= 48 ==> i >= 0;\n\n*/\nwhile( unknown() ) {\n        if(c > 48) {\n            if (c < 57) {\n                j = i + i;\n                t = c - 48;\n                i = j + t;\n            }\n        }\n    } \n    {;\n//@ assert(i >= 0);\n}\n}",
+                        "checker_output_after_prune": true
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant i >= 0;\n    loop invariant c <= 48 || c >= 57 ==> i >= 0;\n    loop invariant i == j + t;\n    loop invariant j >= 0;\n    loop invariant t >= 0;\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\n\nint main() {\n    int i = 0;\n    int j, c, t;\n\n    /*@\nloop invariant i1: i >= 0;\nloop invariant i2: c <= 48 || c >= 57 ==> i >= 0;\n\n\n\n*/\nwhile( unknown() ) {\n        if(c > 48) {\n            if (c < 57) {\n                j = i + i;\n                t = c - 48;\n                i = j + t;\n            }\n        }\n    } \n    {;\n//@ assert(i >= 0);\n}\n}",
+                        "checker_output_after_prune": true
+                    },
+                    {
+                        "num_solver_calls": 3,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant i >= 0;\n    loop invariant c <= 57 ==> c >= 48 ==> j >= 0;\n    loop invariant c <= 57 ==> c >= 48 ==> t >= 0;\n    loop invariant c <= 57 ==> c >= 48 ==> j + t >= i;\n    loop invariant c > 57 || c < 48 ==> i >= \\old(i);\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\n\nint main() {\n    int i = 0;\n    int j, c, t;\n\n    /*@\nloop invariant i1: i >= 0;\n\n\n\n\n*/\nwhile( unknown() ) {\n        if(c > 48) {\n            if (c < 57) {\n                j = i + i;\n                t = c - 48;\n                i = j + t;\n            }\n        }\n    } \n    {;\n//@ assert(i >= 0);\n}\n}",
+                        "checker_output_after_prune": true
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant i >= 0;\n    loop invariant j >= 0;\n    loop invariant c >= 0;\n    loop invariant t >= 0 && t <= 9;\n    loop invariant (c > 48 && c < 57) ==> (i >= i + (c - 48));\n    loop invariant (c <= 48 || c >= 57) ==> (i >= i);\n*/\nwhile( unknown() ) {\n    if(c > 48) {\n        if (c < 57) {\n            j = i + i;\n            t = c - 48;\n            i = j + t;\n        }\n    }\n} \n{;\n    //@ assert i >= 0;\n}",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\n\nint main() {\n    int i = 0;\n    int j, c, t;\n\n    /*@\nloop invariant i1: i >= 0;\n\n\n\n\nloop invariant i6: (c <= 48 || c >= 57) ==> (i >= i);\n*/\nwhile( unknown() ) {\n        if(c > 48) {\n            if (c < 57) {\n                j = i + i;\n                t = c - 48;\n                i = j + t;\n            }\n        }\n    } \n    {;\n//@ assert(i >= 0);\n}\n}",
+                        "checker_output_after_prune": true
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant i >= 0;\n    loop invariant c <= 48 || c >= 57 || (c > 48 && c < 57 && i == 2*j + (c-48));\n    loop invariant i >= 0;\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\n\nint main() {\n    int i = 0;\n    int j, c, t;\n\n    /*@\nloop invariant i1: i >= 0;\n\n*/\nwhile( unknown() ) {\n        if(c > 48) {\n            if (c < 57) {\n                j = i + i;\n                t = c - 48;\n                i = j + t;\n            }\n        }\n    } \n    {;\n//@ assert(i >= 0);\n}\n}",
+                        "checker_output_after_prune": true
+                    },
+                    {
+                        "num_solver_calls": 3,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant i >= 0;\n    loop invariant c >= 0 && c <= 127;   // assuming ASCII values\n    loop invariant j == 2 * i;\n    loop invariant t >= 0 && t <= 9;\n    loop invariant i >= j;\n    loop invariant i >= t;\n    loop invariant (c <= 48 || c >= 57) ==> (j == \\old(j) && t == \\old(t));\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\n\nint main() {\n    int i = 0;\n    int j, c, t;\n\n    /*@\nloop invariant i1: i >= 0;\n\n\n\n\n\n\n*/\nwhile( unknown() ) {\n        if(c > 48) {\n            if (c < 57) {\n                j = i + i;\n                t = c - 48;\n                i = j + t;\n            }\n        }\n    } \n    {;\n//@ assert(i >= 0);\n}\n}",
+                        "checker_output_after_prune": true
+                    },
+                    {
+                        "num_solver_calls": 3,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant i >= 0;\n    loop invariant j >= 0;\n    loop invariant t >= 0;\n    loop invariant \\valid(&c);\n    loop invariant c <= 57 ==> c >= 48;\n    loop invariant c >= 48 ==> c <= 57;\n    loop invariant (c <= 48 || c >= 57) ==> \\old(i) == i;\n    loop invariant (c > 48 && c < 57) ==> i == 2*\\old(i) + (c-48);\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\n\nint main() {\n    int i = 0;\n    int j, c, t;\n\n    /*@\nloop invariant i1: i >= 0;\n\n\nloop invariant i4: \\valid(&c);\n\n\n\n\n*/\nwhile( unknown() ) {\n        if(c > 48) {\n            if (c < 57) {\n                j = i + i;\n                t = c - 48;\n                i = j + t;\n            }\n        }\n    } \n    {;\n//@ assert(i >= 0);\n}\n}",
+                        "checker_output_after_prune": true
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant i >= 0;\n    loop invariant c >= 0 && c <= 127;\n    loop invariant t >= 0 && t <= 9;\n    loop invariant j >= 0;\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\n\nint main() {\n    int i = 0;\n    int j, c, t;\n\n    /*@\nloop invariant i1: i >= 0;\n\n\n\n*/\nwhile( unknown() ) {\n        if(c > 48) {\n            if (c < 57) {\n                j = i + i;\n                t = c - 48;\n                i = j + t;\n            }\n        }\n    } \n    {;\n//@ assert(i >= 0);\n}\n}",
+                        "checker_output_after_prune": true
+                    },
+                    {
+                        "num_solver_calls": 0,
+                        "success": false,
+                        "llm_output": "Pre-conditions:\n- The program does not take any input.\n- The `unknown()` function returns a non-deterministic integer value.\n\nVariable assignments:\n- `i` is initialized to 0.\n- `j`, `c`, and `t` are uninitialized and contain garbage values.\n\nLoop condition:\n- The loop executes as long as the `unknown()` function returns a non-zero value.\n\nLoop invariants:\n- Before the loop execution: `i >= 0`\n- In every iteration of the loop:\n    - `c <= 48 ==> i >= 0`\n    - `c >= 57 ==> i >= 0`\n    - `c > 48 ==> (c < 57 ==> (j == i + i /\\ t == c - 48) ==> i == j + t)`\n    - `c <= 48 \\/ c >= 57 \\/ c <= 48 \\/ (c >= 57 /\\ (j != i + i \\/ t != c - 48))`\n    - `j >= 0`\n    - `t >= 0`\n- After the loop termination: `i >= 0`\n\nExplanation:\n- Before the loop execution, `i` is initialized to 0, so `i >= 0`.\n- In every iteration of the loop, the value of `c` is non-deterministic. However, we can add invariants based on the conditionals in the loop body:\n    - If `c` is less than or equal to 48, then the loop body is not executed, so `i` remains the same. Hence, `c <= 48 ==> i >= 0`.\n    - If `c` is greater than or equal to 57, then the loop body is not executed, so `i` remains the same. Hence, `c >= 57 ==> i >= 0`.\n    - If `c` is between 48 and 57 (inclusive), then the loop body is executed. If `c < 57`, then `j` is assigned the value of `i + i` and `t` is assigned the value of `c - 48`. Then, `i` is assigned the value of `j + t`. Hence, `c > 48 ==> (c < 57 ==> (j == i + i /\\ t == c - 48) ==> i == j + t)`.\n    - If `c` is not between 48 and 57 (inclusive), then either the loop body is not executed or it is executed but the assignments to `j` and `t` are not made. Hence, `c <= 48 \\/ c >= 57 \\/ c <= 48 \\/ (c >= 57 /\\ (j != i + i \\/ t != c - 48))`.\n    - Since `j` is assigned the value of `i + i` in the loop body, `j` is always greater than or equal to 0. Hence, `j >= 0`.\n    - Since `t` is assigned the value of `c - 48` in the loop body, `t` is always greater than or equal to 0. Hence, `t >= 0`.\n- After the loop termination, the only constraint we have is that `i >= 0`.",
+                        "error": "Output does not contain at least 1 code block"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant i >= 0;\n    loop invariant j % 2 == 0;\n    loop invariant 0 <= c <= 127;\n    loop invariant 0 <= t <= 9;\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\n\nint main() {\n    int i = 0;\n    int j, c, t;\n\n    /*@\nloop invariant i1: i >= 0;\n\n\n\n*/\nwhile( unknown() ) {\n        if(c > 48) {\n            if (c < 57) {\n                j = i + i;\n                t = c - 48;\n                i = j + t;\n            }\n        }\n    } \n    {;\n//@ assert(i >= 0);\n}\n}",
+                        "checker_output_after_prune": true
+                    },
+                    {
+                        "num_solver_calls": 4,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant i >= 0;\n    loop invariant j >= 0;\n    loop invariant \\forall integer k; 0 <= k < i; j == 2*k;\n    loop invariant \\forall integer k; 0 <= k < i; c[k] > 48 ==> 49 <= c[k] <= 2147483647;\n    loop invariant \\forall integer k; 0 <= k < i; c[k] > 48 && c[k] < 57 ==> 1 <= t[k] <= 9 && i == j + t[k];\n    loop invariant i >= 0 ==> (c <= 48 || c >= 57);\n    loop assigns i, j, c, t;\n    loop variant 0;\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\n\nint main() {\n    int i = 0;\n    int j, c, t;\n\n    /*@\nloop invariant i1: i >= 0;\n\n\n\n\n\n*/\nwhile( unknown() ) {\n        if(c > 48) {\n            if (c < 57) {\n                j = i + i;\n                t = c - 48;\n                i = j + t;\n            }\n        }\n    } \n    {;\n//@ assert(i >= 0);\n}\n}",
+                        "checker_output_after_prune": true
+                    }
+                ]
+            },
+            {
+                "step": "Houdini for combined completion",
+                "solver_calls": 17,
+                "success": true,
+                "code_with_combined_invariants": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\n\nint main() {\n    int i = 0;\n    int j, c, t;\n\n    /*@\nloop invariant i1: i >= 0;\n\n\n\n\nloop invariant i6: (j == i + i && c > 48 && c < 57) ==> (j >= i);\n\n\n\n\n\nloop invariant i13: (c <= 48) ==> \\true;\n\n\n\nloop invariant i18: (c > 57 || c < 48) ==> i >= 0;\n\n\n\n\n\nloop invariant i26: c <= 48 ==> i >= 0;\n\nloop invariant i29: c <= 48 || c >= 57 ==> i >= 0;\n\n\n\n\n\n\n\n\nloop invariant i43: (c <= 48 || c >= 57) ==> (i >= i);\n\n\n\n\n\nloop invariant i57: \\valid(&c);\n\n\n\n\n\n\n\n\n\n\n\n*/\nwhile( unknown() ) {\n        if(c > 48) {\n            if (c < 57) {\n                j = i + i;\n                t = c - 48;\n                i = j + t;\n            }\n        }\n    } \n    {;\n//@ assert(i >= 0);\n}\n}",
+                "checker_output": true
+            }
+        ]
+    },
+    "stats": {
+        "success": [
+            "../data/benchmarks/code2inv/1.c",
+            "../data/benchmarks/code2inv/2.c",
+            "../data/benchmarks/code2inv/9.c",
+            "../data/benchmarks/code2inv/10.c",
+            "../data/benchmarks/code2inv/12.c",
+            "../data/benchmarks/code2inv/14.c",
+            "../data/benchmarks/code2inv/15.c",
+            "../data/benchmarks/code2inv/16.c",
+            "../data/benchmarks/code2inv/17.c",
+            "../data/benchmarks/code2inv/18.c",
+            "../data/benchmarks/code2inv/19.c",
+            "../data/benchmarks/code2inv/20.c",
+            "../data/benchmarks/code2inv/25.c",
+            "../data/benchmarks/code2inv/30.c",
+            "../data/benchmarks/code2inv/35.c",
+            "../data/benchmarks/code2inv/36.c",
+            "../data/benchmarks/code2inv/38.c",
+            "../data/benchmarks/code2inv/42.c",
+            "../data/benchmarks/code2inv/46.c",
+            "../data/benchmarks/code2inv/49.c",
+            "../data/benchmarks/code2inv/53.c",
+            "../data/benchmarks/code2inv/55.c",
+            "../data/benchmarks/code2inv/56.c",
+            "../data/benchmarks/code2inv/59.c",
+            "../data/benchmarks/code2inv/70.c",
+            "../data/benchmarks/code2inv/71.c",
+            "../data/benchmarks/code2inv/77.c",
+            "../data/benchmarks/code2inv/78.c",
+            "../data/benchmarks/code2inv/79.c",
+            "../data/benchmarks/code2inv/80.c",
+            "../data/benchmarks/code2inv/81.c",
+            "../data/benchmarks/code2inv/82.c",
+            "../data/benchmarks/code2inv/87.c",
+            "../data/benchmarks/code2inv/89.c",
+            "../data/benchmarks/code2inv/90.c",
+            "../data/benchmarks/code2inv/91.c",
+            "../data/benchmarks/code2inv/92.c",
+            "../data/benchmarks/code2inv/93.c",
+            "../data/benchmarks/code2inv/94.c",
+            "../data/benchmarks/code2inv/95.c",
+            "../data/benchmarks/code2inv/96.c",
+            "../data/benchmarks/code2inv/97.c",
+            "../data/benchmarks/code2inv/98.c",
+            "../data/benchmarks/code2inv/99.c",
+            "../data/benchmarks/code2inv/100.c",
+            "../data/benchmarks/code2inv/102.c",
+            "../data/benchmarks/code2inv/104.c",
+            "../data/benchmarks/code2inv/105.c",
+            "../data/benchmarks/code2inv/108.c",
+            "../data/benchmarks/code2inv/113.c",
+            "../data/benchmarks/code2inv/114.c",
+            "../data/benchmarks/code2inv/115.c",
+            "../data/benchmarks/code2inv/116.c",
+            "../data/benchmarks/code2inv/117.c",
+            "../data/benchmarks/code2inv/119.c",
+            "../data/benchmarks/code2inv/120.c",
+            "../data/benchmarks/code2inv/128.c",
+            "../data/benchmarks/code2inv/129.c",
+            "../data/benchmarks/code2inv/132.c"
+        ],
+        "failure": [
+            "../data/benchmarks/code2inv/3.c",
+            "../data/benchmarks/code2inv/4.c",
+            "../data/benchmarks/code2inv/5.c",
+            "../data/benchmarks/code2inv/6.c",
+            "../data/benchmarks/code2inv/7.c",
+            "../data/benchmarks/code2inv/8.c",
+            "../data/benchmarks/code2inv/11.c",
+            "../data/benchmarks/code2inv/13.c",
+            "../data/benchmarks/code2inv/21.c",
+            "../data/benchmarks/code2inv/22.c",
+            "../data/benchmarks/code2inv/23.c",
+            "../data/benchmarks/code2inv/24.c",
+            "../data/benchmarks/code2inv/26.c",
+            "../data/benchmarks/code2inv/27.c",
+            "../data/benchmarks/code2inv/28.c",
+            "../data/benchmarks/code2inv/29.c",
+            "../data/benchmarks/code2inv/31.c",
+            "../data/benchmarks/code2inv/32.c",
+            "../data/benchmarks/code2inv/33.c",
+            "../data/benchmarks/code2inv/34.c",
+            "../data/benchmarks/code2inv/37.c",
+            "../data/benchmarks/code2inv/39.c",
+            "../data/benchmarks/code2inv/40.c",
+            "../data/benchmarks/code2inv/41.c",
+            "../data/benchmarks/code2inv/43.c",
+            "../data/benchmarks/code2inv/44.c",
+            "../data/benchmarks/code2inv/45.c",
+            "../data/benchmarks/code2inv/47.c",
+            "../data/benchmarks/code2inv/48.c",
+            "../data/benchmarks/code2inv/50.c",
+            "../data/benchmarks/code2inv/51.c",
+            "../data/benchmarks/code2inv/52.c",
+            "../data/benchmarks/code2inv/54.c",
+            "../data/benchmarks/code2inv/57.c",
+            "../data/benchmarks/code2inv/58.c",
+            "../data/benchmarks/code2inv/60.c",
+            "../data/benchmarks/code2inv/61.c",
+            "../data/benchmarks/code2inv/62.c",
+            "../data/benchmarks/code2inv/63.c",
+            "../data/benchmarks/code2inv/64.c",
+            "../data/benchmarks/code2inv/65.c",
+            "../data/benchmarks/code2inv/66.c",
+            "../data/benchmarks/code2inv/67.c",
+            "../data/benchmarks/code2inv/68.c",
+            "../data/benchmarks/code2inv/69.c",
+            "../data/benchmarks/code2inv/72.c",
+            "../data/benchmarks/code2inv/73.c",
+            "../data/benchmarks/code2inv/74.c",
+            "../data/benchmarks/code2inv/75.c",
+            "../data/benchmarks/code2inv/76.c",
+            "../data/benchmarks/code2inv/83.c",
+            "../data/benchmarks/code2inv/84.c",
+            "../data/benchmarks/code2inv/85.c",
+            "../data/benchmarks/code2inv/86.c",
+            "../data/benchmarks/code2inv/88.c",
+            "../data/benchmarks/code2inv/101.c",
+            "../data/benchmarks/code2inv/103.c",
+            "../data/benchmarks/code2inv/106.c",
+            "../data/benchmarks/code2inv/107.c",
+            "../data/benchmarks/code2inv/109.c",
+            "../data/benchmarks/code2inv/110.c",
+            "../data/benchmarks/code2inv/111.c",
+            "../data/benchmarks/code2inv/112.c",
+            "../data/benchmarks/code2inv/118.c",
+            "../data/benchmarks/code2inv/121.c",
+            "../data/benchmarks/code2inv/122.c",
+            "../data/benchmarks/code2inv/123.c",
+            "../data/benchmarks/code2inv/124.c",
+            "../data/benchmarks/code2inv/125.c",
+            "../data/benchmarks/code2inv/126.c",
+            "../data/benchmarks/code2inv/127.c",
+            "../data/benchmarks/code2inv/130.c",
+            "../data/benchmarks/code2inv/131.c"
+        ],
+        "skipped": [
+            "../data/benchmarks/code2inv/1.c",
+            "../data/benchmarks/code2inv/3.c",
+            "../data/benchmarks/code2inv/5.c",
+            "../data/benchmarks/code2inv/7.c",
+            "../data/benchmarks/code2inv/9.c",
+            "../data/benchmarks/code2inv/14.c",
+            "../data/benchmarks/code2inv/44.c",
+            "../data/benchmarks/code2inv/45.c",
+            "../data/benchmarks/code2inv/49.c",
+            "../data/benchmarks/code2inv/59.c",
+            "../data/benchmarks/code2inv/71.c",
+            "../data/benchmarks/code2inv/76.c",
+            "../data/benchmarks/code2inv/77.c",
+            "../data/benchmarks/code2inv/79.c",
+            "../data/benchmarks/code2inv/82.c",
+            "../data/benchmarks/code2inv/87.c",
+            "../data/benchmarks/code2inv/94.c",
+            "../data/benchmarks/code2inv/96.c",
+            "../data/benchmarks/code2inv/97.c",
+            "../data/benchmarks/code2inv/102.c",
+            "../data/benchmarks/code2inv/107.c",
+            "../data/benchmarks/code2inv/114.c",
+            "../data/benchmarks/code2inv/124.c",
+            "../data/benchmarks/code2inv/129.c",
+            "../data/benchmarks/code2inv/130.c"
+        ],
+        "total": 132,
+        "success_count": 59,
+        "failure_count": 73,
+        "success_rate": 0.44696969696969696
+    }
+}

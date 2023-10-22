@@ -1,0 +1,329 @@
+{
+    "logs": {
+        "file": "../data/benchmarks/code2inv/114.c",
+        "benchmark_code": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\n\nint main() {\n  \n  int sn;\n  int x;\n  \n  (sn = 0);\n  (x = 0);\n  \n  while (unknown()) {\n    {\n    (x  = (x + 1));\n    (sn  = (sn + 1));\n    }\n\n  }\n  \nif ( (sn != x) )\n{;\n//@ assert( (sn == -1) );\n}\n\n}",
+        "success": true,
+        "log": [
+            {
+                "step": "Prompting LLM",
+                "generating_annotation": "loop_invariants",
+                "success": true,
+                "llm_chat": [
+                    {
+                        "role": "system",
+                        "content": "You are a helpful AI software assistant that reasons about how code behaves. Given a program, you can find loop invariants, which can then be used to verify some property in the program. \nFrama-C is a software verification tool for C programs. The input to Frama-C is a C program file with ACSL (ANSI/ISO C Specification Language) annotations.\nFor the given program, find the necessary loop invariants of the while loop to help Frama-C verify the post-condition.\n\nInstructions:\n- Make a note of the pre-conditions or variable assignments in the program.\n- Analyze the loop body and make a note of the loop condition. \n- Output loop invariants that are true \n(i) before the loop execution, \n(ii) in every iteration of the loop and \n(iii) after the loop termination, \nsuch that the loop invariants imply the post condition.\n- If a loop invariant is a conjunction, split it into its parts.\n- Output all the loop invariants in one code block. For example:\n```\n/*@ \n    loop invariant i1;\n    loop invariant i2;\n*/\n```\nRules:\n- **Do not use variables or functions that are not declared in the program.** \n- **Do not make any assumptions about functions whose definitions are not given.**\n- **All undefined variables contain garbage values. Do not use variables that have garbage values.**\n- **Do not use keywords that are not supported in ACSL annotations for loops.**\n- **Variables that are not explicitly initialized, could have garbage values. Do not make any assumptions about such values.**\n- **Do not use the \\at(x, Pre) notation for any variable x.**\n- **Do not use non-deterministic function calls.**"
+                    },
+                    {
+                        "role": "user",
+                        "content": "\nConsider the following C program:\n```\n#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\n\nint main() {\n  \n  int sn;\n  int x;\n  \n  (sn = 0);\n  (x = 0);\n  \n  while (unknown()) {\n    {\n    (x  = (x + 1));\n    (sn  = (sn + 1));\n    }\n\n  }\n  \nif ( (sn != x) )\n{;\n//@ assert( (sn == -1) );\n}\n\n}\n```\n\nYou are allowed to use implication to take care of the conditional nature of the code. Use implication (==>) instead of using if-then.\n\nFor all variables, add conjunctions that bound the maximum and minimum values that they can take, if such bounds exist.\n\nIf a variable is always equal to or smaller or larger than another variable, add a conjunction for their relation.\n\nIf the assertion is guarded by a condition, use the guard condition in an implication.\n\nIf certain variables are non-deterministic at the beginning or end of the loop, use an implication to make the invariant trivially true at that location. \n\nOutput the loop invariants for the loop in the program above. Let's think step by step."
+                    },
+                    "Pre-conditions:\n- The program takes no input.\n- The function `unknown` returns a non-deterministic integer value.\n\nVariable assignments:\n- `sn` is assigned the value `0`.\n- `x` is assigned the value `0`.\n\nLoop condition:\n- The loop continues while the function `unknown` returns a non-zero value.\n\nPost-condition:\n- If `sn` is not equal to `x`, then the assertion `(sn == -1)` holds.\n\nLoop Invariants:\n- Before the loop execution, the following invariant holds:\n```\n/*@ \n    loop invariant 0 <= sn;\n    loop invariant 0 <= x;\n*/\n```\n- In every iteration of the loop, the following invariant holds:\n```\n/*@ \n    loop invariant 0 <= x;\n    loop invariant sn <= x;\n    loop invariant 0 <= sn;\n*/\n```\n- After the loop termination, the following invariant holds:\n```\n/*@ \n    loop invariant sn == x ==> (sn == -1);\n*/\n```\nExplanation:\n- Before the loop starts, `sn` and `x` are assigned the value `0`, so both of them are greater than or equal to `0`.\n- In every iteration of the loop, `x` is increased by `1` and `sn` is increased by `1`, so `x` is always greater than or equal to `0` and `sn` is always greater than or equal to `0`. Also, since `sn` is always increased by `1`, it is always less than or equal to `x`.\n- After the loop ends, if `sn` is equal to `x`, then the assertion should hold, so the implication `sn == x ==> (sn == -1)` is added.",
+                    "Pre-conditions or variable assignments:\n- The macro `assume` takes a boolean expression and returns 0 if the expression is false.\n- The function `unknown()` returns a non-deterministic boolean value.\n- The variable `sn` is initialized to 0.\n- The variable `x` is initialized to 0.\n\nLoop condition:\n- The loop executes as long as `unknown()` returns a non-zero value.\n\nLoop invariants:\n- `0 <= sn`\n- `0 <= x`\n- `sn >= x`\n- `sn = \\sum_{i=1}^{k} 1`, where `k` is the number of iterations of the loop so far.\n- `x = \\sum_{i=1}^{k} 1`, where `k` is the number of iterations of the loop so far.\n- At the beginning of the loop: `sn = 0 ==> x = 0`\n- At the end of the loop: `sn != x ==> sn = -1`\n- Guarded assertion: `(sn != x && k > 0) ==> sn = -1`, where `k` is the number of iterations of the loop so far.\n\nPutting it all together:\n```\n/*@ \n    loop invariant 0 <= sn;\n    loop invariant 0 <= x;\n    loop invariant sn >= x;\n    loop invariant sn = \\sum_{i=1}^{k} 1;\n    loop invariant x = \\sum_{i=1}^{k} 1;\n    loop invariant sn = 0 ==> x = 0;\n    loop invariant (sn != x && k > 0) ==> sn = -1;\n*/\n```",
+                    "Pre-conditions:\n- None\n\nVariable assignments:\n- `sn` is initialized to 0\n- `x` is initialized to 0\n\nLoop condition:\n- `unknown()` returns a non-deterministic boolean value\n\nLoop invariants:\n- Before the loop execution:\n  - `sn == 0`\n  - `x == 0`\n- In every iteration of the loop:\n  - `sn >= 0`\n  - `x >= 0`\n  - `sn >= x`\n  - `sn <= x + 1`\n- After the loop termination:\n  - `sn >= 0`\n  - `x >= 0`\n  - `sn == x` ==> `sn == -1`\n\nExplanation:\n- Before the loop execution, `sn` and `x` are initialized to 0.\n- In every iteration of the loop, both `sn` and `x` are incremented by 1, so they are always greater than or equal to 0.\n- Since `sn` is incremented by 1 in every iteration, and `x` is incremented by 1 in every iteration, `sn` is always greater than or equal to `x`.\n- Since `unknown()` returns a non-deterministic boolean value, we cannot make any assumptions about the number of loop iterations, so `sn` can be at most one more than `x`.\n- After the loop termination, we know that the loop condition is false, so `sn` must be equal to `x`. The assertion is guarded by the condition `(sn != x)`, so we can use implication to simplify the assertion as `sn == x` ==> `sn == -1`. This means that if `sn` is equal to `x`, then the assertion `sn == -1` must hold true.",
+                    "Pre-conditions:\n- The program has two integer variables, `sn` and `x`.\n- `sn` and `x` are initialized to 0.\n- The program contains a while loop with an unknown condition.\n\nLoop condition:\n- The loop runs as long as the unknown function returns a non-zero value.\n\nPost-condition:\n- If `sn` is not equal to `x`, then the assertion `(sn == -1)` should hold.\n\nLoop invariants:\n- `0 <= sn <= x + 1`\n- `0 <= x <= sn + 1`\n- `(sn == x) ==> (sn == \\old(sn) + 1)`\n- `(sn == x) ==> (x == \\old(x) + 1)`\n- `!(sn == x) ==> (sn == -1)` (using implication for the assertion)\n\nExplanation:\n- The first two invariants ensure that `sn` and `x` are always non-negative and that `sn` is not less than `x` and vice versa.\n- The third and fourth invariants ensure that if `sn` is equal to `x` in the current iteration, then they both increase by 1 in the next iteration.\n- The last invariant ensures that if `sn` is not equal to `x` at the end of the loop, then `sn` should be -1, which implies that `sn` is always less than `x`.",
+                    "Pre-conditions:\n- The `assume` macro takes a boolean expression `e` and returns 0 if `e` is false. This means that the program assumes that the expression `unknown()` in the while loop condition evaluates to either 0 or 1. \n- The external function `unknown()` is not defined in the program, so we cannot make any assumptions about its behavior.\n- The program initializes two integer variables `sn` and `x` to 0.\n\nLoop Condition:\n- The while loop condition is `unknown()`, which means that the loop can iterate an unknown number of times.\n\nPost-condition:\n- If the value of `sn` is not equal to the value of `x` after the loop terminates, then the assertion `(sn == -1)` holds.\n\nLoop Invariants:\n- Before the loop execution, the value of `sn` is 0, which is equal to the value of `x`. So, we can add the following loop invariant: \n```\n/*@ loop invariant sn == x == 0; */\n```\n\n- In every iteration of the loop, the value of `x` is incremented by 1, which means that `x` is always greater than or equal to its initial value of 0. However, we cannot make any assumptions about the behavior of the `unknown()` function, so we cannot say anything about the maximum number of iterations of the loop. Therefore, we can add the following loop invariant:\n```\n/*@ loop invariant x >= 0; */\n```\n\n- In every iteration of the loop, the value of `sn` is incremented by 1, which means that `sn` is always greater than or equal to its initial value of 0. However, we cannot make any assumptions about the behavior of the `unknown()` function, so we cannot say anything about the maximum number of iterations of the loop. Therefore, we can add the following loop invariant:\n```\n/*@ loop invariant sn >= 0; */\n```\n\n- After the loop termination, if the value of `sn` is not equal to the value of `x`, then the assertion `(sn == -1)` holds. This means that if the loop terminates normally, then the value of `sn` must be equal to the value of `x`. We can add the following loop invariant:\n```\n/*@ loop invariant sn == x || unknown(); */\n```\n\n- The loop invariant `(sn == x || unknown())` is not trivially true before the loop execution or in every iteration of the loop. However, we know that `sn` and `x` are initialized to 0 before the loop execution. Therefore, we can use an implication to make the loop invariant trivially true before the loop execution:\n```\n/*@ loop invariant sn == x || unknown();\n    loop invariant sn == x ==> unknown(); */\n```\n\n- We also know that the `unknown()` function can return either 0 or 1, and we cannot make any assumptions about its behavior. Therefore, we can use an implication to make the loop invariant trivially true in every iteration of the loop:\n```\n/*@ loop invariant sn == x || unknown();\n    loop invariant sn == x ==> unknown();\n    loop invariant !unknown() ==> sn == x; */\n```\n\nPutting all the loop invariants together, we get:\n```\n/*@ loop invariant sn == x == 0;\n    loop invariant x >= 0;\n    loop invariant sn >= 0;\n    loop invariant sn == x || unknown();\n    loop invariant sn == x ==> unknown();\n    loop invariant !unknown() ==> sn == x; */\n```",
+                    "Pre-conditions:\n- The program has two integer variables `sn` and `x` that are not initialized.\n- The `assume` macro takes a Boolean expression and returns 0 if the expression is false, otherwise it does nothing.\n- The `unknown()` function returns a non-deterministic integer value.\n\nLoop condition:\n- `unknown()` is used as the loop condition, which means the loop iterates an unknown number of times.\n\nPost-condition:\n- If `sn` is not equal to `x`, then the assertion `(sn == -1)` holds.\n\nLoop invariants:\n- Before the loop execution, `sn` and `x` are both equal to 0.\n```\n/*@ \n    loop invariant sn == 0 && x == 0;\n*/\n```\n\n- In every iteration of the loop, both `sn` and `x` are incremented by 1.\n```\n/*@ \n    loop invariant sn >= 0 && x >= 0;\n    loop invariant sn == \\at(sn, Pre) + \\at(x, Pre);\n    loop invariant x == \\at(x, Pre) + 1;\n*/\n```\nThe first invariant states that `sn` and `x` are non-negative in each iteration of the loop. \n\nThe second invariant expresses the relationship between `sn` and `x`. It states that the value of `sn` in the current iteration is equal to the sum of `sn` and `x` in the previous iteration. We use the `\\at` construct to refer to the value of a variable in the previous iteration. Since we know that `x` is incremented by 1 in each iteration, the value of `sn` in the current iteration is equal to the sum of `sn` and `x` in the previous iteration.\n\nThe third invariant expresses the fact that `x` is incremented by 1 in each iteration of the loop.\n\n- After the loop termination, `sn` is equal to `x` or `sn` is equal to -1.\n```\n/*@ \n    loop invariant sn == -1 ==> x == 0;\n    loop invariant sn >= 0 ==> sn == x;\n*/\n```\nThe first invariant states that if `sn` is equal to -1, then `x` is equal to 0. This is necessary because the post-condition implies that `sn` is equal to -1 if and only if `x` is equal to 0.\n\nThe second invariant states that if `sn` is non-negative, then it is equal to `x`. This is necessary because the post-condition implies that if `sn` is not equal to `x`, then `sn` is equal to -1. Hence, if `sn` is non-negative, then it must be equal to `x`.",
+                    "We can start by analyzing the program and identifying the pre-conditions and variable assignments:\n\nPre-conditions:\nNone\n\nVariable assignments:\n- sn is assigned 0\n- x is assigned 0\n\nNext, we need to analyze the loop body and make a note of the loop condition:\n- The loop condition is the non-deterministic function call `unknown()`\n\nNow, we can start finding the necessary loop invariants:\n\nLoop invariant before the loop execution:\n- sn == 0\n- x == 0\n\nLoop invariant in every iteration of the loop:\n- sn >= 0\n- x >= 0\n\nLoop invariant after the loop termination:\n- sn >= x\n- (sn == -1) ==> (x == -1)\n\nExplanation:\n- Before the loop execution, sn and x are both assigned 0.\n- In every iteration of the loop, both sn and x are incremented by 1, so they must be non-negative.\n- After the loop termination, sn must be greater than or equal to x, because sn is incremented by 1 in each iteration of the loop, while x is only incremented when the loop condition is true. \n- The assertion is guarded by the condition `(sn != x)`, so we can use implication to make the invariant trivially true when `sn != x`. Specifically, if `(sn == -1)` is true, then `x` must also be `-1` (since `sn >= x`), so the invariant is still satisfied. \n\nPutting it all together, the loop invariants are:\n\n```\n/*@ \n    loop invariant sn == 0;\n    loop invariant x == 0;\n    loop invariant sn >= 0;\n    loop invariant x >= 0;\n    loop invariant sn >= x;\n    loop invariant (sn == -1) ==> (x == -1);\n*/\n```",
+                    "First, let's analyze the program and note down some important points:\n- The loop condition is unknown(), which means that we do not know how many iterations the loop will execute.\n- Inside the loop, the variables x and sn are incremented by 1 in each iteration.\n- After the loop, if sn is not equal to x, an assertion is made that sn is equal to -1.\n\nNow, let's find the necessary loop invariants:\n- Before the loop execution, we can add the following loop invariants:\n```\n/*@ \n    loop invariant x >= 0;\n    loop invariant sn >= 0;\n*/\n```\nThese loop invariants specify that x and sn are non-negative before the loop execution.\n- In every iteration of the loop, we can add the following loop invariants:\n```\n/*@ \n    loop invariant x >= 0;\n    loop invariant sn >= 0;\n    loop invariant sn >= \\old(sn) + 1;\n    loop invariant x >= \\old(x) + 1;\n*/\n```\nThese loop invariants specify that x and sn are non-negative and are incremented by 1 in each iteration of the loop.\n- After the loop termination, we can add the following loop invariant:\n```\n/*@ \n    loop invariant sn == x ==> sn == \\old(sn) + x;\n*/\n```\nThis loop invariant specifies that if sn is equal to x after the loop execution, then sn is equal to the sum of its old value and x. We use implication here because if sn is not equal to x after the loop execution, then this loop invariant is trivially true.\n\nFinally, we can use the guard condition of the assertion in an implication to make sure that the assertion holds only when the guard condition is true:\n```\nif ( (sn != x) )\n{\n    assume(unknown());\n    //@ assert(unknown() ==> (sn == -1));\n}\n``` \n\nNote that we did not need to add any constraints on the maximum or minimum values of x and sn as they can both take any non-negative integer value.",
+                    "Pre-conditions: None\n\nVariable assignments: \n- sn is assigned 0\n- x is assigned 0\n\nLoop condition: unknown()\n\nPost-condition: \n- if sn is not equal to x, then assert that sn is equal to -1\n\nLoop invariants:\n- Before the loop: \n    - sn == 0\n    - x == 0\n- In every iteration of the loop:\n    - sn >= 0\n    - x >= 0\n    - sn >= x\n- After the loop termination:\n    - sn == x ==> sn == -1\n\nPutting it all together:\n```\n/*@ \n    loop invariant sn == 0;\n    loop invariant x == 0;\n    \n    loop invariant sn >= 0;\n    loop invariant x >= 0;\n    loop invariant sn >= x;\n    \n    loop invariant (sn == x ==> sn == -1);\n*/\n```",
+                    "Pre-conditions and variable assignments:\n- The program defines a macro `assume(e)` which returns 0 if the expression `e` is false.\n- The program defines an external function `unknown()` which returns an unknown integer value.\n- Inside the main function, two integer variables `sn` and `x` are declared and initialized to 0.\n\nLoop condition:\n- The loop condition is the function call `unknown()`, which returns an unknown integer value.\n\nLoop invariants:\n- Before the loop execution, the following loop invariants are true:\n    ```\n    //@ assert(sn == 0);\n    //@ assert(x == 0);\n    ```\n- In every iteration of the loop, the following loop invariants are true:\n    ```\n    //@ assert(sn >= 0);\n    //@ assert(x >= 0);\n    //@ assert(sn >= x);\n    ```\n    Here, we have assumed that `sn` and `x` are non-negative integers. We can add these assumptions as pre-conditions:\n    ```\n    assume(sn >= 0);\n    assume(x >= 0);\n    ```\n    Since `sn` is incremented by 1 in every iteration, its value is always non-negative. Similarly, since `x` is incremented by 1 in every iteration, its value is also always non-negative. Moreover, since `x` is always incremented by 1 before it is added to `sn`, the value of `x` is always less than or equal to the value of `sn`.\n- After the loop termination, the following loop invariants are true:\n    ```\n    //@ assert((sn == x) || (sn == -1));\n    ```\n    Here, we have assumed that `sn` and `x` are integers. We can add this assumption as a pre-condition:\n    ```\n    assume(\\integer(sn) && \\integer(x));\n    ```\n    The post-condition of the program is:\n    ```\n    (sn != x) ==> (sn == -1)\n    ```\n    We can use implication to write the following loop invariant instead:\n    ```\n    //@ assert((sn == x) || (sn == -1)) ==> (sn != x) ==> (sn == -1)\n    ```\n    This invariant says that if `sn` is not equal to `x`, then `sn` must be equal to `-1`. This is equivalent to the post-condition of the program.",
+                    "Pre-conditions:\n- The program has no pre-conditions.\n\nVariable Assignments:\n- `sn` is assigned the value 0.\n- `x` is assigned the value 0.\n\nLoop Condition:\n- The loop continues as long as the function `unknown()` returns a non-zero value.\n\nLoop Invariants:\n- Before the loop execution, `sn == 0` and `x == 0`.\n- In every iteration of the loop, `x` is incremented by 1, and `sn` is incremented by an unknown value. Therefore, we can add the following loop invariants:\n```\n/*@ \n  loop invariant x >= 0;\n  loop invariant sn >= 0;\n  loop invariant sn >= \\old(sn);\n  loop invariant x == sn + \\at(unknown(), Pre) ==> sn >= \\old(sn) + 1;\n*/\n```\n- After the loop termination, we know that the loop condition is false, which means `unknown()` must have returned zero. Therefore, we know that `sn` is equal to `x`. Hence, we can add the following loop invariant:\n```\n/*@ \n  loop invariant sn == x;\n*/\n```\n- Finally, we need to use the guard condition of the assertion in an implication to make the invariant trivially true when the guard is false. Therefore, we can add the following loop invariant:\n```\n/*@ \n  loop invariant (sn != x) ==> (unknown() == 0 ==> sn == -1);\n*/\n``` \n\nPutting it all together, we get the following code block:\n```\n/*@ \n  loop invariant x >= 0;\n  loop invariant sn >= 0;\n  loop invariant sn >= \\old(sn);\n  loop invariant x == sn + \\at(unknown(), Pre) ==> sn >= \\old(sn) + 1;\n  loop invariant sn == x;\n  loop invariant (sn != x) ==> (unknown() == 0 ==> sn == -1);\n*/\n```",
+                    "Pre-conditions:\n- None\n\nVariable Assignments:\n- `sn` is assigned 0\n- `x` is assigned 0\n\nLoop Condition:\n- The loop executes as long as the return value of the `unknown()` function is non-zero.\n\nLoop Invariants:\n- Before the loop execution, `sn == 0` and `x == 0`\n- In every iteration of the loop:\n    - `sn >= 0`\n    - `x >= 0`\n    - `sn >= x`\n- After the loop termination:\n    - If the loop terminates normally, then `sn == x`\n    - If the loop terminates due to the return statement within the loop, then `sn == -1`\n\nPutting it all together, the loop invariants are:\n\n```\n/*@\n    loop invariant sn >= 0;\n    loop invariant x >= 0;\n    loop invariant sn >= x;\n*/\n\nassume(sn == 0);\nassume(x == 0);\n\nwhile (unknown()) {\n    {\n        (x  = (x + 1));\n        (sn  = (sn + 1));\n    }\n}\n\nassume(!unknown() ==> (sn == x || sn == -1));\n\nif (sn != x) {\n    assume(sn == -1);\n    //@ assert(sn == -1);\n}\n```",
+                    "Pre-conditions or variable assignments:\n- The macro `assume(e)` checks if the condition `e` is true. If it is not true, the program returns 0. \n\nLoop condition:\n- The loop condition is `unknown()`, which means that the loop executes an unknown number of times until `unknown()` returns 0.\n\nLoop invariants:\n- `sn` is the sum of all the values of `x` encountered in the loop so far. Therefore, `sn >= x`.\n- Since `x` is incremented by 1 in each iteration of the loop, `x >= 0`.\n- Since `sn` is the sum of all the values of `x` encountered in the loop so far, `sn >= 0`.\n- The loop terminates when `unknown()` returns 0. Therefore, `!unknown() ==> sn == x`.\n- The assertion is guarded by the condition `(sn != x)`, so we can use this condition in an implication to make the assertion true. Therefore, `(sn != x) ==> (sn == -1)`.\n\nPutting it all together, we get the following loop invariants:\n```\n/*@ \n    loop invariant sn >= x;\n    loop invariant x >= 0;\n    loop invariant sn >= 0;\n    loop invariant !unknown() ==> sn == x;\n    loop invariant (sn != x) ==> (sn == -1);\n*/\n```",
+                    "Pre-conditions:\n- The `unknown()` function returns a boolean value.\n- The `assume()` macro checks if its argument is true, otherwise it returns 0.\n- The `extern` keyword indicates that the `unknown()` function is defined elsewhere and its definition is not given.\n- The program defines two integer variables `sn` and `x`.\n\nVariable bounds:\n- `sn` and `x` are initialized to 0 at the beginning of the program. Therefore, `sn >= 0` and `x >= 0`.\n- There are no maximum bounds on `sn` and `x`.\n- There are no minimum bounds on `sn` and `x`.\n\nLoop condition:\n- The loop continues as long as the `unknown()` function returns a non-zero value.\n\nLoop invariants:\n```\n/*@\n  loop invariant 0 <= sn;\n  loop invariant 0 <= x;\n  loop invariant sn >= x ==> unknown() == 0;\n  loop invariant sn == x + \\sum_{i=0}^{k-1}(unknown()) where k is the number of iterations of the loop;\n*/\n```\n- The first invariant indicates that `sn` is always non-negative.\n- The second invariant indicates that `x` is always non-negative.\n- The third invariant indicates that if `sn` is greater than or equal to `x`, then the `unknown()` function must return 0, which would cause the loop to terminate.\n- The fourth invariant indicates that `sn` is equal to `x` plus the number of times the loop has executed so far. Since the loop condition depends on the `unknown()` function, which is non-deterministic, we cannot say anything about the exact number of iterations. However, we can say that the sum of all the values returned by `unknown()` so far must be equal to the difference between `sn` and `x`. This invariant holds both before and after the loop execution.",
+                    "Pre-conditions:\n- The `assume` macro is defined as `if(!(e)) return 0;`. This means that any condition inside `assume` must be true for the program to execute further.\n- There are two integer variables `sn` and `x` that are initially assigned the value `0`.\n\nLoop Invariants:\n- Before the loop execution, `sn == 0` and `x == 0`.\n- In every iteration of the loop, `x >= 0` and `sn >= 0`.\n- In every iteration of the loop, `sn == \\sum_{i=1}^{n} 1` where `n` is the number of iterations so far, and `x == \\sum_{i=1}^{n} 1`.\n- After the loop termination, if `sn != x`, then `sn == -1`.\n\nExplanation:\n- Before the loop starts, both `sn` and `x` are assigned the value `0`, which satisfies the initial conditions.\n- In every iteration of the loop, both `sn` and `x` are incremented by `1`, so they must be greater than or equal to `0`.\n- Since the loop condition is non-deterministic, we cannot make any assumptions about the number of iterations. However, we can say that after `n` iterations, `sn` and `x` would have been incremented `n` times. Hence, `sn == \\sum_{i=1}^{n} 1` and `x == \\sum_{i=1}^{n} 1`.\n- After the loop terminates, we check if `sn` is not equal to `x`. If they are not equal, then `sn` must be `-1`. This is because `sn` is incremented once in every iteration of the loop, while `x` is also incremented once in every iteration of the loop. If `sn` is not equal to `x`, then `sn` must have been decremented by `1` after the last iteration, making it equal to `-1`."
+                ],
+                "output": [
+                    "/*@ \n    loop invariant 0 <= sn;\n    loop invariant 0 <= x;\n*/",
+                    "/*@ \n    loop invariant 0 <= sn;\n    loop invariant 0 <= x;\n    loop invariant sn >= x;\n    loop invariant sn = \\sum_{i=1}^{k} 1;\n    loop invariant x = \\sum_{i=1}^{k} 1;\n    loop invariant sn = 0 ==> x = 0;\n    loop invariant (sn != x && k > 0) ==> sn = -1;\n*/",
+                    [
+                        "ERROR: Output does not contain at least 1 complete code block",
+                        "Pre-conditions:\n- None\n\nVariable assignments:\n- `sn` is initialized to 0\n- `x` is initialized to 0\n\nLoop condition:\n- `unknown()` returns a non-deterministic boolean value\n\nLoop invariants:\n- Before the loop execution:\n  - `sn == 0`\n  - `x == 0`\n- In every iteration of the loop:\n  - `sn >= 0`\n  - `x >= 0`\n  - `sn >= x`\n  - `sn <= x + 1`\n- After the loop termination:\n  - `sn >= 0`\n  - `x >= 0`\n  - `sn == x` ==> `sn == -1`\n\nExplanation:\n- Before the loop execution, `sn` and `x` are initialized to 0.\n- In every iteration of the loop, both `sn` and `x` are incremented by 1, so they are always greater than or equal to 0.\n- Since `sn` is incremented by 1 in every iteration, and `x` is incremented by 1 in every iteration, `sn` is always greater than or equal to `x`.\n- Since `unknown()` returns a non-deterministic boolean value, we cannot make any assumptions about the number of loop iterations, so `sn` can be at most one more than `x`.\n- After the loop termination, we know that the loop condition is false, so `sn` must be equal to `x`. The assertion is guarded by the condition `(sn != x)`, so we can use implication to simplify the assertion as `sn == x` ==> `sn == -1`. This means that if `sn` is equal to `x`, then the assertion `sn == -1` must hold true."
+                    ],
+                    [
+                        "ERROR: Output does not contain at least 1 complete code block",
+                        "Pre-conditions:\n- The program has two integer variables, `sn` and `x`.\n- `sn` and `x` are initialized to 0.\n- The program contains a while loop with an unknown condition.\n\nLoop condition:\n- The loop runs as long as the unknown function returns a non-zero value.\n\nPost-condition:\n- If `sn` is not equal to `x`, then the assertion `(sn == -1)` should hold.\n\nLoop invariants:\n- `0 <= sn <= x + 1`\n- `0 <= x <= sn + 1`\n- `(sn == x) ==> (sn == \\old(sn) + 1)`\n- `(sn == x) ==> (x == \\old(x) + 1)`\n- `!(sn == x) ==> (sn == -1)` (using implication for the assertion)\n\nExplanation:\n- The first two invariants ensure that `sn` and `x` are always non-negative and that `sn` is not less than `x` and vice versa.\n- The third and fourth invariants ensure that if `sn` is equal to `x` in the current iteration, then they both increase by 1 in the next iteration.\n- The last invariant ensures that if `sn` is not equal to `x` at the end of the loop, then `sn` should be -1, which implies that `sn` is always less than `x`."
+                    ],
+                    "/*@ loop invariant sn == x == 0; */",
+                    "/*@ \n    loop invariant sn == 0 && x == 0;\n*/",
+                    "/*@ \n    loop invariant sn == 0;\n    loop invariant x == 0;\n    loop invariant sn >= 0;\n    loop invariant x >= 0;\n    loop invariant sn >= x;\n    loop invariant (sn == -1) ==> (x == -1);\n*/",
+                    "/*@ \n    loop invariant x >= 0;\n    loop invariant sn >= 0;\n*/",
+                    "/*@ \n    loop invariant sn == 0;\n    loop invariant x == 0;\n    \n    loop invariant sn >= 0;\n    loop invariant x >= 0;\n    loop invariant sn >= x;\n    \n    loop invariant (sn == x ==> sn == -1);\n*/",
+                    "    //@ assert(sn == 0);\n    //@ assert(x == 0);",
+                    "/*@ \n  loop invariant x >= 0;\n  loop invariant sn >= 0;\n  loop invariant sn >= \\old(sn);\n  loop invariant x == sn + \\at(unknown(), Pre) ==> sn >= \\old(sn) + 1;\n*/",
+                    "/*@\n    loop invariant sn >= 0;\n    loop invariant x >= 0;\n    loop invariant sn >= x;\n*/\n\nassume(sn == 0);\nassume(x == 0);\n\nwhile (unknown()) {\n    {\n        (x  = (x + 1));\n        (sn  = (sn + 1));\n    }\n}\n\nassume(!unknown() ==> (sn == x || sn == -1));\n\nif (sn != x) {\n    assume(sn == -1);\n    //@ assert(sn == -1);\n}",
+                    "/*@ \n    loop invariant sn >= x;\n    loop invariant x >= 0;\n    loop invariant sn >= 0;\n    loop invariant !unknown() ==> sn == x;\n    loop invariant (sn != x) ==> (sn == -1);\n*/",
+                    "/*@\n  loop invariant 0 <= sn;\n  loop invariant 0 <= x;\n  loop invariant sn >= x ==> unknown() == 0;\n  loop invariant sn == x + \\sum_{i=0}^{k-1}(unknown()) where k is the number of iterations of the loop;\n*/",
+                    [
+                        "ERROR: Output does not contain at least 1 complete code block",
+                        "Pre-conditions:\n- The `assume` macro is defined as `if(!(e)) return 0;`. This means that any condition inside `assume` must be true for the program to execute further.\n- There are two integer variables `sn` and `x` that are initially assigned the value `0`.\n\nLoop Invariants:\n- Before the loop execution, `sn == 0` and `x == 0`.\n- In every iteration of the loop, `x >= 0` and `sn >= 0`.\n- In every iteration of the loop, `sn == \\sum_{i=1}^{n} 1` where `n` is the number of iterations so far, and `x == \\sum_{i=1}^{n} 1`.\n- After the loop termination, if `sn != x`, then `sn == -1`.\n\nExplanation:\n- Before the loop starts, both `sn` and `x` are assigned the value `0`, which satisfies the initial conditions.\n- In every iteration of the loop, both `sn` and `x` are incremented by `1`, so they must be greater than or equal to `0`.\n- Since the loop condition is non-deterministic, we cannot make any assumptions about the number of iterations. However, we can say that after `n` iterations, `sn` and `x` would have been incremented `n` times. Hence, `sn == \\sum_{i=1}^{n} 1` and `x == \\sum_{i=1}^{n} 1`.\n- After the loop terminates, we check if `sn` is not equal to `x`. If they are not equal, then `sn` must be `-1`. This is because `sn` is incremented once in every iteration of the loop, while `x` is also incremented once in every iteration of the loop. If `sn` is not equal to `x`, then `sn` must have been decremented by `1` after the last iteration, making it equal to `-1`."
+                    ]
+                ]
+            },
+            {
+                "step": "Checking individual completion",
+                "solver_calls": 12,
+                "completions": [
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant 0 <= sn;\n    loop invariant 0 <= x;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant 0 <= sn is inductive.\nloop invariant 0 <= x is inductive.\nAssertion sn == -1: Unproven\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant 0 <= sn;\n    loop invariant 0 <= x;\n    loop invariant sn >= x;\n    loop invariant sn = \\sum_{i=1}^{k} 1;\n    loop invariant x = \\sum_{i=1}^{k} 1;\n    loop invariant sn = 0 ==> x = 0;\n    loop invariant (sn != x && k > 0) ==> sn = -1;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "Annotation error on line 16: Assignment operators not allowed in annotations."
+                    },
+                    {
+                        "num_solver_calls": 0,
+                        "success": false,
+                        "llm_output": "Pre-conditions:\n- None\n\nVariable assignments:\n- `sn` is initialized to 0\n- `x` is initialized to 0\n\nLoop condition:\n- `unknown()` returns a non-deterministic boolean value\n\nLoop invariants:\n- Before the loop execution:\n  - `sn == 0`\n  - `x == 0`\n- In every iteration of the loop:\n  - `sn >= 0`\n  - `x >= 0`\n  - `sn >= x`\n  - `sn <= x + 1`\n- After the loop termination:\n  - `sn >= 0`\n  - `x >= 0`\n  - `sn == x` ==> `sn == -1`\n\nExplanation:\n- Before the loop execution, `sn` and `x` are initialized to 0.\n- In every iteration of the loop, both `sn` and `x` are incremented by 1, so they are always greater than or equal to 0.\n- Since `sn` is incremented by 1 in every iteration, and `x` is incremented by 1 in every iteration, `sn` is always greater than or equal to `x`.\n- Since `unknown()` returns a non-deterministic boolean value, we cannot make any assumptions about the number of loop iterations, so `sn` can be at most one more than `x`.\n- After the loop termination, we know that the loop condition is false, so `sn` must be equal to `x`. The assertion is guarded by the condition `(sn != x)`, so we can use implication to simplify the assertion as `sn == x` ==> `sn == -1`. This means that if `sn` is equal to `x`, then the assertion `sn == -1` must hold true.",
+                        "error": "Output does not contain at least 1 code block"
+                    },
+                    {
+                        "num_solver_calls": 0,
+                        "success": false,
+                        "llm_output": "Pre-conditions:\n- The program has two integer variables, `sn` and `x`.\n- `sn` and `x` are initialized to 0.\n- The program contains a while loop with an unknown condition.\n\nLoop condition:\n- The loop runs as long as the unknown function returns a non-zero value.\n\nPost-condition:\n- If `sn` is not equal to `x`, then the assertion `(sn == -1)` should hold.\n\nLoop invariants:\n- `0 <= sn <= x + 1`\n- `0 <= x <= sn + 1`\n- `(sn == x) ==> (sn == \\old(sn) + 1)`\n- `(sn == x) ==> (x == \\old(x) + 1)`\n- `!(sn == x) ==> (sn == -1)` (using implication for the assertion)\n\nExplanation:\n- The first two invariants ensure that `sn` and `x` are always non-negative and that `sn` is not less than `x` and vice versa.\n- The third and fourth invariants ensure that if `sn` is equal to `x` in the current iteration, then they both increase by 1 in the next iteration.\n- The last invariant ensures that if `sn` is not equal to `x` at the end of the loop, then `sn` should be -1, which implies that `sn` is always less than `x`.",
+                        "error": "Output does not contain at least 1 code block"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ loop invariant sn == x == 0; */",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant sn == x == 0 is established but not preserved.\nAssertion sn == -1: Partially proven\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant sn == 0 && x == 0;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant sn == 0 && x == 0 is established but not preserved.\nAssertion sn == -1: Partially proven\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant sn == 0;\n    loop invariant x == 0;\n    loop invariant sn >= 0;\n    loop invariant x >= 0;\n    loop invariant sn >= x;\n    loop invariant (sn == -1) ==> (x == -1);\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant sn == 0 is established but not preserved.\nloop invariant x == 0 is inductive.\nloop invariant sn >= 0 is inductive.\nloop invariant x >= 0 is inductive.\nloop invariant sn >= x is inductive.\nloop invariant (sn == -1) ==> (x == -1) is inductive.\nAssertion sn == -1: Partially proven\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant x >= 0;\n    loop invariant sn >= 0;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant x >= 0 is inductive.\nloop invariant sn >= 0 is inductive.\nAssertion sn == -1: Unproven\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant sn == 0;\n    loop invariant x == 0;\n    \n    loop invariant sn >= 0;\n    loop invariant x >= 0;\n    loop invariant sn >= x;\n    \n    loop invariant (sn == x ==> sn == -1);\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant sn == 0 is inductive.\nloop invariant x == 0 is inductive.\nloop invariant sn >= 0 is inductive.\nloop invariant x >= 0 is inductive.\nloop invariant sn >= x is inductive.\nloop invariant (sn == x ==> sn == -1) is preserved but not established.\nAssertion sn == -1: Partially proven\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "    //@ assert(sn == 0);\n    //@ assert(x == 0);",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "No invariants found."
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n  loop invariant x >= 0;\n  loop invariant sn >= 0;\n  loop invariant sn >= \\old(sn);\n  loop invariant x == sn + \\at(unknown(), Pre) ==> sn >= \\old(sn) + 1;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "Annotation error on line 16: unexpected token ')'"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@\n    loop invariant sn >= 0;\n    loop invariant x >= 0;\n    loop invariant sn >= x;\n*/\n\nassume(sn == 0);\nassume(x == 0);\n\nwhile (unknown()) {\n    {\n        (x  = (x + 1));\n        (sn  = (sn + 1));\n    }\n}\n\nassume(!unknown() ==> (sn == x || sn == -1));\n\nif (sn != x) {\n    assume(sn == -1);\n    //@ assert(sn == -1);\n}",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant sn >= 0 is inductive.\nloop invariant x >= 0 is inductive.\nloop invariant sn >= x is inductive.\nAssertion sn == -1: Unproven\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant sn >= x;\n    loop invariant x >= 0;\n    loop invariant sn >= 0;\n    loop invariant !unknown() ==> sn == x;\n    loop invariant (sn != x) ==> (sn == -1);\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "Annotation error on line 16: unexpected token ')'"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@\n  loop invariant 0 <= sn;\n  loop invariant 0 <= x;\n  loop invariant sn >= x ==> unknown() == 0;\n  loop invariant sn == x + \\sum_{i=0}^{k-1}(unknown()) where k is the number of iterations of the loop;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "Annotation error on line 15: unexpected token ')'"
+                    },
+                    {
+                        "num_solver_calls": 0,
+                        "success": false,
+                        "llm_output": "Pre-conditions:\n- The `assume` macro is defined as `if(!(e)) return 0;`. This means that any condition inside `assume` must be true for the program to execute further.\n- There are two integer variables `sn` and `x` that are initially assigned the value `0`.\n\nLoop Invariants:\n- Before the loop execution, `sn == 0` and `x == 0`.\n- In every iteration of the loop, `x >= 0` and `sn >= 0`.\n- In every iteration of the loop, `sn == \\sum_{i=1}^{n} 1` where `n` is the number of iterations so far, and `x == \\sum_{i=1}^{n} 1`.\n- After the loop termination, if `sn != x`, then `sn == -1`.\n\nExplanation:\n- Before the loop starts, both `sn` and `x` are assigned the value `0`, which satisfies the initial conditions.\n- In every iteration of the loop, both `sn` and `x` are incremented by `1`, so they must be greater than or equal to `0`.\n- Since the loop condition is non-deterministic, we cannot make any assumptions about the number of iterations. However, we can say that after `n` iterations, `sn` and `x` would have been incremented `n` times. Hence, `sn == \\sum_{i=1}^{n} 1` and `x == \\sum_{i=1}^{n} 1`.\n- After the loop terminates, we check if `sn` is not equal to `x`. If they are not equal, then `sn` must be `-1`. This is because `sn` is incremented once in every iteration of the loop, while `x` is also incremented once in every iteration of the loop. If `sn` is not equal to `x`, then `sn` must have been decremented by `1` after the last iteration, making it equal to `-1`.",
+                        "error": "Output does not contain at least 1 code block"
+                    }
+                ],
+                "success": false
+            },
+            {
+                "step": "Houdini for combined completion",
+                "solver_calls": 14,
+                "success": true,
+                "code_with_combined_invariants": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\n\nint main() {\n  \n  int sn;\n  int x;\n  \n  (sn = 0);\n  (x = 0);\n  \n  /*@\nloop invariant i1: 0 <= sn;\nloop invariant i2: 0 <= x;\nloop invariant i5: sn >= x;\n\n\n\n\n\n\n\n\nloop invariant i14: sn >= 0;\nloop invariant i15: x >= 0;\nloop invariant i17: (sn == -1) ==> (x == -1);\n\n\n\n\nloop invariant i37: (sn != x) ==> (sn == -1);\n\n\n*/\nwhile (unknown()) {\n    {\n    (x  = (x + 1));\n    (sn  = (sn + 1));\n    }\n\n  }\n  \nif ( (sn != x) )\n{;\n//@ assert( (sn == -1) );\n}\n\n}",
+                "checker_output": true
+            }
+        ]
+    },
+    "stats": {
+        "success": [
+            "../data/benchmarks/code2inv/1.c",
+            "../data/benchmarks/code2inv/2.c",
+            "../data/benchmarks/code2inv/9.c",
+            "../data/benchmarks/code2inv/10.c",
+            "../data/benchmarks/code2inv/12.c",
+            "../data/benchmarks/code2inv/14.c",
+            "../data/benchmarks/code2inv/15.c",
+            "../data/benchmarks/code2inv/16.c",
+            "../data/benchmarks/code2inv/17.c",
+            "../data/benchmarks/code2inv/18.c",
+            "../data/benchmarks/code2inv/19.c",
+            "../data/benchmarks/code2inv/20.c",
+            "../data/benchmarks/code2inv/25.c",
+            "../data/benchmarks/code2inv/30.c",
+            "../data/benchmarks/code2inv/35.c",
+            "../data/benchmarks/code2inv/36.c",
+            "../data/benchmarks/code2inv/38.c",
+            "../data/benchmarks/code2inv/42.c",
+            "../data/benchmarks/code2inv/46.c",
+            "../data/benchmarks/code2inv/49.c",
+            "../data/benchmarks/code2inv/53.c",
+            "../data/benchmarks/code2inv/55.c",
+            "../data/benchmarks/code2inv/56.c",
+            "../data/benchmarks/code2inv/59.c",
+            "../data/benchmarks/code2inv/70.c",
+            "../data/benchmarks/code2inv/71.c",
+            "../data/benchmarks/code2inv/77.c",
+            "../data/benchmarks/code2inv/78.c",
+            "../data/benchmarks/code2inv/79.c",
+            "../data/benchmarks/code2inv/80.c",
+            "../data/benchmarks/code2inv/81.c",
+            "../data/benchmarks/code2inv/82.c",
+            "../data/benchmarks/code2inv/87.c",
+            "../data/benchmarks/code2inv/89.c",
+            "../data/benchmarks/code2inv/90.c",
+            "../data/benchmarks/code2inv/91.c",
+            "../data/benchmarks/code2inv/92.c",
+            "../data/benchmarks/code2inv/93.c",
+            "../data/benchmarks/code2inv/94.c",
+            "../data/benchmarks/code2inv/95.c",
+            "../data/benchmarks/code2inv/96.c",
+            "../data/benchmarks/code2inv/97.c",
+            "../data/benchmarks/code2inv/98.c",
+            "../data/benchmarks/code2inv/99.c",
+            "../data/benchmarks/code2inv/100.c",
+            "../data/benchmarks/code2inv/102.c",
+            "../data/benchmarks/code2inv/104.c",
+            "../data/benchmarks/code2inv/105.c",
+            "../data/benchmarks/code2inv/108.c",
+            "../data/benchmarks/code2inv/113.c",
+            "../data/benchmarks/code2inv/114.c"
+        ],
+        "failure": [
+            "../data/benchmarks/code2inv/3.c",
+            "../data/benchmarks/code2inv/4.c",
+            "../data/benchmarks/code2inv/5.c",
+            "../data/benchmarks/code2inv/6.c",
+            "../data/benchmarks/code2inv/7.c",
+            "../data/benchmarks/code2inv/8.c",
+            "../data/benchmarks/code2inv/11.c",
+            "../data/benchmarks/code2inv/13.c",
+            "../data/benchmarks/code2inv/21.c",
+            "../data/benchmarks/code2inv/22.c",
+            "../data/benchmarks/code2inv/23.c",
+            "../data/benchmarks/code2inv/24.c",
+            "../data/benchmarks/code2inv/26.c",
+            "../data/benchmarks/code2inv/27.c",
+            "../data/benchmarks/code2inv/28.c",
+            "../data/benchmarks/code2inv/29.c",
+            "../data/benchmarks/code2inv/31.c",
+            "../data/benchmarks/code2inv/32.c",
+            "../data/benchmarks/code2inv/33.c",
+            "../data/benchmarks/code2inv/34.c",
+            "../data/benchmarks/code2inv/37.c",
+            "../data/benchmarks/code2inv/39.c",
+            "../data/benchmarks/code2inv/40.c",
+            "../data/benchmarks/code2inv/41.c",
+            "../data/benchmarks/code2inv/43.c",
+            "../data/benchmarks/code2inv/44.c",
+            "../data/benchmarks/code2inv/45.c",
+            "../data/benchmarks/code2inv/47.c",
+            "../data/benchmarks/code2inv/48.c",
+            "../data/benchmarks/code2inv/50.c",
+            "../data/benchmarks/code2inv/51.c",
+            "../data/benchmarks/code2inv/52.c",
+            "../data/benchmarks/code2inv/54.c",
+            "../data/benchmarks/code2inv/57.c",
+            "../data/benchmarks/code2inv/58.c",
+            "../data/benchmarks/code2inv/60.c",
+            "../data/benchmarks/code2inv/61.c",
+            "../data/benchmarks/code2inv/62.c",
+            "../data/benchmarks/code2inv/63.c",
+            "../data/benchmarks/code2inv/64.c",
+            "../data/benchmarks/code2inv/65.c",
+            "../data/benchmarks/code2inv/66.c",
+            "../data/benchmarks/code2inv/67.c",
+            "../data/benchmarks/code2inv/68.c",
+            "../data/benchmarks/code2inv/69.c",
+            "../data/benchmarks/code2inv/72.c",
+            "../data/benchmarks/code2inv/73.c",
+            "../data/benchmarks/code2inv/74.c",
+            "../data/benchmarks/code2inv/75.c",
+            "../data/benchmarks/code2inv/76.c",
+            "../data/benchmarks/code2inv/83.c",
+            "../data/benchmarks/code2inv/84.c",
+            "../data/benchmarks/code2inv/85.c",
+            "../data/benchmarks/code2inv/86.c",
+            "../data/benchmarks/code2inv/88.c",
+            "../data/benchmarks/code2inv/101.c",
+            "../data/benchmarks/code2inv/103.c",
+            "../data/benchmarks/code2inv/106.c",
+            "../data/benchmarks/code2inv/107.c",
+            "../data/benchmarks/code2inv/109.c",
+            "../data/benchmarks/code2inv/110.c",
+            "../data/benchmarks/code2inv/111.c",
+            "../data/benchmarks/code2inv/112.c"
+        ],
+        "skipped": [
+            "../data/benchmarks/code2inv/1.c",
+            "../data/benchmarks/code2inv/3.c",
+            "../data/benchmarks/code2inv/5.c",
+            "../data/benchmarks/code2inv/7.c",
+            "../data/benchmarks/code2inv/9.c",
+            "../data/benchmarks/code2inv/14.c",
+            "../data/benchmarks/code2inv/44.c",
+            "../data/benchmarks/code2inv/45.c",
+            "../data/benchmarks/code2inv/49.c",
+            "../data/benchmarks/code2inv/59.c",
+            "../data/benchmarks/code2inv/71.c",
+            "../data/benchmarks/code2inv/76.c",
+            "../data/benchmarks/code2inv/77.c",
+            "../data/benchmarks/code2inv/79.c",
+            "../data/benchmarks/code2inv/82.c",
+            "../data/benchmarks/code2inv/87.c",
+            "../data/benchmarks/code2inv/94.c",
+            "../data/benchmarks/code2inv/96.c",
+            "../data/benchmarks/code2inv/97.c",
+            "../data/benchmarks/code2inv/102.c",
+            "../data/benchmarks/code2inv/107.c",
+            "../data/benchmarks/code2inv/114.c"
+        ],
+        "total": 114,
+        "success_count": 51,
+        "failure_count": 63,
+        "success_rate": 0.4473684210526316
+    }
+}

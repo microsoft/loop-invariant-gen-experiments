@@ -1,0 +1,454 @@
+{
+    "logs": {
+        "file": "../data/benchmarks/code2inv/127.c",
+        "benchmark_code": "#define assume(e) if(!(e)) return 0;\n\nint main() {\n  \n  int i;\n  int j;\n  int x;\n  int y;\n  int z1;\n  int z2;\n  int z3;\n  \n  (i = x);\n  (j = y);\n  \n  while ((x != 0)) {\n    {\n    (x  = (x - 1));\n    (y  = (y - 1));\n    }\n\n  }\n  \nif ( (y != 0) )\n{;\n//@ assert( (i != j) );\n}\n\n}",
+        "success": false,
+        "log": [
+            {
+                "step": "Prompting LLM",
+                "generating_annotation": "loop_invariants",
+                "success": true,
+                "llm_chat": [
+                    {
+                        "role": "system",
+                        "content": "You are a helpful AI software assistant that reasons about how code behaves. Given a program, you can find loop invariants, which can then be used to verify some property in the program. \nFrama-C is a software verification tool for C programs. The input to Frama-C is a C program file with ACSL (ANSI/ISO C Specification Language) annotations.\nFor the given program, find the necessary loop invariants of the while loop to help Frama-C verify the post-condition.\n\nInstructions:\n- Make a note of the pre-conditions or variable assignments in the program.\n- Analyze the loop body and make a note of the loop condition. \n- Output loop invariants that are true \n(i) before the loop execution, \n(ii) in every iteration of the loop and \n(iii) after the loop termination, \nsuch that the loop invariants imply the post condition.\n- If a loop invariant is a conjunction, split it into its parts.\n- Output all the loop invariants in one code block. For example:\n```\n/*@ \n    loop invariant i1;\n    loop invariant i2;\n*/\n```\nRules:\n- **Do not use variables or functions that are not declared in the program.** \n- **Do not make any assumptions about functions whose definitions are not given.**\n- **All undefined variables contain garbage values. Do not use variables that have garbage values.**\n- **Do not use keywords that are not supported in ACSL annotations for loops.**\n- **Variables that are not explicitly initialized, could have garbage values. Do not make any assumptions about such values.**\n- **Do not use the \\at(x, Pre) notation for any variable x.**\n- **Do not use non-deterministic function calls.**"
+                    },
+                    {
+                        "role": "user",
+                        "content": "\nConsider the following C program:\n```\n#define assume(e) if(!(e)) return 0;\n\nint main() {\n  \n  int i;\n  int j;\n  int x;\n  int y;\n  int z1;\n  int z2;\n  int z3;\n  \n  (i = x);\n  (j = y);\n  \n  while ((x != 0)) {\n    {\n    (x  = (x - 1));\n    (y  = (y - 1));\n    }\n\n  }\n  \nif ( (y != 0) )\n{;\n//@ assert( (i != j) );\n}\n\n}\n```\n\nYou are allowed to use implication to take care of the conditional nature of the code. Use implication (==>) instead of using if-then.\n\nFor all variables, add conjunctions that bound the maximum and minimum values that they can take, if such bounds exist.\n\nIf a variable is always equal to or smaller or larger than another variable, add a conjunction for their relation.\n\nIf the assertion is guarded by a condition, use the guard condition in an implication.\n\nIf certain variables are non-deterministic at the beginning or end of the loop, use an implication to make the invariant trivially true at that location. \n\nOutput the loop invariants for the loop in the program above. Let's think step by step."
+                    },
+                    "Pre-conditions:\n- None\n\nVariable assignments:\n- i is assigned the value of x\n- j is assigned the value of y\n\nLoop condition:\n- x != 0\n\nLoop invariants:\n```\n/*@\nloop invariant 0 <= x;\nloop invariant 0 <= y;\nloop invariant x + y == i + j;\nloop invariant i <= x;\nloop invariant j <= y;\nloop invariant (x == 0) ==> (i == j);\n*/\n```\n\nExplanation:\n- The first invariant states that x is always greater than or equal to 0.\n- The second invariant states that y is always greater than or equal to 0.\n- The third invariant states that the sum of x and y is always equal to the initial sum of i and j.\n- The fourth invariant states that i is always less than or equal to x.\n- The fifth invariant states that j is always less than or equal to y.\n- The sixth invariant states that if x becomes 0, then i must be equal to j. This is because the loop subtracts 1 from both x and y in each iteration, and since x is greater than or equal to i at the start of each iteration, x will eventually become 0 when it reaches i. At this point, y must also be equal to j for the sum of x and y to remain equal to the initial sum of i and j. Therefore, i must be equal to j when x becomes 0. This is captured in the sixth invariant using implication. \n\nPost-conditions:\n- (y != 0) ==> (i != j)\nThis post-condition is already in the program. \n\nExplanation:\n- If y is not equal to 0, then the loop has terminated before x became 0. This means that x has become less than i, and therefore, i must be different from j. This is captured in the post-condition using implication.",
+                    "Pre-conditions: None\n\nVariable assignments:\n- i = x\n- j = y\n\nLoop condition: x != 0\n\nLoop body:\n- x = x - 1\n- y = y - 1\n\nPost-condition: If y != 0 then i != j\n\nLoop Invariants:\n- i >= 0 && j >= 0 && x >= 0 && y >= 0  (to ensure non-negative values)\n- i <= x && j <= y  (since i and j are initialized to x and y respectively)\n- (y == 0) ==> (i == j)  (if the loop terminates, i should be equal to j)\n- (y != 0) ==> (i != j)  (using implication to handle the assertion)\n- x + y == i + j  (the sum of i and j should remain constant throughout the loop)\n\nPutting it all together:\n```\n/*@ \n    loop invariant i >= 0 && j >= 0 && x >= 0 && y >= 0;\n    loop invariant i <= x && j <= y;\n    loop invariant (y == 0) ==> (i == j);\n    loop invariant (y != 0) ==> (i != j);\n    loop invariant x + y == i + j;\n*/\n```",
+                    "Pre-conditions:\n- None\n\nVariable assignments:\n- i = x\n- j = y\n\nLoop condition:\n- (x != 0)\n\nLoop invariants:\n- Before the loop: None\n- In every iteration:\n    - (x >= 0)         // x is always non-negative\n    - (y >= 0)         // y is always non-negative\n    - (x + y == i + j) // the sum of x and y is constant\n- After the loop:\n    - (x == 0)         // x is zero when the loop terminates\n    - (y == j - i)     // y equals the initial value of j minus the initial value of i\n\nImplication for the assertion:\n- (y != 0) ==> (i != j)\n\nPutting it all together, we get the following loop invariants:\n```\n/*@ \n    loop invariant x >= 0;\n    loop invariant y >= 0;\n    loop invariant x + y == i + j;\n    \n    loop assigns x, y;\n    \n    loop variant x;\n*/\nwhile (x != 0) {\n  {\n    (x = x - 1);\n    (y = y - 1);\n  }\n}\n\n//@ assert (y != 0) ==> (i != j);\n\n/*@ \n    loop invariant x == 0;\n    loop invariant y == j - i;\n*/\n```",
+                    "Pre-conditions:\n- None\n\nVariable assignments:\n- i is assigned the value of x\n- j is assigned the value of y\n\nLoop condition:\n- The loop runs as long as x is not equal to 0.\n\nLoop invariants:\n- Before the loop execution:\n    - None\n\n- In every iteration of the loop:\n    - x is greater than or equal to 0.\n    - y is greater than or equal to 0.\n    - i is greater than or equal to x.\n    - j is greater than or equal to y.\n    - If i is not equal to j, then y is greater than 0.\n\n- After the loop termination:\n    - i is greater than or equal to 0.\n    - j is greater than or equal to 0.\n    - If i is not equal to j, then y is greater than 0.\n    \nPutting it all together, the loop invariants are:\n```\n/*@ \n    loop invariant x >= 0;\n    loop invariant y >= 0;\n    loop invariant i >= x;\n    loop invariant j >= y;\n    loop invariant (i != j) ==> (y > 0);\n    loop invariant \\forall integer k; 0 <= k < i ==> k >= 0;\n    loop invariant \\forall integer k; 0 <= k < j ==> k >= 0;\n*/\n```\nNote that we added additional loop invariants to bound the minimum value of i and j. We also added an implication to capture the relationship between i, j, and y when i is not equal to j. Finally, we used universal quantifiers to bound the minimum value of i and j.",
+                    "Pre-conditions and variable assignments:\n- The program takes no input.\n- The program initializes variables i, j, x, y, z1, z2, and z3.\n- The program assigns the value of variable x to variable i.\n- The program assigns the value of variable y to variable j.\n\nLoop condition:\n- The loop continues while variable x is not equal to 0.\n\nLoop invariants:\n- Before the loop starts, we have:\n```\n/*@ \n    loop invariant x >= 0;\n    loop invariant y >= 0;\n    loop invariant i == x;\n    loop invariant j == y;\n*/\n```\n- In every iteration of the loop, we have:\n```\n/*@ \n    loop invariant x >= 0;\n    loop invariant y >= 0;\n    loop invariant i == \\old(x);\n    loop invariant j == \\old(y);\n    loop invariant (x == 0) ==> (y == \\old(y) - \\old(x));\n*/\n```\n- After the loop terminates, we have:\n```\n/*@ \n    loop invariant x == 0;\n    loop invariant i == \\old(x);\n    loop invariant j == \\old(y);\n    loop invariant (y == 0) || (i != j);\n*/\n```\nExplanation:\n- Before the loop starts, we know that x and y are non-negative integers. Also, i and j are initialized with the same values as x and y, respectively.\n- In every iteration of the loop, x is decremented by 1, and y is also decremented by 1. Thus, the relation between x and y is y = old(y) - old(x) after each iteration of the loop. Also, i and j remain unchanged in each iteration.\n- After the loop terminates, x is equal to 0. Thus, i is equal to old(x), and j is equal to old(y). If y is equal to 0, the assertion trivially holds. Otherwise, i and j are not equal, which implies that x was not equal to 0 at some point in the loop, and the assertion holds.",
+                    "Pre-conditions:\n- None\n\nVariable assignments:\n- i is assigned the value of x\n- j is assigned the value of y\n\nLoop condition:\n- x != 0\n\nLoop invariants:\n- i <= x ==> j <= y\n- i >= x ==> j >= y\n- x >= 0\n- y >= 0\n\nBefore loop execution:\n- i <= x ==> j <= y\n- i >= x ==> j >= y\n- x >= 0\n- y >= 0\n\nIn every iteration of the loop:\n- i <= x ==> j <= y\n- i >= x ==> j >= y\n- x >= 0\n- y >= 0\n- (x + y) == (i + j)\n\nAfter loop termination:\n- i <= x ==> j <= y\n- i >= x ==> j >= y\n- x == 0\n- (y == 0) ==> (i == j)\n\nFinal assertion:\n- (y != 0) ==> (i != j)\n\nNote: Since there are no bounds given for x, y, i, j, we cannot add any additional constraints on them.",
+                    "Pre-conditions:\n- None\n\nVariable assignments:\n- `i` is assigned the value of `x`\n- `j` is assigned the value of `y`\n\nLoop condition:\n- The loop continues as long as `x` is not equal to 0\n\nLoop invariants:\n- Before the loop: None (since no loop has executed yet)\n- In every iteration:\n    - `i == x`\n    - `j == y`\n    - `x >= 0`\n    - `y >= 0`\n- After the loop:\n    - `i == x`\n    - `j == y`\n    - `x == 0` (since the loop has terminated)\n    - `y >= 0`\n    - `(y != 0) ==> (i != j)` (since the assertion is guarded by the condition `y != 0`)\n\nCombining all the loop invariants, we get:\n```\n/*@ \n    loop invariant i == x;\n    loop invariant j == y;\n    loop invariant x >= 0;\n    loop invariant y >= 0;\n    \n    loop assigns x, y;\n*/\nwhile ((x != 0)) {\n    {\n        (x  = (x - 1));\n        (y  = (y - 1));\n    }\n}\n/*@ \n    loop invariant i == x;\n    loop invariant j == y;\n    loop invariant x == 0;\n    loop invariant y >= 0;\n    loop invariant (y != 0) ==> (i != j);\n*/\nif ( (y != 0) )\n{;\n    //@ assert( (i != j) );\n}\n```\n\nNote that we have also included the `loop assigns` clause to specify which variables are modified in the loop body.",
+                    "Pre-conditions:\n- The program assumes the existence of a macro `assume(e)` which returns 0 if the expression `e` evaluates to false. We will assume that this macro behaves as intended.\n- The program declares and initializes several integer variables `i`, `j`, `x`, `y`, `z1`, `z2`, and `z3`. We don't know the initial values of these variables, so we can't assume anything about them.\n\nLoop condition:\n- The while loop executes while the value of `x` is not equal to 0.\n\nLoop invariants:\n- Before the loop execution, the values of `i` and `j` are equal to the values of `x` and `y`, respectively.\n```\n/*@ \n    loop invariant i == \\old(x);\n    loop invariant j == \\old(y);\n*/\n```\n- In every iteration of the loop, the values of `i` and `j` are equal to the values of `x` and `y`, respectively.\n```\n/*@ \n    loop invariant i == x;\n    loop invariant j == y;\n*/\n```\n- After the loop termination, if `y` is not equal to 0, then `i` and `j` must be different.\n```\n/*@ \n    loop invariant i == x;\n    loop invariant j == y;\n    loop invariant (y != 0) ==> (i != j);\n*/\n```\n- Since we don't know the initial values of `x` and `y`, we can use implications to make the loop invariants true at the beginning of the loop. Specifically, we can add the following implications to make the first two loop invariants true:\n```\n/*@ \n    loop invariant (x == \\old(x)) ==> (i == \\old(x));\n    loop invariant (y == \\old(y)) ==> (j == \\old(y));\n*/\n```\n- Similarly, we can add an implication to make the third loop invariant true at the end of the loop:\n```\n/*@ \n    loop invariant (x == 0) ==> ((y != 0) ==> (i != j));\n*/\n```\n- We don't need to add any loop invariants to bound the maximum or minimum values of the variables, since we don't have any information about their initial values or the range of values that they can take during the loop.",
+                    "First, let's consider the pre-conditions and variable assignments in the program:\n\n- Pre-conditions: None.\n- Variable assignments: `i` is assigned the value of `x` and `j` is assigned the value of `y`.\n\nNext, let's analyze the loop body and make a note of the loop condition:\n\n- Loop condition: `(x != 0)`\n\nNow, let's think about the necessary loop invariants:\n\n- Before the loop execution, we have:\n    - `i == x`\n    - `j == y`\n- In every iteration of the loop, we have:\n    - `x >= 0`\n    - `y >= 0`\n    - `i == x`\n    - `j == y`\n- After the loop termination, we have:\n    - `(y == 0) ==> (i == j)`\n\nLet's break down the loop invariants:\n\n- `x >= 0` and `y >= 0` are necessary because `x` and `y` are decremented by 1 in each iteration of the loop and we want to ensure that they don't become negative.\n- `i == x` and `j == y` are necessary to ensure that `i` and `j` remain equal to `x` and `y` respectively throughout the loop execution.\n- `(y == 0) ==> (i == j)` is necessary to ensure that the assertion `i != j` is true only when `y` is not equal to 0, which is the condition guarding the assertion.\n\nAdding all the loop invariants together, we get:\n\n```\n/*@ \n    loop invariant x >= 0;\n    loop invariant y >= 0;\n    loop invariant i == x;\n    loop invariant j == y;\n    loop invariant (y == 0) ==> (i == j);\n*/\n```\n\nNote that we do not need to add any non-deterministic variables in this case because all variables are explicitly initialized.",
+                    "Pre-conditions:\n- None\n\nVariable Assignments:\n- i is assigned the value of x\n- j is assigned the value of y\n\nLoop Condition:\n- x != 0\n\nLoop Invariants:\n- `i == x ==> j == y - x` (true before the loop execution)\n- `i <= x` (true before the loop execution)\n- `j <= y` (true before the loop execution)\n- `j >= y - x` (true before the loop execution)\n- `x >= 0` (true in every iteration of the loop)\n- `y >= 0` (true in every iteration of the loop)\n- `i <= x ==> j <= y - x` (true in every iteration of the loop)\n- `y != 0 ==> i != j` (true after the loop termination)\n\nExplanation:\n- The first invariant is true before the loop execution because if i is equal to x then j must be equal to y - x, according to the assignment of j. \n- The second invariant is true before the loop execution because i is assigned the value of x, so i can never be greater than x.\n- The third invariant is true before the loop execution because j is assigned the value of y, so j can never be greater than y.\n- The fourth invariant is true before the loop execution because if i is equal to x then j must be equal to y - x, according to the assignment of j. Therefore, j must be greater than or equal to y - x.\n- The fifth invariant is true in every iteration of the loop because x is decremented by 1 in each iteration, so it can never be negative.\n- The sixth invariant is true in every iteration of the loop because y is decremented by 1 in each iteration, so it can never be negative.\n- The seventh invariant is true in every iteration of the loop because if i is less than or equal to x then j must be less than or equal to y - x, according to the assignment of j.\n- The eighth invariant is true after the loop termination because if y is not equal to 0 then the assertion implies that i is not equal to j. \n\nNote that since none of the variables are non-deterministic at the beginning or end of the loop, we do not need to use any implications to make the invariants trivially true.",
+                    "Pre-conditions:\n- None\n\nVariable assignments:\n- i is assigned the value of x.\n- j is assigned the value of y.\n\nLoop condition:\n- The loop executes while x is not equal to 0.\n\nLoop invariants:\n- Before the loop execution:\n    - None\n- In every iteration of the loop:\n    - (x >= 0) && (y >= 0)\n    - (x + y) == (i + j)\n- After the loop termination:\n    - (y == 0) ==> (i == j)\n\nExplanation:\n- Before the loop execution, there are no invariants to state.\n- In every iteration of the loop:\n    - (x >= 0) && (y >= 0) ensures that x and y are always non-negative.\n    - (x + y) == (i + j) ensures that the sum of x and y remains constant throughout the loop, since i and j are constant.\n- After the loop termination:\n    - (y == 0) ==> (i == j) ensures that if the loop terminates with y equal to 0, then i must be equal to j. This is because the loop only modifies x and y, and the sum of x and y remains constant. Therefore, if y is 0, then x must be equal to (i-j), which means that i must be equal to j.\n\nNote: Since all variables are explicitly initialized in the program, we do not need to add any assumptions about their initial values.",
+                    "Pre-conditions and variable assignments:\n- The program declares and initializes seven integer variables: i, j, x, y, z1, z2, and z3.\n- The macro `assume(e)` is defined to return 0 if the expression e is false.\n- The program assigns the values of x and y to i and j respectively: `(i = x)` and `(j = y)`.\n\nLoop condition:\n- The while loop executes while x is not equal to 0: `while ((x != 0))`.\n\nLoop invariants:\n- Before the loop: \n    - None required.\n- In every iteration: \n    - `(x >= 0)`\n    - `(y >= 0)`\n    - `(i <= x)`\n    - `(j <= y)`\n    - `(i - x = j - y)`\n- After the loop:\n    - `(y = j - x) ==> (i != j)`\n\nExplanation:\n- Before the loop: No loop invariants are required before the loop because no assumptions are made about the initial values of x and y.\n- In every iteration: \n    - `(x >= 0)`: x is non-negative before each iteration.\n    - `(y >= 0)`: y is non-negative before each iteration.\n    - `(i <= x)`: i is always less than or equal to x.\n    - `(j <= y)`: j is always less than or equal to y.\n    - `(i - x = j - y)`: This is the key loop invariant. We can see that i and j are assigned the initial values of x and y, respectively. The loop decrements x and y by the same amount in each iteration. So, the difference between i and x is always equal to the difference between j and y.\n- After the loop:\n    - `(y = j - x) ==> (i != j)`: If y is equal to j minus x, then the loop invariant `(i - x = j - y)` implies that i is not equal to j. \n\nNote: We don't need to add any bounds on the variables because they are not used in any arithmetic expressions, and their values are not changed in a way that would violate the constraints specified by the loop invariants.",
+                    "Pre-conditions:\n- All variables are integers and contain garbage values.\n- The macro `assume` is defined to check a condition and return 0 if it fails.\n\nVariable assignments:\n- `i` is assigned the value of `x`.\n- `j` is assigned the value of `y`.\n\nLoop condition:\n- The loop continues while `x` is not equal to 0.\n\nPost-condition:\n- If `y` is not equal to 0, then `i` is not equal to `j`.\n\nLoop invariants:\n- Before the loop execution, we have:\n```\n/*@ \n    loop invariant 0 <= x;\n    loop invariant x <= \\max_int;\n    loop invariant 0 <= y;\n    loop invariant y <= \\max_int;\n    loop invariant i <= \\max_int;\n    loop invariant j <= \\max_int;\n*/\n```\n- In every iteration of the loop, we have:\n```\n/*@ \n    loop invariant 0 <= x;\n    loop invariant x <= \\old(x);\n    loop invariant 0 <= y;\n    loop invariant y <= \\old(y);\n    loop invariant x + y == \\old(x) + \\old(y);\n    loop invariant i <= \\old(i);\n    loop invariant j <= \\old(j);\n    loop invariant i == x + \\old(j) - \\old(y);\n    loop invariant j == y;\n*/\n```\n- After the loop termination, we have:\n```\n/*@ \n    loop invariant 0 <= x;\n    loop invariant x <= 0;\n    loop invariant 0 <= y;\n    loop invariant y <= \\old(y);\n    loop invariant x + y == \\old(x) + \\old(y);\n    loop invariant i <= \\old(i);\n    loop invariant j <= \\old(j);\n    loop invariant i == x + \\old(j) - \\old(y);\n    loop invariant j == y;\n    loop invariant y == 0 ==> (i != j);\n*/\n```\nNote that we have used `\\max_int` to represent the maximum value that an integer can take in the given platform. In practice, this value can be obtained using the `INT_MAX` macro defined in the `limits.h` header file. However, since we are not allowed to assume any external function or macro, we use the ACSL keyword `\\max_int` instead. \n\nAlso, we have used the `\\old` keyword to represent the value of a variable before the loop execution. For example, `\\old(x)` represents the value of `x` before the loop execution. \n\nFinally, note that we have added an implication to the loop invariant that ensures that the post-condition holds. The implication states that if `y` is equal to 0, then the assertion `(i != j)` is not checked, which trivially makes the assertion true.",
+                    "Pre-conditions and variable assignments:\n- The program defines a macro `assume` which takes an expression and returns 0 if the expression is false.\n- The program declares and initializes several integer variables `i`, `j`, `x`, `y`, `z1`, `z2`, `z3`. The initial values of these variables are not given, so we cannot assume anything about their values.\n\nLoop condition:\n- The while loop runs as long as `x != 0`.\n\nLoop invariants:\n- Before the loop: None. We cannot assume anything about the values of `x` and `y`.\n- In every iteration of the loop: \n    - `(x >= 0) && (y >= 0)` to ensure that `x` and `y` are always non-negative.\n    - `(x + y) == (i + j)` to ensure that the sum of `x` and `y` remains constant throughout the loop. Here, we use the initialization `(i = x)` and `(j = y)` to derive this invariant.\n    - `(x <= i) && (y <= j)` to ensure that `x` and `y` never exceed their initial values. Here, we use the initialization `(i = x)` and `(j = y)` to derive this invariant.\n- After the loop:\n    - `((x == 0) && (y == 0)) ==> (i == j)` to ensure that if the loop terminates, then `i` and `j` must be equal. We use implication here because the loop may not terminate if `x` is negative initially. We use the assertion `(y != 0)` as a guard condition for the assertion to hold.",
+                    "Pre-conditions:\n- All variables are integers.\n\nVariable assignments:\n- `i` is assigned the value of `x`.\n- `j` is assigned the value of `y`.\n\nLoop condition:\n- The loop continues as long as `x` is not equal to 0.\n\nLoop invariants:\n- `i` is equal to `x`.\n- `j` is equal to `y`.\n- `y <= j`.\n- `x >= 0`.\n- `y >= 0`.\n\nExplanation:\n- The first two loop invariants are true before the loop execution.\n- The third loop invariant is true in every iteration of the loop because `y` is decremented by 1 in every iteration, so it is always less than or equal to its initial value `j`.\n- The fourth loop invariant is true in every iteration of the loop because `x` is decremented by 1 in every iteration, so it is always greater than or equal to 0.\n- The fifth loop invariant is true in every iteration of the loop because `y` is decremented by 1 in every iteration, so it is always greater than or equal to 0.\n- After the loop termination, `x` is equal to 0, so the last three loop invariants are true, which implies that `(y == j)`. Since the assertion is guarded by `y != 0`, we can use implication to get `(y != 0) ==> (i != j)`, which is equivalent to `(y == 0) || (i != j)`."
+                ],
+                "output": [
+                    "/*@\nloop invariant 0 <= x;\nloop invariant 0 <= y;\nloop invariant x + y == i + j;\nloop invariant i <= x;\nloop invariant j <= y;\nloop invariant (x == 0) ==> (i == j);\n*/",
+                    "/*@ \n    loop invariant i >= 0 && j >= 0 && x >= 0 && y >= 0;\n    loop invariant i <= x && j <= y;\n    loop invariant (y == 0) ==> (i == j);\n    loop invariant (y != 0) ==> (i != j);\n    loop invariant x + y == i + j;\n*/",
+                    "/*@ \n    loop invariant x >= 0;\n    loop invariant y >= 0;\n    loop invariant x + y == i + j;\n    \n    loop assigns x, y;\n    \n    loop variant x;\n*/\nwhile (x != 0) {\n  {\n    (x = x - 1);\n    (y = y - 1);\n  }\n}\n\n//@ assert (y != 0) ==> (i != j);\n\n/*@ \n    loop invariant x == 0;\n    loop invariant y == j - i;\n*/",
+                    "/*@ \n    loop invariant x >= 0;\n    loop invariant y >= 0;\n    loop invariant i >= x;\n    loop invariant j >= y;\n    loop invariant (i != j) ==> (y > 0);\n    loop invariant \\forall integer k; 0 <= k < i ==> k >= 0;\n    loop invariant \\forall integer k; 0 <= k < j ==> k >= 0;\n*/",
+                    "/*@ \n    loop invariant x >= 0;\n    loop invariant y >= 0;\n    loop invariant i == x;\n    loop invariant j == y;\n*/",
+                    [
+                        "ERROR: Output does not contain at least 1 complete code block",
+                        "Pre-conditions:\n- None\n\nVariable assignments:\n- i is assigned the value of x\n- j is assigned the value of y\n\nLoop condition:\n- x != 0\n\nLoop invariants:\n- i <= x ==> j <= y\n- i >= x ==> j >= y\n- x >= 0\n- y >= 0\n\nBefore loop execution:\n- i <= x ==> j <= y\n- i >= x ==> j >= y\n- x >= 0\n- y >= 0\n\nIn every iteration of the loop:\n- i <= x ==> j <= y\n- i >= x ==> j >= y\n- x >= 0\n- y >= 0\n- (x + y) == (i + j)\n\nAfter loop termination:\n- i <= x ==> j <= y\n- i >= x ==> j >= y\n- x == 0\n- (y == 0) ==> (i == j)\n\nFinal assertion:\n- (y != 0) ==> (i != j)\n\nNote: Since there are no bounds given for x, y, i, j, we cannot add any additional constraints on them."
+                    ],
+                    "/*@ \n    loop invariant i == x;\n    loop invariant j == y;\n    loop invariant x >= 0;\n    loop invariant y >= 0;\n    \n    loop assigns x, y;\n*/\nwhile ((x != 0)) {\n    {\n        (x  = (x - 1));\n        (y  = (y - 1));\n    }\n}\n/*@ \n    loop invariant i == x;\n    loop invariant j == y;\n    loop invariant x == 0;\n    loop invariant y >= 0;\n    loop invariant (y != 0) ==> (i != j);\n*/\nif ( (y != 0) )\n{;\n    //@ assert( (i != j) );\n}",
+                    "/*@ \n    loop invariant i == \\old(x);\n    loop invariant j == \\old(y);\n*/",
+                    "/*@ \n    loop invariant x >= 0;\n    loop invariant y >= 0;\n    loop invariant i == x;\n    loop invariant j == y;\n    loop invariant (y == 0) ==> (i == j);\n*/",
+                    [
+                        "ERROR: Output does not contain at least 1 complete code block",
+                        "Pre-conditions:\n- None\n\nVariable Assignments:\n- i is assigned the value of x\n- j is assigned the value of y\n\nLoop Condition:\n- x != 0\n\nLoop Invariants:\n- `i == x ==> j == y - x` (true before the loop execution)\n- `i <= x` (true before the loop execution)\n- `j <= y` (true before the loop execution)\n- `j >= y - x` (true before the loop execution)\n- `x >= 0` (true in every iteration of the loop)\n- `y >= 0` (true in every iteration of the loop)\n- `i <= x ==> j <= y - x` (true in every iteration of the loop)\n- `y != 0 ==> i != j` (true after the loop termination)\n\nExplanation:\n- The first invariant is true before the loop execution because if i is equal to x then j must be equal to y - x, according to the assignment of j. \n- The second invariant is true before the loop execution because i is assigned the value of x, so i can never be greater than x.\n- The third invariant is true before the loop execution because j is assigned the value of y, so j can never be greater than y.\n- The fourth invariant is true before the loop execution because if i is equal to x then j must be equal to y - x, according to the assignment of j. Therefore, j must be greater than or equal to y - x.\n- The fifth invariant is true in every iteration of the loop because x is decremented by 1 in each iteration, so it can never be negative.\n- The sixth invariant is true in every iteration of the loop because y is decremented by 1 in each iteration, so it can never be negative.\n- The seventh invariant is true in every iteration of the loop because if i is less than or equal to x then j must be less than or equal to y - x, according to the assignment of j.\n- The eighth invariant is true after the loop termination because if y is not equal to 0 then the assertion implies that i is not equal to j. \n\nNote that since none of the variables are non-deterministic at the beginning or end of the loop, we do not need to use any implications to make the invariants trivially true."
+                    ],
+                    [
+                        "ERROR: Output does not contain at least 1 complete code block",
+                        "Pre-conditions:\n- None\n\nVariable assignments:\n- i is assigned the value of x.\n- j is assigned the value of y.\n\nLoop condition:\n- The loop executes while x is not equal to 0.\n\nLoop invariants:\n- Before the loop execution:\n    - None\n- In every iteration of the loop:\n    - (x >= 0) && (y >= 0)\n    - (x + y) == (i + j)\n- After the loop termination:\n    - (y == 0) ==> (i == j)\n\nExplanation:\n- Before the loop execution, there are no invariants to state.\n- In every iteration of the loop:\n    - (x >= 0) && (y >= 0) ensures that x and y are always non-negative.\n    - (x + y) == (i + j) ensures that the sum of x and y remains constant throughout the loop, since i and j are constant.\n- After the loop termination:\n    - (y == 0) ==> (i == j) ensures that if the loop terminates with y equal to 0, then i must be equal to j. This is because the loop only modifies x and y, and the sum of x and y remains constant. Therefore, if y is 0, then x must be equal to (i-j), which means that i must be equal to j.\n\nNote: Since all variables are explicitly initialized in the program, we do not need to add any assumptions about their initial values."
+                    ],
+                    [
+                        "ERROR: Output does not contain at least 1 complete code block",
+                        "Pre-conditions and variable assignments:\n- The program declares and initializes seven integer variables: i, j, x, y, z1, z2, and z3.\n- The macro `assume(e)` is defined to return 0 if the expression e is false.\n- The program assigns the values of x and y to i and j respectively: `(i = x)` and `(j = y)`.\n\nLoop condition:\n- The while loop executes while x is not equal to 0: `while ((x != 0))`.\n\nLoop invariants:\n- Before the loop: \n    - None required.\n- In every iteration: \n    - `(x >= 0)`\n    - `(y >= 0)`\n    - `(i <= x)`\n    - `(j <= y)`\n    - `(i - x = j - y)`\n- After the loop:\n    - `(y = j - x) ==> (i != j)`\n\nExplanation:\n- Before the loop: No loop invariants are required before the loop because no assumptions are made about the initial values of x and y.\n- In every iteration: \n    - `(x >= 0)`: x is non-negative before each iteration.\n    - `(y >= 0)`: y is non-negative before each iteration.\n    - `(i <= x)`: i is always less than or equal to x.\n    - `(j <= y)`: j is always less than or equal to y.\n    - `(i - x = j - y)`: This is the key loop invariant. We can see that i and j are assigned the initial values of x and y, respectively. The loop decrements x and y by the same amount in each iteration. So, the difference between i and x is always equal to the difference between j and y.\n- After the loop:\n    - `(y = j - x) ==> (i != j)`: If y is equal to j minus x, then the loop invariant `(i - x = j - y)` implies that i is not equal to j. \n\nNote: We don't need to add any bounds on the variables because they are not used in any arithmetic expressions, and their values are not changed in a way that would violate the constraints specified by the loop invariants."
+                    ],
+                    "/*@ \n    loop invariant 0 <= x;\n    loop invariant x <= \\max_int;\n    loop invariant 0 <= y;\n    loop invariant y <= \\max_int;\n    loop invariant i <= \\max_int;\n    loop invariant j <= \\max_int;\n*/",
+                    [
+                        "ERROR: Output does not contain at least 1 complete code block",
+                        "Pre-conditions and variable assignments:\n- The program defines a macro `assume` which takes an expression and returns 0 if the expression is false.\n- The program declares and initializes several integer variables `i`, `j`, `x`, `y`, `z1`, `z2`, `z3`. The initial values of these variables are not given, so we cannot assume anything about their values.\n\nLoop condition:\n- The while loop runs as long as `x != 0`.\n\nLoop invariants:\n- Before the loop: None. We cannot assume anything about the values of `x` and `y`.\n- In every iteration of the loop: \n    - `(x >= 0) && (y >= 0)` to ensure that `x` and `y` are always non-negative.\n    - `(x + y) == (i + j)` to ensure that the sum of `x` and `y` remains constant throughout the loop. Here, we use the initialization `(i = x)` and `(j = y)` to derive this invariant.\n    - `(x <= i) && (y <= j)` to ensure that `x` and `y` never exceed their initial values. Here, we use the initialization `(i = x)` and `(j = y)` to derive this invariant.\n- After the loop:\n    - `((x == 0) && (y == 0)) ==> (i == j)` to ensure that if the loop terminates, then `i` and `j` must be equal. We use implication here because the loop may not terminate if `x` is negative initially. We use the assertion `(y != 0)` as a guard condition for the assertion to hold."
+                    ],
+                    [
+                        "ERROR: Output does not contain at least 1 complete code block",
+                        "Pre-conditions:\n- All variables are integers.\n\nVariable assignments:\n- `i` is assigned the value of `x`.\n- `j` is assigned the value of `y`.\n\nLoop condition:\n- The loop continues as long as `x` is not equal to 0.\n\nLoop invariants:\n- `i` is equal to `x`.\n- `j` is equal to `y`.\n- `y <= j`.\n- `x >= 0`.\n- `y >= 0`.\n\nExplanation:\n- The first two loop invariants are true before the loop execution.\n- The third loop invariant is true in every iteration of the loop because `y` is decremented by 1 in every iteration, so it is always less than or equal to its initial value `j`.\n- The fourth loop invariant is true in every iteration of the loop because `x` is decremented by 1 in every iteration, so it is always greater than or equal to 0.\n- The fifth loop invariant is true in every iteration of the loop because `y` is decremented by 1 in every iteration, so it is always greater than or equal to 0.\n- After the loop termination, `x` is equal to 0, so the last three loop invariants are true, which implies that `(y == j)`. Since the assertion is guarded by `y != 0`, we can use implication to get `(y != 0) ==> (i != j)`, which is equivalent to `(y == 0) || (i != j)`."
+                    ]
+                ]
+            },
+            {
+                "step": "Checking individual completion",
+                "solver_calls": 9,
+                "completions": [
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@\nloop invariant 0 <= x;\nloop invariant 0 <= y;\nloop invariant x + y == i + j;\nloop invariant i <= x;\nloop invariant j <= y;\nloop invariant (x == 0) ==> (i == j);\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant 0 <= x is preserved but not established.\nloop invariant 0 <= y is neither established nor preserved.\nloop invariant x + y == i + j is established but not preserved.\nloop invariant i <= x is inductive.\nloop invariant j <= y is inductive.\nloop invariant (x == 0) ==> (i == j) is preserved but not established.\nAssertion i != j: Partially proven\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant i >= 0 && j >= 0 && x >= 0 && y >= 0;\n    loop invariant i <= x && j <= y;\n    loop invariant (y == 0) ==> (i == j);\n    loop invariant (y != 0) ==> (i != j);\n    loop invariant x + y == i + j;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant i >= 0 && j >= 0 && x >= 0 && y >= 0 is preserved but not established.\nloop invariant i <= x && j <= y is established but not preserved.\nloop invariant (y == 0) ==> (i == j) is preserved but not established.\nloop invariant (y != 0) ==> (i != j) is preserved but not established.\nloop invariant x + y == i + j is inductive.\nAssertion i != j: Partially proven\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant x >= 0;\n    loop invariant y >= 0;\n    loop invariant x + y == i + j;\n    \n    loop assigns x, y;\n    \n    loop variant x;\n*/\nwhile (x != 0) {\n  {\n    (x = x - 1);\n    (y = y - 1);\n  }\n}\n\n//@ assert (y != 0) ==> (i != j);\n\n/*@ \n    loop invariant x == 0;\n    loop invariant y == j - i;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant x >= 0 is preserved but not established.\nloop invariant y >= 0 is preserved but not established.\nloop invariant x + y == i + j is inductive.\nloop invariant x == 0 is preserved but not established.\nloop invariant y == j - i is inductive.\nAssertion i != j: Partially proven\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant x >= 0;\n    loop invariant y >= 0;\n    loop invariant i >= x;\n    loop invariant j >= y;\n    loop invariant (i != j) ==> (y > 0);\n    loop invariant \\forall integer k; 0 <= k < i ==> k >= 0;\n    loop invariant \\forall integer k; 0 <= k < j ==> k >= 0;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant x >= 0 is preserved but not established.\nloop invariant y >= 0 is neither established nor preserved.\nloop invariant i >= x is inductive.\nloop invariant j >= y is inductive.\nloop invariant (i != j) ==> (y > 0) is neither established nor preserved.\nloop invariant \\forall integer k; 0 <= k < i ==> k >= 0 is inductive.\nloop invariant \\forall integer k; 0 <= k < j ==> k >= 0 is inductive.\nAssertion i != j: Unproven\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant x >= 0;\n    loop invariant y >= 0;\n    loop invariant i == x;\n    loop invariant j == y;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant x >= 0 is preserved but not established.\nloop invariant y >= 0 is neither established nor preserved.\nloop invariant i == x is established but not preserved.\nloop invariant j == y is inductive.\nAssertion i != j: Partially proven\n"
+                    },
+                    {
+                        "num_solver_calls": 0,
+                        "success": false,
+                        "llm_output": "Pre-conditions:\n- None\n\nVariable assignments:\n- i is assigned the value of x\n- j is assigned the value of y\n\nLoop condition:\n- x != 0\n\nLoop invariants:\n- i <= x ==> j <= y\n- i >= x ==> j >= y\n- x >= 0\n- y >= 0\n\nBefore loop execution:\n- i <= x ==> j <= y\n- i >= x ==> j >= y\n- x >= 0\n- y >= 0\n\nIn every iteration of the loop:\n- i <= x ==> j <= y\n- i >= x ==> j >= y\n- x >= 0\n- y >= 0\n- (x + y) == (i + j)\n\nAfter loop termination:\n- i <= x ==> j <= y\n- i >= x ==> j >= y\n- x == 0\n- (y == 0) ==> (i == j)\n\nFinal assertion:\n- (y != 0) ==> (i != j)\n\nNote: Since there are no bounds given for x, y, i, j, we cannot add any additional constraints on them.",
+                        "error": "Output does not contain at least 1 code block"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant i == x;\n    loop invariant j == y;\n    loop invariant x >= 0;\n    loop invariant y >= 0;\n    \n    loop assigns x, y;\n*/\nwhile ((x != 0)) {\n    {\n        (x  = (x - 1));\n        (y  = (y - 1));\n    }\n}\n/*@ \n    loop invariant i == x;\n    loop invariant j == y;\n    loop invariant x == 0;\n    loop invariant y >= 0;\n    loop invariant (y != 0) ==> (i != j);\n*/\nif ( (y != 0) )\n{;\n    //@ assert( (i != j) );\n}",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant i == x is inductive.\nloop invariant j == y is inductive.\nloop invariant x >= 0 is preserved but not established.\nloop invariant y >= 0 is preserved but not established.\nloop invariant i == x is inductive.\nloop invariant j == y is inductive.\nloop invariant x == 0 is preserved but not established.\nloop invariant y >= 0 is inductive.\nloop invariant (y != 0) ==> (i != j) is inductive.\nAssertion i != j: Partially proven\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant i == \\old(x);\n    loop invariant j == \\old(y);\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "Annotation error on line 17: \\old undefined in this context. Ignoring loop annotation"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant x >= 0;\n    loop invariant y >= 0;\n    loop invariant i == x;\n    loop invariant j == y;\n    loop invariant (y == 0) ==> (i == j);\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant x >= 0 is preserved but not established.\nloop invariant y >= 0 is preserved but not established.\nloop invariant i == x is established but not preserved.\nloop invariant j == y is inductive.\nloop invariant (y == 0) ==> (i == j) is preserved but not established.\nAssertion i != j: Partially proven\n"
+                    },
+                    {
+                        "num_solver_calls": 0,
+                        "success": false,
+                        "llm_output": "Pre-conditions:\n- None\n\nVariable Assignments:\n- i is assigned the value of x\n- j is assigned the value of y\n\nLoop Condition:\n- x != 0\n\nLoop Invariants:\n- `i == x ==> j == y - x` (true before the loop execution)\n- `i <= x` (true before the loop execution)\n- `j <= y` (true before the loop execution)\n- `j >= y - x` (true before the loop execution)\n- `x >= 0` (true in every iteration of the loop)\n- `y >= 0` (true in every iteration of the loop)\n- `i <= x ==> j <= y - x` (true in every iteration of the loop)\n- `y != 0 ==> i != j` (true after the loop termination)\n\nExplanation:\n- The first invariant is true before the loop execution because if i is equal to x then j must be equal to y - x, according to the assignment of j. \n- The second invariant is true before the loop execution because i is assigned the value of x, so i can never be greater than x.\n- The third invariant is true before the loop execution because j is assigned the value of y, so j can never be greater than y.\n- The fourth invariant is true before the loop execution because if i is equal to x then j must be equal to y - x, according to the assignment of j. Therefore, j must be greater than or equal to y - x.\n- The fifth invariant is true in every iteration of the loop because x is decremented by 1 in each iteration, so it can never be negative.\n- The sixth invariant is true in every iteration of the loop because y is decremented by 1 in each iteration, so it can never be negative.\n- The seventh invariant is true in every iteration of the loop because if i is less than or equal to x then j must be less than or equal to y - x, according to the assignment of j.\n- The eighth invariant is true after the loop termination because if y is not equal to 0 then the assertion implies that i is not equal to j. \n\nNote that since none of the variables are non-deterministic at the beginning or end of the loop, we do not need to use any implications to make the invariants trivially true.",
+                        "error": "Output does not contain at least 1 code block"
+                    },
+                    {
+                        "num_solver_calls": 0,
+                        "success": false,
+                        "llm_output": "Pre-conditions:\n- None\n\nVariable assignments:\n- i is assigned the value of x.\n- j is assigned the value of y.\n\nLoop condition:\n- The loop executes while x is not equal to 0.\n\nLoop invariants:\n- Before the loop execution:\n    - None\n- In every iteration of the loop:\n    - (x >= 0) && (y >= 0)\n    - (x + y) == (i + j)\n- After the loop termination:\n    - (y == 0) ==> (i == j)\n\nExplanation:\n- Before the loop execution, there are no invariants to state.\n- In every iteration of the loop:\n    - (x >= 0) && (y >= 0) ensures that x and y are always non-negative.\n    - (x + y) == (i + j) ensures that the sum of x and y remains constant throughout the loop, since i and j are constant.\n- After the loop termination:\n    - (y == 0) ==> (i == j) ensures that if the loop terminates with y equal to 0, then i must be equal to j. This is because the loop only modifies x and y, and the sum of x and y remains constant. Therefore, if y is 0, then x must be equal to (i-j), which means that i must be equal to j.\n\nNote: Since all variables are explicitly initialized in the program, we do not need to add any assumptions about their initial values.",
+                        "error": "Output does not contain at least 1 code block"
+                    },
+                    {
+                        "num_solver_calls": 0,
+                        "success": false,
+                        "llm_output": "Pre-conditions and variable assignments:\n- The program declares and initializes seven integer variables: i, j, x, y, z1, z2, and z3.\n- The macro `assume(e)` is defined to return 0 if the expression e is false.\n- The program assigns the values of x and y to i and j respectively: `(i = x)` and `(j = y)`.\n\nLoop condition:\n- The while loop executes while x is not equal to 0: `while ((x != 0))`.\n\nLoop invariants:\n- Before the loop: \n    - None required.\n- In every iteration: \n    - `(x >= 0)`\n    - `(y >= 0)`\n    - `(i <= x)`\n    - `(j <= y)`\n    - `(i - x = j - y)`\n- After the loop:\n    - `(y = j - x) ==> (i != j)`\n\nExplanation:\n- Before the loop: No loop invariants are required before the loop because no assumptions are made about the initial values of x and y.\n- In every iteration: \n    - `(x >= 0)`: x is non-negative before each iteration.\n    - `(y >= 0)`: y is non-negative before each iteration.\n    - `(i <= x)`: i is always less than or equal to x.\n    - `(j <= y)`: j is always less than or equal to y.\n    - `(i - x = j - y)`: This is the key loop invariant. We can see that i and j are assigned the initial values of x and y, respectively. The loop decrements x and y by the same amount in each iteration. So, the difference between i and x is always equal to the difference between j and y.\n- After the loop:\n    - `(y = j - x) ==> (i != j)`: If y is equal to j minus x, then the loop invariant `(i - x = j - y)` implies that i is not equal to j. \n\nNote: We don't need to add any bounds on the variables because they are not used in any arithmetic expressions, and their values are not changed in a way that would violate the constraints specified by the loop invariants.",
+                        "error": "Output does not contain at least 1 code block"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant 0 <= x;\n    loop invariant x <= \\max_int;\n    loop invariant 0 <= y;\n    loop invariant y <= \\max_int;\n    loop invariant i <= \\max_int;\n    loop invariant j <= \\max_int;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "Annotation error on line 18: unbound logic variable \\max_int. Ignoring loop annotation"
+                    },
+                    {
+                        "num_solver_calls": 0,
+                        "success": false,
+                        "llm_output": "Pre-conditions and variable assignments:\n- The program defines a macro `assume` which takes an expression and returns 0 if the expression is false.\n- The program declares and initializes several integer variables `i`, `j`, `x`, `y`, `z1`, `z2`, `z3`. The initial values of these variables are not given, so we cannot assume anything about their values.\n\nLoop condition:\n- The while loop runs as long as `x != 0`.\n\nLoop invariants:\n- Before the loop: None. We cannot assume anything about the values of `x` and `y`.\n- In every iteration of the loop: \n    - `(x >= 0) && (y >= 0)` to ensure that `x` and `y` are always non-negative.\n    - `(x + y) == (i + j)` to ensure that the sum of `x` and `y` remains constant throughout the loop. Here, we use the initialization `(i = x)` and `(j = y)` to derive this invariant.\n    - `(x <= i) && (y <= j)` to ensure that `x` and `y` never exceed their initial values. Here, we use the initialization `(i = x)` and `(j = y)` to derive this invariant.\n- After the loop:\n    - `((x == 0) && (y == 0)) ==> (i == j)` to ensure that if the loop terminates, then `i` and `j` must be equal. We use implication here because the loop may not terminate if `x` is negative initially. We use the assertion `(y != 0)` as a guard condition for the assertion to hold.",
+                        "error": "Output does not contain at least 1 code block"
+                    },
+                    {
+                        "num_solver_calls": 0,
+                        "success": false,
+                        "llm_output": "Pre-conditions:\n- All variables are integers.\n\nVariable assignments:\n- `i` is assigned the value of `x`.\n- `j` is assigned the value of `y`.\n\nLoop condition:\n- The loop continues as long as `x` is not equal to 0.\n\nLoop invariants:\n- `i` is equal to `x`.\n- `j` is equal to `y`.\n- `y <= j`.\n- `x >= 0`.\n- `y >= 0`.\n\nExplanation:\n- The first two loop invariants are true before the loop execution.\n- The third loop invariant is true in every iteration of the loop because `y` is decremented by 1 in every iteration, so it is always less than or equal to its initial value `j`.\n- The fourth loop invariant is true in every iteration of the loop because `x` is decremented by 1 in every iteration, so it is always greater than or equal to 0.\n- The fifth loop invariant is true in every iteration of the loop because `y` is decremented by 1 in every iteration, so it is always greater than or equal to 0.\n- After the loop termination, `x` is equal to 0, so the last three loop invariants are true, which implies that `(y == j)`. Since the assertion is guarded by `y != 0`, we can use implication to get `(y != 0) ==> (i != j)`, which is equivalent to `(y == 0) || (i != j)`.",
+                        "error": "Output does not contain at least 1 code block"
+                    }
+                ],
+                "success": false
+            },
+            {
+                "step": "Houdini for individual completion",
+                "success": false,
+                "completions": [
+                    {
+                        "num_solver_calls": 3,
+                        "success": false,
+                        "invariants": "/*@\nloop invariant 0 <= x;\nloop invariant 0 <= y;\nloop invariant x + y == i + j;\nloop invariant i <= x;\nloop invariant j <= y;\nloop invariant (x == 0) ==> (i == j);\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\n\nint main() {\n  \n  int i;\n  int j;\n  int x;\n  int y;\n  int z1;\n  int z2;\n  int z3;\n  \n  (i = x);\n  (j = y);\n  \n  /*@\n\n\n\n\n\n\n*/\nwhile ((x != 0)) {\n    {\n    (x  = (x - 1));\n    (y  = (y - 1));\n    }\n\n  }\n  \nif ( (y != 0) )\n{;\n//@ assert( (i != j) );\n}\n\n}",
+                        "checker_output_after_prune": false
+                    },
+                    {
+                        "num_solver_calls": 3,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant i >= 0 && j >= 0 && x >= 0 && y >= 0;\n    loop invariant i <= x && j <= y;\n    loop invariant (y == 0) ==> (i == j);\n    loop invariant (y != 0) ==> (i != j);\n    loop invariant x + y == i + j;\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\n\nint main() {\n  \n  int i;\n  int j;\n  int x;\n  int y;\n  int z1;\n  int z2;\n  int z3;\n  \n  (i = x);\n  (j = y);\n  \n  /*@\n\n\n\n\n\n*/\nwhile ((x != 0)) {\n    {\n    (x  = (x - 1));\n    (y  = (y - 1));\n    }\n\n  }\n  \nif ( (y != 0) )\n{;\n//@ assert( (i != j) );\n}\n\n}",
+                        "checker_output_after_prune": false
+                    },
+                    {
+                        "num_solver_calls": 3,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant x >= 0;\n    loop invariant y >= 0;\n    loop invariant x + y == i + j;\n    \n    loop assigns x, y;\n    \n    loop variant x;\n*/\nwhile (x != 0) {\n  {\n    (x = x - 1);\n    (y = y - 1);\n  }\n}\n\n//@ assert (y != 0) ==> (i != j);\n\n/*@ \n    loop invariant x == 0;\n    loop invariant y == j - i;\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\n\nint main() {\n  \n  int i;\n  int j;\n  int x;\n  int y;\n  int z1;\n  int z2;\n  int z3;\n  \n  (i = x);\n  (j = y);\n  \n  /*@\n\n\n\n\n\n*/\nwhile ((x != 0)) {\n    {\n    (x  = (x - 1));\n    (y  = (y - 1));\n    }\n\n  }\n  \nif ( (y != 0) )\n{;\n//@ assert( (i != j) );\n}\n\n}",
+                        "checker_output_after_prune": false
+                    },
+                    {
+                        "num_solver_calls": 2,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant x >= 0;\n    loop invariant y >= 0;\n    loop invariant i >= x;\n    loop invariant j >= y;\n    loop invariant (i != j) ==> (y > 0);\n    loop invariant \\forall integer k; 0 <= k < i ==> k >= 0;\n    loop invariant \\forall integer k; 0 <= k < j ==> k >= 0;\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\n\nint main() {\n  \n  int i;\n  int j;\n  int x;\n  int y;\n  int z1;\n  int z2;\n  int z3;\n  \n  (i = x);\n  (j = y);\n  \n  /*@\n\n\nloop invariant i3: i >= x;\nloop invariant i4: j >= y;\n\nloop invariant i6: \\forall integer k; 0 <= k < i ==> k >= 0;\nloop invariant i7: \\forall integer k; 0 <= k < j ==> k >= 0;\n*/\nwhile ((x != 0)) {\n    {\n    (x  = (x - 1));\n    (y  = (y - 1));\n    }\n\n  }\n  \nif ( (y != 0) )\n{;\n//@ assert( (i != j) );\n}\n\n}",
+                        "checker_output_after_prune": false
+                    },
+                    {
+                        "num_solver_calls": 3,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant x >= 0;\n    loop invariant y >= 0;\n    loop invariant i == x;\n    loop invariant j == y;\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\n\nint main() {\n  \n  int i;\n  int j;\n  int x;\n  int y;\n  int z1;\n  int z2;\n  int z3;\n  \n  (i = x);\n  (j = y);\n  \n  /*@\n\n\n\n\n*/\nwhile ((x != 0)) {\n    {\n    (x  = (x - 1));\n    (y  = (y - 1));\n    }\n\n  }\n  \nif ( (y != 0) )\n{;\n//@ assert( (i != j) );\n}\n\n}",
+                        "checker_output_after_prune": false
+                    },
+                    {
+                        "num_solver_calls": 0,
+                        "success": false,
+                        "llm_output": "Pre-conditions:\n- None\n\nVariable assignments:\n- i is assigned the value of x\n- j is assigned the value of y\n\nLoop condition:\n- x != 0\n\nLoop invariants:\n- i <= x ==> j <= y\n- i >= x ==> j >= y\n- x >= 0\n- y >= 0\n\nBefore loop execution:\n- i <= x ==> j <= y\n- i >= x ==> j >= y\n- x >= 0\n- y >= 0\n\nIn every iteration of the loop:\n- i <= x ==> j <= y\n- i >= x ==> j >= y\n- x >= 0\n- y >= 0\n- (x + y) == (i + j)\n\nAfter loop termination:\n- i <= x ==> j <= y\n- i >= x ==> j >= y\n- x == 0\n- (y == 0) ==> (i == j)\n\nFinal assertion:\n- (y != 0) ==> (i != j)\n\nNote: Since there are no bounds given for x, y, i, j, we cannot add any additional constraints on them.",
+                        "error": "Output does not contain at least 1 code block"
+                    },
+                    {
+                        "num_solver_calls": 4,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant i == x;\n    loop invariant j == y;\n    loop invariant x >= 0;\n    loop invariant y >= 0;\n    \n    loop assigns x, y;\n*/\nwhile ((x != 0)) {\n    {\n        (x  = (x - 1));\n        (y  = (y - 1));\n    }\n}\n/*@ \n    loop invariant i == x;\n    loop invariant j == y;\n    loop invariant x == 0;\n    loop invariant y >= 0;\n    loop invariant (y != 0) ==> (i != j);\n*/\nif ( (y != 0) )\n{;\n    //@ assert( (i != j) );\n}",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\n\nint main() {\n  \n  int i;\n  int j;\n  int x;\n  int y;\n  int z1;\n  int z2;\n  int z3;\n  \n  (i = x);\n  (j = y);\n  \n  /*@\n\n\n\n\n\n\n*/\nwhile ((x != 0)) {\n    {\n    (x  = (x - 1));\n    (y  = (y - 1));\n    }\n\n  }\n  \nif ( (y != 0) )\n{;\n//@ assert( (i != j) );\n}\n\n}",
+                        "checker_output_after_prune": false
+                    },
+                    {
+                        "num_solver_calls": 3,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant i == \\old(x);\n    loop invariant j == \\old(y);\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\n\nint main() {\n  \n  int i;\n  int j;\n  int x;\n  int y;\n  int z1;\n  int z2;\n  int z3;\n  \n  (i = x);\n  (j = y);\n  \n  /*@\n\n\n*/\nwhile ((x != 0)) {\n    {\n    (x  = (x - 1));\n    (y  = (y - 1));\n    }\n\n  }\n  \nif ( (y != 0) )\n{;\n//@ assert( (i != j) );\n}\n\n}",
+                        "checker_output_after_prune": false
+                    },
+                    {
+                        "num_solver_calls": 3,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant x >= 0;\n    loop invariant y >= 0;\n    loop invariant i == x;\n    loop invariant j == y;\n    loop invariant (y == 0) ==> (i == j);\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\n\nint main() {\n  \n  int i;\n  int j;\n  int x;\n  int y;\n  int z1;\n  int z2;\n  int z3;\n  \n  (i = x);\n  (j = y);\n  \n  /*@\n\n\n\n\n\n*/\nwhile ((x != 0)) {\n    {\n    (x  = (x - 1));\n    (y  = (y - 1));\n    }\n\n  }\n  \nif ( (y != 0) )\n{;\n//@ assert( (i != j) );\n}\n\n}",
+                        "checker_output_after_prune": false
+                    },
+                    {
+                        "num_solver_calls": 0,
+                        "success": false,
+                        "llm_output": "Pre-conditions:\n- None\n\nVariable Assignments:\n- i is assigned the value of x\n- j is assigned the value of y\n\nLoop Condition:\n- x != 0\n\nLoop Invariants:\n- `i == x ==> j == y - x` (true before the loop execution)\n- `i <= x` (true before the loop execution)\n- `j <= y` (true before the loop execution)\n- `j >= y - x` (true before the loop execution)\n- `x >= 0` (true in every iteration of the loop)\n- `y >= 0` (true in every iteration of the loop)\n- `i <= x ==> j <= y - x` (true in every iteration of the loop)\n- `y != 0 ==> i != j` (true after the loop termination)\n\nExplanation:\n- The first invariant is true before the loop execution because if i is equal to x then j must be equal to y - x, according to the assignment of j. \n- The second invariant is true before the loop execution because i is assigned the value of x, so i can never be greater than x.\n- The third invariant is true before the loop execution because j is assigned the value of y, so j can never be greater than y.\n- The fourth invariant is true before the loop execution because if i is equal to x then j must be equal to y - x, according to the assignment of j. Therefore, j must be greater than or equal to y - x.\n- The fifth invariant is true in every iteration of the loop because x is decremented by 1 in each iteration, so it can never be negative.\n- The sixth invariant is true in every iteration of the loop because y is decremented by 1 in each iteration, so it can never be negative.\n- The seventh invariant is true in every iteration of the loop because if i is less than or equal to x then j must be less than or equal to y - x, according to the assignment of j.\n- The eighth invariant is true after the loop termination because if y is not equal to 0 then the assertion implies that i is not equal to j. \n\nNote that since none of the variables are non-deterministic at the beginning or end of the loop, we do not need to use any implications to make the invariants trivially true.",
+                        "error": "Output does not contain at least 1 code block"
+                    },
+                    {
+                        "num_solver_calls": 0,
+                        "success": false,
+                        "llm_output": "Pre-conditions:\n- None\n\nVariable assignments:\n- i is assigned the value of x.\n- j is assigned the value of y.\n\nLoop condition:\n- The loop executes while x is not equal to 0.\n\nLoop invariants:\n- Before the loop execution:\n    - None\n- In every iteration of the loop:\n    - (x >= 0) && (y >= 0)\n    - (x + y) == (i + j)\n- After the loop termination:\n    - (y == 0) ==> (i == j)\n\nExplanation:\n- Before the loop execution, there are no invariants to state.\n- In every iteration of the loop:\n    - (x >= 0) && (y >= 0) ensures that x and y are always non-negative.\n    - (x + y) == (i + j) ensures that the sum of x and y remains constant throughout the loop, since i and j are constant.\n- After the loop termination:\n    - (y == 0) ==> (i == j) ensures that if the loop terminates with y equal to 0, then i must be equal to j. This is because the loop only modifies x and y, and the sum of x and y remains constant. Therefore, if y is 0, then x must be equal to (i-j), which means that i must be equal to j.\n\nNote: Since all variables are explicitly initialized in the program, we do not need to add any assumptions about their initial values.",
+                        "error": "Output does not contain at least 1 code block"
+                    },
+                    {
+                        "num_solver_calls": 0,
+                        "success": false,
+                        "llm_output": "Pre-conditions and variable assignments:\n- The program declares and initializes seven integer variables: i, j, x, y, z1, z2, and z3.\n- The macro `assume(e)` is defined to return 0 if the expression e is false.\n- The program assigns the values of x and y to i and j respectively: `(i = x)` and `(j = y)`.\n\nLoop condition:\n- The while loop executes while x is not equal to 0: `while ((x != 0))`.\n\nLoop invariants:\n- Before the loop: \n    - None required.\n- In every iteration: \n    - `(x >= 0)`\n    - `(y >= 0)`\n    - `(i <= x)`\n    - `(j <= y)`\n    - `(i - x = j - y)`\n- After the loop:\n    - `(y = j - x) ==> (i != j)`\n\nExplanation:\n- Before the loop: No loop invariants are required before the loop because no assumptions are made about the initial values of x and y.\n- In every iteration: \n    - `(x >= 0)`: x is non-negative before each iteration.\n    - `(y >= 0)`: y is non-negative before each iteration.\n    - `(i <= x)`: i is always less than or equal to x.\n    - `(j <= y)`: j is always less than or equal to y.\n    - `(i - x = j - y)`: This is the key loop invariant. We can see that i and j are assigned the initial values of x and y, respectively. The loop decrements x and y by the same amount in each iteration. So, the difference between i and x is always equal to the difference between j and y.\n- After the loop:\n    - `(y = j - x) ==> (i != j)`: If y is equal to j minus x, then the loop invariant `(i - x = j - y)` implies that i is not equal to j. \n\nNote: We don't need to add any bounds on the variables because they are not used in any arithmetic expressions, and their values are not changed in a way that would violate the constraints specified by the loop invariants.",
+                        "error": "Output does not contain at least 1 code block"
+                    },
+                    {
+                        "num_solver_calls": 6,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant 0 <= x;\n    loop invariant x <= \\max_int;\n    loop invariant 0 <= y;\n    loop invariant y <= \\max_int;\n    loop invariant i <= \\max_int;\n    loop invariant j <= \\max_int;\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\n\nint main() {\n  \n  int i;\n  int j;\n  int x;\n  int y;\n  int z1;\n  int z2;\n  int z3;\n  \n  (i = x);\n  (j = y);\n  \n  /*@\n\n\n\n\n\n\n*/\nwhile ((x != 0)) {\n    {\n    (x  = (x - 1));\n    (y  = (y - 1));\n    }\n\n  }\n  \nif ( (y != 0) )\n{;\n//@ assert( (i != j) );\n}\n\n}",
+                        "checker_output_after_prune": false
+                    },
+                    {
+                        "num_solver_calls": 0,
+                        "success": false,
+                        "llm_output": "Pre-conditions and variable assignments:\n- The program defines a macro `assume` which takes an expression and returns 0 if the expression is false.\n- The program declares and initializes several integer variables `i`, `j`, `x`, `y`, `z1`, `z2`, `z3`. The initial values of these variables are not given, so we cannot assume anything about their values.\n\nLoop condition:\n- The while loop runs as long as `x != 0`.\n\nLoop invariants:\n- Before the loop: None. We cannot assume anything about the values of `x` and `y`.\n- In every iteration of the loop: \n    - `(x >= 0) && (y >= 0)` to ensure that `x` and `y` are always non-negative.\n    - `(x + y) == (i + j)` to ensure that the sum of `x` and `y` remains constant throughout the loop. Here, we use the initialization `(i = x)` and `(j = y)` to derive this invariant.\n    - `(x <= i) && (y <= j)` to ensure that `x` and `y` never exceed their initial values. Here, we use the initialization `(i = x)` and `(j = y)` to derive this invariant.\n- After the loop:\n    - `((x == 0) && (y == 0)) ==> (i == j)` to ensure that if the loop terminates, then `i` and `j` must be equal. We use implication here because the loop may not terminate if `x` is negative initially. We use the assertion `(y != 0)` as a guard condition for the assertion to hold.",
+                        "error": "Output does not contain at least 1 code block"
+                    },
+                    {
+                        "num_solver_calls": 0,
+                        "success": false,
+                        "llm_output": "Pre-conditions:\n- All variables are integers.\n\nVariable assignments:\n- `i` is assigned the value of `x`.\n- `j` is assigned the value of `y`.\n\nLoop condition:\n- The loop continues as long as `x` is not equal to 0.\n\nLoop invariants:\n- `i` is equal to `x`.\n- `j` is equal to `y`.\n- `y <= j`.\n- `x >= 0`.\n- `y >= 0`.\n\nExplanation:\n- The first two loop invariants are true before the loop execution.\n- The third loop invariant is true in every iteration of the loop because `y` is decremented by 1 in every iteration, so it is always less than or equal to its initial value `j`.\n- The fourth loop invariant is true in every iteration of the loop because `x` is decremented by 1 in every iteration, so it is always greater than or equal to 0.\n- The fifth loop invariant is true in every iteration of the loop because `y` is decremented by 1 in every iteration, so it is always greater than or equal to 0.\n- After the loop termination, `x` is equal to 0, so the last three loop invariants are true, which implies that `(y == j)`. Since the assertion is guarded by `y != 0`, we can use implication to get `(y != 0) ==> (i != j)`, which is equivalent to `(y == 0) || (i != j)`.",
+                        "error": "Output does not contain at least 1 code block"
+                    }
+                ]
+            },
+            {
+                "step": "Houdini for combined completion",
+                "solver_calls": 14,
+                "success": false,
+                "code_with_combined_invariants": "#define assume(e) if(!(e)) return 0;\n\nint main() {\n  \n  int i;\n  int j;\n  int x;\n  int y;\n  int z1;\n  int z2;\n  int z3;\n  \n  (i = x);\n  (j = y);\n  \n  /*@\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nloop invariant i19: i >= x;\nloop invariant i20: j >= y;\n\nloop invariant i22: \\forall integer k; 0 <= k < i ==> k >= 0;\nloop invariant i23: \\forall integer k; 0 <= k < j ==> k >= 0;\n\n\n\n\n\n\n\n\n*/\nwhile ((x != 0)) {\n    {\n    (x  = (x - 1));\n    (y  = (y - 1));\n    }\n\n  }\n  \nif ( (y != 0) )\n{;\n//@ assert( (i != j) );\n}\n\n}",
+                "checker_output": false
+            }
+        ]
+    },
+    "stats": {
+        "success": [
+            "../data/benchmarks/code2inv/1.c",
+            "../data/benchmarks/code2inv/2.c",
+            "../data/benchmarks/code2inv/9.c",
+            "../data/benchmarks/code2inv/10.c",
+            "../data/benchmarks/code2inv/12.c",
+            "../data/benchmarks/code2inv/14.c",
+            "../data/benchmarks/code2inv/15.c",
+            "../data/benchmarks/code2inv/16.c",
+            "../data/benchmarks/code2inv/17.c",
+            "../data/benchmarks/code2inv/18.c",
+            "../data/benchmarks/code2inv/19.c",
+            "../data/benchmarks/code2inv/20.c",
+            "../data/benchmarks/code2inv/25.c",
+            "../data/benchmarks/code2inv/30.c",
+            "../data/benchmarks/code2inv/35.c",
+            "../data/benchmarks/code2inv/36.c",
+            "../data/benchmarks/code2inv/38.c",
+            "../data/benchmarks/code2inv/42.c",
+            "../data/benchmarks/code2inv/46.c",
+            "../data/benchmarks/code2inv/49.c",
+            "../data/benchmarks/code2inv/53.c",
+            "../data/benchmarks/code2inv/55.c",
+            "../data/benchmarks/code2inv/56.c",
+            "../data/benchmarks/code2inv/59.c",
+            "../data/benchmarks/code2inv/70.c",
+            "../data/benchmarks/code2inv/71.c",
+            "../data/benchmarks/code2inv/77.c",
+            "../data/benchmarks/code2inv/78.c",
+            "../data/benchmarks/code2inv/79.c",
+            "../data/benchmarks/code2inv/80.c",
+            "../data/benchmarks/code2inv/81.c",
+            "../data/benchmarks/code2inv/82.c",
+            "../data/benchmarks/code2inv/87.c",
+            "../data/benchmarks/code2inv/89.c",
+            "../data/benchmarks/code2inv/90.c",
+            "../data/benchmarks/code2inv/91.c",
+            "../data/benchmarks/code2inv/92.c",
+            "../data/benchmarks/code2inv/93.c",
+            "../data/benchmarks/code2inv/94.c",
+            "../data/benchmarks/code2inv/95.c",
+            "../data/benchmarks/code2inv/96.c",
+            "../data/benchmarks/code2inv/97.c",
+            "../data/benchmarks/code2inv/98.c",
+            "../data/benchmarks/code2inv/99.c",
+            "../data/benchmarks/code2inv/100.c",
+            "../data/benchmarks/code2inv/102.c",
+            "../data/benchmarks/code2inv/104.c",
+            "../data/benchmarks/code2inv/105.c",
+            "../data/benchmarks/code2inv/108.c",
+            "../data/benchmarks/code2inv/113.c",
+            "../data/benchmarks/code2inv/114.c",
+            "../data/benchmarks/code2inv/115.c",
+            "../data/benchmarks/code2inv/116.c",
+            "../data/benchmarks/code2inv/117.c",
+            "../data/benchmarks/code2inv/119.c",
+            "../data/benchmarks/code2inv/120.c"
+        ],
+        "failure": [
+            "../data/benchmarks/code2inv/3.c",
+            "../data/benchmarks/code2inv/4.c",
+            "../data/benchmarks/code2inv/5.c",
+            "../data/benchmarks/code2inv/6.c",
+            "../data/benchmarks/code2inv/7.c",
+            "../data/benchmarks/code2inv/8.c",
+            "../data/benchmarks/code2inv/11.c",
+            "../data/benchmarks/code2inv/13.c",
+            "../data/benchmarks/code2inv/21.c",
+            "../data/benchmarks/code2inv/22.c",
+            "../data/benchmarks/code2inv/23.c",
+            "../data/benchmarks/code2inv/24.c",
+            "../data/benchmarks/code2inv/26.c",
+            "../data/benchmarks/code2inv/27.c",
+            "../data/benchmarks/code2inv/28.c",
+            "../data/benchmarks/code2inv/29.c",
+            "../data/benchmarks/code2inv/31.c",
+            "../data/benchmarks/code2inv/32.c",
+            "../data/benchmarks/code2inv/33.c",
+            "../data/benchmarks/code2inv/34.c",
+            "../data/benchmarks/code2inv/37.c",
+            "../data/benchmarks/code2inv/39.c",
+            "../data/benchmarks/code2inv/40.c",
+            "../data/benchmarks/code2inv/41.c",
+            "../data/benchmarks/code2inv/43.c",
+            "../data/benchmarks/code2inv/44.c",
+            "../data/benchmarks/code2inv/45.c",
+            "../data/benchmarks/code2inv/47.c",
+            "../data/benchmarks/code2inv/48.c",
+            "../data/benchmarks/code2inv/50.c",
+            "../data/benchmarks/code2inv/51.c",
+            "../data/benchmarks/code2inv/52.c",
+            "../data/benchmarks/code2inv/54.c",
+            "../data/benchmarks/code2inv/57.c",
+            "../data/benchmarks/code2inv/58.c",
+            "../data/benchmarks/code2inv/60.c",
+            "../data/benchmarks/code2inv/61.c",
+            "../data/benchmarks/code2inv/62.c",
+            "../data/benchmarks/code2inv/63.c",
+            "../data/benchmarks/code2inv/64.c",
+            "../data/benchmarks/code2inv/65.c",
+            "../data/benchmarks/code2inv/66.c",
+            "../data/benchmarks/code2inv/67.c",
+            "../data/benchmarks/code2inv/68.c",
+            "../data/benchmarks/code2inv/69.c",
+            "../data/benchmarks/code2inv/72.c",
+            "../data/benchmarks/code2inv/73.c",
+            "../data/benchmarks/code2inv/74.c",
+            "../data/benchmarks/code2inv/75.c",
+            "../data/benchmarks/code2inv/76.c",
+            "../data/benchmarks/code2inv/83.c",
+            "../data/benchmarks/code2inv/84.c",
+            "../data/benchmarks/code2inv/85.c",
+            "../data/benchmarks/code2inv/86.c",
+            "../data/benchmarks/code2inv/88.c",
+            "../data/benchmarks/code2inv/101.c",
+            "../data/benchmarks/code2inv/103.c",
+            "../data/benchmarks/code2inv/106.c",
+            "../data/benchmarks/code2inv/107.c",
+            "../data/benchmarks/code2inv/109.c",
+            "../data/benchmarks/code2inv/110.c",
+            "../data/benchmarks/code2inv/111.c",
+            "../data/benchmarks/code2inv/112.c",
+            "../data/benchmarks/code2inv/118.c",
+            "../data/benchmarks/code2inv/121.c",
+            "../data/benchmarks/code2inv/122.c",
+            "../data/benchmarks/code2inv/123.c",
+            "../data/benchmarks/code2inv/124.c",
+            "../data/benchmarks/code2inv/125.c",
+            "../data/benchmarks/code2inv/126.c",
+            "../data/benchmarks/code2inv/127.c"
+        ],
+        "skipped": [
+            "../data/benchmarks/code2inv/1.c",
+            "../data/benchmarks/code2inv/3.c",
+            "../data/benchmarks/code2inv/5.c",
+            "../data/benchmarks/code2inv/7.c",
+            "../data/benchmarks/code2inv/9.c",
+            "../data/benchmarks/code2inv/14.c",
+            "../data/benchmarks/code2inv/44.c",
+            "../data/benchmarks/code2inv/45.c",
+            "../data/benchmarks/code2inv/49.c",
+            "../data/benchmarks/code2inv/59.c",
+            "../data/benchmarks/code2inv/71.c",
+            "../data/benchmarks/code2inv/76.c",
+            "../data/benchmarks/code2inv/77.c",
+            "../data/benchmarks/code2inv/79.c",
+            "../data/benchmarks/code2inv/82.c",
+            "../data/benchmarks/code2inv/87.c",
+            "../data/benchmarks/code2inv/94.c",
+            "../data/benchmarks/code2inv/96.c",
+            "../data/benchmarks/code2inv/97.c",
+            "../data/benchmarks/code2inv/102.c",
+            "../data/benchmarks/code2inv/107.c",
+            "../data/benchmarks/code2inv/114.c",
+            "../data/benchmarks/code2inv/124.c"
+        ],
+        "total": 127,
+        "success_count": 56,
+        "failure_count": 71,
+        "success_rate": 0.4409448818897638
+    }
+}

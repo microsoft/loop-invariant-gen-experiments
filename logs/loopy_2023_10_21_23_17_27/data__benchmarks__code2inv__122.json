@@ -1,0 +1,447 @@
+{
+    "logs": {
+        "file": "../data/benchmarks/code2inv/122.c",
+        "benchmark_code": "#define assume(e) if(!(e)) return 0;\n\nint main() {\n  \n  int i;\n  int size;\n  int sn;\n  int v1;\n  int v2;\n  int v3;\n  \n  (sn = 0);\n  (i = 1);\n  \n  while ((i <= size)) {\n    {\n    (i  = (i + 1));\n    (sn  = (sn + 1));\n    }\n\n  }\n  \nif ( (sn != size) )\n{;\n//@ assert( (sn == 0) );\n}\n\n}",
+        "success": false,
+        "log": [
+            {
+                "step": "Prompting LLM",
+                "generating_annotation": "loop_invariants",
+                "success": true,
+                "llm_chat": [
+                    {
+                        "role": "system",
+                        "content": "You are a helpful AI software assistant that reasons about how code behaves. Given a program, you can find loop invariants, which can then be used to verify some property in the program. \nFrama-C is a software verification tool for C programs. The input to Frama-C is a C program file with ACSL (ANSI/ISO C Specification Language) annotations.\nFor the given program, find the necessary loop invariants of the while loop to help Frama-C verify the post-condition.\n\nInstructions:\n- Make a note of the pre-conditions or variable assignments in the program.\n- Analyze the loop body and make a note of the loop condition. \n- Output loop invariants that are true \n(i) before the loop execution, \n(ii) in every iteration of the loop and \n(iii) after the loop termination, \nsuch that the loop invariants imply the post condition.\n- If a loop invariant is a conjunction, split it into its parts.\n- Output all the loop invariants in one code block. For example:\n```\n/*@ \n    loop invariant i1;\n    loop invariant i2;\n*/\n```\nRules:\n- **Do not use variables or functions that are not declared in the program.** \n- **Do not make any assumptions about functions whose definitions are not given.**\n- **All undefined variables contain garbage values. Do not use variables that have garbage values.**\n- **Do not use keywords that are not supported in ACSL annotations for loops.**\n- **Variables that are not explicitly initialized, could have garbage values. Do not make any assumptions about such values.**\n- **Do not use the \\at(x, Pre) notation for any variable x.**\n- **Do not use non-deterministic function calls.**"
+                    },
+                    {
+                        "role": "user",
+                        "content": "\nConsider the following C program:\n```\n#define assume(e) if(!(e)) return 0;\n\nint main() {\n  \n  int i;\n  int size;\n  int sn;\n  int v1;\n  int v2;\n  int v3;\n  \n  (sn = 0);\n  (i = 1);\n  \n  while ((i <= size)) {\n    {\n    (i  = (i + 1));\n    (sn  = (sn + 1));\n    }\n\n  }\n  \nif ( (sn != size) )\n{;\n//@ assert( (sn == 0) );\n}\n\n}\n```\n\nYou are allowed to use implication to take care of the conditional nature of the code. Use implication (==>) instead of using if-then.\n\nFor all variables, add conjunctions that bound the maximum and minimum values that they can take, if such bounds exist.\n\nIf a variable is always equal to or smaller or larger than another variable, add a conjunction for their relation.\n\nIf the assertion is guarded by a condition, use the guard condition in an implication.\n\nIf certain variables are non-deterministic at the beginning or end of the loop, use an implication to make the invariant trivially true at that location. \n\nOutput the loop invariants for the loop in the program above. Let's think step by step."
+                    },
+                    "Pre-conditions:\n- None.\n\nVariable assignments:\n- `sn` is assigned the value `0`.\n- `i` is assigned the value `1`.\n\nLoop condition:\n- The loop executes while `i` is less than or equal to `size`.\n\nPost-condition:\n- If `sn` is not equal to `size`, then `sn` must be equal to `0`.\n\nLoop invariants:\n- `i` is greater than or equal to `1`.\n- `i` is less than or equal to `size + 1`.\n- `sn` is greater than or equal to `0`.\n- `sn` is less than or equal to `i - 1`.\n- If `i` is less than or equal to `size`, then `sn` is equal to `i - 1`.\n- If `sn` is not equal to `size`, then `sn` is equal to `0`.\n\nExplanation:\n- The first two invariants ensure that `i` is always within the range of `1` to `size + 1`.\n- The third invariant ensures that `sn` is always non-negative.\n- The fourth invariant ensures that `sn` is always less than or equal to `i - 1`.\n- The fifth invariant uses the loop condition to derive a relationship between `sn` and `i`.\n- The sixth invariant uses the post-condition to derive a relationship between `sn` and `size`.\n\nPutting it all together, the loop invariants are:\n```\n/*@ \n    loop invariant i >= 1 && i <= size + 1;\n    loop invariant sn >= 0 && sn <= i - 1;\n    loop invariant i <= size + 1 ==> sn == i - 1;\n    loop invariant sn != size ==> sn == 0;\n*/\n```",
+                    "Pre-conditions and variable assignments:\n- The program defines a macro `assume(e)` that returns 0 if the condition `e` is false.\n- The program defines variables `i`, `size`, `sn`, `v1`, `v2`, and `v3`.\n- The program assigns `0` to `sn`.\n- The program assigns `1` to `i`.\n\nLoop condition:\n- The loop executes while `i` is less than or equal to `size`.\n\nLoop invariants:\n- Before the loop: \n    - `sn == 0`\n    - `i >= 1`\n    - `size >= 0`\n- In every iteration of the loop:\n    - `i > 0`\n    - `i <= size + 1`\n    - `sn == i - 1`\n- After the loop:\n    - `sn == size` implies `i == size + 1`\n\nExplanation:\n- Before the loop, we know that `sn` should be `0`, `i` should be greater than or equal to `1`, and `size` should be greater than or equal to `0`.\n- In every iteration of the loop, we know that `i` should be greater than `0` (because we increment it by `1` at the end of each iteration) and less than or equal to `size + 1` (because we exit the loop when `i` is greater than `size`). We also know that `sn` should be equal to `i - 1` (because we increment it by `1` at the end of each iteration).\n- After the loop, we know that if `sn` is equal to `size`, then `i` must be equal to `size + 1` (because we exit the loop when `i` is greater than `size`). Therefore, we can add an implication that if `sn` is equal to `size`, then `i` must be equal to `size + 1`.",
+                    "Pre-conditions:\n- None.\n\nVariable assignments:\n- `sn` is assigned the value `0`.\n- `i` is assigned the value `1`.\n\nLoop condition:\n- The loop executes while `i` is less than or equal to `size`.\n\nPost-condition:\n- If `sn` is not equal to `size`, then `sn` must be equal to `0`.\n\nLoop invariants:\n- Since `size` is not initialized, we cannot make any assumptions about its value. Therefore, we cannot bound the maximum or minimum values that `i` can take. However, we can assume that `i` is always positive, so we can add the following loop invariant:\n```\n/*@ loop invariant i > 0; */\n```\n- Since `sn` is assigned the value `0` at the beginning of the program, we can add the following loop invariant:\n```\n/*@ loop invariant sn >= 0; */\n```\n- Since `i` is incremented by `1` in each iteration of the loop, we can assume that `i` is always less than or equal to `size + 1` after the loop terminates. Therefore, we can add the following loop invariant:\n```\n/*@ loop invariant i <= size + 1; */\n```\n- Since `sn` is incremented by `1` in each iteration of the loop, we can assume that `sn` is always less than or equal to `i - 1`. Therefore, we can add the following loop invariant:\n```\n/*@ loop invariant sn <= i - 1; */\n```\n- Finally, we need to ensure that the post-condition is satisfied. Since the assertion is guarded by the condition `(sn != size)`, we can use an implication to make the invariant trivially true when `sn` is equal to `size`. Therefore, we can add the following loop invariant:\n```\n/*@ loop invariant (sn == size) || (sn == 0); */\n```\n\nPutting it all together, the loop invariants are:\n```\n/*@ \n    loop invariant i > 0;\n    loop invariant sn >= 0;\n    loop invariant i <= size + 1;\n    loop invariant sn <= i - 1;\n    loop invariant (sn == size) || (sn == 0);\n*/\n```",
+                    "Pre-conditions:\n- None.\n\nVariable assignments:\n- `sn` is assigned the value 0.\n- `i` is assigned the value 1.\n\nLoop condition:\n- The loop will execute as long as `i` is less than or equal to `size`.\n\nLoop invariants:\n- Since `sn` is initialized to 0 before the loop, we can add the invariant `(sn == 0)` before the loop.\n- Since `i` is initialized to 1 before the loop, we can add the invariant `(i >= 1)` before the loop.\n- Since the loop executes as long as `i` is less than or equal to `size`, we can add the invariant `(i <= size + 1)` at the beginning of each iteration of the loop.\n- Since `i` is incremented by 1 at the end of each iteration, we can add the invariant `(i >= 1)` at the end of each iteration of the loop.\n- Since `sn` is incremented by 1 at the end of each iteration, we can add the invariant `(sn >= 0)` at the end of each iteration of the loop.\n- Since the loop terminates when `i` becomes greater than `size`, we can add the invariant `((i == size + 1) ==> (sn == size))` after the loop.\n\nPutting it all together, the loop invariants are:\n```\n/*@ \n    loop invariant (sn == 0);\n    loop invariant (i >= 1);\n    loop invariant (i <= size + 1);\n    loop invariant (i >= 1);\n    loop invariant (sn >= 0);\n*/\nwhile ((i <= size)) {\n    {\n    (i  = (i + 1));\n    (sn  = (sn + 1));\n    }\n\n}\n/*@ \n    loop invariant ((i == size + 1) ==> (sn == size));\n*/\n\nif ( (sn != size) )\n{;\n//@ assert( (sn == 0) );\n}\n```",
+                    "Pre-conditions/Variable Assignments:\n- The variables `size`, `v1`, `v2`, `v3` are not initialized and could have garbage values.\n- The macro `assume(e)` is defined to return 0 if the expression `e` is false.\n\nLoop Condition:\n- The loop executes while `i` is less than or equal to `size`.\n\nLoop Invariants:\n- `i` is always greater than or equal to 1 and less than or equal to `size + 1`. `(1 <= i <= size + 1)`\n- `sn` is always greater than or equal to 0 and less than or equal to `size`. `(0 <= sn <= size)`\n- In each iteration of the loop, `i` is incremented by 1 and `sn` is incremented by 1. `(i' == i + 1 && sn' == sn + 1)`\n- After the loop terminates, `(sn == i - 1)`. This is because `i` is incremented in each iteration of the loop, so when the loop terminates, `i` is equal to `size + 1`, which means that `sn` is equal to `size`. However, the final assignment to `sn` in the loop body is `sn = sn + 1`, so `sn` is actually equal to `size + 1`. Therefore, the correct post-condition is `(sn == i - 1)`. `(sn == i - 1) ==> (sn == 0)`\n\nPutting all the loop invariants together, we get:\n```\n/*@ \n    loop invariant 1 <= i <= size + 1;\n    loop invariant 0 <= sn <= size;\n    loop invariant i' == i + 1 && sn' == sn + 1;\n    loop assigns i, sn;\n    loop variant size - i + 1;\n*/\n\nwhile ((i <= size)) {\n    {\n    (i  = (i + 1));\n    (sn  = (sn + 1));\n    }\n\n}\n\n//@ assert (sn == i - 1) ==> (sn == 0);\n```\nNote that we also added the `loop assigns` clause and `loop variant` clause to complete the loop annotation. The `loop assigns` clause specifies which variables are modified inside the loop, and the `loop variant` clause specifies a decreasing expression that is used to prove termination of the loop. In this case, the decreasing expression is `size - i + 1`, which decreases by 1 in each iteration of the loop until it reaches 0.",
+                    "Pre-conditions:\n- None\n\nVariable assignments:\n- `sn = 0`\n- `i = 1`\n\nLoop condition:\n- `i <= size`\n\nPost-condition:\n- `sn == size` implies `sn == 0`\n\nLoop invariants:\n- `i >= 1`: `i` is initialized to 1 and is incremented by 1 in each iteration of the loop. So, `i` is always greater than or equal to 1.\n- `i <= size + 1`: `i` is incremented by 1 in each iteration of the loop and the loop continues until `i` becomes greater than `size`. So, at the end of the loop, `i` is equal to `size + 1` and hence, `i` is always less than or equal to `size + 1`.\n- `sn >= 0`: `sn` is initialized to 0 and incremented by 1 in each iteration of the loop. So, `sn` is always greater than or equal to 0.\n- `(sn + i - 1) == (i - 1)`: This is true before the loop execution since `sn` is initially 0 and `i` is initially 1. This is true in every iteration of the loop since `sn` is incremented by 1 and `i` is incremented by 1. This is also true after the loop termination since the loop continues until `i` becomes greater than `size` and at that point, `sn` is equal to `size`. Therefore, `(sn + i - 1) == (i - 1)` holds throughout the loop execution.\n- `(sn == size) ==> (sn == 0)`: The assertion is guarded by the condition `sn != size`. Therefore, we need to use implication to take care of the conditional nature of the code. If `sn == size`, then the loop has terminated and `(sn == 0)` must hold. So, `(sn == size) ==> (sn == 0)` is a valid loop invariant. \n\nPutting all the loop invariants together, we get:\n```\n/*@\n  loop invariant i >= 1;\n  loop invariant i <= size + 1;\n  loop invariant sn >= 0;\n  loop invariant (sn + i - 1) == (i - 1);\n  loop invariant (sn == size) ==> (sn == 0);\n*/\n```",
+                    "Pre-conditions:\n- None.\n\nVariable assignments:\n- `sn = 0`: initializes `sn` to 0.\n- `i = 1`: initializes `i` to 1.\n\nLoop condition:\n- `(i <= size)`: the loop continues as long as `i` is less than or equal to `size`.\n\nPost-condition:\n- `(sn == 0)`: `sn` should be equal to 0 after the loop terminates.\n\nLoop Invariants:\n- Before the loop execution, `sn` is equal to 0 and `i` is equal to 1. `size` is non-negative.\n```\n/*@ \n    loop invariant sn == 0 && i == 1 && size >= 0;\n*/\n```\n- In every iteration of the loop, `i` is incremented by 1 and `sn` is incremented by 1.\n```\n/*@ \n    loop invariant i > 0 && size >= 0 && sn >= 0 && sn <= i-1;\n    loop invariant sn == i-1;\n*/\n```\n- After the loop termination, `i` is greater than `size` and `sn` is equal to `size`.\n```\n/*@ \n    loop invariant size >= 0;\n    loop invariant sn == i-1;\n    loop invariant i > size ==> sn == size;\n*/\n```\n- Since there are no preconditions for the program, we don't need to worry about non-deterministic variables.",
+                    "Pre-conditions:\n- None\n\nVariable Assignments:\n- `sn = 0`\n- `i = 1`\n\nLoop Condition:\n- `i <= size`\n\nPost-condition:\n- `(sn == 0)`\n\nLoop Invariants:\n- `0 <= i <= size+1`\n- `0 <= sn <= i-1`\n- `(sn == i-1) ==> (i > size)`\n- `(sn != size) ==> (sn <= i-1)`\n\nExplanation:\n- The first loop invariant ensures that `i` stays within the bounds `[1, size]` during the loop execution.\n- The second loop invariant ensures that `sn` stays within the bounds `[0, i-1]` during the loop execution.\n- The third loop invariant ensures that if `sn` is equal to `i-1`, then `i` must be greater than `size`, which is the loop termination condition.\n- The fourth loop invariant ensures that if `sn` is not equal to `size`, then `sn` must be less than or equal to `i-1`, which means that `sn` is always less than or equal to the number of times the loop has executed so far.\n- Since there are no non-deterministic variables, we don't need to add any implications to make the loop invariants trivially true at any location.\n- Finally, we use implication to take care of the conditional nature of the code in the post-condition. If `sn` is not equal to `size`, then the assertion `(sn == 0)` must be true.",
+                    "Pre-conditions:\n- None.\n\nVariable assignments:\n- `sn` is assigned the value `0`.\n- `i` is assigned the value `1`.\n\nLoop condition:\n- The loop continues as long as `i` is less than or equal to `size`.\n\nLoop invariants:\n- Before the loop execution, `sn` is equal to `0` and `i` is equal to `1`. (`sn == 0 && i == 1`)\n- In every iteration of the loop, `i` is greater than or equal to `1` and less than or equal to `size + 1`, and `sn` is equal to `i - 1`. (`1 <= i <= size + 1 && sn == i - 1`)\n- After the loop termination, `i` is equal to `size + 1` and `sn` is equal to `size`. (`i == size + 1 && sn == size`)\n\nExplanation:\n- Before the loop starts, the value of `sn` is set to `0` and the value of `i` is set to `1`. This is the starting point of the loop.\n- In every iteration of the loop, `i` is incremented by `1` and `sn` is incremented by `1`. Therefore, `i` is always greater than or equal to `1` and less than or equal to `size + 1`, and `sn` is always equal to `i - 1`.\n- After the loop termination, the value of `i` is equal to `size + 1` and the value of `sn` is equal to `size`, which means that the loop has executed `size` times and `sn` has been incremented `size` times. This implies that the loop has correctly executed `size` times, which is the required post-condition.\n- We don't have any additional information about the variables `size`, `v1`, `v2`, and `v3`, so we don't include any additional conditions for them. \n- The assertion is guarded by the condition `sn != size`, so we include this condition in the implication. If `sn` is not equal to `size`, then the assertion should hold. Otherwise, if `sn` is equal to `size`, then the implication is vacuously true, since the assertion is already true in this case. Therefore, the loop invariants imply the post-condition.",
+                    "Pre-conditions:\n- None.\n\nVariable Assignments:\n- `i` is assigned the value of `1`.\n- `sn` is assigned the value of `0`.\n\nLoop Condition:\n- `i` is less than or equal to `size`.\n\nPost-condition:\n- If `sn` is not equal to `size`, then `sn` must be equal to `0`.\n\nLoop Invariants:\n- `1 <= i <= size + 1` (since `i` is incremented by `1` in each iteration and the loop terminates when `i > size`).\n- `0 <= sn <= i - 1` (since `sn` is incremented by `1` in each iteration).\n- `i == size + 1 ==> sn == size` (since `sn` is incremented by `1` in each iteration and the loop terminates when `i > size`).\n\nPutting it all together:\n```\n/*@ \n    loop invariant 1 <= i <= size + 1;\n    loop invariant 0 <= sn <= i - 1;\n    loop invariant i == size + 1 ==> sn == size;\n*/\n```",
+                    "Pre-conditions and variable assignments:\n- The program does not have any pre-conditions.\n- The program declares and assigns initial values to the following variables:\n  - `i`, `sn`: initialized to `1`, `0` respectively.\n  - `size`, `v1`, `v2`, `v3`: declared but not initialized.\n\nLoop condition:\n- The loop will continue as long as `i` is less than or equal to `size`.\n\nLoop invariants:\n- Before the loop execution:\n  - `sn == 0`\n  - `i >= 1`\n  - `size >= 0`\n  - `v1` is any integer value\n  - `v2` is any integer value\n  - `v3` is any integer value\n- In every iteration of the loop:\n  - `i >= 1`\n  - `i <= size + 1`\n  - `sn == i - 1`\n  - `v1` is any integer value\n  - `v2` is any integer value\n  - `v3` is any integer value\n- After the loop termination:\n  - `sn == size ==> i == size + 1`\n  - `sn != size ==> sn == 0`\n  - `i >= 1`\n  - `size >= 0`\n  - `v1` is any integer value\n  - `v2` is any integer value\n  - `v3` is any integer value\n\nExplanation:\n- Before the loop starts, `sn` should be initialized to `0`. Also, `i` should be greater than or equal to `1` and `size` should be greater than or equal to `0`. As `v1`, `v2`, and `v3` are not used in the program, any integer value is acceptable for them.\n- In every iteration, `i` should be greater than or equal to `1` and less than or equal to `size + 1`. At the start of every iteration, `sn` should be equal to `i - 1` as `sn` accumulates the sum of numbers from `1` to `i-1` inclusive. `v1`, `v2`, and `v3` are not used in the loop, so they can take any value.\n- After the loop ends, if `sn` is equal to `size`, then `i` should be equal to `size + 1` because the loop condition `i <= size` should fail and the loop should terminate. If `sn` is not equal to `size`, then it means the loop condition `i <= size` never failed, hence `i` should be equal to `size + 1`. Also, `sn` should be equal to `0` in this case because the loop accumulated the sum of numbers from `1` to `size`. `v1`, `v2`, and `v3` are not used after the loop, so they can take any value.",
+                    "Pre-conditions and variable assignments:\n- The program defines a macro `assume` which takes a boolean expression and returns 0 if the expression is false.\n- The program defines several integer variables: `i`, `size`, `sn`, `v1`, `v2`, and `v3`.\n- `sn` and `i` are assigned the value 0 and 1 respectively.\n- There is a loop that iterates while `i <= size`.\n\nLoop condition:\n- The loop iterates while `i <= size`.\n\nLoop invariants:\n- Before the loop: \n    - `i >= 1`\n    - `sn == 0`\n    - `size >= 0`\n\n- In every iteration:\n    - `i >= 1`\n    - `i <= size + 1`\n    - `sn == i - 1`\n    - `size >= 0`\n    \n- After the loop:\n    - `i == size + 1`\n    - `sn == size`\n    - `size >= 0`\n    - `(sn != size) ==> (sn == 0)` (Implication used to take care of the conditional nature of the code.)\n\nExplanation:\n- Before the loop, we know that `i` is initialized to 1, so it must be greater than or equal to 1. `sn` is initialized to 0, so it must be equal to 0. `size` is not initialized, so we can't make any assumption about its value except that it must be non-negative.\n- In every iteration, we know that `i` is incremented by 1, so it must be less than or equal to `size + 1`. `sn` is incremented by 1 in every iteration, so it must be equal to `i - 1`. `size` remains non-negative.\n- After the loop, we know that `i` has been incremented to `size + 1`, so it must be equal to `size + 1`. `sn` has been incremented `size` times, so it must be equal to `size`. `size` remains non-negative.\n- The assertion is guarded by the condition `(sn != size)`. If this condition is false, then the assertion is trivially true. If it is true, then we know that `sn` must be 0, since it has been incremented `size` times and is not equal to `size`. So we add an implication to take care of this case.",
+                    "Pre-conditions:\n- None\n\nVariable assignments:\n- `sn = 0`\n- `i = 1`\n\nLoop condition:\n- `i <= size`\n\nPost-condition:\n- If `sn` is not equal to `size`, then `sn` must be equal to 0.\n\nLoop invariants:\n- `i >= 1`\n- `sn >= 0`\n- `i <= size + 1`\n- `sn <= i - 1`\n- `((sn == 0) ==> (i == size + 1))`\n\nExplanation:\n- `i >= 1`: The variable `i` starts from 1 and is incremented by 1 in each iteration. Hence, `i` is always greater than or equal to 1.\n- `sn >= 0`: The variable `sn` is initialized to 0 and incremented by 1 in each iteration. Hence, `sn` is always greater than or equal to 0.\n- `i <= size + 1`: The loop terminates when `i` becomes greater than `size`. Therefore, `i` must be less than or equal to `size + 1` after the loop terminates.\n- `sn <= i - 1`: In each iteration, `sn` is incremented by 1. Therefore, at any point during the loop execution, `sn` must be less than or equal to `i - 1`.\n- `((sn == 0) ==> (i == size + 1))`: If `sn` is equal to 0, then the loop must have executed `size` times because `sn` is incremented by 1 in each iteration. Therefore, `i` must be equal to `size + 1` after the loop terminates. \n\nThe conjunction of these loop invariants is:\n```\n/*@ \n    loop invariant i >= 1;\n    loop invariant sn >= 0;\n    loop invariant i <= size + 1;\n    loop invariant sn <= i - 1;\n    loop invariant (sn == 0) ==> (i == size + 1);\n*/\n```",
+                    "Pre-conditions:\n- None\n\nVariable assignments:\n- `sn` is assigned `0`\n- `i` is assigned `1`\n\nLoop condition:\n- `i <= size`\n\nLoop invariants:\n- `sn >= 0`\n- `i >= 1`\n- `i <= size + 1`\n- `sn <= i - 1`\n- `sn == i - 1 ==> i > size`\n- `sn != size ==> i <= size + 1`\n- `sn == size ==> i == size + 1`\n\nExplanation:\n- `sn >= 0`: `sn` must always be non-negative.\n- `i >= 1`: `i` must always be greater than or equal to 1.\n- `i <= size + 1`: `i` must always be less than or equal to `size + 1`, since it is incremented by 1 in each iteration of the loop.\n- `sn <= i - 1`: `sn` must always be less than or equal to `i - 1`, since `sn` is incremented by 1 in each iteration of the loop.\n- `sn == i - 1 ==> i > size`: if `sn == i - 1`, then `i` must be greater than `size`. This is because the loop condition is `i <= size`, so if `i` is equal to `size`, the loop will terminate, and `sn` will be equal to `size - 1`. Therefore, if `sn` is equal to `i - 1`, then `i` must be greater than `size`.\n- `sn != size ==> i <= size + 1`: if `sn` is not equal to `size`, then `i` must be less than or equal to `size + 1`. This is because the loop condition is `i <= size`, so if `i` is equal to `size + 1`, the loop will terminate, and `sn` will be equal to `size`. Therefore, if `sn` is not equal to `size`, then `i` must be less than or equal to `size + 1`.\n- `sn == size ==> i == size + 1`: if `sn` is equal to `size`, then `i` must be equal to `size + 1`. This is because the loop condition is `i <= size`, so if `i` is equal to `size + 1`, the loop will terminate, and `sn` will be equal to `size`.\n\nThe post-condition is `sn == 0` if `sn != size`. This can be expressed as an implication: `sn != size ==> sn == 0`. Therefore, the final loop invariant is:\n- `(sn != size ==> sn == 0)`.\n\nPutting all the loop invariants together, we get:\n```\n/*@\n  loop invariant sn >= 0;\n  loop invariant i >= 1;\n  loop invariant i <= size + 1;\n  loop invariant sn <= i - 1;\n  loop invariant sn == i - 1 ==> i > size;\n  loop invariant sn != size ==> i <= size + 1;\n  loop invariant sn == size ==> i == size + 1;\n  loop invariant (sn != size ==> sn == 0);\n*/\n```",
+                    "Pre-conditions:\n- None\n\nVariable assignments:\n- `sn` is assigned 0.\n- `i` is assigned 1.\n\nLoop condition:\n- `i <= size`\n\nLoop invariants:\n- `i >= 1`\n- `i <= size + 1`\n- `sn >= 0`\n- `sn <= i - 1`\n- If `sn == size`, then `i == size + 1`\n- If `sn != size`, then `sn == 0`\n\nExplanation:\n- `i` is initialized to 1, so it is greater than or equal to 1.\n- In each iteration of the loop, `i` is incremented by 1. So `i` is always less than or equal to `size + 1` at the end of each iteration.\n- `sn` is initialized to 0, so it is greater than or equal to 0.\n- In each iteration of the loop, `sn` is incremented by 1. So `sn` is always less than or equal to `i - 1` at the end of each iteration.\n- If `sn` is equal to `size`, then the loop has executed `size` times, so `i` must be `size + 1`.\n- If `sn` is not equal to `size`, then the loop has not executed `size` times, so `sn` must be 0 at the end of the loop.\n\nPost-condition:\n- If `sn` is not equal to `size`, then assert that `sn` is equal to 0.\n\nLoop invariant implication:\n- Before loop execution, all loop invariants are true since `i=1` and `sn=0`.\n- In every iteration of the loop, all loop invariants remain true:\n    - `i` is incremented by 1, so the first two invariants remain true.\n    - `sn` is incremented by 1, so the third and fourth invariants remain true.\n    - The last two invariants remain true as well.\n- After the loop termination, all loop invariants hold:\n    - Since the loop terminates when `i > size`, the first invariant holds.\n    - Since `sn <= i - 1` at the end of each iteration, and the loop terminates when `i > size`, we have that `sn <= size`.\n    - If `sn == size`, then `i == size + 1`, so the second invariant holds.\n    - If `sn != size`, then `sn == 0`, so the last invariant holds.\n    - Therefore, all the loop invariants imply the post-condition. \n\nLoop invariants:\n```\n/*@ \n    loop invariant i >= 1;\n    loop invariant i <= size + 1;\n    loop invariant sn >= 0;\n    loop invariant sn <= i - 1;\n    loop invariant (sn == size) ==> (i == size + 1);\n    loop invariant (sn != size) ==> (sn == 0);\n*/\n```"
+                ],
+                "output": [
+                    "/*@ \n    loop invariant i >= 1 && i <= size + 1;\n    loop invariant sn >= 0 && sn <= i - 1;\n    loop invariant i <= size + 1 ==> sn == i - 1;\n    loop invariant sn != size ==> sn == 0;\n*/",
+                    [
+                        "ERROR: Output does not contain at least 1 complete code block",
+                        "Pre-conditions and variable assignments:\n- The program defines a macro `assume(e)` that returns 0 if the condition `e` is false.\n- The program defines variables `i`, `size`, `sn`, `v1`, `v2`, and `v3`.\n- The program assigns `0` to `sn`.\n- The program assigns `1` to `i`.\n\nLoop condition:\n- The loop executes while `i` is less than or equal to `size`.\n\nLoop invariants:\n- Before the loop: \n    - `sn == 0`\n    - `i >= 1`\n    - `size >= 0`\n- In every iteration of the loop:\n    - `i > 0`\n    - `i <= size + 1`\n    - `sn == i - 1`\n- After the loop:\n    - `sn == size` implies `i == size + 1`\n\nExplanation:\n- Before the loop, we know that `sn` should be `0`, `i` should be greater than or equal to `1`, and `size` should be greater than or equal to `0`.\n- In every iteration of the loop, we know that `i` should be greater than `0` (because we increment it by `1` at the end of each iteration) and less than or equal to `size + 1` (because we exit the loop when `i` is greater than `size`). We also know that `sn` should be equal to `i - 1` (because we increment it by `1` at the end of each iteration).\n- After the loop, we know that if `sn` is equal to `size`, then `i` must be equal to `size + 1` (because we exit the loop when `i` is greater than `size`). Therefore, we can add an implication that if `sn` is equal to `size`, then `i` must be equal to `size + 1`."
+                    ],
+                    "/*@ loop invariant i > 0; */",
+                    "/*@ \n    loop invariant (sn == 0);\n    loop invariant (i >= 1);\n    loop invariant (i <= size + 1);\n    loop invariant (i >= 1);\n    loop invariant (sn >= 0);\n*/\nwhile ((i <= size)) {\n    {\n    (i  = (i + 1));\n    (sn  = (sn + 1));\n    }\n\n}\n/*@ \n    loop invariant ((i == size + 1) ==> (sn == size));\n*/\n\nif ( (sn != size) )\n{;\n//@ assert( (sn == 0) );\n}",
+                    "/*@ \n    loop invariant 1 <= i <= size + 1;\n    loop invariant 0 <= sn <= size;\n    loop invariant i' == i + 1 && sn' == sn + 1;\n    loop assigns i, sn;\n    loop variant size - i + 1;\n*/\n\nwhile ((i <= size)) {\n    {\n    (i  = (i + 1));\n    (sn  = (sn + 1));\n    }\n\n}\n\n//@ assert (sn == i - 1) ==> (sn == 0);",
+                    "/*@\n  loop invariant i >= 1;\n  loop invariant i <= size + 1;\n  loop invariant sn >= 0;\n  loop invariant (sn + i - 1) == (i - 1);\n  loop invariant (sn == size) ==> (sn == 0);\n*/",
+                    "/*@ \n    loop invariant sn == 0 && i == 1 && size >= 0;\n*/",
+                    [
+                        "ERROR: Output does not contain at least 1 complete code block",
+                        "Pre-conditions:\n- None\n\nVariable Assignments:\n- `sn = 0`\n- `i = 1`\n\nLoop Condition:\n- `i <= size`\n\nPost-condition:\n- `(sn == 0)`\n\nLoop Invariants:\n- `0 <= i <= size+1`\n- `0 <= sn <= i-1`\n- `(sn == i-1) ==> (i > size)`\n- `(sn != size) ==> (sn <= i-1)`\n\nExplanation:\n- The first loop invariant ensures that `i` stays within the bounds `[1, size]` during the loop execution.\n- The second loop invariant ensures that `sn` stays within the bounds `[0, i-1]` during the loop execution.\n- The third loop invariant ensures that if `sn` is equal to `i-1`, then `i` must be greater than `size`, which is the loop termination condition.\n- The fourth loop invariant ensures that if `sn` is not equal to `size`, then `sn` must be less than or equal to `i-1`, which means that `sn` is always less than or equal to the number of times the loop has executed so far.\n- Since there are no non-deterministic variables, we don't need to add any implications to make the loop invariants trivially true at any location.\n- Finally, we use implication to take care of the conditional nature of the code in the post-condition. If `sn` is not equal to `size`, then the assertion `(sn == 0)` must be true."
+                    ],
+                    [
+                        "ERROR: Output does not contain at least 1 complete code block",
+                        "Pre-conditions:\n- None.\n\nVariable assignments:\n- `sn` is assigned the value `0`.\n- `i` is assigned the value `1`.\n\nLoop condition:\n- The loop continues as long as `i` is less than or equal to `size`.\n\nLoop invariants:\n- Before the loop execution, `sn` is equal to `0` and `i` is equal to `1`. (`sn == 0 && i == 1`)\n- In every iteration of the loop, `i` is greater than or equal to `1` and less than or equal to `size + 1`, and `sn` is equal to `i - 1`. (`1 <= i <= size + 1 && sn == i - 1`)\n- After the loop termination, `i` is equal to `size + 1` and `sn` is equal to `size`. (`i == size + 1 && sn == size`)\n\nExplanation:\n- Before the loop starts, the value of `sn` is set to `0` and the value of `i` is set to `1`. This is the starting point of the loop.\n- In every iteration of the loop, `i` is incremented by `1` and `sn` is incremented by `1`. Therefore, `i` is always greater than or equal to `1` and less than or equal to `size + 1`, and `sn` is always equal to `i - 1`.\n- After the loop termination, the value of `i` is equal to `size + 1` and the value of `sn` is equal to `size`, which means that the loop has executed `size` times and `sn` has been incremented `size` times. This implies that the loop has correctly executed `size` times, which is the required post-condition.\n- We don't have any additional information about the variables `size`, `v1`, `v2`, and `v3`, so we don't include any additional conditions for them. \n- The assertion is guarded by the condition `sn != size`, so we include this condition in the implication. If `sn` is not equal to `size`, then the assertion should hold. Otherwise, if `sn` is equal to `size`, then the implication is vacuously true, since the assertion is already true in this case. Therefore, the loop invariants imply the post-condition."
+                    ],
+                    "/*@ \n    loop invariant 1 <= i <= size + 1;\n    loop invariant 0 <= sn <= i - 1;\n    loop invariant i == size + 1 ==> sn == size;\n*/",
+                    [
+                        "ERROR: Output does not contain at least 1 complete code block",
+                        "Pre-conditions and variable assignments:\n- The program does not have any pre-conditions.\n- The program declares and assigns initial values to the following variables:\n  - `i`, `sn`: initialized to `1`, `0` respectively.\n  - `size`, `v1`, `v2`, `v3`: declared but not initialized.\n\nLoop condition:\n- The loop will continue as long as `i` is less than or equal to `size`.\n\nLoop invariants:\n- Before the loop execution:\n  - `sn == 0`\n  - `i >= 1`\n  - `size >= 0`\n  - `v1` is any integer value\n  - `v2` is any integer value\n  - `v3` is any integer value\n- In every iteration of the loop:\n  - `i >= 1`\n  - `i <= size + 1`\n  - `sn == i - 1`\n  - `v1` is any integer value\n  - `v2` is any integer value\n  - `v3` is any integer value\n- After the loop termination:\n  - `sn == size ==> i == size + 1`\n  - `sn != size ==> sn == 0`\n  - `i >= 1`\n  - `size >= 0`\n  - `v1` is any integer value\n  - `v2` is any integer value\n  - `v3` is any integer value\n\nExplanation:\n- Before the loop starts, `sn` should be initialized to `0`. Also, `i` should be greater than or equal to `1` and `size` should be greater than or equal to `0`. As `v1`, `v2`, and `v3` are not used in the program, any integer value is acceptable for them.\n- In every iteration, `i` should be greater than or equal to `1` and less than or equal to `size + 1`. At the start of every iteration, `sn` should be equal to `i - 1` as `sn` accumulates the sum of numbers from `1` to `i-1` inclusive. `v1`, `v2`, and `v3` are not used in the loop, so they can take any value.\n- After the loop ends, if `sn` is equal to `size`, then `i` should be equal to `size + 1` because the loop condition `i <= size` should fail and the loop should terminate. If `sn` is not equal to `size`, then it means the loop condition `i <= size` never failed, hence `i` should be equal to `size + 1`. Also, `sn` should be equal to `0` in this case because the loop accumulated the sum of numbers from `1` to `size`. `v1`, `v2`, and `v3` are not used after the loop, so they can take any value."
+                    ],
+                    [
+                        "ERROR: Output does not contain at least 1 complete code block",
+                        "Pre-conditions and variable assignments:\n- The program defines a macro `assume` which takes a boolean expression and returns 0 if the expression is false.\n- The program defines several integer variables: `i`, `size`, `sn`, `v1`, `v2`, and `v3`.\n- `sn` and `i` are assigned the value 0 and 1 respectively.\n- There is a loop that iterates while `i <= size`.\n\nLoop condition:\n- The loop iterates while `i <= size`.\n\nLoop invariants:\n- Before the loop: \n    - `i >= 1`\n    - `sn == 0`\n    - `size >= 0`\n\n- In every iteration:\n    - `i >= 1`\n    - `i <= size + 1`\n    - `sn == i - 1`\n    - `size >= 0`\n    \n- After the loop:\n    - `i == size + 1`\n    - `sn == size`\n    - `size >= 0`\n    - `(sn != size) ==> (sn == 0)` (Implication used to take care of the conditional nature of the code.)\n\nExplanation:\n- Before the loop, we know that `i` is initialized to 1, so it must be greater than or equal to 1. `sn` is initialized to 0, so it must be equal to 0. `size` is not initialized, so we can't make any assumption about its value except that it must be non-negative.\n- In every iteration, we know that `i` is incremented by 1, so it must be less than or equal to `size + 1`. `sn` is incremented by 1 in every iteration, so it must be equal to `i - 1`. `size` remains non-negative.\n- After the loop, we know that `i` has been incremented to `size + 1`, so it must be equal to `size + 1`. `sn` has been incremented `size` times, so it must be equal to `size`. `size` remains non-negative.\n- The assertion is guarded by the condition `(sn != size)`. If this condition is false, then the assertion is trivially true. If it is true, then we know that `sn` must be 0, since it has been incremented `size` times and is not equal to `size`. So we add an implication to take care of this case."
+                    ],
+                    "/*@ \n    loop invariant i >= 1;\n    loop invariant sn >= 0;\n    loop invariant i <= size + 1;\n    loop invariant sn <= i - 1;\n    loop invariant (sn == 0) ==> (i == size + 1);\n*/",
+                    "/*@\n  loop invariant sn >= 0;\n  loop invariant i >= 1;\n  loop invariant i <= size + 1;\n  loop invariant sn <= i - 1;\n  loop invariant sn == i - 1 ==> i > size;\n  loop invariant sn != size ==> i <= size + 1;\n  loop invariant sn == size ==> i == size + 1;\n  loop invariant (sn != size ==> sn == 0);\n*/",
+                    "/*@ \n    loop invariant i >= 1;\n    loop invariant i <= size + 1;\n    loop invariant sn >= 0;\n    loop invariant sn <= i - 1;\n    loop invariant (sn == size) ==> (i == size + 1);\n    loop invariant (sn != size) ==> (sn == 0);\n*/"
+                ]
+            },
+            {
+                "step": "Checking individual completion",
+                "solver_calls": 10,
+                "completions": [
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant i >= 1 && i <= size + 1;\n    loop invariant sn >= 0 && sn <= i - 1;\n    loop invariant i <= size + 1 ==> sn == i - 1;\n    loop invariant sn != size ==> sn == 0;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant i >= 1 && i <= size + 1 is preserved but not established.\nloop invariant sn >= 0 && sn <= i - 1 is inductive.\nloop invariant i <= size + 1 ==> sn == i - 1 is inductive.\nloop invariant sn != size ==> sn == 0 is established but not preserved.\nAssertion sn == 0: Partially proven\n"
+                    },
+                    {
+                        "num_solver_calls": 0,
+                        "success": false,
+                        "llm_output": "Pre-conditions and variable assignments:\n- The program defines a macro `assume(e)` that returns 0 if the condition `e` is false.\n- The program defines variables `i`, `size`, `sn`, `v1`, `v2`, and `v3`.\n- The program assigns `0` to `sn`.\n- The program assigns `1` to `i`.\n\nLoop condition:\n- The loop executes while `i` is less than or equal to `size`.\n\nLoop invariants:\n- Before the loop: \n    - `sn == 0`\n    - `i >= 1`\n    - `size >= 0`\n- In every iteration of the loop:\n    - `i > 0`\n    - `i <= size + 1`\n    - `sn == i - 1`\n- After the loop:\n    - `sn == size` implies `i == size + 1`\n\nExplanation:\n- Before the loop, we know that `sn` should be `0`, `i` should be greater than or equal to `1`, and `size` should be greater than or equal to `0`.\n- In every iteration of the loop, we know that `i` should be greater than `0` (because we increment it by `1` at the end of each iteration) and less than or equal to `size + 1` (because we exit the loop when `i` is greater than `size`). We also know that `sn` should be equal to `i - 1` (because we increment it by `1` at the end of each iteration).\n- After the loop, we know that if `sn` is equal to `size`, then `i` must be equal to `size + 1` (because we exit the loop when `i` is greater than `size`). Therefore, we can add an implication that if `sn` is equal to `size`, then `i` must be equal to `size + 1`.",
+                        "error": "Output does not contain at least 1 code block"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ loop invariant i > 0; */",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant i > 0 is inductive.\nAssertion sn == 0: Unproven\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant (sn == 0);\n    loop invariant (i >= 1);\n    loop invariant (i <= size + 1);\n    loop invariant (i >= 1);\n    loop invariant (sn >= 0);\n*/\nwhile ((i <= size)) {\n    {\n    (i  = (i + 1));\n    (sn  = (sn + 1));\n    }\n\n}\n/*@ \n    loop invariant ((i == size + 1) ==> (sn == size));\n*/\n\nif ( (sn != size) )\n{;\n//@ assert( (sn == 0) );\n}",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant (sn == 0) is established but not preserved.\nloop invariant (i >= 1) is inductive.\nloop invariant (i <= size + 1) is preserved but not established.\nloop invariant (i >= 1) is inductive.\nloop invariant (sn >= 0) is inductive.\nloop invariant ((i == size + 1) ==> (sn == size)) is inductive.\nAssertion sn == 0: Partially proven\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant 1 <= i <= size + 1;\n    loop invariant 0 <= sn <= size;\n    loop invariant i' == i + 1 && sn' == sn + 1;\n    loop assigns i, sn;\n    loop variant size - i + 1;\n*/\n\nwhile ((i <= size)) {\n    {\n    (i  = (i + 1));\n    (sn  = (sn + 1));\n    }\n\n}\n\n//@ assert (sn == i - 1) ==> (sn == 0);",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "No invariants found."
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@\n  loop invariant i >= 1;\n  loop invariant i <= size + 1;\n  loop invariant sn >= 0;\n  loop invariant (sn + i - 1) == (i - 1);\n  loop invariant (sn == size) ==> (sn == 0);\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant i >= 1 is inductive.\nloop invariant i <= size + 1 is preserved but not established.\nloop invariant sn >= 0 is inductive.\nloop invariant (sn + i - 1) == (i - 1) is established but not preserved.\nloop invariant (sn == size) ==> (sn == 0) is inductive.\nAssertion sn == 0: Partially proven\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant sn == 0 && i == 1 && size >= 0;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant sn == 0 && i == 1 && size >= 0 is neither established nor preserved.\nAssertion sn == 0: Partially proven\n"
+                    },
+                    {
+                        "num_solver_calls": 0,
+                        "success": false,
+                        "llm_output": "Pre-conditions:\n- None\n\nVariable Assignments:\n- `sn = 0`\n- `i = 1`\n\nLoop Condition:\n- `i <= size`\n\nPost-condition:\n- `(sn == 0)`\n\nLoop Invariants:\n- `0 <= i <= size+1`\n- `0 <= sn <= i-1`\n- `(sn == i-1) ==> (i > size)`\n- `(sn != size) ==> (sn <= i-1)`\n\nExplanation:\n- The first loop invariant ensures that `i` stays within the bounds `[1, size]` during the loop execution.\n- The second loop invariant ensures that `sn` stays within the bounds `[0, i-1]` during the loop execution.\n- The third loop invariant ensures that if `sn` is equal to `i-1`, then `i` must be greater than `size`, which is the loop termination condition.\n- The fourth loop invariant ensures that if `sn` is not equal to `size`, then `sn` must be less than or equal to `i-1`, which means that `sn` is always less than or equal to the number of times the loop has executed so far.\n- Since there are no non-deterministic variables, we don't need to add any implications to make the loop invariants trivially true at any location.\n- Finally, we use implication to take care of the conditional nature of the code in the post-condition. If `sn` is not equal to `size`, then the assertion `(sn == 0)` must be true.",
+                        "error": "Output does not contain at least 1 code block"
+                    },
+                    {
+                        "num_solver_calls": 0,
+                        "success": false,
+                        "llm_output": "Pre-conditions:\n- None.\n\nVariable assignments:\n- `sn` is assigned the value `0`.\n- `i` is assigned the value `1`.\n\nLoop condition:\n- The loop continues as long as `i` is less than or equal to `size`.\n\nLoop invariants:\n- Before the loop execution, `sn` is equal to `0` and `i` is equal to `1`. (`sn == 0 && i == 1`)\n- In every iteration of the loop, `i` is greater than or equal to `1` and less than or equal to `size + 1`, and `sn` is equal to `i - 1`. (`1 <= i <= size + 1 && sn == i - 1`)\n- After the loop termination, `i` is equal to `size + 1` and `sn` is equal to `size`. (`i == size + 1 && sn == size`)\n\nExplanation:\n- Before the loop starts, the value of `sn` is set to `0` and the value of `i` is set to `1`. This is the starting point of the loop.\n- In every iteration of the loop, `i` is incremented by `1` and `sn` is incremented by `1`. Therefore, `i` is always greater than or equal to `1` and less than or equal to `size + 1`, and `sn` is always equal to `i - 1`.\n- After the loop termination, the value of `i` is equal to `size + 1` and the value of `sn` is equal to `size`, which means that the loop has executed `size` times and `sn` has been incremented `size` times. This implies that the loop has correctly executed `size` times, which is the required post-condition.\n- We don't have any additional information about the variables `size`, `v1`, `v2`, and `v3`, so we don't include any additional conditions for them. \n- The assertion is guarded by the condition `sn != size`, so we include this condition in the implication. If `sn` is not equal to `size`, then the assertion should hold. Otherwise, if `sn` is equal to `size`, then the implication is vacuously true, since the assertion is already true in this case. Therefore, the loop invariants imply the post-condition.",
+                        "error": "Output does not contain at least 1 code block"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant 1 <= i <= size + 1;\n    loop invariant 0 <= sn <= i - 1;\n    loop invariant i == size + 1 ==> sn == size;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant 1 <= i <= size + 1 is preserved but not established.\nloop invariant 0 <= sn <= i - 1 is inductive.\nloop invariant i == size + 1 ==> sn == size is established but not preserved.\nAssertion sn == 0: Partially proven\n"
+                    },
+                    {
+                        "num_solver_calls": 0,
+                        "success": false,
+                        "llm_output": "Pre-conditions and variable assignments:\n- The program does not have any pre-conditions.\n- The program declares and assigns initial values to the following variables:\n  - `i`, `sn`: initialized to `1`, `0` respectively.\n  - `size`, `v1`, `v2`, `v3`: declared but not initialized.\n\nLoop condition:\n- The loop will continue as long as `i` is less than or equal to `size`.\n\nLoop invariants:\n- Before the loop execution:\n  - `sn == 0`\n  - `i >= 1`\n  - `size >= 0`\n  - `v1` is any integer value\n  - `v2` is any integer value\n  - `v3` is any integer value\n- In every iteration of the loop:\n  - `i >= 1`\n  - `i <= size + 1`\n  - `sn == i - 1`\n  - `v1` is any integer value\n  - `v2` is any integer value\n  - `v3` is any integer value\n- After the loop termination:\n  - `sn == size ==> i == size + 1`\n  - `sn != size ==> sn == 0`\n  - `i >= 1`\n  - `size >= 0`\n  - `v1` is any integer value\n  - `v2` is any integer value\n  - `v3` is any integer value\n\nExplanation:\n- Before the loop starts, `sn` should be initialized to `0`. Also, `i` should be greater than or equal to `1` and `size` should be greater than or equal to `0`. As `v1`, `v2`, and `v3` are not used in the program, any integer value is acceptable for them.\n- In every iteration, `i` should be greater than or equal to `1` and less than or equal to `size + 1`. At the start of every iteration, `sn` should be equal to `i - 1` as `sn` accumulates the sum of numbers from `1` to `i-1` inclusive. `v1`, `v2`, and `v3` are not used in the loop, so they can take any value.\n- After the loop ends, if `sn` is equal to `size`, then `i` should be equal to `size + 1` because the loop condition `i <= size` should fail and the loop should terminate. If `sn` is not equal to `size`, then it means the loop condition `i <= size` never failed, hence `i` should be equal to `size + 1`. Also, `sn` should be equal to `0` in this case because the loop accumulated the sum of numbers from `1` to `size`. `v1`, `v2`, and `v3` are not used after the loop, so they can take any value.",
+                        "error": "Output does not contain at least 1 code block"
+                    },
+                    {
+                        "num_solver_calls": 0,
+                        "success": false,
+                        "llm_output": "Pre-conditions and variable assignments:\n- The program defines a macro `assume` which takes a boolean expression and returns 0 if the expression is false.\n- The program defines several integer variables: `i`, `size`, `sn`, `v1`, `v2`, and `v3`.\n- `sn` and `i` are assigned the value 0 and 1 respectively.\n- There is a loop that iterates while `i <= size`.\n\nLoop condition:\n- The loop iterates while `i <= size`.\n\nLoop invariants:\n- Before the loop: \n    - `i >= 1`\n    - `sn == 0`\n    - `size >= 0`\n\n- In every iteration:\n    - `i >= 1`\n    - `i <= size + 1`\n    - `sn == i - 1`\n    - `size >= 0`\n    \n- After the loop:\n    - `i == size + 1`\n    - `sn == size`\n    - `size >= 0`\n    - `(sn != size) ==> (sn == 0)` (Implication used to take care of the conditional nature of the code.)\n\nExplanation:\n- Before the loop, we know that `i` is initialized to 1, so it must be greater than or equal to 1. `sn` is initialized to 0, so it must be equal to 0. `size` is not initialized, so we can't make any assumption about its value except that it must be non-negative.\n- In every iteration, we know that `i` is incremented by 1, so it must be less than or equal to `size + 1`. `sn` is incremented by 1 in every iteration, so it must be equal to `i - 1`. `size` remains non-negative.\n- After the loop, we know that `i` has been incremented to `size + 1`, so it must be equal to `size + 1`. `sn` has been incremented `size` times, so it must be equal to `size`. `size` remains non-negative.\n- The assertion is guarded by the condition `(sn != size)`. If this condition is false, then the assertion is trivially true. If it is true, then we know that `sn` must be 0, since it has been incremented `size` times and is not equal to `size`. So we add an implication to take care of this case.",
+                        "error": "Output does not contain at least 1 code block"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant i >= 1;\n    loop invariant sn >= 0;\n    loop invariant i <= size + 1;\n    loop invariant sn <= i - 1;\n    loop invariant (sn == 0) ==> (i == size + 1);\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant i >= 1 is inductive.\nloop invariant sn >= 0 is inductive.\nloop invariant i <= size + 1 is preserved but not established.\nloop invariant sn <= i - 1 is inductive.\nloop invariant (sn == 0) ==> (i == size + 1) is preserved but not established.\nAssertion sn == 0: Unproven\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@\n  loop invariant sn >= 0;\n  loop invariant i >= 1;\n  loop invariant i <= size + 1;\n  loop invariant sn <= i - 1;\n  loop invariant sn == i - 1 ==> i > size;\n  loop invariant sn != size ==> i <= size + 1;\n  loop invariant sn == size ==> i == size + 1;\n  loop invariant (sn != size ==> sn == 0);\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant sn >= 0 is inductive.\nloop invariant i >= 1 is inductive.\nloop invariant i <= size + 1 is preserved but not established.\nloop invariant sn <= i - 1 is inductive.\nloop invariant sn == i - 1 ==> i > size is preserved but not established.\nloop invariant sn != size ==> i <= size + 1 is inductive.\nloop invariant sn == size ==> i == size + 1 is inductive.\nloop invariant (sn != size ==> sn == 0) is established but not preserved.\nAssertion sn == 0: Partially proven\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant i >= 1;\n    loop invariant i <= size + 1;\n    loop invariant sn >= 0;\n    loop invariant sn <= i - 1;\n    loop invariant (sn == size) ==> (i == size + 1);\n    loop invariant (sn != size) ==> (sn == 0);\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant i >= 1 is inductive.\nloop invariant i <= size + 1 is preserved but not established.\nloop invariant sn >= 0 is inductive.\nloop invariant sn <= i - 1 is inductive.\nloop invariant (sn == size) ==> (i == size + 1) is inductive.\nloop invariant (sn != size) ==> (sn == 0) is established but not preserved.\nAssertion sn == 0: Partially proven\n"
+                    }
+                ],
+                "success": false
+            },
+            {
+                "step": "Houdini for individual completion",
+                "success": false,
+                "completions": [
+                    {
+                        "num_solver_calls": 2,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant i >= 1 && i <= size + 1;\n    loop invariant sn >= 0 && sn <= i - 1;\n    loop invariant i <= size + 1 ==> sn == i - 1;\n    loop invariant sn != size ==> sn == 0;\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\n\nint main() {\n  \n  int i;\n  int size;\n  int sn;\n  int v1;\n  int v2;\n  int v3;\n  \n  (sn = 0);\n  (i = 1);\n  \n  /*@\n\nloop invariant i2: sn >= 0 && sn <= i - 1;\nloop invariant i3: i <= size + 1 ==> sn == i - 1;\n\n*/\nwhile ((i <= size)) {\n    {\n    (i  = (i + 1));\n    (sn  = (sn + 1));\n    }\n\n  }\n  \nif ( (sn != size) )\n{;\n//@ assert( (sn == 0) );\n}\n\n}",
+                        "checker_output_after_prune": false
+                    },
+                    {
+                        "num_solver_calls": 0,
+                        "success": false,
+                        "llm_output": "Pre-conditions and variable assignments:\n- The program defines a macro `assume(e)` that returns 0 if the condition `e` is false.\n- The program defines variables `i`, `size`, `sn`, `v1`, `v2`, and `v3`.\n- The program assigns `0` to `sn`.\n- The program assigns `1` to `i`.\n\nLoop condition:\n- The loop executes while `i` is less than or equal to `size`.\n\nLoop invariants:\n- Before the loop: \n    - `sn == 0`\n    - `i >= 1`\n    - `size >= 0`\n- In every iteration of the loop:\n    - `i > 0`\n    - `i <= size + 1`\n    - `sn == i - 1`\n- After the loop:\n    - `sn == size` implies `i == size + 1`\n\nExplanation:\n- Before the loop, we know that `sn` should be `0`, `i` should be greater than or equal to `1`, and `size` should be greater than or equal to `0`.\n- In every iteration of the loop, we know that `i` should be greater than `0` (because we increment it by `1` at the end of each iteration) and less than or equal to `size + 1` (because we exit the loop when `i` is greater than `size`). We also know that `sn` should be equal to `i - 1` (because we increment it by `1` at the end of each iteration).\n- After the loop, we know that if `sn` is equal to `size`, then `i` must be equal to `size + 1` (because we exit the loop when `i` is greater than `size`). Therefore, we can add an implication that if `sn` is equal to `size`, then `i` must be equal to `size + 1`.",
+                        "error": "Output does not contain at least 1 code block"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ loop invariant i > 0; */",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\n\nint main() {\n  \n  int i;\n  int size;\n  int sn;\n  int v1;\n  int v2;\n  int v3;\n  \n  (sn = 0);\n  (i = 1);\n  \n  /*@\nloop invariant i1: i > 0;\n*/\nwhile ((i <= size)) {\n    {\n    (i  = (i + 1));\n    (sn  = (sn + 1));\n    }\n\n  }\n  \nif ( (sn != size) )\n{;\n//@ assert( (sn == 0) );\n}\n\n}",
+                        "checker_output_after_prune": false
+                    },
+                    {
+                        "num_solver_calls": 3,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant (sn == 0);\n    loop invariant (i >= 1);\n    loop invariant (i <= size + 1);\n    loop invariant (i >= 1);\n    loop invariant (sn >= 0);\n*/\nwhile ((i <= size)) {\n    {\n    (i  = (i + 1));\n    (sn  = (sn + 1));\n    }\n\n}\n/*@ \n    loop invariant ((i == size + 1) ==> (sn == size));\n*/\n\nif ( (sn != size) )\n{;\n//@ assert( (sn == 0) );\n}",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\n\nint main() {\n  \n  int i;\n  int size;\n  int sn;\n  int v1;\n  int v2;\n  int v3;\n  \n  (sn = 0);\n  (i = 1);\n  \n  /*@\n\nloop invariant i2: (i >= 1);\n\nloop invariant i5: (sn >= 0);\n\n*/\nwhile ((i <= size)) {\n    {\n    (i  = (i + 1));\n    (sn  = (sn + 1));\n    }\n\n  }\n  \nif ( (sn != size) )\n{;\n//@ assert( (sn == 0) );\n}\n\n}",
+                        "checker_output_after_prune": false
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant 1 <= i <= size + 1;\n    loop invariant 0 <= sn <= size;\n    loop invariant i' == i + 1 && sn' == sn + 1;\n    loop assigns i, sn;\n    loop variant size - i + 1;\n*/\n\nwhile ((i <= size)) {\n    {\n    (i  = (i + 1));\n    (sn  = (sn + 1));\n    }\n\n}\n\n//@ assert (sn == i - 1) ==> (sn == 0);",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\n\nint main() {\n  \n  int i;\n  int size;\n  int sn;\n  int v1;\n  int v2;\n  int v3;\n  \n  (sn = 0);\n  (i = 1);\n  \n  /*@\nloop invariant i1: 1 <= i <= size + 1;\nloop invariant i2: 0 <= sn <= size;\nloop invariant i3: i' == i + 1 && sn' == sn + 1;\n*/\nwhile ((i <= size)) {\n    {\n    (i  = (i + 1));\n    (sn  = (sn + 1));\n    }\n\n  }\n  \nif ( (sn != size) )\n{;\n//@ assert( (sn == 0) );\n}\n\n}",
+                        "checker_output_after_prune": false
+                    },
+                    {
+                        "num_solver_calls": 3,
+                        "success": false,
+                        "invariants": "/*@\n  loop invariant i >= 1;\n  loop invariant i <= size + 1;\n  loop invariant sn >= 0;\n  loop invariant (sn + i - 1) == (i - 1);\n  loop invariant (sn == size) ==> (sn == 0);\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\n\nint main() {\n  \n  int i;\n  int size;\n  int sn;\n  int v1;\n  int v2;\n  int v3;\n  \n  (sn = 0);\n  (i = 1);\n  \n  /*@\nloop invariant i1: i >= 1;\n\nloop invariant i3: sn >= 0;\n\n\n*/\nwhile ((i <= size)) {\n    {\n    (i  = (i + 1));\n    (sn  = (sn + 1));\n    }\n\n  }\n  \nif ( (sn != size) )\n{;\n//@ assert( (sn == 0) );\n}\n\n}",
+                        "checker_output_after_prune": false
+                    },
+                    {
+                        "num_solver_calls": 2,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant sn == 0 && i == 1 && size >= 0;\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\n\nint main() {\n  \n  int i;\n  int size;\n  int sn;\n  int v1;\n  int v2;\n  int v3;\n  \n  (sn = 0);\n  (i = 1);\n  \n  /*@\n\n*/\nwhile ((i <= size)) {\n    {\n    (i  = (i + 1));\n    (sn  = (sn + 1));\n    }\n\n  }\n  \nif ( (sn != size) )\n{;\n//@ assert( (sn == 0) );\n}\n\n}",
+                        "checker_output_after_prune": false
+                    },
+                    {
+                        "num_solver_calls": 0,
+                        "success": false,
+                        "llm_output": "Pre-conditions:\n- None\n\nVariable Assignments:\n- `sn = 0`\n- `i = 1`\n\nLoop Condition:\n- `i <= size`\n\nPost-condition:\n- `(sn == 0)`\n\nLoop Invariants:\n- `0 <= i <= size+1`\n- `0 <= sn <= i-1`\n- `(sn == i-1) ==> (i > size)`\n- `(sn != size) ==> (sn <= i-1)`\n\nExplanation:\n- The first loop invariant ensures that `i` stays within the bounds `[1, size]` during the loop execution.\n- The second loop invariant ensures that `sn` stays within the bounds `[0, i-1]` during the loop execution.\n- The third loop invariant ensures that if `sn` is equal to `i-1`, then `i` must be greater than `size`, which is the loop termination condition.\n- The fourth loop invariant ensures that if `sn` is not equal to `size`, then `sn` must be less than or equal to `i-1`, which means that `sn` is always less than or equal to the number of times the loop has executed so far.\n- Since there are no non-deterministic variables, we don't need to add any implications to make the loop invariants trivially true at any location.\n- Finally, we use implication to take care of the conditional nature of the code in the post-condition. If `sn` is not equal to `size`, then the assertion `(sn == 0)` must be true.",
+                        "error": "Output does not contain at least 1 code block"
+                    },
+                    {
+                        "num_solver_calls": 0,
+                        "success": false,
+                        "llm_output": "Pre-conditions:\n- None.\n\nVariable assignments:\n- `sn` is assigned the value `0`.\n- `i` is assigned the value `1`.\n\nLoop condition:\n- The loop continues as long as `i` is less than or equal to `size`.\n\nLoop invariants:\n- Before the loop execution, `sn` is equal to `0` and `i` is equal to `1`. (`sn == 0 && i == 1`)\n- In every iteration of the loop, `i` is greater than or equal to `1` and less than or equal to `size + 1`, and `sn` is equal to `i - 1`. (`1 <= i <= size + 1 && sn == i - 1`)\n- After the loop termination, `i` is equal to `size + 1` and `sn` is equal to `size`. (`i == size + 1 && sn == size`)\n\nExplanation:\n- Before the loop starts, the value of `sn` is set to `0` and the value of `i` is set to `1`. This is the starting point of the loop.\n- In every iteration of the loop, `i` is incremented by `1` and `sn` is incremented by `1`. Therefore, `i` is always greater than or equal to `1` and less than or equal to `size + 1`, and `sn` is always equal to `i - 1`.\n- After the loop termination, the value of `i` is equal to `size + 1` and the value of `sn` is equal to `size`, which means that the loop has executed `size` times and `sn` has been incremented `size` times. This implies that the loop has correctly executed `size` times, which is the required post-condition.\n- We don't have any additional information about the variables `size`, `v1`, `v2`, and `v3`, so we don't include any additional conditions for them. \n- The assertion is guarded by the condition `sn != size`, so we include this condition in the implication. If `sn` is not equal to `size`, then the assertion should hold. Otherwise, if `sn` is equal to `size`, then the implication is vacuously true, since the assertion is already true in this case. Therefore, the loop invariants imply the post-condition.",
+                        "error": "Output does not contain at least 1 code block"
+                    },
+                    {
+                        "num_solver_calls": 2,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant 1 <= i <= size + 1;\n    loop invariant 0 <= sn <= i - 1;\n    loop invariant i == size + 1 ==> sn == size;\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\n\nint main() {\n  \n  int i;\n  int size;\n  int sn;\n  int v1;\n  int v2;\n  int v3;\n  \n  (sn = 0);\n  (i = 1);\n  \n  /*@\n\nloop invariant i2: 0 <= sn <= i - 1;\n\n*/\nwhile ((i <= size)) {\n    {\n    (i  = (i + 1));\n    (sn  = (sn + 1));\n    }\n\n  }\n  \nif ( (sn != size) )\n{;\n//@ assert( (sn == 0) );\n}\n\n}",
+                        "checker_output_after_prune": false
+                    },
+                    {
+                        "num_solver_calls": 0,
+                        "success": false,
+                        "llm_output": "Pre-conditions and variable assignments:\n- The program does not have any pre-conditions.\n- The program declares and assigns initial values to the following variables:\n  - `i`, `sn`: initialized to `1`, `0` respectively.\n  - `size`, `v1`, `v2`, `v3`: declared but not initialized.\n\nLoop condition:\n- The loop will continue as long as `i` is less than or equal to `size`.\n\nLoop invariants:\n- Before the loop execution:\n  - `sn == 0`\n  - `i >= 1`\n  - `size >= 0`\n  - `v1` is any integer value\n  - `v2` is any integer value\n  - `v3` is any integer value\n- In every iteration of the loop:\n  - `i >= 1`\n  - `i <= size + 1`\n  - `sn == i - 1`\n  - `v1` is any integer value\n  - `v2` is any integer value\n  - `v3` is any integer value\n- After the loop termination:\n  - `sn == size ==> i == size + 1`\n  - `sn != size ==> sn == 0`\n  - `i >= 1`\n  - `size >= 0`\n  - `v1` is any integer value\n  - `v2` is any integer value\n  - `v3` is any integer value\n\nExplanation:\n- Before the loop starts, `sn` should be initialized to `0`. Also, `i` should be greater than or equal to `1` and `size` should be greater than or equal to `0`. As `v1`, `v2`, and `v3` are not used in the program, any integer value is acceptable for them.\n- In every iteration, `i` should be greater than or equal to `1` and less than or equal to `size + 1`. At the start of every iteration, `sn` should be equal to `i - 1` as `sn` accumulates the sum of numbers from `1` to `i-1` inclusive. `v1`, `v2`, and `v3` are not used in the loop, so they can take any value.\n- After the loop ends, if `sn` is equal to `size`, then `i` should be equal to `size + 1` because the loop condition `i <= size` should fail and the loop should terminate. If `sn` is not equal to `size`, then it means the loop condition `i <= size` never failed, hence `i` should be equal to `size + 1`. Also, `sn` should be equal to `0` in this case because the loop accumulated the sum of numbers from `1` to `size`. `v1`, `v2`, and `v3` are not used after the loop, so they can take any value.",
+                        "error": "Output does not contain at least 1 code block"
+                    },
+                    {
+                        "num_solver_calls": 0,
+                        "success": false,
+                        "llm_output": "Pre-conditions and variable assignments:\n- The program defines a macro `assume` which takes a boolean expression and returns 0 if the expression is false.\n- The program defines several integer variables: `i`, `size`, `sn`, `v1`, `v2`, and `v3`.\n- `sn` and `i` are assigned the value 0 and 1 respectively.\n- There is a loop that iterates while `i <= size`.\n\nLoop condition:\n- The loop iterates while `i <= size`.\n\nLoop invariants:\n- Before the loop: \n    - `i >= 1`\n    - `sn == 0`\n    - `size >= 0`\n\n- In every iteration:\n    - `i >= 1`\n    - `i <= size + 1`\n    - `sn == i - 1`\n    - `size >= 0`\n    \n- After the loop:\n    - `i == size + 1`\n    - `sn == size`\n    - `size >= 0`\n    - `(sn != size) ==> (sn == 0)` (Implication used to take care of the conditional nature of the code.)\n\nExplanation:\n- Before the loop, we know that `i` is initialized to 1, so it must be greater than or equal to 1. `sn` is initialized to 0, so it must be equal to 0. `size` is not initialized, so we can't make any assumption about its value except that it must be non-negative.\n- In every iteration, we know that `i` is incremented by 1, so it must be less than or equal to `size + 1`. `sn` is incremented by 1 in every iteration, so it must be equal to `i - 1`. `size` remains non-negative.\n- After the loop, we know that `i` has been incremented to `size + 1`, so it must be equal to `size + 1`. `sn` has been incremented `size` times, so it must be equal to `size`. `size` remains non-negative.\n- The assertion is guarded by the condition `(sn != size)`. If this condition is false, then the assertion is trivially true. If it is true, then we know that `sn` must be 0, since it has been incremented `size` times and is not equal to `size`. So we add an implication to take care of this case.",
+                        "error": "Output does not contain at least 1 code block"
+                    },
+                    {
+                        "num_solver_calls": 2,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant i >= 1;\n    loop invariant sn >= 0;\n    loop invariant i <= size + 1;\n    loop invariant sn <= i - 1;\n    loop invariant (sn == 0) ==> (i == size + 1);\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\n\nint main() {\n  \n  int i;\n  int size;\n  int sn;\n  int v1;\n  int v2;\n  int v3;\n  \n  (sn = 0);\n  (i = 1);\n  \n  /*@\nloop invariant i1: i >= 1;\nloop invariant i2: sn >= 0;\n\nloop invariant i4: sn <= i - 1;\n\n*/\nwhile ((i <= size)) {\n    {\n    (i  = (i + 1));\n    (sn  = (sn + 1));\n    }\n\n  }\n  \nif ( (sn != size) )\n{;\n//@ assert( (sn == 0) );\n}\n\n}",
+                        "checker_output_after_prune": false
+                    },
+                    {
+                        "num_solver_calls": 2,
+                        "success": false,
+                        "invariants": "/*@\n  loop invariant sn >= 0;\n  loop invariant i >= 1;\n  loop invariant i <= size + 1;\n  loop invariant sn <= i - 1;\n  loop invariant sn == i - 1 ==> i > size;\n  loop invariant sn != size ==> i <= size + 1;\n  loop invariant sn == size ==> i == size + 1;\n  loop invariant (sn != size ==> sn == 0);\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\n\nint main() {\n  \n  int i;\n  int size;\n  int sn;\n  int v1;\n  int v2;\n  int v3;\n  \n  (sn = 0);\n  (i = 1);\n  \n  /*@\nloop invariant i1: sn >= 0;\nloop invariant i2: i >= 1;\n\nloop invariant i4: sn <= i - 1;\n\n\nloop invariant i7: sn == size ==> i == size + 1;\n\n*/\nwhile ((i <= size)) {\n    {\n    (i  = (i + 1));\n    (sn  = (sn + 1));\n    }\n\n  }\n  \nif ( (sn != size) )\n{;\n//@ assert( (sn == 0) );\n}\n\n}",
+                        "checker_output_after_prune": false
+                    },
+                    {
+                        "num_solver_calls": 2,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant i >= 1;\n    loop invariant i <= size + 1;\n    loop invariant sn >= 0;\n    loop invariant sn <= i - 1;\n    loop invariant (sn == size) ==> (i == size + 1);\n    loop invariant (sn != size) ==> (sn == 0);\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\n\nint main() {\n  \n  int i;\n  int size;\n  int sn;\n  int v1;\n  int v2;\n  int v3;\n  \n  (sn = 0);\n  (i = 1);\n  \n  /*@\nloop invariant i1: i >= 1;\n\nloop invariant i3: sn >= 0;\nloop invariant i4: sn <= i - 1;\nloop invariant i5: (sn == size) ==> (i == size + 1);\n\n*/\nwhile ((i <= size)) {\n    {\n    (i  = (i + 1));\n    (sn  = (sn + 1));\n    }\n\n  }\n  \nif ( (sn != size) )\n{;\n//@ assert( (sn == 0) );\n}\n\n}",
+                        "checker_output_after_prune": false
+                    }
+                ]
+            },
+            {
+                "step": "Houdini for combined completion",
+                "solver_calls": 1,
+                "success": false,
+                "code_with_combined_invariants": "#define assume(e) if(!(e)) return 0;\n\nint main() {\n  \n  int i;\n  int size;\n  int sn;\n  int v1;\n  int v2;\n  int v3;\n  \n  (sn = 0);\n  (i = 1);\n  \n  /*@\nloop invariant i1: i >= 1 && i <= size + 1;\nloop invariant i2: sn >= 0 && sn <= i - 1;\nloop invariant i3: i <= size + 1 ==> sn == i - 1;\nloop invariant i4: sn != size ==> sn == 0;\nloop invariant i5: i > 0;\nloop invariant i6: (sn == 0);\nloop invariant i7: (i >= 1);\nloop invariant i8: (i <= size + 1);\nloop invariant i10: (sn >= 0);\nloop invariant i11: ((i == size + 1) ==> (sn == size));\nloop invariant i12: 1 <= i <= size + 1;\nloop invariant i13: 0 <= sn <= size;\nloop invariant i14: i' == i + 1 && sn' == sn + 1;\nloop invariant i15: i >= 1;\nloop invariant i16: i <= size + 1;\nloop invariant i17: sn >= 0;\nloop invariant i18: (sn + i - 1) == (i - 1);\nloop invariant i19: (sn == size) ==> (sn == 0);\nloop invariant i20: sn == 0 && i == 1 && size >= 0;\nloop invariant i22: 0 <= sn <= i - 1;\nloop invariant i23: i == size + 1 ==> sn == size;\nloop invariant i27: sn <= i - 1;\nloop invariant i28: (sn == 0) ==> (i == size + 1);\nloop invariant i33: sn == i - 1 ==> i > size;\nloop invariant i34: sn != size ==> i <= size + 1;\nloop invariant i35: sn == size ==> i == size + 1;\nloop invariant i36: (sn != size ==> sn == 0);\nloop invariant i41: (sn == size) ==> (i == size + 1);\nloop invariant i42: (sn != size) ==> (sn == 0);\n*/\nwhile ((i <= size)) {\n    {\n    (i  = (i + 1));\n    (sn  = (sn + 1));\n    }\n\n  }\n  \nif ( (sn != size) )\n{;\n//@ assert( (sn == 0) );\n}\n\n}",
+                "checker_output": false
+            }
+        ]
+    },
+    "stats": {
+        "success": [
+            "../data/benchmarks/code2inv/1.c",
+            "../data/benchmarks/code2inv/2.c",
+            "../data/benchmarks/code2inv/9.c",
+            "../data/benchmarks/code2inv/10.c",
+            "../data/benchmarks/code2inv/12.c",
+            "../data/benchmarks/code2inv/14.c",
+            "../data/benchmarks/code2inv/15.c",
+            "../data/benchmarks/code2inv/16.c",
+            "../data/benchmarks/code2inv/17.c",
+            "../data/benchmarks/code2inv/18.c",
+            "../data/benchmarks/code2inv/19.c",
+            "../data/benchmarks/code2inv/20.c",
+            "../data/benchmarks/code2inv/25.c",
+            "../data/benchmarks/code2inv/30.c",
+            "../data/benchmarks/code2inv/35.c",
+            "../data/benchmarks/code2inv/36.c",
+            "../data/benchmarks/code2inv/38.c",
+            "../data/benchmarks/code2inv/42.c",
+            "../data/benchmarks/code2inv/46.c",
+            "../data/benchmarks/code2inv/49.c",
+            "../data/benchmarks/code2inv/53.c",
+            "../data/benchmarks/code2inv/55.c",
+            "../data/benchmarks/code2inv/56.c",
+            "../data/benchmarks/code2inv/59.c",
+            "../data/benchmarks/code2inv/70.c",
+            "../data/benchmarks/code2inv/71.c",
+            "../data/benchmarks/code2inv/77.c",
+            "../data/benchmarks/code2inv/78.c",
+            "../data/benchmarks/code2inv/79.c",
+            "../data/benchmarks/code2inv/80.c",
+            "../data/benchmarks/code2inv/81.c",
+            "../data/benchmarks/code2inv/82.c",
+            "../data/benchmarks/code2inv/87.c",
+            "../data/benchmarks/code2inv/89.c",
+            "../data/benchmarks/code2inv/90.c",
+            "../data/benchmarks/code2inv/91.c",
+            "../data/benchmarks/code2inv/92.c",
+            "../data/benchmarks/code2inv/93.c",
+            "../data/benchmarks/code2inv/94.c",
+            "../data/benchmarks/code2inv/95.c",
+            "../data/benchmarks/code2inv/96.c",
+            "../data/benchmarks/code2inv/97.c",
+            "../data/benchmarks/code2inv/98.c",
+            "../data/benchmarks/code2inv/99.c",
+            "../data/benchmarks/code2inv/100.c",
+            "../data/benchmarks/code2inv/102.c",
+            "../data/benchmarks/code2inv/104.c",
+            "../data/benchmarks/code2inv/105.c",
+            "../data/benchmarks/code2inv/108.c",
+            "../data/benchmarks/code2inv/113.c",
+            "../data/benchmarks/code2inv/114.c",
+            "../data/benchmarks/code2inv/115.c",
+            "../data/benchmarks/code2inv/116.c",
+            "../data/benchmarks/code2inv/117.c",
+            "../data/benchmarks/code2inv/119.c",
+            "../data/benchmarks/code2inv/120.c"
+        ],
+        "failure": [
+            "../data/benchmarks/code2inv/3.c",
+            "../data/benchmarks/code2inv/4.c",
+            "../data/benchmarks/code2inv/5.c",
+            "../data/benchmarks/code2inv/6.c",
+            "../data/benchmarks/code2inv/7.c",
+            "../data/benchmarks/code2inv/8.c",
+            "../data/benchmarks/code2inv/11.c",
+            "../data/benchmarks/code2inv/13.c",
+            "../data/benchmarks/code2inv/21.c",
+            "../data/benchmarks/code2inv/22.c",
+            "../data/benchmarks/code2inv/23.c",
+            "../data/benchmarks/code2inv/24.c",
+            "../data/benchmarks/code2inv/26.c",
+            "../data/benchmarks/code2inv/27.c",
+            "../data/benchmarks/code2inv/28.c",
+            "../data/benchmarks/code2inv/29.c",
+            "../data/benchmarks/code2inv/31.c",
+            "../data/benchmarks/code2inv/32.c",
+            "../data/benchmarks/code2inv/33.c",
+            "../data/benchmarks/code2inv/34.c",
+            "../data/benchmarks/code2inv/37.c",
+            "../data/benchmarks/code2inv/39.c",
+            "../data/benchmarks/code2inv/40.c",
+            "../data/benchmarks/code2inv/41.c",
+            "../data/benchmarks/code2inv/43.c",
+            "../data/benchmarks/code2inv/44.c",
+            "../data/benchmarks/code2inv/45.c",
+            "../data/benchmarks/code2inv/47.c",
+            "../data/benchmarks/code2inv/48.c",
+            "../data/benchmarks/code2inv/50.c",
+            "../data/benchmarks/code2inv/51.c",
+            "../data/benchmarks/code2inv/52.c",
+            "../data/benchmarks/code2inv/54.c",
+            "../data/benchmarks/code2inv/57.c",
+            "../data/benchmarks/code2inv/58.c",
+            "../data/benchmarks/code2inv/60.c",
+            "../data/benchmarks/code2inv/61.c",
+            "../data/benchmarks/code2inv/62.c",
+            "../data/benchmarks/code2inv/63.c",
+            "../data/benchmarks/code2inv/64.c",
+            "../data/benchmarks/code2inv/65.c",
+            "../data/benchmarks/code2inv/66.c",
+            "../data/benchmarks/code2inv/67.c",
+            "../data/benchmarks/code2inv/68.c",
+            "../data/benchmarks/code2inv/69.c",
+            "../data/benchmarks/code2inv/72.c",
+            "../data/benchmarks/code2inv/73.c",
+            "../data/benchmarks/code2inv/74.c",
+            "../data/benchmarks/code2inv/75.c",
+            "../data/benchmarks/code2inv/76.c",
+            "../data/benchmarks/code2inv/83.c",
+            "../data/benchmarks/code2inv/84.c",
+            "../data/benchmarks/code2inv/85.c",
+            "../data/benchmarks/code2inv/86.c",
+            "../data/benchmarks/code2inv/88.c",
+            "../data/benchmarks/code2inv/101.c",
+            "../data/benchmarks/code2inv/103.c",
+            "../data/benchmarks/code2inv/106.c",
+            "../data/benchmarks/code2inv/107.c",
+            "../data/benchmarks/code2inv/109.c",
+            "../data/benchmarks/code2inv/110.c",
+            "../data/benchmarks/code2inv/111.c",
+            "../data/benchmarks/code2inv/112.c",
+            "../data/benchmarks/code2inv/118.c",
+            "../data/benchmarks/code2inv/121.c",
+            "../data/benchmarks/code2inv/122.c"
+        ],
+        "skipped": [
+            "../data/benchmarks/code2inv/1.c",
+            "../data/benchmarks/code2inv/3.c",
+            "../data/benchmarks/code2inv/5.c",
+            "../data/benchmarks/code2inv/7.c",
+            "../data/benchmarks/code2inv/9.c",
+            "../data/benchmarks/code2inv/14.c",
+            "../data/benchmarks/code2inv/44.c",
+            "../data/benchmarks/code2inv/45.c",
+            "../data/benchmarks/code2inv/49.c",
+            "../data/benchmarks/code2inv/59.c",
+            "../data/benchmarks/code2inv/71.c",
+            "../data/benchmarks/code2inv/76.c",
+            "../data/benchmarks/code2inv/77.c",
+            "../data/benchmarks/code2inv/79.c",
+            "../data/benchmarks/code2inv/82.c",
+            "../data/benchmarks/code2inv/87.c",
+            "../data/benchmarks/code2inv/94.c",
+            "../data/benchmarks/code2inv/96.c",
+            "../data/benchmarks/code2inv/97.c",
+            "../data/benchmarks/code2inv/102.c",
+            "../data/benchmarks/code2inv/107.c",
+            "../data/benchmarks/code2inv/114.c"
+        ],
+        "total": 122,
+        "success_count": 56,
+        "failure_count": 66,
+        "success_rate": 0.45901639344262296
+    }
+}

@@ -1,0 +1,456 @@
+{
+    "logs": {
+        "file": "../data/benchmarks/code2inv/133.c",
+        "benchmark_code": "#define assume(e) if(!(e)) return 0;\n\nint main() {\n  \n  int n;\n  int x;\n  \n  (x = 0);\n  assume((n >= 0));\n  \n  while ((x < n)) {\n    {\n    (x  = (x + 1));\n    }\n\n  }\n  \n{;\n//@ assert( (x == n) );\n}\n}",
+        "success": true,
+        "log": [
+            {
+                "step": "Prompting LLM",
+                "generating_annotation": "loop_invariants",
+                "success": true,
+                "llm_chat": [
+                    {
+                        "role": "system",
+                        "content": "You are a helpful AI software assistant that reasons about how code behaves. Given a program, you can find loop invariants, which can then be used to verify some property in the program. \nFrama-C is a software verification tool for C programs. The input to Frama-C is a C program file with ACSL (ANSI/ISO C Specification Language) annotations.\nFor the given program, find the necessary loop invariants of the while loop to help Frama-C verify the post-condition.\n\nInstructions:\n- Make a note of the pre-conditions or variable assignments in the program.\n- Analyze the loop body and make a note of the loop condition. \n- Output loop invariants that are true \n(i) before the loop execution, \n(ii) in every iteration of the loop and \n(iii) after the loop termination, \nsuch that the loop invariants imply the post condition.\n- If a loop invariant is a conjunction, split it into its parts.\n- Output all the loop invariants in one code block. For example:\n```\n/*@ \n    loop invariant i1;\n    loop invariant i2;\n*/\n```\nRules:\n- **Do not use variables or functions that are not declared in the program.** \n- **Do not make any assumptions about functions whose definitions are not given.**\n- **All undefined variables contain garbage values. Do not use variables that have garbage values.**\n- **Do not use keywords that are not supported in ACSL annotations for loops.**\n- **Variables that are not explicitly initialized, could have garbage values. Do not make any assumptions about such values.**\n- **Do not use the \\at(x, Pre) notation for any variable x.**\n- **Do not use non-deterministic function calls.**"
+                    },
+                    {
+                        "role": "user",
+                        "content": "\nConsider the following C program:\n```\n#define assume(e) if(!(e)) return 0;\n\nint main() {\n  \n  int n;\n  int x;\n  \n  (x = 0);\n  assume((n >= 0));\n  \n  while ((x < n)) {\n    {\n    (x  = (x + 1));\n    }\n\n  }\n  \n{;\n//@ assert( (x == n) );\n}\n}\n```\n\nYou are allowed to use implication to take care of the conditional nature of the code. Use implication (==>) instead of using if-then.\n\nFor all variables, add conjunctions that bound the maximum and minimum values that they can take, if such bounds exist.\n\nIf a variable is always equal to or smaller or larger than another variable, add a conjunction for their relation.\n\nIf the assertion is guarded by a condition, use the guard condition in an implication.\n\nIf certain variables are non-deterministic at the beginning or end of the loop, use an implication to make the invariant trivially true at that location. \n\nOutput the loop invariants for the loop in the program above. Let's think step by step."
+                    },
+                    "Pre-conditions:\n- `n` is an integer variable.\n- `x` is an integer variable.\n- `x` is assigned the value 0.\n- `n` is non-negative.\n\nLoop condition:\n- `x < n`\n\nPost-condition:\n- `x` is equal to `n`.\n\nLoop invariants:\n- `0 <= x <= n`\n- At the beginning of the loop, `x <= n`.\n- At the end of each iteration, `x <= n`.\n- At the end of the loop, `x == n`.\n\nCombining all the loop invariants:\n```\n/*@ \n    loop invariant 0 <= x <= n;\n    loop invariant x <= n;\n    loop invariant \\forall integer k; 0 <= k < x ==> k < n;\n    loop invariant x == n || x < n;\n*/\n```\nExplanation:\n- The first loop invariant ensures that `x` is always between 0 and `n`.\n- The second loop invariant ensures that `x` is always less than or equal to `n` before the loop body is executed.\n- The third loop invariant ensures that for all `k` between 0 and `x-1`, `k` is less than `n`. This is true because `x` is incremented by 1 in each iteration, so all integers less than `x` will be less than `n`.\n- The fourth loop invariant ensures that either `x` is equal to `n` or `x` is less than `n`. This is true because the loop terminates when `x` becomes equal to `n`.",
+                    "Pre-conditions and variable assignments:\n- `n` is an integer variable that is not initialized and its value is not known.\n- `x` is an integer variable that is initialized to 0.\n\nLoop condition:\n- The loop runs while `x` is less than `n`.\n\nWe need to find loop invariants such that they hold true:\n- Before the loop execution\n- In every iteration of the loop\n- After the loop termination\n\nAlso, the loop invariants should imply the post-condition which is `x == n`.\n\nLet's start with finding the loop invariants:\n\n1. Before the loop execution:\n- `x >= 0`\n- `n >= 0`\n\n2. In every iteration of the loop:\n- `x <= n`\n- `x >= 0`\n- `n >= 0`\n\n3. After the loop termination:\n- `x >= n`\n\nNow, we need to verify that the loop invariants imply the post-condition `x == n`:\n- From the loop invariant `x >= n`, we can infer `x == n` because of the loop condition `x < n` which means that the loop terminates when `x` becomes equal to `n`.\n- Therefore, the loop invariants imply the post-condition.\n\nFinally, we can write the loop invariants for the given program as follows:\n```\n/*@ \n    loop invariant x >= 0;\n    loop invariant n >= 0;\n    loop invariant x <= n;\n    loop invariant x >= 0;\n    loop invariant n >= 0;\n    loop invariant x >= n;\n*/\n```",
+                    "Pre-conditions:\n- `n` is an integer variable.\n- `x` is an integer variable.\n- `x` is assigned the value 0.\n- `n` is non-negative.\n\nLoop condition:\n- `x < n`\n\nPost-condition:\n- `x` is equal to `n`.\n\nLoop invariants:\n- Before the loop execution:\n  - `n >= 0` (from pre-condition)\n  - `x == 0` (from pre-condition)\n- In every iteration of the loop:\n  - `x <= n` (since `x` is incremented by 1 in each iteration and the loop terminates when `x >= n`)\n  - `x >= 0` (since `x` is non-negative)\n- After the loop termination:\n  - `x == n` (from post-condition)\n  \nPutting it all together:\n```\n/*@ \n    loop invariant n >= 0;\n    loop invariant x == 0;\n    loop invariant x <= n;\n    loop invariant x >= 0;\n    loop invariant x == n ==> (x == n);\n*/\n``` \n\nNote that the last loop invariant uses implication to take care of the conditional nature of the code. Since the loop terminates when `x >= n`, the implication `x == n ==> (x == n)` is true, and it makes the invariant trivially true at the end of the loop.",
+                    "Pre-conditions:\n- `n` and `x` are integer variables that are uninitialized and contain garbage values.\n\nVariable assignments:\n- `x` is assigned the value 0.\n\nLoop condition:\n- The loop continues as long as `x < n`.\n\nPost-condition:\n- `x` is equal to `n`.\n\nTo find the loop invariants, we need to analyze the loop body and see what changes and what remains the same. In this case, the loop body only contains an assignment statement that increments the value of `x` by 1.\n\nLoop invariants:\n- `x >= 0` (since `x` is initialized to 0 and incremented by 1 in each iteration)\n- `n >= 0` (since `n` is assumed to be non-negative)\n- `x <= n` (since the loop continues as long as `x < n`)\n- `x <= INT_MAX` (since `x` is an integer and has a maximum value)\n- `n <= INT_MAX` (since `n` is an integer and has a maximum value)\n- `(x == n) ==> (x <= INT_MAX)` (this is to handle the case where `x` becomes equal to `n` and the loop terminates. At that point, we need to ensure that `x` does not exceed its maximum value.)\n\nPutting it all together:\n```\n/*@\n  loop invariant x >= 0;\n  loop invariant n >= 0;\n  loop invariant x <= n;\n  loop invariant x <= INT_MAX;\n  loop invariant n <= INT_MAX;\n  loop invariant (x == n) ==> (x <= INT_MAX);\n*/\n```",
+                    "Pre-conditions: \n- None\n\nVariable Assignments:\n- x is assigned 0\n\nLoop Condition:\n- (x < n)\n\nPost-condition:\n- x == n\n\nLoop Invariants:\n- Since x is initialized to 0, x >= 0 before loop execution.\n- Since n is assumed to be greater than or equal to 0, n >= 0 before loop execution.\n- In every iteration of the loop, x <= n. This can be shown as follows:\n  - If x < n, then x + 1 <= n.\n- After the loop terminates, x == n.\n\nPutting it all together, the loop invariants for the given program are:\n\n```\n/*@ \n  loop invariant x >= 0;\n  loop invariant n >= 0;\n  loop invariant x <= n;\n  loop invariant (x == n) ==> (x == \\old(x) + 1);\n*/\n``` \n\nNote that the last invariant is needed to deal with the conditional nature of the code. Since the loop only increments x if x < n, we can use implication to state that if x == n, then x must be equal to its old value plus 1.",
+                    "Pre-conditions/Variable Assignments:\n- `n` is an integer variable\n- `x` is an integer variable\n- `x` is initialized to 0\n\nLoop Condition:\n- `(x < n)`\n\nPost-condition:\n- `(x == n)`\n\nLoop Invariants:\n- `n >= 0`\n- `0 <= x <= n`\n\nBefore Loop Execution:\n- `n >= 0`\n- `0 <= x <= n`\n- Since `x` is initialized to 0, `(x == 0)` is also an invariant.\n\nIn Every Iteration:\n- `n >= 0`\n- `0 <= x <= n`\n- `(x < n)` (loop condition)\n\nAfter Loop Termination:\n- `n >= 0`\n- `0 <= x <= n`\n- `(x >= n)` (negation of loop condition)\n- Since `x` must be equal to `n` after the loop, `(x == n)` is also an invariant.\n\nPutting all the loop invariants together:\n```\n/*@ \n    loop invariant n >= 0;\n    loop invariant 0 <= x <= n;\n    loop invariant x == 0 || x == n;\n*/\n```",
+                    "Pre-conditions:\n- `n` and `x` are integer variables.\n- `x` is assigned the value `0`.\n- `n` is assumed to be non-negative.\n\nLoop condition:\n- The loop executes while `x < n`.\n\nPost-condition:\n- The value of `x` is equal to `n`.\n\nLoop invariants:\n- `n >= 0` (pre-condition)\n- `x >= 0` (assignment to `x`)\n- `x <= n` (loop condition)\n- `(\\forall int i; i >= 0 && i < x; i++;)` (loop invariant)\n    - The above invariant states that for all values of `i` greater than or equal to `0` and less than `x`, the loop has executed at least once. Since `x` is incremented by `1` in each iteration, the loop has executed `x` times.\n- `(\\forall int j; j > x && j <= n; j++;)` (loop invariant)\n    - The above invariant states that for all values of `j` greater than `x` and less than or equal to `n`, the loop has not yet executed. Since `x` is incremented by `1` in each iteration, the loop will execute `n - x` times after the current iteration. Therefore, the above invariant holds true before every iteration of the loop.\n- `(x == n) ==> (\\forall int i; i >= 0 && i <= n; i++;)` (post-condition)\n    - The above invariant states that if `x` is equal to `n` (i.e., post-condition holds true), then the loop has executed `n` times. Therefore, for all values of `i` greater than or equal to `0` and less than or equal to `n`, the loop has executed at least once. This implication holds true after the loop terminates. \n\nTherefore, the complete set of loop invariants are:\n```\n/*@ \n    loop invariant n >= 0;\n    loop invariant x >= 0;\n    loop invariant x <= n;\n    loop invariant (\\forall int i; i >= 0 && i < x; i++;);\n    loop invariant (\\forall int j; j > x && j <= n; j++;);\n    loop invariant (x == n) ==> (\\forall int i; i >= 0 && i <= n; i++;);\n*/\n```",
+                    "Pre-conditions: \n- n is an integer variable with a minimum value of 0. \n- x is an integer variable.\n- x is assigned the value of 0.\n\n```\n/*@ \n    requires n >= 0;\n    assigns x;\n    ensures x == n;\n*/\n```\n\nLoop Invariants:\n1. The value of x is always less than or equal to n. \n2. The value of x is always greater than or equal to 0.\n\n```\n/*@ \n    loop invariant 0 <= x <= n;\n    loop invariant 0 <= x;\n*/\n```\n\nImplication for the assertion:\n- The assertion holds true only if the loop has terminated. Therefore, we can add the loop condition as a guard condition to the assertion.\n\n```\n/*@ \n    loop invariant 0 <= x <= n;\n    loop invariant 0 <= x;\n*/\nwhile (x < n) {\n    {\n    (x  = (x + 1));\n    }\n}\n{;\n    //@ assert x == n ==> x == n;\n}\n``` \n\nNote: Since x is initialized to 0, we do not need to add any implication for the loop invariants.",
+                    "Pre-conditions:\n- n >= 0\n\nVariable assignments:\n- x = 0\n\nLoop condition:\n- x < n\n\nPost-condition:\n- x == n\n\nLoop Invariants:\n- Before the loop: x >= 0\n- In every iteration:\n  - x <= n\n  - x >= 0\n- After the loop: x == n\n\nExplanation:\n- Before the loop, we know that x is assigned 0, so x is greater than or equal to 0.\n- In every iteration, we have to make sure that x is less than or equal to n, and x is greater than or equal to 0.\n- After the loop, x should be equal to n, so we add x == n as the last loop invariant.\n\nPutting it all together:\n```\n/*@ \n    loop invariant x >= 0;\n    \n    loop invariant x <= n;\n    \n    loop invariant x >= 0;\n    \n    loop invariant x == n ==> (x >= 0 && x <= n);\n*/\n```",
+                    "Pre-conditions:\n- `n` and `x` are integer variables.\n- `x` is assigned the value 0.\n- `n` is assumed to be non-negative.\n\nLoop condition:\n- `x` is less than `n`.\n\nPost-condition:\n- `x` is equal to `n`.\n\nLoop Invariants:\n- `0 <= x <= n` (boundedness of `x` between 0 and `n`)\n- `x <= n` (relationship between `x` and `n`)\n- For the first iteration of the loop: `0 <= x` (initialization of `x`)\n- For the last iteration of the loop: `x == n` (termination condition of the loop)\n\nPutting it all together:\n```\n/*@ \n    loop invariant 0 <= x <= n;\n    loop invariant x <= n;\n    loop invariant (x == 0) ==> (0 <= x);\n    loop invariant (x == n) ==> (x == n);\n*/\n```\nThese loop invariants hold true before the loop starts, in every iteration of the loop, and after the loop terminates, and together they imply the post-condition of the program.",
+                    "Pre-conditions:\n- `n` is an integer variable.\n- `x` is an integer variable.\n- `x` is assigned the value of 0.\n- `n` is non-negative.\n\nLoop condition:\n- The loop continues as long as `x` is less than `n`.\n\nPost-condition:\n- `x` is equal to `n`.\n\nLoop Invariants:\n- `x` is greater than or equal to 0.\n- `n` is greater than or equal to 0.\n- `x` is less than or equal to `n`.\n- At the beginning of the loop, `x` is less than `n` and `x` is greater than or equal to 0.\n- At the end of each iteration of the loop, `x` is less than or equal to `n` and `x` is greater than or equal to 0.\n- After the loop terminates, `x` is equal to `n`.\n- Since there are no non-deterministic variables, we don't need to use implication to make the invariants trivially true.\n- We can combine all the invariants in one code block as follows:\n```\n/*@ \n    loop invariant x >= 0;\n    loop invariant n >= 0;\n    loop invariant x <= n;\n    loop invariant x < n ==> x >= 0;\n    loop invariant x <= n ==> x >= 0;\n    loop invariant x == n <== x >= n;\n*/\n```",
+                    "Pre-conditions:\n- The variable `n` is an integer and is greater than or equal to 0.\n- The variable `x` is an integer.\n\nVariable assignments:\n- The variable `x` is initialized to 0.\n\nLoop condition:\n- The loop continues while `x` is less than `n`.\n\nPost-condition:\n- `x` is equal to `n`.\n\nLoop invariants:\n- Before the loop execution, `x` is less than or equal to `n`.\n- In every iteration of the loop, `x` is less than or equal to `n`.\n- After the loop termination, `x` is equal to `n`.\n\nCombining these invariants and using implication to take care of the conditional nature of the code, we get:\n```\n/*@ \n    loop invariant 0 <= x <= n;\n    loop invariant (x < n) ==> (x + 1 <= n);\n    loop invariant (x >= n) ==> (x == n);\n*/\n``` \nWe do not need to add any conjunctions to bound the maximum and minimum values of `x` or `n` as there are no constraints on their values other than the pre-condition that `n` is greater than or equal to 0. \n\nThere are no non-deterministic variables in this program. \n\nThe post-condition is not guarded by any condition, so we do not need to use an implication. \n\nTherefore, the final set of loop invariants are:\n```\n/*@ \n    loop invariant 0 <= x <= n;\n    loop invariant (x < n) ==> (x + 1 <= n);\n    loop invariant (x >= n) ==> (x == n);\n*/\n```",
+                    "Pre-conditions:\n- The variable `n` is an integer.\n- The variable `x` is an integer.\n- The variable `x` is assigned the value 0.\n- The variable `n` is greater than or equal to 0.\n\nLoop condition:\n- The loop will execute as long as `x` is less than `n`.\n\nPost-condition:\n- The variable `x` is equal to `n`.\n\nLoop invariants:\n```\n/*@\nloop invariant 0 <= x <= n;\nloop invariant \\forall integer i; (0 <= i < x) ==> i < n;\nloop invariant (x >= n) ==> (x == n);\n*/\n```\nExplanation:\n- The first loop invariant ensures that `x` is always between 0 and `n`.\n- The second loop invariant ensures that all values of `i` between 0 and `x-1` are less than `n`. This implies that `x` must be equal to or greater than `n` when the loop terminates.\n- The third loop invariant uses implication to state that if `x` is greater than or equal to `n`, then `x` must be equal to `n` (which is the post-condition).\n",
+                    "First, let's identify the pre-conditions and variable assignments in the program:\n\n- Pre-condition: n >= 0\n- Variable assignments: x = 0, x = x + 1\n\nNext, let's analyze the loop body and note the loop condition:\n\n- Loop condition: x < n\n\nNow, let's find the necessary loop invariants:\n\n1. Before the loop execution:\n- x >= 0\n- n >= 0\n\n2. In every iteration of the loop:\n- x < n\n\n3. After the loop termination:\n- x >= n\n\nBased on the loop invariants, we can prove the post-condition, which is (x == n). \n\nSo, the final loop invariants for the program are:\n\n```\n/*@ \n    loop invariant x >= 0;\n    loop invariant n >= 0;\n    loop invariant x < n;\n    loop invariant x >= n ==> (x == n);\n*/\n```",
+                    "Preconditions:\n- The variable `n` is an integer.\n- The variable `x` is an integer.\n- The value of `x` is initialized to 0.\n- The value of `n` is non-negative.\n\nLoop condition:\n- The loop continues as long as the value of `x` is less than `n`.\n\nPostcondition:\n- The value of `x` is equal to `n`.\n\nWe can use the loop condition to create a loop invariant:\n```\n/*@ \n    loop invariant x <= n;\n*/\n```\nThis invariant is true before the loop execution and in every iteration of the loop.\n\nTo prove that the postcondition holds after the loop termination, we can use implication. We know that the loop terminates only when `x` is greater than or equal to `n`. Therefore, we can use the loop condition and an implication to show that `x` is equal to `n` after the loop termination:\n```\n/*@ \n    loop invariant x <= n;\n    loop invariant (x >= n) ==> (x == n);\n*/\n```\n\nSince `x` is initialized to 0, we can add an implication to make the loop invariant true for the first iteration as well:\n```\n/*@ \n    loop invariant x <= n;\n    loop invariant (x == 0) ==> (x <= n);\n    loop invariant (x >= n) ==> (x == n);\n*/\n```\n\nFinally, we can add a conjunction to bound the minimum and maximum values of `n`:\n```\n/*@ \n    loop invariant x <= n;\n    loop invariant (x == 0) ==> (x <= n);\n    loop invariant (x >= n) ==> (x == n);\n    loop invariant n >= 0 && n <= INT_MAX;\n*/\n```\nThis set of loop invariants implies the postcondition, and therefore, can be used to verify that the program satisfies the postcondition."
+                ],
+                "output": [
+                    "/*@ \n    loop invariant 0 <= x <= n;\n    loop invariant x <= n;\n    loop invariant \\forall integer k; 0 <= k < x ==> k < n;\n    loop invariant x == n || x < n;\n*/",
+                    "/*@ \n    loop invariant x >= 0;\n    loop invariant n >= 0;\n    loop invariant x <= n;\n    loop invariant x >= 0;\n    loop invariant n >= 0;\n    loop invariant x >= n;\n*/",
+                    "/*@ \n    loop invariant n >= 0;\n    loop invariant x == 0;\n    loop invariant x <= n;\n    loop invariant x >= 0;\n    loop invariant x == n ==> (x == n);\n*/",
+                    "/*@\n  loop invariant x >= 0;\n  loop invariant n >= 0;\n  loop invariant x <= n;\n  loop invariant x <= INT_MAX;\n  loop invariant n <= INT_MAX;\n  loop invariant (x == n) ==> (x <= INT_MAX);\n*/",
+                    "/*@ \n  loop invariant x >= 0;\n  loop invariant n >= 0;\n  loop invariant x <= n;\n  loop invariant (x == n) ==> (x == \\old(x) + 1);\n*/",
+                    "/*@ \n    loop invariant n >= 0;\n    loop invariant 0 <= x <= n;\n    loop invariant x == 0 || x == n;\n*/",
+                    "/*@ \n    loop invariant n >= 0;\n    loop invariant x >= 0;\n    loop invariant x <= n;\n    loop invariant (\\forall int i; i >= 0 && i < x; i++;);\n    loop invariant (\\forall int j; j > x && j <= n; j++;);\n    loop invariant (x == n) ==> (\\forall int i; i >= 0 && i <= n; i++;);\n*/",
+                    "/*@ \n    loop invariant 0 <= x <= n;\n    loop invariant 0 <= x;\n*/",
+                    "/*@ \n    loop invariant x >= 0;\n    \n    loop invariant x <= n;\n    \n    loop invariant x >= 0;\n    \n    loop invariant x == n ==> (x >= 0 && x <= n);\n*/",
+                    "/*@ \n    loop invariant 0 <= x <= n;\n    loop invariant x <= n;\n    loop invariant (x == 0) ==> (0 <= x);\n    loop invariant (x == n) ==> (x == n);\n*/",
+                    "/*@ \n    loop invariant x >= 0;\n    loop invariant n >= 0;\n    loop invariant x <= n;\n    loop invariant x < n ==> x >= 0;\n    loop invariant x <= n ==> x >= 0;\n    loop invariant x == n <== x >= n;\n*/",
+                    "/*@ \n    loop invariant 0 <= x <= n;\n    loop invariant (x < n) ==> (x + 1 <= n);\n    loop invariant (x >= n) ==> (x == n);\n*/",
+                    "/*@\nloop invariant 0 <= x <= n;\nloop invariant \\forall integer i; (0 <= i < x) ==> i < n;\nloop invariant (x >= n) ==> (x == n);\n*/",
+                    "/*@ \n    loop invariant x >= 0;\n    loop invariant n >= 0;\n    loop invariant x < n;\n    loop invariant x >= n ==> (x == n);\n*/",
+                    "/*@ \n    loop invariant x <= n;\n*/"
+                ]
+            },
+            {
+                "step": "Checking individual completion",
+                "solver_calls": 15,
+                "completions": [
+                    {
+                        "num_solver_calls": 1,
+                        "success": true,
+                        "invariants": "/*@ \n    loop invariant 0 <= x <= n;\n    loop invariant x <= n;\n    loop invariant \\forall integer k; 0 <= k < x ==> k < n;\n    loop invariant x == n || x < n;\n*/",
+                        "checker_output_for_invariants": true,
+                        "checker_message_for_invariants": "loop invariant 0 <= x <= n is inductive.\nloop invariant x <= n is inductive.\nloop invariant \\forall integer k; 0 <= k < x ==> k < n is inductive.\nloop invariant x == n || x < n is inductive.\nAssertion x == n: Valid\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant x >= 0;\n    loop invariant n >= 0;\n    loop invariant x <= n;\n    loop invariant x >= 0;\n    loop invariant n >= 0;\n    loop invariant x >= n;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant x >= 0 is inductive.\nloop invariant n >= 0 is inductive.\nloop invariant x <= n is inductive.\nloop invariant x >= 0 is inductive.\nloop invariant n >= 0 is inductive.\nloop invariant x >= n is preserved but not established.\nAssertion x == n: Partially proven\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant n >= 0;\n    loop invariant x == 0;\n    loop invariant x <= n;\n    loop invariant x >= 0;\n    loop invariant x == n ==> (x == n);\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant n >= 0 is inductive.\nloop invariant x == 0 is established but not preserved.\nloop invariant x <= n is inductive.\nloop invariant x >= 0 is inductive.\nloop invariant x == n ==> (x == n) is inductive.\nAssertion x == n: Partially proven\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@\n  loop invariant x >= 0;\n  loop invariant n >= 0;\n  loop invariant x <= n;\n  loop invariant x <= INT_MAX;\n  loop invariant n <= INT_MAX;\n  loop invariant (x == n) ==> (x <= INT_MAX);\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "Annotation error on line 15: unbound logic variable INT_MAX. Ignoring loop annotation"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n  loop invariant x >= 0;\n  loop invariant n >= 0;\n  loop invariant x <= n;\n  loop invariant (x == n) ==> (x == \\old(x) + 1);\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "Annotation error on line 15: \\old undefined in this context. Ignoring loop annotation"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant n >= 0;\n    loop invariant 0 <= x <= n;\n    loop invariant x == 0 || x == n;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant n >= 0 is inductive.\nloop invariant 0 <= x <= n is inductive.\nloop invariant x == 0 || x == n is established but not preserved.\nAssertion x == n: Partially proven\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant n >= 0;\n    loop invariant x >= 0;\n    loop invariant x <= n;\n    loop invariant (\\forall int i; i >= 0 && i < x; i++;);\n    loop invariant (\\forall int j; j > x && j <= n; j++;);\n    loop invariant (x == n) ==> (\\forall int i; i >= 0 && i <= n; i++;);\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "Annotation error on line 15: unexpected token ';'"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": true,
+                        "invariants": "/*@ \n    loop invariant 0 <= x <= n;\n    loop invariant 0 <= x;\n*/",
+                        "checker_output_for_invariants": true,
+                        "checker_message_for_invariants": "loop invariant 0 <= x <= n is inductive.\nloop invariant 0 <= x is inductive.\nAssertion x == n: Valid\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": true,
+                        "invariants": "/*@ \n    loop invariant x >= 0;\n    \n    loop invariant x <= n;\n    \n    loop invariant x >= 0;\n    \n    loop invariant x == n ==> (x >= 0 && x <= n);\n*/",
+                        "checker_output_for_invariants": true,
+                        "checker_message_for_invariants": "loop invariant x >= 0 is inductive.\nloop invariant x <= n is inductive.\nloop invariant x >= 0 is inductive.\nloop invariant x == n ==> (x >= 0 && x <= n) is inductive.\nAssertion x == n: Valid\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": true,
+                        "invariants": "/*@ \n    loop invariant 0 <= x <= n;\n    loop invariant x <= n;\n    loop invariant (x == 0) ==> (0 <= x);\n    loop invariant (x == n) ==> (x == n);\n*/",
+                        "checker_output_for_invariants": true,
+                        "checker_message_for_invariants": "loop invariant 0 <= x <= n is inductive.\nloop invariant x <= n is inductive.\nloop invariant (x == 0) ==> (0 <= x) is inductive.\nloop invariant (x == n) ==> (x == n) is inductive.\nAssertion x == n: Valid\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant x >= 0;\n    loop invariant n >= 0;\n    loop invariant x <= n;\n    loop invariant x < n ==> x >= 0;\n    loop invariant x <= n ==> x >= 0;\n    loop invariant x == n <== x >= n;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "Annotation error on line 17: unexpected token '='"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": true,
+                        "invariants": "/*@ \n    loop invariant 0 <= x <= n;\n    loop invariant (x < n) ==> (x + 1 <= n);\n    loop invariant (x >= n) ==> (x == n);\n*/",
+                        "checker_output_for_invariants": true,
+                        "checker_message_for_invariants": "loop invariant 0 <= x <= n is inductive.\nloop invariant (x < n) ==> (x + 1 <= n) is inductive.\nloop invariant (x >= n) ==> (x == n) is inductive.\nAssertion x == n: Valid\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": true,
+                        "invariants": "/*@\nloop invariant 0 <= x <= n;\nloop invariant \\forall integer i; (0 <= i < x) ==> i < n;\nloop invariant (x >= n) ==> (x == n);\n*/",
+                        "checker_output_for_invariants": true,
+                        "checker_message_for_invariants": "loop invariant 0 <= x <= n is inductive.\nloop invariant \\forall integer i; (0 <= i < x) ==> i < n is inductive.\nloop invariant (x >= n) ==> (x == n) is inductive.\nAssertion x == n: Valid\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant x >= 0;\n    loop invariant n >= 0;\n    loop invariant x < n;\n    loop invariant x >= n ==> (x == n);\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant x >= 0 is inductive.\nloop invariant n >= 0 is inductive.\nloop invariant x < n is neither established nor preserved.\nloop invariant x >= n ==> (x == n) is inductive.\nAssertion x == n: Partially proven\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": true,
+                        "invariants": "/*@ \n    loop invariant x <= n;\n*/",
+                        "checker_output_for_invariants": true,
+                        "checker_message_for_invariants": "loop invariant x <= n is inductive.\nAssertion x == n: Valid\n"
+                    }
+                ],
+                "success": true
+            },
+            {
+                "step": "Houdini for individual completion",
+                "success": true,
+                "completions": [
+                    {
+                        "num_solver_calls": 0,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant 0 <= x <= n;\n    loop invariant x <= n;\n    loop invariant \\forall integer k; 0 <= k < x ==> k < n;\n    loop invariant x == n || x < n;\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\n\nint main() {\n  \n  int n;\n  int x;\n  \n  (x = 0);\n  assume((n >= 0));\n  \n  /*@\nloop invariant i1: 0 <= x <= n;\nloop invariant i2: x <= n;\nloop invariant i3: \\forall integer k; 0 <= k < x ==> k < n;\nloop invariant i4: x == n || x < n;\n*/\nwhile ((x < n)) {\n    {\n    (x  = (x + 1));\n    }\n\n  }\n  \n{;\n//@ assert( (x == n) );\n}\n}",
+                        "checker_output_after_prune": true
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant x >= 0;\n    loop invariant n >= 0;\n    loop invariant x <= n;\n    loop invariant x >= 0;\n    loop invariant n >= 0;\n    loop invariant x >= n;\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\n\nint main() {\n  \n  int n;\n  int x;\n  \n  (x = 0);\n  assume((n >= 0));\n  \n  /*@\nloop invariant i1: x >= 0;\nloop invariant i2: n >= 0;\nloop invariant i3: x <= n;\n\n*/\nwhile ((x < n)) {\n    {\n    (x  = (x + 1));\n    }\n\n  }\n  \n{;\n//@ assert( (x == n) );\n}\n}",
+                        "checker_output_after_prune": true
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant n >= 0;\n    loop invariant x == 0;\n    loop invariant x <= n;\n    loop invariant x >= 0;\n    loop invariant x == n ==> (x == n);\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\n\nint main() {\n  \n  int n;\n  int x;\n  \n  (x = 0);\n  assume((n >= 0));\n  \n  /*@\nloop invariant i1: n >= 0;\n\nloop invariant i3: x <= n;\nloop invariant i4: x >= 0;\nloop invariant i5: x == n ==> (x == n);\n*/\nwhile ((x < n)) {\n    {\n    (x  = (x + 1));\n    }\n\n  }\n  \n{;\n//@ assert( (x == n) );\n}\n}",
+                        "checker_output_after_prune": true
+                    },
+                    {
+                        "num_solver_calls": 3,
+                        "success": false,
+                        "invariants": "/*@\n  loop invariant x >= 0;\n  loop invariant n >= 0;\n  loop invariant x <= n;\n  loop invariant x <= INT_MAX;\n  loop invariant n <= INT_MAX;\n  loop invariant (x == n) ==> (x <= INT_MAX);\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\n\nint main() {\n  \n  int n;\n  int x;\n  \n  (x = 0);\n  assume((n >= 0));\n  \n  /*@\nloop invariant i1: x >= 0;\nloop invariant i2: n >= 0;\nloop invariant i3: x <= n;\n\n\n\n*/\nwhile ((x < n)) {\n    {\n    (x  = (x + 1));\n    }\n\n  }\n  \n{;\n//@ assert( (x == n) );\n}\n}",
+                        "checker_output_after_prune": true
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n  loop invariant x >= 0;\n  loop invariant n >= 0;\n  loop invariant x <= n;\n  loop invariant (x == n) ==> (x == \\old(x) + 1);\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\n\nint main() {\n  \n  int n;\n  int x;\n  \n  (x = 0);\n  assume((n >= 0));\n  \n  /*@\nloop invariant i1: x >= 0;\nloop invariant i2: n >= 0;\nloop invariant i3: x <= n;\n\n*/\nwhile ((x < n)) {\n    {\n    (x  = (x + 1));\n    }\n\n  }\n  \n{;\n//@ assert( (x == n) );\n}\n}",
+                        "checker_output_after_prune": true
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant n >= 0;\n    loop invariant 0 <= x <= n;\n    loop invariant x == 0 || x == n;\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\n\nint main() {\n  \n  int n;\n  int x;\n  \n  (x = 0);\n  assume((n >= 0));\n  \n  /*@\nloop invariant i1: n >= 0;\nloop invariant i2: 0 <= x <= n;\n\n*/\nwhile ((x < n)) {\n    {\n    (x  = (x + 1));\n    }\n\n  }\n  \n{;\n//@ assert( (x == n) );\n}\n}",
+                        "checker_output_after_prune": true
+                    },
+                    {
+                        "num_solver_calls": 3,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant n >= 0;\n    loop invariant x >= 0;\n    loop invariant x <= n;\n    loop invariant (\\forall int i; i >= 0 && i < x; i++;);\n    loop invariant (\\forall int j; j > x && j <= n; j++;);\n    loop invariant (x == n) ==> (\\forall int i; i >= 0 && i <= n; i++;);\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\n\nint main() {\n  \n  int n;\n  int x;\n  \n  (x = 0);\n  assume((n >= 0));\n  \n  /*@\nloop invariant i1: n >= 0;\nloop invariant i2: x >= 0;\nloop invariant i3: x <= n;\n\n\n\n*/\nwhile ((x < n)) {\n    {\n    (x  = (x + 1));\n    }\n\n  }\n  \n{;\n//@ assert( (x == n) );\n}\n}",
+                        "checker_output_after_prune": true
+                    },
+                    {
+                        "num_solver_calls": 0,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant 0 <= x <= n;\n    loop invariant 0 <= x;\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\n\nint main() {\n  \n  int n;\n  int x;\n  \n  (x = 0);\n  assume((n >= 0));\n  \n  /*@\nloop invariant i1: 0 <= x <= n;\nloop invariant i2: 0 <= x;\n*/\nwhile ((x < n)) {\n    {\n    (x  = (x + 1));\n    }\n\n  }\n  \n{;\n//@ assert( (x == n) );\n}\n}",
+                        "checker_output_after_prune": true
+                    },
+                    {
+                        "num_solver_calls": 0,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant x >= 0;\n    \n    loop invariant x <= n;\n    \n    loop invariant x >= 0;\n    \n    loop invariant x == n ==> (x >= 0 && x <= n);\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\n\nint main() {\n  \n  int n;\n  int x;\n  \n  (x = 0);\n  assume((n >= 0));\n  \n  /*@\nloop invariant i1: x >= 0;\nloop invariant i2: x <= n;\nloop invariant i4: x == n ==> (x >= 0 && x <= n);\n*/\nwhile ((x < n)) {\n    {\n    (x  = (x + 1));\n    }\n\n  }\n  \n{;\n//@ assert( (x == n) );\n}\n}",
+                        "checker_output_after_prune": true
+                    },
+                    {
+                        "num_solver_calls": 0,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant 0 <= x <= n;\n    loop invariant x <= n;\n    loop invariant (x == 0) ==> (0 <= x);\n    loop invariant (x == n) ==> (x == n);\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\n\nint main() {\n  \n  int n;\n  int x;\n  \n  (x = 0);\n  assume((n >= 0));\n  \n  /*@\nloop invariant i1: 0 <= x <= n;\nloop invariant i2: x <= n;\nloop invariant i3: (x == 0) ==> (0 <= x);\nloop invariant i4: (x == n) ==> (x == n);\n*/\nwhile ((x < n)) {\n    {\n    (x  = (x + 1));\n    }\n\n  }\n  \n{;\n//@ assert( (x == n) );\n}\n}",
+                        "checker_output_after_prune": true
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant x >= 0;\n    loop invariant n >= 0;\n    loop invariant x <= n;\n    loop invariant x < n ==> x >= 0;\n    loop invariant x <= n ==> x >= 0;\n    loop invariant x == n <== x >= n;\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\n\nint main() {\n  \n  int n;\n  int x;\n  \n  (x = 0);\n  assume((n >= 0));\n  \n  /*@\nloop invariant i1: x >= 0;\nloop invariant i2: n >= 0;\nloop invariant i3: x <= n;\nloop invariant i4: x < n ==> x >= 0;\nloop invariant i5: x <= n ==> x >= 0;\n\n*/\nwhile ((x < n)) {\n    {\n    (x  = (x + 1));\n    }\n\n  }\n  \n{;\n//@ assert( (x == n) );\n}\n}",
+                        "checker_output_after_prune": true
+                    },
+                    {
+                        "num_solver_calls": 0,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant 0 <= x <= n;\n    loop invariant (x < n) ==> (x + 1 <= n);\n    loop invariant (x >= n) ==> (x == n);\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\n\nint main() {\n  \n  int n;\n  int x;\n  \n  (x = 0);\n  assume((n >= 0));\n  \n  /*@\nloop invariant i1: 0 <= x <= n;\nloop invariant i2: (x < n) ==> (x + 1 <= n);\nloop invariant i3: (x >= n) ==> (x == n);\n*/\nwhile ((x < n)) {\n    {\n    (x  = (x + 1));\n    }\n\n  }\n  \n{;\n//@ assert( (x == n) );\n}\n}",
+                        "checker_output_after_prune": true
+                    },
+                    {
+                        "num_solver_calls": 0,
+                        "success": false,
+                        "invariants": "/*@\nloop invariant 0 <= x <= n;\nloop invariant \\forall integer i; (0 <= i < x) ==> i < n;\nloop invariant (x >= n) ==> (x == n);\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\n\nint main() {\n  \n  int n;\n  int x;\n  \n  (x = 0);\n  assume((n >= 0));\n  \n  /*@\nloop invariant i1: 0 <= x <= n;\nloop invariant i2: \\forall integer i; (0 <= i < x) ==> i < n;\nloop invariant i3: (x >= n) ==> (x == n);\n*/\nwhile ((x < n)) {\n    {\n    (x  = (x + 1));\n    }\n\n  }\n  \n{;\n//@ assert( (x == n) );\n}\n}",
+                        "checker_output_after_prune": true
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant x >= 0;\n    loop invariant n >= 0;\n    loop invariant x < n;\n    loop invariant x >= n ==> (x == n);\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\n\nint main() {\n  \n  int n;\n  int x;\n  \n  (x = 0);\n  assume((n >= 0));\n  \n  /*@\nloop invariant i1: x >= 0;\nloop invariant i2: n >= 0;\n\nloop invariant i4: x >= n ==> (x == n);\n*/\nwhile ((x < n)) {\n    {\n    (x  = (x + 1));\n    }\n\n  }\n  \n{;\n//@ assert( (x == n) );\n}\n}",
+                        "checker_output_after_prune": true
+                    },
+                    {
+                        "num_solver_calls": 0,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant x <= n;\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\n\nint main() {\n  \n  int n;\n  int x;\n  \n  (x = 0);\n  assume((n >= 0));\n  \n  /*@\nloop invariant i1: x <= n;\n*/\nwhile ((x < n)) {\n    {\n    (x  = (x + 1));\n    }\n\n  }\n  \n{;\n//@ assert( (x == n) );\n}\n}",
+                        "checker_output_after_prune": true
+                    }
+                ]
+            },
+            {
+                "step": "Houdini for combined completion",
+                "solver_calls": 10,
+                "success": true,
+                "code_with_combined_invariants": "#define assume(e) if(!(e)) return 0;\n\nint main() {\n  \n  int n;\n  int x;\n  \n  (x = 0);\n  assume((n >= 0));\n  \n  /*@\nloop invariant i1: 0 <= x <= n;\nloop invariant i2: x <= n;\nloop invariant i3: \\forall integer k; 0 <= k < x ==> k < n;\n\nloop invariant i5: x >= 0;\nloop invariant i6: n >= 0;\n\n\nloop invariant i15: x == n ==> (x == n);\n\n\n\n\n\n\n\n\nloop invariant i36: 0 <= x;\nloop invariant i40: x == n ==> (x >= 0 && x <= n);\n\nloop invariant i44: (x == n) ==> (x == n);\n\nloop invariant i49: x <= n ==> x >= 0;\n\n\n\nloop invariant i55: \\forall integer i; (0 <= i < x) ==> i < n;\n\n\n*/\nwhile ((x < n)) {\n    {\n    (x  = (x + 1));\n    }\n\n  }\n  \n{;\n//@ assert( (x == n) );\n}\n}",
+                "checker_output": true
+            }
+        ]
+    },
+    "stats": {
+        "success": [
+            "../data/benchmarks/code2inv/1.c",
+            "../data/benchmarks/code2inv/2.c",
+            "../data/benchmarks/code2inv/9.c",
+            "../data/benchmarks/code2inv/10.c",
+            "../data/benchmarks/code2inv/12.c",
+            "../data/benchmarks/code2inv/14.c",
+            "../data/benchmarks/code2inv/15.c",
+            "../data/benchmarks/code2inv/16.c",
+            "../data/benchmarks/code2inv/17.c",
+            "../data/benchmarks/code2inv/18.c",
+            "../data/benchmarks/code2inv/19.c",
+            "../data/benchmarks/code2inv/20.c",
+            "../data/benchmarks/code2inv/25.c",
+            "../data/benchmarks/code2inv/30.c",
+            "../data/benchmarks/code2inv/35.c",
+            "../data/benchmarks/code2inv/36.c",
+            "../data/benchmarks/code2inv/38.c",
+            "../data/benchmarks/code2inv/42.c",
+            "../data/benchmarks/code2inv/46.c",
+            "../data/benchmarks/code2inv/49.c",
+            "../data/benchmarks/code2inv/53.c",
+            "../data/benchmarks/code2inv/55.c",
+            "../data/benchmarks/code2inv/56.c",
+            "../data/benchmarks/code2inv/59.c",
+            "../data/benchmarks/code2inv/70.c",
+            "../data/benchmarks/code2inv/71.c",
+            "../data/benchmarks/code2inv/77.c",
+            "../data/benchmarks/code2inv/78.c",
+            "../data/benchmarks/code2inv/79.c",
+            "../data/benchmarks/code2inv/80.c",
+            "../data/benchmarks/code2inv/81.c",
+            "../data/benchmarks/code2inv/82.c",
+            "../data/benchmarks/code2inv/87.c",
+            "../data/benchmarks/code2inv/89.c",
+            "../data/benchmarks/code2inv/90.c",
+            "../data/benchmarks/code2inv/91.c",
+            "../data/benchmarks/code2inv/92.c",
+            "../data/benchmarks/code2inv/93.c",
+            "../data/benchmarks/code2inv/94.c",
+            "../data/benchmarks/code2inv/95.c",
+            "../data/benchmarks/code2inv/96.c",
+            "../data/benchmarks/code2inv/97.c",
+            "../data/benchmarks/code2inv/98.c",
+            "../data/benchmarks/code2inv/99.c",
+            "../data/benchmarks/code2inv/100.c",
+            "../data/benchmarks/code2inv/102.c",
+            "../data/benchmarks/code2inv/104.c",
+            "../data/benchmarks/code2inv/105.c",
+            "../data/benchmarks/code2inv/108.c",
+            "../data/benchmarks/code2inv/113.c",
+            "../data/benchmarks/code2inv/114.c",
+            "../data/benchmarks/code2inv/115.c",
+            "../data/benchmarks/code2inv/116.c",
+            "../data/benchmarks/code2inv/117.c",
+            "../data/benchmarks/code2inv/119.c",
+            "../data/benchmarks/code2inv/120.c",
+            "../data/benchmarks/code2inv/128.c",
+            "../data/benchmarks/code2inv/129.c",
+            "../data/benchmarks/code2inv/132.c",
+            "../data/benchmarks/code2inv/133.c"
+        ],
+        "failure": [
+            "../data/benchmarks/code2inv/3.c",
+            "../data/benchmarks/code2inv/4.c",
+            "../data/benchmarks/code2inv/5.c",
+            "../data/benchmarks/code2inv/6.c",
+            "../data/benchmarks/code2inv/7.c",
+            "../data/benchmarks/code2inv/8.c",
+            "../data/benchmarks/code2inv/11.c",
+            "../data/benchmarks/code2inv/13.c",
+            "../data/benchmarks/code2inv/21.c",
+            "../data/benchmarks/code2inv/22.c",
+            "../data/benchmarks/code2inv/23.c",
+            "../data/benchmarks/code2inv/24.c",
+            "../data/benchmarks/code2inv/26.c",
+            "../data/benchmarks/code2inv/27.c",
+            "../data/benchmarks/code2inv/28.c",
+            "../data/benchmarks/code2inv/29.c",
+            "../data/benchmarks/code2inv/31.c",
+            "../data/benchmarks/code2inv/32.c",
+            "../data/benchmarks/code2inv/33.c",
+            "../data/benchmarks/code2inv/34.c",
+            "../data/benchmarks/code2inv/37.c",
+            "../data/benchmarks/code2inv/39.c",
+            "../data/benchmarks/code2inv/40.c",
+            "../data/benchmarks/code2inv/41.c",
+            "../data/benchmarks/code2inv/43.c",
+            "../data/benchmarks/code2inv/44.c",
+            "../data/benchmarks/code2inv/45.c",
+            "../data/benchmarks/code2inv/47.c",
+            "../data/benchmarks/code2inv/48.c",
+            "../data/benchmarks/code2inv/50.c",
+            "../data/benchmarks/code2inv/51.c",
+            "../data/benchmarks/code2inv/52.c",
+            "../data/benchmarks/code2inv/54.c",
+            "../data/benchmarks/code2inv/57.c",
+            "../data/benchmarks/code2inv/58.c",
+            "../data/benchmarks/code2inv/60.c",
+            "../data/benchmarks/code2inv/61.c",
+            "../data/benchmarks/code2inv/62.c",
+            "../data/benchmarks/code2inv/63.c",
+            "../data/benchmarks/code2inv/64.c",
+            "../data/benchmarks/code2inv/65.c",
+            "../data/benchmarks/code2inv/66.c",
+            "../data/benchmarks/code2inv/67.c",
+            "../data/benchmarks/code2inv/68.c",
+            "../data/benchmarks/code2inv/69.c",
+            "../data/benchmarks/code2inv/72.c",
+            "../data/benchmarks/code2inv/73.c",
+            "../data/benchmarks/code2inv/74.c",
+            "../data/benchmarks/code2inv/75.c",
+            "../data/benchmarks/code2inv/76.c",
+            "../data/benchmarks/code2inv/83.c",
+            "../data/benchmarks/code2inv/84.c",
+            "../data/benchmarks/code2inv/85.c",
+            "../data/benchmarks/code2inv/86.c",
+            "../data/benchmarks/code2inv/88.c",
+            "../data/benchmarks/code2inv/101.c",
+            "../data/benchmarks/code2inv/103.c",
+            "../data/benchmarks/code2inv/106.c",
+            "../data/benchmarks/code2inv/107.c",
+            "../data/benchmarks/code2inv/109.c",
+            "../data/benchmarks/code2inv/110.c",
+            "../data/benchmarks/code2inv/111.c",
+            "../data/benchmarks/code2inv/112.c",
+            "../data/benchmarks/code2inv/118.c",
+            "../data/benchmarks/code2inv/121.c",
+            "../data/benchmarks/code2inv/122.c",
+            "../data/benchmarks/code2inv/123.c",
+            "../data/benchmarks/code2inv/124.c",
+            "../data/benchmarks/code2inv/125.c",
+            "../data/benchmarks/code2inv/126.c",
+            "../data/benchmarks/code2inv/127.c",
+            "../data/benchmarks/code2inv/130.c",
+            "../data/benchmarks/code2inv/131.c"
+        ],
+        "skipped": [
+            "../data/benchmarks/code2inv/1.c",
+            "../data/benchmarks/code2inv/3.c",
+            "../data/benchmarks/code2inv/5.c",
+            "../data/benchmarks/code2inv/7.c",
+            "../data/benchmarks/code2inv/9.c",
+            "../data/benchmarks/code2inv/14.c",
+            "../data/benchmarks/code2inv/44.c",
+            "../data/benchmarks/code2inv/45.c",
+            "../data/benchmarks/code2inv/49.c",
+            "../data/benchmarks/code2inv/59.c",
+            "../data/benchmarks/code2inv/71.c",
+            "../data/benchmarks/code2inv/76.c",
+            "../data/benchmarks/code2inv/77.c",
+            "../data/benchmarks/code2inv/79.c",
+            "../data/benchmarks/code2inv/82.c",
+            "../data/benchmarks/code2inv/87.c",
+            "../data/benchmarks/code2inv/94.c",
+            "../data/benchmarks/code2inv/96.c",
+            "../data/benchmarks/code2inv/97.c",
+            "../data/benchmarks/code2inv/102.c",
+            "../data/benchmarks/code2inv/107.c",
+            "../data/benchmarks/code2inv/114.c",
+            "../data/benchmarks/code2inv/124.c",
+            "../data/benchmarks/code2inv/129.c",
+            "../data/benchmarks/code2inv/130.c"
+        ],
+        "total": 133,
+        "success_count": 60,
+        "failure_count": 73,
+        "success_rate": 0.45112781954887216
+    }
+}

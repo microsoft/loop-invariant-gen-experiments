@@ -1,0 +1,294 @@
+{
+    "logs": {
+        "file": "../data/benchmarks/code2inv/87.c",
+        "benchmark_code": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\n\nint main() {\n  \n  int lock;\n  int x;\n  int y;\n  \n  (x = y);\n  (lock = 1);\n  \n  while ((x != y)) {\n    {\n      if ( unknown() ) {\n        {\n        (lock  = 1);\n        (x  = y);\n        }\n      } else {\n        {\n        (lock  = 0);\n        (x  = y);\n        (y  = (y + 1));\n        }\n      }\n\n    }\n\n  }\n  \n{;\n//@ assert( (lock == 1) );\n}\n}",
+        "success": true,
+        "log": [
+            {
+                "step": "Prompting LLM",
+                "generating_annotation": "loop_invariants",
+                "success": true,
+                "llm_chat": [
+                    {
+                        "role": "system",
+                        "content": "You are a helpful AI software assistant that reasons about how code behaves. Given a program, you can find loop invariants, which can then be used to verify some property in the program. \nFrama-C is a software verification tool for C programs. The input to Frama-C is a C program file with ACSL (ANSI/ISO C Specification Language) annotations.\nFor the given program, find the necessary loop invariants of the while loop to help Frama-C verify the post-condition.\n\nInstructions:\n- Make a note of the pre-conditions or variable assignments in the program.\n- Analyze the loop body and make a note of the loop condition. \n- Output loop invariants that are true \n(i) before the loop execution, \n(ii) in every iteration of the loop and \n(iii) after the loop termination, \nsuch that the loop invariants imply the post condition.\n- If a loop invariant is a conjunction, split it into its parts.\n- Output all the loop invariants in one code block. For example:\n```\n/*@ \n    loop invariant i1;\n    loop invariant i2;\n*/\n```\nRules:\n- **Do not use variables or functions that are not declared in the program.** \n- **Do not make any assumptions about functions whose definitions are not given.**\n- **All undefined variables contain garbage values. Do not use variables that have garbage values.**\n- **Do not use keywords that are not supported in ACSL annotations for loops.**\n- **Variables that are not explicitly initialized, could have garbage values. Do not make any assumptions about such values.**\n- **Do not use the \\at(x, Pre) notation for any variable x.**\n- **Do not use non-deterministic function calls.**"
+                    },
+                    {
+                        "role": "user",
+                        "content": "\nConsider the following C program:\n```\n#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\n\nint main() {\n  \n  int lock;\n  int x;\n  int y;\n  \n  (x = y);\n  (lock = 1);\n  \n  while ((x != y)) {\n    {\n      if ( unknown() ) {\n        {\n        (lock  = 1);\n        (x  = y);\n        }\n      } else {\n        {\n        (lock  = 0);\n        (x  = y);\n        (y  = (y + 1));\n        }\n      }\n\n    }\n\n  }\n  \n{;\n//@ assert( (lock == 1) );\n}\n}\n```\n\nYou are allowed to use implication to take care of the conditional nature of the code. Use implication (==>) instead of using if-then.\n\nFor all variables, add conjunctions that bound the maximum and minimum values that they can take, if such bounds exist.\n\nIf a variable is always equal to or smaller or larger than another variable, add a conjunction for their relation.\n\nIf the assertion is guarded by a condition, use the guard condition in an implication.\n\nIf certain variables are non-deterministic at the beginning or end of the loop, use an implication to make the invariant trivially true at that location. \n\nOutput the loop invariants for the loop in the program above. Let's think step by step."
+                    },
+                    "Pre-conditions:\n- The function `unknown()` returns a non-deterministic boolean value.\n\nVariable assignments:\n- `lock` is initialized to 1.\n- `x` is assigned the value of `y`.\n\nLoop condition:\n- The loop continues as long as `x` is not equal to `y`.\n\nLoop invariants:\n- Before the loop execution, `x` and `y` are equal. This can be expressed as:\n```\n/*@ loop invariant x == y; */\n```\n- In every iteration of the loop, the value of `lock` is either 0 or 1. This can be expressed as:\n```\n/*@ loop invariant lock == 0 || lock == 1; */\n```\n- In every iteration of the loop, either `x` and `y` are equal or `y` is greater than `x`. This can be expressed as:\n```\n/*@ loop invariant x == y || y > x; */\n```\n- In every iteration of the loop, if `lock` is 1, then `x` and `y` are equal. This can be expressed as:\n```\n/*@ loop invariant lock == 1 ==> x == y; */\n```\n- In every iteration of the loop, if `lock` is 0, then `y` is greater than `x`. This can be expressed as:\n```\n/*@ loop invariant lock == 0 ==> y > x; */\n```\n- After the loop termination, `lock` is equal to 1. This can be expressed as:\n```\n/*@ assert lock == 1; */\n```\nNote: Since `unknown()` is non-deterministic, we cannot make any assumptions about the values of `lock`, `x`, and `y` at the beginning or end of the loop. Therefore, we do not need to use any implications in this case.",
+                    "Pre-conditions:\n- The function `unknown` returns a boolean value.\n- All variables (`lock`, `x`, `y`) are uninitialized and contain garbage values.\n\nVariable assignments:\n- `x` is assigned the value of `y`.\n- `lock` is assigned the value `1`.\n\nLoop condition:\n- The loop continues as long as `x` is not equal to `y`.\n\nPost-condition:\n- `lock` is equal to `1` after the loop terminates.\n\nLoop invariants:\n- `lock` is always either `0` or `1`.\n- `x` and `y` are always equal at the end of each iteration.\n- If `lock` is `1` at the end of an iteration, then `x` must be equal to `y` in the next iteration.\n- If `lock` is `0` at the end of an iteration, then `y` must be greater than `x` in the next iteration.\n- If `lock` is `1` at the end of the loop, then `x` must be equal to `y`.\n\nPutting it all together:\n```\n/*@ \n  loop invariant lock == 0 || lock == 1;\n  loop invariant x == y;\n  loop invariant lock == 1 ==> \\old(x) == y;\n  loop invariant lock == 0 ==> \\old(y) > x;\n  loop invariant lock == 1 ==> x == y;\n*/\n``` \n\nNote that we use the `\\old` keyword to refer to the values of `x` and `y` in the previous iteration of the loop. Since `unknown()` is non-deterministic, we cannot make any assumptions about the values of `lock`, `x`, or `y` at the beginning of each iteration or at the end of the loop. Therefore, we do not include any loop invariants for the initial or final values of the variables.",
+                    "We start by identifying the pre-conditions and variable assignments in the program:\n- The program does not have any pre-conditions.\n- The program declares three integer variables: `lock`, `x`, and `y`.\n- The program assigns `y` to `x`.\n- The program assigns `1` to `lock`.\n\nNext, we analyze the loop body and make a note of the loop condition:\n- The loop condition is `(x != y)`.\n- The loop contains a conditional statement that modifies the values of `lock`, `x`, and `y` based on the result of a call to an external function `unknown()`.\n\nNow, we need to find loop invariants that are true before, during, and after the loop execution:\n- Before the loop execution, we can state the following loop invariants:\n```\n/*@ \n    loop invariant lock >= 0 && lock <= 1;\n    loop invariant x == y;\n    loop invariant y >= \\old(y);\n*/\n```\n    - The first loop invariant ensures that `lock` is either `0` or `1`.\n    - The second loop invariant ensures that `x` and `y` are equal before the loop execution.\n    - The third loop invariant ensures that `y` is non-decreasing before the loop execution.\n\n- In every iteration of the loop, we can state the following loop invariants:\n```\n/*@ \n    loop invariant lock >= 0 && lock <= 1;\n    loop invariant x == y;\n    loop invariant y >= \\old(y);\n    loop invariant (lock == 0 ==> y == \\old(y) + 1);\n    loop invariant (lock == 1 ==> y == \\old(y));\n*/\n```\n    - The first three loop invariants are the same as before.\n    - The fourth loop invariant states that if `lock` is `0`, then `y` must be equal to its previous value plus `1`.\n    - The fifth loop invariant states that if `lock` is `1`, then `y` must be equal to its previous value.\n\n- After the loop termination, we can state the following loop invariants:\n```\n/*@ \n    loop invariant lock >= 0 && lock <= 1;\n    loop invariant x == y;\n    loop invariant y >= \\old(y);\n    loop invariant (lock == 0 ==> y == \\old(y) + 1);\n    loop invariant (lock == 1 ==> y == \\old(y));\n    loop invariant x == y;\n    loop invariant lock == 1;\n*/\n```\n    - The first five loop invariants are the same as before.\n    - The sixth loop invariant ensures that `x` and `y` are equal after the loop termination.\n    - The seventh loop invariant ensures that `lock` is `1` after the loop termination.\n\nFinally, we need to use implication to take care of the conditional nature of the code and the assertion:\n- In the loop invariants, we have used implication to ensure that the loop invariants hold regardless of the value of `lock`.\n- For the assertion, we can use the guard condition `(x != y)` in an implication:\n```\n//@ assert ((x != y) ==> (lock == 1));\n```\n\nPutting everything together, the loop invariants and the assertion are:\n```\n#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\n\nint main() {\n  \n  int lock;\n  int x;\n  int y;\n  \n  (x = y);\n  (lock = 1);\n  \n  /*@ \n      loop invariant lock >= 0 && lock <= 1;\n      loop invariant x == y;\n      loop invariant y >= \\old(y);\n  */\n  while ((x != y)) {\n    {\n      /*@ \n          loop invariant lock >= 0 && lock <= 1;\n          loop invariant x == y;\n          loop invariant y >= \\old(y);\n          loop invariant (lock == 0 ==> y == \\old(y) + 1);\n          loop invariant (lock == 1 ==> y == \\old(y));\n      */\n      if ( unknown() ) {\n        {\n        (lock  = 1);\n        (x  = y);\n        }\n      } else {\n        {\n        (lock  = 0);\n        (x  = y);\n        (y  = (y + 1));\n        }\n      }\n\n    }\n\n  }\n  \n{;\n/*@ \n    loop invariant lock >= 0 && lock <= 1;\n    loop invariant x == y;\n    loop invariant y >= \\old(y);\n    loop invariant (lock == 0 ==> y == \\old(y) + 1);\n    loop invariant (lock == 1 ==> y == \\old(y));\n    loop invariant x == y;\n    loop invariant lock == 1;\n*/\n//@ assert ((x !=",
+                    "Pre-conditions:\n- None\n\nVariable assignments:\n- `lock` is assigned the value 1.\n- `x` is assigned the value of `y`.\n\nLoop condition:\n- `x != y`\n\nLoop invariants:\n- `lock == 0 ==> y_old == y`\n- `lock == 1 ==> x_old == y`\n- `x <= y`\n- `y <= x + 1`\n\nExplanation:\n- The first invariant states that if the lock is 0 (meaning the else block was executed), then `y` should not have been modified in that iteration, hence it should be equal to its old value (`y_old`).\n- The second invariant states that if the lock is 1 (meaning the if block was executed), then `x` should be equal to `y`.\n- The third invariant states that `x` should always be less than or equal to `y`.\n- The fourth invariant states that `y` should always be less than or equal to `x+1`.\n- Since there are no non-deterministic variables, we do not need to use any implications to make the invariants trivially true at the beginning or end of the loop.\n\nPutting it all together:\n```\n/*@ \n    loop invariant lock == 0 ==> y_old == y;\n    loop invariant lock == 1 ==> x_old == y;\n    loop invariant x <= y;\n    loop invariant y <= x + 1;\n*/\n```\n\nThe loop invariants hold true before, during, and after the loop, and they imply the post-condition of the program (`lock == 1`).",
+                    "Pre-conditions:\n- None\n\nVariable assignments:\n- `int lock;`: Initializes `lock` to some garbage value.\n- `int x;`: Initializes `x` to some garbage value.\n- `int y;`: Initializes `y` to some garbage value.\n- `(x = y);`: Assigns the value of `y` to `x`.\n- `(lock = 1);`: Assigns 1 to `lock`.\n\nLoop condition:\n- `(x != y)`\n\nLoop invariants:\n```\n/*@ \n    loop invariant lock == 1 || lock == 0;\n    loop invariant x == y || x > y;\n    loop invariant y >= \\at(y, Pre);\n    loop invariant (x == y) ==> lock == 1;\n    loop invariant (x != y) ==> x > y;\n*/\n```\nExplanation of the loop invariants:\n- `lock` can only be 1 or 0. This is true before the loop, in every iteration of the loop and after the loop termination.\n- `x` is either equal to `y` or greater than `y`. This is true before the loop, in every iteration of the loop and after the loop termination.\n- `y` is greater than or equal to its value at the beginning of the loop. This is true before the loop, in every iteration of the loop and after the loop termination.\n- If `x` equals `y`, then `lock` must be 1. This is true in every iteration of the loop.\n- If `x` does not equal `y`, then `x` must be greater than `y`. This is true in every iteration of the loop.\n\nNote:\n- Since the values of `lock`, `x` and `y` are assigned before the loop, we do not need to consider the case where they have garbage values.\n- The function `unknown` is an external function whose behavior is not known. Therefore, we cannot use it to make any assumptions about the values of `lock`, `x` or `y` within the loop.",
+                    "Pre-conditions and variable assignments:\n- `lock`, `x`, and `y` are integer variables.\n- `x` is assigned the value of `y`.\n- `lock` is assigned the value `1`.\n\nLoop condition:\n- The loop continues as long as `x` is not equal to `y`.\n\nLoop invariants:\n- Before the loop:\n    - `lock == 1`\n    - `x == y`\n- In every iteration of the loop:\n    - `((lock == 1) && (x == y)) ==> (x == \\old(y))` \n    - `((lock == 0) && (x == y)) ==> ((x == \\old(y)) && (y == \\old(y) + 1))`\n- After the loop:\n    - `(x == y) ==> (lock == 1)`\n\nExplanation:\n- Before the loop, we know that `lock` has been assigned the value `1`, and `x` has been assigned the value of `y`. Therefore, `lock == 1` and `x == y` are true before the loop starts.\n- In every iteration of the loop, we know that `x` is updated to either the current value of `y` or the old value of `y`. Therefore, we have two cases:\n    - If `lock == 1`, then we know that `x` is equal to `y`, and it is updated to the old value of `y`. Therefore, `(x == \\old(y))` is true.\n    - If `lock == 0`, then we know that `x` is equal to `y`, and it is updated to the old value of `y`, while `y` is updated to the old value of `y` plus `1`. Therefore, `(x == \\old(y)) && (y == \\old(y) + 1)` is true.\n- After the loop, we know that `x` is equal to `y`, and we need to show that `lock == 1`. Therefore, we have the implication `(x == y) ==> (lock == 1)`. This is because the only way `x` can be equal to `y` is if `lock` was set to `1` in the previous iteration of the loop.",
+                    "Pre-conditions:\n- The function `unknown()` returns a boolean value.\n- All variables contain garbage values.\n\nVariable Assignments:\n- `x` is assigned the value of `y`.\n- `lock` is assigned the value of 1.\n\nLoop condition:\n- The loop continues as long as `x` is not equal to `y`.\n\nTo prove the post-condition `(lock == 1)`, we can use the following loop invariants:\n```\n/*@ loop invariant x <= y;\n    loop invariant lock == 0 || lock == 1;\n    loop invariant lock == 1 ==> x == y;\n    loop invariant y >= \\at(y, Pre);\n    loop invariant y <= \\at(y, Pre) + \\at(\\max(y - x, 0), Pre);\n*/\n```\nExplanation:\n- `x <= y` ensures that `y` is always greater than or equal to `x`.\n- `lock == 0 || lock == 1` ensures that `lock` can only be 0 or 1.\n- `lock == 1 ==> x == y` ensures that `x` and `y` are equal only when `lock` is 1.\n- `y >= \\at(y, Pre)` ensures that `y` is always greater than or equal to its value at the beginning of the loop.\n- `y <= \\at(y, Pre) + \\at(\\max(y - x, 0), Pre)` ensures that `y` does not increase more than the difference between its initial value and `x`.\n\nUsing these loop invariants, we can prove that `(lock == 1)` holds after the loop termination.",
+                    "Pre-conditions:\n- The program does not take any input from the user.\n- The external function `unknown` returns a non-deterministic value.\n\nVariable assignments:\n- `x` is assigned the value of `y`.\n- `lock` is assigned the value `1`.\n\nLoop condition:\n- The loop continues until `x` is equal to `y`.\n\nLoop Invariants:\n- Before the loop execution:\n```\n//@ assert lock == 1;\n//@ assert x == y;\n```\n- In every iteration of the loop:\n```\n//@ assert ((lock == 0) || (lock == 1));\n//@ assert x >= y;\n//@ assert y >= \\old(y);\n```\n- After the loop termination:\n```\n//@ assert lock == 1;\n//@ assert x == y;\n```\n\nExplanation:\n- Before the loop execution, `lock` is assigned the value `1`, therefore, `lock` should be equal to `1`.\n- Before the loop execution, `x` is assigned the value of `y`, therefore, `x` should be equal to `y`.\n- In every iteration of the loop, `lock` can only take values `0` or `1` as per the program logic. Therefore, `lock` should be equal to `0` or `1`.\n- In every iteration of the loop, `x` is assigned the value of `y` and `y` is incremented by `1`. Therefore, `x` should be greater than or equal to `y` and `y` should be greater than or equal to its previous value.\n- After the loop termination, `lock` is assigned the value `1`, therefore, `lock` should be equal to `1`.\n- After the loop termination, `x` is assigned the value of `y`, therefore, `x` should be equal to `y`.\n\nNote:\n- There are no maximum or minimum bounds on any of the variables.\n- There is no relation between `lock` and any other variable, or between `x` and `lock`.",
+                    "Pre-conditions:\n- None\n\nVariable assignments:\n- `lock` is assigned the value 1\n- `x` is assigned the value of `y`\n\nLoop condition:\n- `(x != y)`\n\nLoop invariants:\n- `lock == 1`\n- `x == y ==> lock == 1`\n- `x <= y`\n- `y <= x + 1`\n\nExplanation:\n- Since `lock` is assigned the value 1 before the loop, it should be equal to 1 throughout the loop. Hence, `lock == 1` is a loop invariant.\n- If `x` is equal to `y`, then the loop should terminate and the final value of `lock` should be 1. Hence, `x == y ==> lock == 1` is a loop invariant.\n- `x` is assigned the value of `y` before the loop, so initially `x` is equal to `y`. Also, during each iteration of the loop, `x` is assigned the value of `y`. Therefore, `x <= y` is a loop invariant.\n- If `unknown()` returns 0, then `y` is incremented by 1 in each iteration of the loop. Therefore, `y` should always be greater than or equal to `x` and less than or equal to `x + 1`. Hence, `y <= x + 1` is a loop invariant.\n\nFinal loop invariants:\n```\n/*@ \n    loop invariant lock == 1;\n    loop invariant x == y ==> lock == 1;\n    loop invariant x <= y;\n    loop invariant y <= x + 1;\n*/\n```",
+                    "We can start by analyzing the program and identifying the pre-conditions and variable assignments:\n\n- Pre-conditions: None\n- Variable assignments:\n  - `x` is assigned the value of `y`\n  - `lock` is assigned the value `1`\n\nNext, we can analyze the loop condition: the loop continues as long as `x` is not equal to `y`.\n\nBased on this analysis, we can derive the following loop invariants:\n\n/*@ \n    loop invariant lock == 0 || lock == 1;\n    loop invariant x <= y;\n    loop invariant y <= \\max(y, \\at(y, Pre) + 1);\n    loop invariant (x != y) ==> (lock == 0);\n    loop invariant ((x == y) && (lock == 0)) ==> (\\old(y) == y);\n*/\nThe first loop invariant states that `lock` can only be equal to 0 or 1.\n\nThe second loop invariant states that `x` is always less than or equal to `y`.\n\nThe third loop invariant states that `y` is always greater than or equal to its initial value and less than or equal to the maximum value it can take, which is the maximum of its current value and its previous value incremented by 1.\n\nThe fourth loop invariant states that if `x` becomes equal to `y`, then `lock` must be equal to 0.\n\nThe fifth loop invariant states that if `x` becomes equal to `y` and `lock` is equal to 0, then `y` must be equal to its previous value.\n\nFinally, we can use the loop invariants to prove the post-condition, which states that `lock` is equal to 1 after the loop terminates. The loop invariant `(x != y) ==> (lock == 0)` implies that if `x` becomes equal to `y`, then `lock` must be equal to 0. Therefore, if `lock` is equal to 1 after the loop terminates, then `x` must still be not equal to `y`. But this contradicts the loop condition, which requires that the loop terminates when `x` becomes equal to `y`. Therefore, `lock` must be equal to 1 after the loop terminates.",
+                    "Pre-conditions:\n- The program takes no input.\n- The `unknown()` function returns a non-deterministic boolean value.\n\nVariable assignments:\n- `x` is assigned the value of `y`.\n- `lock` is assigned the value `1`.\n\nLoop condition:\n- The loop condition is `(x != y)`.\n\nLoop invariants:\n- Before the loop execution, the values of `x`, `y`, and `lock` are initialized and `lock` is set to `1`.\n```\n/*@ \n    loop invariant lock == 1;\n    loop invariant x == y;\n*/\n```\n- In every iteration of the loop, either `lock` is `1` and `x` is still equal to `y`, or `lock` is `0` and `x` is updated to the new value of `y`.\n```\n/*@ \n    loop invariant (lock == 1 && x == y) || (lock == 0 && x == \\old(y));\n*/\n```\n- After the loop termination, the loop condition is false, which means `x` is equal to `y`. Also, `lock` is still `1`.\n```\n/*@ \n    loop invariant lock == 1;\n    loop invariant x == y;\n    loop assigns lock, x, y;\n    loop variant 0; \n*/\n{;\n  //@ assert( (lock == 1) );\n}",
+                    "Pre-conditions or variable assignments:\n- The program declares three integer variables `lock`, `x`, and `y`.\n- The macro `assume` is defined which takes a boolean expression and returns 0 if the expression is false.\n- The statement `(x = y)` assigns the value of `y` to `x`.\n- The statement `(lock = 1)` assigns the value 1 to `lock`.\n\nLoop condition:\n- The while loop runs as long as `x` is not equal to `y`.\n\nLoop invariants:\n- The variable `lock` can only have the values 0 or 1. Thus, we can add the following conjunction before the loop:\n```\n/*@ loop invariant (lock == 0) || (lock == 1);\n*/\n```\n- The variables `x` and `y` are equal before the loop starts. Thus, we can add the following conjunction before the loop:\n```\n/*@ loop invariant x == y;\n*/\n```\n- The variables `x` and `y` are always equal inside the loop. Thus, we can add the following conjunction inside the loop:\n```\n/*@ loop invariant x == y;\n*/\n```\n- If `unknown()` returns true, then `lock` is set to 1 and `x` is set to `y`. Thus, we can add the following implication inside the loop:\n```\n/*@ loop invariant unknown() ==> (lock == 1 && x == y);\n*/\n```\n- If `unknown()` returns false, then `lock` is set to 0, `x` is set to `y`, and `y` is incremented by 1. Thus, we can add the following implication inside the loop:\n```\n/*@ loop invariant !unknown() ==> (lock == 0 && x == y && y >= \\at(y, LoopEntry));\n*/\n```\n- The loop terminates when `x` is equal to `y`. Thus, we can add the following conjunction after the loop:\n```\n/*@ loop invariant x == y;\n*/\n```\n- The assertion is guarded by the condition that the loop terminated. Thus, we can add the following implication after the loop:\n```\n/*@ assert x == y ==> (lock == 1);\n*/\n```\n\nPutting it all together, the final loop invariants are:\n```\n/*@ loop invariant (lock == 0) || (lock == 1);\n    loop invariant x == y;\n    loop invariant x == y;\n    loop invariant unknown() ==> (lock == 1 && x == y);\n    loop invariant !unknown() ==> (lock == 0 && x == y && y >= \\at(y, LoopEntry));\n    loop invariant x == y;\n*/\n```\nNote that the third loop invariant is duplicated, but this is not a problem.",
+                    "Pre-conditions:\n- None\n\nVariable assignments:\n- Assigns the value of y to x\n- Sets the value of lock to 1\n\nLoop condition:\n- Loops until x is equal to y\n\nLoop invariants:\n- Before the loop execution, lock is 1 and x is equal to y\n```\n/*@ \n    loop invariant lock == 1 && x == y;\n*/\n```\n- In every iteration of the loop, either lock is 1 and x is equal to y, or lock is 0 and y is greater than or equal to x.\n```\n/*@ \n    loop invariant (lock == 1 && x == y) || (lock == 0 && y >= x);\n*/\n```\n- After the loop termination, lock is 1.\n```\n/*@ \n    loop invariant lock == 1;\n    ensures lock == 1;\n*/\n```\n- Since unknown() is non-deterministic, we need to add an implication to make the loop invariant true at the beginning of the loop:\n```\n/*@ \n    loop invariant (lock == 1 && x == y) || (lock == 0 && y >= x);\n    loop invariant unknown() ==> (lock == 1 && x == y);\n*/\n```\n- Similarly, we need to add an implication to make the post-condition true:\n```\n/*@ \n    loop invariant (lock == 1 && x == y) || (lock == 0 && y >= x);\n    loop invariant unknown() ==> (lock == 1 && x == y);\n    loop invariant lock == 1 ==> (x == y);\n    ensures lock == 1 ==> (x == y);\n*/\n```",
+                    "Pre-conditions or variable assignments:\n- Three integer variables `lock`, `x`, and `y` are declared.\n- `x` is assigned the value of `y`.\n- `lock` is assigned the value 1.\n\nLoop condition:\n- The loop continues while `x` is not equal to `y`.\n\nLoop invariants:\n- `lock` is either 0 or 1.\n- `x` and `y` have the same initial value.\n- In every iteration of the loop, either `lock` is 1 and `x` is equal to `y`, or `lock` is 0, `x` is equal to `y`, and `y` is strictly greater than its initial value.\n- After the loop termination, `lock` is equal to 1.\n\nExplanation:\n- The first invariant is straightforward, since `lock` is assigned either 0 or 1 in the loop.\n- The second invariant ensures that `x` and `y` have the same initial value, and this is necessary to imply the post-condition.\n- The third invariant combines the two branches of the conditional inside the loop. If `unknown()` returns true, then `lock` is set to 1 and `x` is set to `y`, which satisfies the first part of the invariant. If `unknown()` returns false, then `lock` is set to 0, `x` is set to `y`, and `y` is incremented by 1. This satisfies the second part of the invariant, which is a conjunction of two conditions. Note that `x` is always equal to `y` in both branches, so we only need to include it once in the invariant. Also note that we do not need to include any bounds on `y`, since it is incremented by 1 in every iteration and there are no other assignments to it.\n- The fourth invariant ensures that the post-condition is satisfied, since `lock` is assigned the value 1 after the loop. \n\nPutting it all together:\n```\n/*@ \n    loop invariant lock == 0 || lock == 1;\n    loop invariant x == y;\n    loop invariant (lock == 1 && x == y) || (lock == 0 && x == y && y > \\at(y,LoopEntry));\n    loop invariant lock == 1 ==> (lock == 1);\n*/\n```",
+                    "Preconditions:\n- The program does not have any explicit preconditions. \n\nVariable Assignments:\n- `lock` is assigned the value `1`.\n- `x` is assigned the value of `y`.\n- `y` is not assigned any value explicitly.\n\nLoop Condition:\n- The loop continues to execute as long as `x` is not equal to `y`.\n\nLoop Invariants:\n- `lock` is either `0` or `1` throughout the loop execution.\n- The value of `x` is equal to the value of `y` at the end of every iteration of the loop.\n- The value of `y` is either equal to its initial value or greater than its initial value at the end of every iteration of the loop.\n- If `lock` is `0` at the end of the loop, then `y` is greater than its initial value.\n- If `x` is not equal to `y` at the end of the loop, then `lock` is `1`.\n- The value of `y` is greater than or equal to its initial value throughout the loop execution.\n\nLoop Invariants (in ACSL):\n```\n/*@ \n  loop invariant lock == 0 || lock == 1;\n  loop invariant x == y;\n  loop invariant y >= \\at(y, Loop_Entry);\n  loop invariant (lock == 0 && y > \\at(y, Loop_Entry)) ==> y > \\at(y, Loop_Entry);\n  loop invariant (x != y && \\at(lock, Here) == 0) ==> lock == 1;\n  loop invariant y >= \\at(y, Loop_Entry);\n*/\n```\n\nExplanation:\n- The first invariant specifies that `lock` is either `0` or `1` throughout the loop execution.\n- The second invariant specifies that the value of `x` is equal to the value of `y` at the end of every iteration of the loop.\n- The third invariant specifies that the value of `y` is either equal to its initial value or greater than its initial value at the end of every iteration of the loop.\n- The fourth invariant specifies that if `lock` is `0` at the end of the loop, then `y` is greater than its initial value.\n- The fifth invariant specifies that if `x` is not equal to `y` at the end of the loop, then `lock` is `1`.\n- The sixth invariant specifies that the value of `y` is greater than or equal to its initial value throughout the loop execution."
+                ],
+                "output": [
+                    "/*@ loop invariant x == y; */",
+                    "/*@ \n  loop invariant lock == 0 || lock == 1;\n  loop invariant x == y;\n  loop invariant lock == 1 ==> \\old(x) == y;\n  loop invariant lock == 0 ==> \\old(y) > x;\n  loop invariant lock == 1 ==> x == y;\n*/",
+                    "/*@ \n    loop invariant lock >= 0 && lock <= 1;\n    loop invariant x == y;\n    loop invariant y >= \\old(y);\n*/",
+                    "/*@ \n    loop invariant lock == 0 ==> y_old == y;\n    loop invariant lock == 1 ==> x_old == y;\n    loop invariant x <= y;\n    loop invariant y <= x + 1;\n*/",
+                    "/*@ \n    loop invariant lock == 1 || lock == 0;\n    loop invariant x == y || x > y;\n    loop invariant y >= \\at(y, Pre);\n    loop invariant (x == y) ==> lock == 1;\n    loop invariant (x != y) ==> x > y;\n*/",
+                    [
+                        "ERROR: Output does not contain at least 1 complete code block",
+                        "Pre-conditions and variable assignments:\n- `lock`, `x`, and `y` are integer variables.\n- `x` is assigned the value of `y`.\n- `lock` is assigned the value `1`.\n\nLoop condition:\n- The loop continues as long as `x` is not equal to `y`.\n\nLoop invariants:\n- Before the loop:\n    - `lock == 1`\n    - `x == y`\n- In every iteration of the loop:\n    - `((lock == 1) && (x == y)) ==> (x == \\old(y))` \n    - `((lock == 0) && (x == y)) ==> ((x == \\old(y)) && (y == \\old(y) + 1))`\n- After the loop:\n    - `(x == y) ==> (lock == 1)`\n\nExplanation:\n- Before the loop, we know that `lock` has been assigned the value `1`, and `x` has been assigned the value of `y`. Therefore, `lock == 1` and `x == y` are true before the loop starts.\n- In every iteration of the loop, we know that `x` is updated to either the current value of `y` or the old value of `y`. Therefore, we have two cases:\n    - If `lock == 1`, then we know that `x` is equal to `y`, and it is updated to the old value of `y`. Therefore, `(x == \\old(y))` is true.\n    - If `lock == 0`, then we know that `x` is equal to `y`, and it is updated to the old value of `y`, while `y` is updated to the old value of `y` plus `1`. Therefore, `(x == \\old(y)) && (y == \\old(y) + 1)` is true.\n- After the loop, we know that `x` is equal to `y`, and we need to show that `lock == 1`. Therefore, we have the implication `(x == y) ==> (lock == 1)`. This is because the only way `x` can be equal to `y` is if `lock` was set to `1` in the previous iteration of the loop."
+                    ],
+                    "/*@ loop invariant x <= y;\n    loop invariant lock == 0 || lock == 1;\n    loop invariant lock == 1 ==> x == y;\n    loop invariant y >= \\at(y, Pre);\n    loop invariant y <= \\at(y, Pre) + \\at(\\max(y - x, 0), Pre);\n*/",
+                    "//@ assert lock == 1;\n//@ assert x == y;",
+                    "/*@ \n    loop invariant lock == 1;\n    loop invariant x == y ==> lock == 1;\n    loop invariant x <= y;\n    loop invariant y <= x + 1;\n*/",
+                    [
+                        "ERROR: Output does not contain at least 1 complete code block",
+                        "We can start by analyzing the program and identifying the pre-conditions and variable assignments:\n\n- Pre-conditions: None\n- Variable assignments:\n  - `x` is assigned the value of `y`\n  - `lock` is assigned the value `1`\n\nNext, we can analyze the loop condition: the loop continues as long as `x` is not equal to `y`.\n\nBased on this analysis, we can derive the following loop invariants:\n\n/*@ \n    loop invariant lock == 0 || lock == 1;\n    loop invariant x <= y;\n    loop invariant y <= \\max(y, \\at(y, Pre) + 1);\n    loop invariant (x != y) ==> (lock == 0);\n    loop invariant ((x == y) && (lock == 0)) ==> (\\old(y) == y);\n*/\nThe first loop invariant states that `lock` can only be equal to 0 or 1.\n\nThe second loop invariant states that `x` is always less than or equal to `y`.\n\nThe third loop invariant states that `y` is always greater than or equal to its initial value and less than or equal to the maximum value it can take, which is the maximum of its current value and its previous value incremented by 1.\n\nThe fourth loop invariant states that if `x` becomes equal to `y`, then `lock` must be equal to 0.\n\nThe fifth loop invariant states that if `x` becomes equal to `y` and `lock` is equal to 0, then `y` must be equal to its previous value.\n\nFinally, we can use the loop invariants to prove the post-condition, which states that `lock` is equal to 1 after the loop terminates. The loop invariant `(x != y) ==> (lock == 0)` implies that if `x` becomes equal to `y`, then `lock` must be equal to 0. Therefore, if `lock` is equal to 1 after the loop terminates, then `x` must still be not equal to `y`. But this contradicts the loop condition, which requires that the loop terminates when `x` becomes equal to `y`. Therefore, `lock` must be equal to 1 after the loop terminates."
+                    ],
+                    "/*@ \n    loop invariant lock == 1;\n    loop invariant x == y;\n*/",
+                    "/*@ loop invariant (lock == 0) || (lock == 1);\n*/",
+                    "/*@ \n    loop invariant lock == 1 && x == y;\n*/",
+                    "/*@ \n    loop invariant lock == 0 || lock == 1;\n    loop invariant x == y;\n    loop invariant (lock == 1 && x == y) || (lock == 0 && x == y && y > \\at(y,LoopEntry));\n    loop invariant lock == 1 ==> (lock == 1);\n*/",
+                    "/*@ \n  loop invariant lock == 0 || lock == 1;\n  loop invariant x == y;\n  loop invariant y >= \\at(y, Loop_Entry);\n  loop invariant (lock == 0 && y > \\at(y, Loop_Entry)) ==> y > \\at(y, Loop_Entry);\n  loop invariant (x != y && \\at(lock, Here) == 0) ==> lock == 1;\n  loop invariant y >= \\at(y, Loop_Entry);\n*/"
+                ]
+            },
+            {
+                "step": "Checking individual completion",
+                "solver_calls": 13,
+                "completions": [
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ loop invariant x == y; */",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant x == y is inductive.\nAssertion lock == 1: Unproven\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n  loop invariant lock == 0 || lock == 1;\n  loop invariant x == y;\n  loop invariant lock == 1 ==> \\old(x) == y;\n  loop invariant lock == 0 ==> \\old(y) > x;\n  loop invariant lock == 1 ==> x == y;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "Annotation error on line 16: \\old undefined in this context. Ignoring loop annotation"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant lock >= 0 && lock <= 1;\n    loop invariant x == y;\n    loop invariant y >= \\old(y);\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "Annotation error on line 16: \\old undefined in this context. Ignoring loop annotation"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant lock == 0 ==> y_old == y;\n    loop invariant lock == 1 ==> x_old == y;\n    loop invariant x <= y;\n    loop invariant y <= x + 1;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "Annotation error on line 14: unbound logic variable y_old. Ignoring loop annotation"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant lock == 1 || lock == 0;\n    loop invariant x == y || x > y;\n    loop invariant y >= \\at(y, Pre);\n    loop invariant (x == y) ==> lock == 1;\n    loop invariant (x != y) ==> x > y;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "Annotation error on line 16: unbound logic variable y. Ignoring loop annotation"
+                    },
+                    {
+                        "num_solver_calls": 0,
+                        "success": false,
+                        "llm_output": "Pre-conditions and variable assignments:\n- `lock`, `x`, and `y` are integer variables.\n- `x` is assigned the value of `y`.\n- `lock` is assigned the value `1`.\n\nLoop condition:\n- The loop continues as long as `x` is not equal to `y`.\n\nLoop invariants:\n- Before the loop:\n    - `lock == 1`\n    - `x == y`\n- In every iteration of the loop:\n    - `((lock == 1) && (x == y)) ==> (x == \\old(y))` \n    - `((lock == 0) && (x == y)) ==> ((x == \\old(y)) && (y == \\old(y) + 1))`\n- After the loop:\n    - `(x == y) ==> (lock == 1)`\n\nExplanation:\n- Before the loop, we know that `lock` has been assigned the value `1`, and `x` has been assigned the value of `y`. Therefore, `lock == 1` and `x == y` are true before the loop starts.\n- In every iteration of the loop, we know that `x` is updated to either the current value of `y` or the old value of `y`. Therefore, we have two cases:\n    - If `lock == 1`, then we know that `x` is equal to `y`, and it is updated to the old value of `y`. Therefore, `(x == \\old(y))` is true.\n    - If `lock == 0`, then we know that `x` is equal to `y`, and it is updated to the old value of `y`, while `y` is updated to the old value of `y` plus `1`. Therefore, `(x == \\old(y)) && (y == \\old(y) + 1)` is true.\n- After the loop, we know that `x` is equal to `y`, and we need to show that `lock == 1`. Therefore, we have the implication `(x == y) ==> (lock == 1)`. This is because the only way `x` can be equal to `y` is if `lock` was set to `1` in the previous iteration of the loop.",
+                        "error": "Output does not contain at least 1 code block"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ loop invariant x <= y;\n    loop invariant lock == 0 || lock == 1;\n    loop invariant lock == 1 ==> x == y;\n    loop invariant y >= \\at(y, Pre);\n    loop invariant y <= \\at(y, Pre) + \\at(\\max(y - x, 0), Pre);\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "Annotation error on line 17: unbound logic variable y. Ignoring loop annotation"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "//@ assert lock == 1;\n//@ assert x == y;",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "No invariants found."
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant lock == 1;\n    loop invariant x == y ==> lock == 1;\n    loop invariant x <= y;\n    loop invariant y <= x + 1;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant lock == 1 is established but not preserved.\nloop invariant x == y ==> lock == 1 is inductive.\nloop invariant x <= y is inductive.\nloop invariant y <= x + 1 is inductive.\nAssertion lock == 1: Partially proven\n"
+                    },
+                    {
+                        "num_solver_calls": 0,
+                        "success": false,
+                        "llm_output": "We can start by analyzing the program and identifying the pre-conditions and variable assignments:\n\n- Pre-conditions: None\n- Variable assignments:\n  - `x` is assigned the value of `y`\n  - `lock` is assigned the value `1`\n\nNext, we can analyze the loop condition: the loop continues as long as `x` is not equal to `y`.\n\nBased on this analysis, we can derive the following loop invariants:\n\n/*@ \n    loop invariant lock == 0 || lock == 1;\n    loop invariant x <= y;\n    loop invariant y <= \\max(y, \\at(y, Pre) + 1);\n    loop invariant (x != y) ==> (lock == 0);\n    loop invariant ((x == y) && (lock == 0)) ==> (\\old(y) == y);\n*/\nThe first loop invariant states that `lock` can only be equal to 0 or 1.\n\nThe second loop invariant states that `x` is always less than or equal to `y`.\n\nThe third loop invariant states that `y` is always greater than or equal to its initial value and less than or equal to the maximum value it can take, which is the maximum of its current value and its previous value incremented by 1.\n\nThe fourth loop invariant states that if `x` becomes equal to `y`, then `lock` must be equal to 0.\n\nThe fifth loop invariant states that if `x` becomes equal to `y` and `lock` is equal to 0, then `y` must be equal to its previous value.\n\nFinally, we can use the loop invariants to prove the post-condition, which states that `lock` is equal to 1 after the loop terminates. The loop invariant `(x != y) ==> (lock == 0)` implies that if `x` becomes equal to `y`, then `lock` must be equal to 0. Therefore, if `lock` is equal to 1 after the loop terminates, then `x` must still be not equal to `y`. But this contradicts the loop condition, which requires that the loop terminates when `x` becomes equal to `y`. Therefore, `lock` must be equal to 1 after the loop terminates.",
+                        "error": "Output does not contain at least 1 code block"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": true,
+                        "invariants": "/*@ \n    loop invariant lock == 1;\n    loop invariant x == y;\n*/",
+                        "checker_output_for_invariants": true,
+                        "checker_message_for_invariants": "loop invariant lock == 1 is inductive.\nloop invariant x == y is inductive.\nAssertion lock == 1: Valid\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ loop invariant (lock == 0) || (lock == 1);\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant (lock == 0) || (lock == 1) is inductive.\nAssertion lock == 1: Unproven\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": true,
+                        "invariants": "/*@ \n    loop invariant lock == 1 && x == y;\n*/",
+                        "checker_output_for_invariants": true,
+                        "checker_message_for_invariants": "loop invariant lock == 1 && x == y is inductive.\nAssertion lock == 1: Valid\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant lock == 0 || lock == 1;\n    loop invariant x == y;\n    loop invariant (lock == 1 && x == y) || (lock == 0 && x == y && y > \\at(y,LoopEntry));\n    loop invariant lock == 1 ==> (lock == 1);\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant lock == 0 || lock == 1 is inductive.\nloop invariant x == y is inductive.\nloop invariant (lock == 1 && x == y) || (lock == 0 && x == y && y > \\at(y,LoopEntry)) is inductive.\nloop invariant lock == 1 ==> (lock == 1) is inductive.\nAssertion lock == 1: Unproven\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n  loop invariant lock == 0 || lock == 1;\n  loop invariant x == y;\n  loop invariant y >= \\at(y, Loop_Entry);\n  loop invariant (lock == 0 && y > \\at(y, Loop_Entry)) ==> y > \\at(y, Loop_Entry);\n  loop invariant (x != y && \\at(lock, Here) == 0) ==> lock == 1;\n  loop invariant y >= \\at(y, Loop_Entry);\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "Annotation error on line 16: logic label `Loop_Entry' not found. Ignoring loop annotation"
+                    }
+                ],
+                "success": true
+            },
+            {
+                "step": "Houdini for combined completion",
+                "solver_calls": 9,
+                "success": true,
+                "code_with_combined_invariants": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\n\nint main() {\n  \n  int lock;\n  int x;\n  int y;\n  \n  (x = y);\n  (lock = 1);\n  \n  /*@\nloop invariant i1: x == y;\nloop invariant i2: lock == 0 || lock == 1;\n\n\nloop invariant i6: lock == 1 ==> x == y;\nloop invariant i7: lock >= 0 && lock <= 1;\n\n\n\nloop invariant i12: x <= y;\nloop invariant i13: y <= x + 1;\nloop invariant i14: lock == 1 || lock == 0;\nloop invariant i15: x == y || x > y;\n\nloop invariant i17: (x == y) ==> lock == 1;\nloop invariant i18: (x != y) ==> x > y;\n\nloop invariant i24: lock == 1;\nloop invariant i25: x == y ==> lock == 1;\nloop invariant i30: (lock == 0) || (lock == 1);\nloop invariant i31: lock == 1 && x == y;\nloop invariant i34: (lock == 1 && x == y) || (lock == 0 && x == y && y > \\at(y,LoopEntry));\nloop invariant i35: lock == 1 ==> (lock == 1);\n\n\nloop invariant i40: (x != y && \\at(lock, Here) == 0) ==> lock == 1;\n*/\nwhile ((x != y)) {\n    {\n      if ( unknown() ) {\n        {\n        (lock  = 1);\n        (x  = y);\n        }\n      } else {\n        {\n        (lock  = 0);\n        (x  = y);\n        (y  = (y + 1));\n        }\n      }\n\n    }\n\n  }\n  \n{;\n//@ assert( (lock == 1) );\n}\n}",
+                "checker_output": true
+            }
+        ]
+    },
+    "stats": {
+        "success": [
+            "../data/benchmarks/code2inv/1.c",
+            "../data/benchmarks/code2inv/2.c",
+            "../data/benchmarks/code2inv/9.c",
+            "../data/benchmarks/code2inv/10.c",
+            "../data/benchmarks/code2inv/12.c",
+            "../data/benchmarks/code2inv/14.c",
+            "../data/benchmarks/code2inv/15.c",
+            "../data/benchmarks/code2inv/16.c",
+            "../data/benchmarks/code2inv/17.c",
+            "../data/benchmarks/code2inv/18.c",
+            "../data/benchmarks/code2inv/19.c",
+            "../data/benchmarks/code2inv/20.c",
+            "../data/benchmarks/code2inv/25.c",
+            "../data/benchmarks/code2inv/30.c",
+            "../data/benchmarks/code2inv/35.c",
+            "../data/benchmarks/code2inv/36.c",
+            "../data/benchmarks/code2inv/38.c",
+            "../data/benchmarks/code2inv/42.c",
+            "../data/benchmarks/code2inv/46.c",
+            "../data/benchmarks/code2inv/49.c",
+            "../data/benchmarks/code2inv/53.c",
+            "../data/benchmarks/code2inv/55.c",
+            "../data/benchmarks/code2inv/56.c",
+            "../data/benchmarks/code2inv/59.c",
+            "../data/benchmarks/code2inv/70.c",
+            "../data/benchmarks/code2inv/71.c",
+            "../data/benchmarks/code2inv/77.c",
+            "../data/benchmarks/code2inv/78.c",
+            "../data/benchmarks/code2inv/79.c",
+            "../data/benchmarks/code2inv/80.c",
+            "../data/benchmarks/code2inv/81.c",
+            "../data/benchmarks/code2inv/82.c",
+            "../data/benchmarks/code2inv/87.c"
+        ],
+        "failure": [
+            "../data/benchmarks/code2inv/3.c",
+            "../data/benchmarks/code2inv/4.c",
+            "../data/benchmarks/code2inv/5.c",
+            "../data/benchmarks/code2inv/6.c",
+            "../data/benchmarks/code2inv/7.c",
+            "../data/benchmarks/code2inv/8.c",
+            "../data/benchmarks/code2inv/11.c",
+            "../data/benchmarks/code2inv/13.c",
+            "../data/benchmarks/code2inv/21.c",
+            "../data/benchmarks/code2inv/22.c",
+            "../data/benchmarks/code2inv/23.c",
+            "../data/benchmarks/code2inv/24.c",
+            "../data/benchmarks/code2inv/26.c",
+            "../data/benchmarks/code2inv/27.c",
+            "../data/benchmarks/code2inv/28.c",
+            "../data/benchmarks/code2inv/29.c",
+            "../data/benchmarks/code2inv/31.c",
+            "../data/benchmarks/code2inv/32.c",
+            "../data/benchmarks/code2inv/33.c",
+            "../data/benchmarks/code2inv/34.c",
+            "../data/benchmarks/code2inv/37.c",
+            "../data/benchmarks/code2inv/39.c",
+            "../data/benchmarks/code2inv/40.c",
+            "../data/benchmarks/code2inv/41.c",
+            "../data/benchmarks/code2inv/43.c",
+            "../data/benchmarks/code2inv/44.c",
+            "../data/benchmarks/code2inv/45.c",
+            "../data/benchmarks/code2inv/47.c",
+            "../data/benchmarks/code2inv/48.c",
+            "../data/benchmarks/code2inv/50.c",
+            "../data/benchmarks/code2inv/51.c",
+            "../data/benchmarks/code2inv/52.c",
+            "../data/benchmarks/code2inv/54.c",
+            "../data/benchmarks/code2inv/57.c",
+            "../data/benchmarks/code2inv/58.c",
+            "../data/benchmarks/code2inv/60.c",
+            "../data/benchmarks/code2inv/61.c",
+            "../data/benchmarks/code2inv/62.c",
+            "../data/benchmarks/code2inv/63.c",
+            "../data/benchmarks/code2inv/64.c",
+            "../data/benchmarks/code2inv/65.c",
+            "../data/benchmarks/code2inv/66.c",
+            "../data/benchmarks/code2inv/67.c",
+            "../data/benchmarks/code2inv/68.c",
+            "../data/benchmarks/code2inv/69.c",
+            "../data/benchmarks/code2inv/72.c",
+            "../data/benchmarks/code2inv/73.c",
+            "../data/benchmarks/code2inv/74.c",
+            "../data/benchmarks/code2inv/75.c",
+            "../data/benchmarks/code2inv/76.c",
+            "../data/benchmarks/code2inv/83.c",
+            "../data/benchmarks/code2inv/84.c",
+            "../data/benchmarks/code2inv/85.c",
+            "../data/benchmarks/code2inv/86.c"
+        ],
+        "skipped": [
+            "../data/benchmarks/code2inv/1.c",
+            "../data/benchmarks/code2inv/3.c",
+            "../data/benchmarks/code2inv/5.c",
+            "../data/benchmarks/code2inv/7.c",
+            "../data/benchmarks/code2inv/9.c",
+            "../data/benchmarks/code2inv/14.c",
+            "../data/benchmarks/code2inv/44.c",
+            "../data/benchmarks/code2inv/45.c",
+            "../data/benchmarks/code2inv/49.c",
+            "../data/benchmarks/code2inv/59.c",
+            "../data/benchmarks/code2inv/71.c",
+            "../data/benchmarks/code2inv/76.c",
+            "../data/benchmarks/code2inv/77.c",
+            "../data/benchmarks/code2inv/79.c",
+            "../data/benchmarks/code2inv/82.c",
+            "../data/benchmarks/code2inv/87.c"
+        ],
+        "total": 87,
+        "success_count": 33,
+        "failure_count": 54,
+        "success_rate": 0.3793103448275862
+    }
+}

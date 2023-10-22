@@ -1,0 +1,323 @@
+{
+    "logs": {
+        "file": "../data/benchmarks/code2inv/17.c",
+        "benchmark_code": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\n\nint main()\n{\n    int x = 1;\n    int m = 1;\n    int n;\n\n    while (x < n) {\n        if (unknown()) {\n            m = x;\n        }\n        x = x + 1;\n    }\n\n    if(n > 1) {\n       {;\n//@ assert(m < n);\n}\n       \n    }\n}",
+        "success": true,
+        "log": [
+            {
+                "step": "Prompting LLM",
+                "generating_annotation": "loop_invariants",
+                "success": true,
+                "llm_chat": [
+                    {
+                        "role": "system",
+                        "content": "You are a helpful AI software assistant that reasons about how code behaves. Given a program, you can find loop invariants, which can then be used to verify some property in the program. \nFrama-C is a software verification tool for C programs. The input to Frama-C is a C program file with ACSL (ANSI/ISO C Specification Language) annotations.\nFor the given program, find the necessary loop invariants of the while loop to help Frama-C verify the post-condition.\n\nInstructions:\n- Make a note of the pre-conditions or variable assignments in the program.\n- Analyze the loop body and make a note of the loop condition. \n- Output loop invariants that are true \n(i) before the loop execution, \n(ii) in every iteration of the loop and \n(iii) after the loop termination, \nsuch that the loop invariants imply the post condition.\n- If a loop invariant is a conjunction, split it into its parts.\n- Output all the loop invariants in one code block. For example:\n```\n/*@ \n    loop invariant i1;\n    loop invariant i2;\n*/\n```\nRules:\n- **Do not use variables or functions that are not declared in the program.** \n- **Do not make any assumptions about functions whose definitions are not given.**\n- **All undefined variables contain garbage values. Do not use variables that have garbage values.**\n- **Do not use keywords that are not supported in ACSL annotations for loops.**\n- **Variables that are not explicitly initialized, could have garbage values. Do not make any assumptions about such values.**\n- **Do not use the \\at(x, Pre) notation for any variable x.**\n- **Do not use non-deterministic function calls.**"
+                    },
+                    {
+                        "role": "user",
+                        "content": "\nConsider the following C program:\n```\n#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\n\nint main()\n{\n    int x = 1;\n    int m = 1;\n    int n;\n\n    while (x < n) {\n        if (unknown()) {\n            m = x;\n        }\n        x = x + 1;\n    }\n\n    if(n > 1) {\n       {;\n//@ assert(m < n);\n}\n       \n    }\n}\n```\n\nYou are allowed to use implication to take care of the conditional nature of the code. Use implication (==>) instead of using if-then.\n\nFor all variables, add conjunctions that bound the maximum and minimum values that they can take, if such bounds exist.\n\nIf a variable is always equal to or smaller or larger than another variable, add a conjunction for their relation.\n\nIf the assertion is guarded by a condition, use the guard condition in an implication.\n\nIf certain variables are non-deterministic at the beginning or end of the loop, use an implication to make the invariant trivially true at that location. \n\nOutput the loop invariants for the loop in the program above. Let's think step by step."
+                    },
+                    "Step 1: Pre-conditions and variable assignments\n\nThe program declares and initializes three integer variables `x`, `m`, and `n`. The pre-condition for the loop is that `x` is less than `n`. The loop body assigns a new value to `x` in each iteration. The loop also conditionally assigns a new value to `m`. At the end of the loop, the program checks if `n` is greater than `1`, and if so, asserts that `m` is less than `n`. \n\nStep 2: Loop condition\n\nThe loop condition is `x < n`, which means that the loop will continue executing as long as `x` is less than `n`.\n\nStep 3: Loop invariants\n\nWe need to find loop invariants that are true before the loop execution, in every iteration of the loop, and after the loop termination, such that the loop invariants imply the post condition.\n\nBefore the loop execution, we know that `x` is initialized to `1`, and `m` is initialized to `1`. We also know that `n` is uninitialized and hence can have garbage value. Hence, we add the following conjunction as a loop invariant before the loop execution:\n\n```\n/*@ \n    loop invariant 1 <= x;\n    loop invariant 1 <= m;\n*/\n```\n\nIn every iteration of the loop, we know that `x` is incremented by `1`. We also know that `m` is either unchanged or updated to `x`. Hence, we add the following conjunction as a loop invariant in every iteration of the loop:\n\n```\n/*@ \n    loop invariant 1 <= x;\n    loop invariant m <= x;\n*/\n```\n\nAfter the loop termination, we know that `x` is greater than or equal to `n`. We also know that `m` is the maximum value of `x` that satisfies the condition inside the loop. Hence, we need to add the following implication as a loop invariant after the loop termination:\n\n```\n/*@ \n    loop invariant x >= n;\n    loop invariant (n <= 1) ==> (m < n);\n*/\n```\n\nThis implication is necessary because the assertion is guarded by the condition `n > 1`. If `n` is less than or equal to `1`, then the assertion is trivially true and we do not need to use the loop invariant to prove it.\n\nCombining all the loop invariants, we get:\n\n```\n/*@ \n    loop invariant 1 <= x;\n    loop invariant 1 <= m;\n    loop invariant m <= x;\n    loop invariant x >= n;\n    loop invariant (n <= 1) ==> (m < n);\n*/\n``` \n\nThese loop invariants imply the post-condition that `m` is less than `n`, if `n` is greater than `1`.",
+                    "Pre-conditions or variable assignments:\n- `x` is initialized to 1.\n- `m` is initialized to 1.\n- `n` is uninitialized and contains a garbage value.\n\nLoop condition:\n- `x < n`\n\nLoop invariants:\n- Before loop execution: \n    - `m >= 1`\n    - `x >= 1`\n    - `n > 1` (since the assertion checks `n > 1`)\n- In every iteration of the loop:\n    - `m >= 1`\n    - `x >= 1`\n    - `n > 1`\n    - `m <= x` (since `m` is only updated when `unknown()` is true)\n- After loop termination (when `x >= n`):\n    - `m >= 1`\n    - `x >= n`\n    - `n > 1`\n    - `m <= n-1` (since `x` is incremented by 1 in each iteration)\n    - `x >= n ==> m < n`\n\nPutting all the loop invariants together:\n\n```\n/*@\n    loop invariant 1 <= x <= n;\n    loop invariant m >= 1;\n    loop invariant n > 1;\n    loop invariant m <= x;\n    loop invariant x >= n ==> m < n;\n    loop invariant x >= n ==> x == n;\n    loop invariant x < n ==> x > \\at(x, Pre);\n    loop invariant x < n ==> (unknown() ==> m == x);\n    loop invariant x < n ==> (!unknown() ==> m >= \\at(m, Pre));\n    loop invariant x >= n ==> m <= n-1;\n*/\n``` \n\nNote:\n- `x == n` is added to the loop invariant to take care of the case when the loop terminates with `x == n`. \n- `x > \\at(x, Pre)` is added to take care of the case when `x` is incremented in each iteration and is less than `n`.\n- The loop invariant `unknown() ==> m == x` is added to take care of the case when `unknown()` is true, in which case `m` is updated to `x`. \n- The loop invariant `!unknown() ==> m >= \\at(m, Pre)` is added to take care of the case when `unknown()` is false, in which case `m` is not updated and retains its previous value.",
+                    "Pre-conditions:\n\n- `n` is an integer variable and its value is not given.\n- The function `unknown` returns an integer value.\n\nVariable assignments:\n\n- `x` is initialized to `1`.\n- `m` is initialized to `1`.\n\nLoop condition:\n\n- The loop executes as long as `x` is less than `n`.\n\nLoop invariants:\n\n- `x >= 1`\n- `m >= 1`\n- `m <= x`\n- `(x >= n) ==> (m < n)`\n\nExplanation:\n\n- `x >= 1` is true before the loop execution because `x` is initialized to `1`.\n- `m >= 1` is true before the loop execution because `m` is initialized to `1`.\n- `m <= x` is true in every iteration of the loop because `m` is assigned the value of `x` only when `unknown()` returns true, which means that `m` is always less than or equal to `x`.\n- `(x >= n) ==> (m < n)` is true after the loop termination because if `x >= n` then the loop condition is false, which means that `x` is greater than or equal to `n`. Since `m <= x`, we have `m < n`. Therefore, the post-condition `m < n` is implied by this loop invariant.\n\nFinal loop invariants:\n\n```\n/*@ \n    loop invariant x >= 1;\n    loop invariant m >= 1;\n    loop invariant m <= x;\n    loop invariant (x >= n) ==> (m < n);\n*/\n```",
+                    "Pre-conditions:\n- x is initialized to 1.\n- m is initialized to 1.\n- n is uninitialized and contains garbage value.\n\nLoop condition:\n- x < n\n\nPost-condition:\n- m < n if n > 1\n\nLoop invariants:\n1. Before the loop execution:\n- x >= 1 (initialized value)\n- m >= 1 (initialized value)\n- n > 1 ==> m < n (post-condition)\n\n2. In every iteration of the loop:\n- x >= 1 (initialized value)\n- m >= 1 (initialized value)\n- x <= n\n- m <= x\n- (m == \\old(m)) || (m == \\old(x) && unknown())\n\n3. After the loop termination:\n- x >= 1 (initialized value)\n- m >= 1 (initialized value)\n- x >= n\n- n > 1 ==> m < n (post-condition)\n\nExplanation:\n1. Before the loop, x and m are initialized to 1. n may have garbage value, but we know it should be greater than 1 for the post-condition to hold. Therefore, we need to add an implication in the loop invariant for the post-condition. \n\n2. In each iteration of the loop, x and m are non-negative integers, x is less than or equal to n, and m is less than or equal to x. The last conjunction is an implication that states if the unknown function returns true, then m is updated to the current value of x, otherwise m remains the same as the previous iteration.\n\n3. After the loop, x is greater than or equal to n. Again, we need to add an implication for the post-condition. \n\nNote that we did not add any bounds on the maximum or minimum values of x, m, or n, as they are not specified in the program.",
+                    "Pre-conditions:\n- `n` is an integer variable.\n\nLoop condition:\n- `x < n`\n\nLoop Invariants:\n- `x >= 1`\n- `m >= 1`\n- `m <= x`\n- `m < n ==> x >= m`\n- `x >= n ==> x - 1 >= m`\n\nExplanation:\n- The first two invariants are pre-conditions for the loop, as `x` and `m` are initialized to 1.\n- The third invariant ensures that `m` is always less than or equal to `x`.\n- The fourth invariant is true before the loop execution and in every iteration of the loop. It ensures that if `m` is less than `n`, then `x` must be greater than or equal to `m`. This is because if `m` is updated inside the loop, it can only be updated to a value less than or equal to `x`.\n- The fifth invariant is true after the loop termination. It ensures that if `n` is greater than 1, then `m` must be less than `n`. This is because if `m` is not less than `n`, then `x` must be greater than or equal to `n`. If `x` is greater than or equal to `n`, then `x-1` is also greater than or equal to `n-1`, and hence `m` must be less than `n`.\n- We do not need any implications as all variables are initialized and deterministic.",
+                    "Let's start by analyzing the program and making some observations:\n- The loop condition is \"x < n\".\n- The loop modifies the value of \"x\" in each iteration and assigns either \"x\" or \"m\" to \"m\" depending on the value of \"unknown()\".\n- The post-condition is \"m < n\".\n\nNow, let's find the necessary loop invariants:\n- Before the loop execution, we have the pre-condition \"x = 1\".\n- In every iteration of the loop, we need to ensure that:\n  - \"x < n\" still holds.\n  - \"m\" is either \"x\" or a value smaller than \"x\".\n- After the loop termination, we need to ensure that \"m < n\" holds.\n\nLet's write the loop invariants using ACSL annotations:\n```\n/*@ \n    loop invariant x >= 1; // minimum bound for x\n    loop invariant x <= n; // maximum bound for x\n    loop invariant (m == x) || (m < x); // m is either x or a value smaller than x\n*/\nwhile (x < n) {\n    if (unknown()) {\n        m = x;\n    }\n    x = x + 1;\n}\n/*@ \n    // loop invariant implies post-condition\n    loop invariant m < n ==> (n > 1);\n*/\nif(n > 1) {\n    {;\n        //@ assert(m < n);\n    }\n}\n```\n\nNote that we added the minimum and maximum bounds for \"x\" in the loop invariants, as \"x\" is modified in each iteration. We also added the invariant that \"m\" is either \"x\" or a smaller value than \"x\", as it is assigned either \"x\" or its previous value in each iteration. Finally, we added an implication in the post-condition to take care of the conditional nature of the code.",
+                    "Pre-conditions:\n- `n` is an integer variable.\n\nVariable Assignments:\n- `x` is assigned the value 1.\n- `m` is assigned the value 1.\n\nLoop Condition:\n- `x < n`\n\nLoop Invariants:\n- `x >= 1`\n- `m >= 1`\n- `n` does not change in the loop.\n\nBefore loop execution, the loop invariants hold since `x` and `m` are assigned values greater than or equal to 1. \n\nIn each iteration of the loop, the loop invariants hold since `x` is incremented by 1 and `n` does not change, so `x < n` remains true. Additionally, if `unknown()` returns true and `m` is assigned the value of `x`, then the loop invariant `m >= 1` still holds.\n\nAfter loop termination, the loop invariant `x < n` no longer holds. However, we can use implication to show that if `n > 1`, then `m < n`. Therefore, the loop invariant is:\n```\n/*@ \n    loop invariant x >= 1 && m >= 1 && n == \\old(n);\n    loop invariant x <= n;\n    loop invariant m <= n;\n    loop invariant n >= 1;\n    loop invariant (n > 1 && m >= x ==> m < n);\n*/\n``` \nNote that we added additional loop invariants to bound the maximum and minimum values of `x`, `m`, and `n`. Also, we used implication in the last loop invariant to take care of the conditional assertion.",
+                    "Pre-conditions:\n- The program has no pre-conditions.\n\nVariable Assignments:\n- `x` is assigned the value `1`.\n- `m` is assigned the value `1`.\n- The value of `n` is not assigned.\n\nLoop Condition:\n- The loop continues while `x` is less than `n`.\n\nLoop Invariants:\n- `x >= 1` (minimum bound for `x`)\n- `m >= 1` (minimum bound for `m`)\n- `n` is non-deterministic at the beginning of the loop, so we can use an implication to make the following invariant trivially true at the beginning of the loop: `n >= 1`.\n- `m <= x` (since `m` is assigned the value of `x` inside the loop when `unknown()` returns true)\n- `m < n ==> x < n` (since the loop continues while `x` is less than `n`)\n- `m < n` implies the post-condition `m < n` when the loop terminates.\n\nPutting it all together, the loop invariants are:\n```\n/*@ \n    loop invariant x >= 1;\n    loop invariant m >= 1;\n    loop invariant n >= 1 ==> \\true;\n    loop invariant m <= x;\n    loop invariant (m < n ==> x < n);\n    loop invariant (m < n ==> m < n);\n*/\n```",
+                    "First, let's analyze the program and make a note of the pre-conditions and variable assignments:\n- The program initializes three integer variables x, m, and n with values 1, 1, and an unknown value respectively.\n- There is an external function unknown(), which returns an unknown value at runtime.\n- The program enters a while loop with the condition x < n.\n- Inside the loop, there is an if statement with an unknown condition. If the condition is true, the value of m is updated to x.\n- At the end of each loop iteration, the value of x is incremented by 1.\n- After the loop, there is an assertion that checks if m is less than n.\n\nNow, let's analyze the loop body and make a note of the loop condition:\n- The loop condition is x < n.\n- Inside the loop, there is an if statement with an unknown condition. If the condition is true, the value of m is updated to x.\n- At the end of each loop iteration, the value of x is incremented by 1.\n\nBased on the program analysis, we can output the following loop invariants:\n```\n/*@ \n    loop invariant 1 <= x <= n;\n    loop invariant 1 <= m <= x;\n    loop invariant !(unknown()) ==> (m == \\old(m));\n    loop invariant unknown() ==> (m == x);\n*/\n```\n\nExplanation:\n- The first loop invariant ensures that x is always between 1 and n (inclusive) in every iteration of the loop.\n- The second loop invariant ensures that m is always between 1 and x (inclusive) in every iteration of the loop.\n- The third loop invariant states that if the condition inside the if statement is false, then the value of m remains the same as its value at the beginning of the loop iteration, which is captured by the \\old(m) notation. \n- The fourth loop invariant states that if the condition inside the if statement is true, then the value of m is updated to x.\n\nNow, let's add an implication to take care of the conditional nature of the assertion:\n```\n    if(n > 1) {\n        //@ assert (m < n) ==> (x >= n);\n    }\n```\n\nExplanation:\n- The assertion checks if m is less than n only when n is greater than 1.\n- The implication ensures that if the assertion condition (m < n) is true, then the loop condition (x < n) must be false (i.e., x >= n). This is because if the loop condition is true, then the loop would not have terminated and m would have been updated further.",
+                    "Pre-conditions:\n- The variable x is initialized to 1.\n- The variable m is initialized to 1.\n- The variable n is uninitialized and contains garbage value.\n\nLoop condition:\n- The loop continues as long as x is less than n.\n\nLoop invariants:\n- Before the loop execution: None, as n is uninitialized and contains garbage value.\n- In every iteration of the loop:\n  - x is greater than or equal to 1.\n  - x is less than or equal to n (this follows from the loop condition).\n  - m is greater than or equal to 1.\n  - m is less than or equal to x.\n- After the loop termination:\n  - If the loop terminates naturally (i.e., x >= n), then m is less than n.\n\nCombining these invariants, we get:\n```\n/*@ \n    loop invariant 1 <= x <= n;\n    loop invariant 1 <= m <= x;\n    loop invariant \\forall integer i; 0 <= i < x ==> (i < n ==> m < n);\n*/\n```\n\nNote that we have used the third invariant to handle the conditional statement inside the loop. If the condition is true, then m is updated to x, so the invariant still holds. If the condition is false, then m is unchanged, so the invariant still holds. \n\nAlso note that we have not used any non-deterministic function calls or made any assumptions about the values of unknown variables. We have only used the given pre-conditions and loop condition to derive loop invariants that imply the post-condition.",
+                    "Pre-conditions and variable assignments:\n\n- `x` is assigned the value 1\n- `m` is assigned the value 1\n- `n` is uninitialized and contains garbage value.\n\nLoop condition:\n\n- The loop executes as long as `x` is less than `n`.\n\nLoop invariants:\n\n- `x` is greater than or equal to 1.\n- `m` is greater than or equal to 1.\n- If `n` is non-deterministic at the beginning of the loop, then `n` is greater than or equal to 1.\n- If `n` is non-deterministic at the end of the loop, then `n` is greater than or equal to `x`.\n- If `m` is assigned the value of `x` in the loop body, then `m` is less than or equal to `x`.\n- If `m` is not assigned the value of `x` in the loop body, then `m` is less than or equal to `x - 1`.\n\nThe loop invariants imply the post-condition because the post-condition is that `m` is less than `n`, and all of the loop invariants ensure that `m` is always less than or equal to `x`, and that `x` is less than or equal to `n`. Therefore, after the loop terminates, `m` is guaranteed to be less than `n`. \n\nPutting it all together, the loop invariants are:\n\n```\n/*@ \n    loop invariant x >= 1;\n    loop invariant m >= 1;\n    loop invariant n >= x ==> n >= 1;\n    loop invariant n >= \\old(x) ==> n >= x;\n    loop invariant m <= x;\n    loop invariant (m == \\old(x)) ==> m <= x;\n    loop invariant (m != \\old(x)) ==> m <= x - 1;\n*/\n```",
+                    "Pre-conditions and variable assignments:\n- x is initialized to 1.\n- m is initialized to 1.\n- n is not initialized and contains a garbage value.\n\nLoop condition:\n- The loop continues as long as x is less than n.\n\nLoop invariants:\n- Before the loop execution, we have:\n    - x >= 1\n    - m >= 1\n    - n is a non-negative integer (since it is not initialized, we cannot be more specific)\n- In every iteration of the loop, we have:\n    - x >= 1\n    - m >= 1\n    - n is a non-negative integer\n    - m <= x\n- After the loop termination, we have:\n    - x >= n\n    - m >= 1\n    - n is a non-negative integer\n    - m <= x\n    - if n > 1, then m < n (guarded by the if statement)\n\nUsing implication, we can combine the last two invariants as follows:\n```\n/*@ \n    loop invariant x >= n ==> m < n;\n*/\n```\n\nCombining all the loop invariants, we get:\n```\n/*@ \n    loop invariant x >= 1;\n    loop invariant m >= 1;\n    loop invariant n >= 0;\n    loop invariant m <= x;\n    loop invariant x >= n ==> m < n;\n*/\n```",
+                    "Pre-conditions:\n- The variable `n` is not initialized, so we cannot make any assumptions about its value.\n- The `assume` macro takes an expression as input and returns 0 if the expression is false. Otherwise, it does nothing.\n\nLoop condition:\n- The loop continues as long as `x < n`.\n\nLoop invariants:\n- Before the loop execution, `m` is initialized to 1. So, `m >= 1`.\n- Before the loop execution, `x` is initialized to 1. So, `x >= 1`.\n- In every iteration of the loop, `x >= 1`.\n- In every iteration of the loop, `m >= 1`.\n- In every iteration of the loop, either `m < x` or `m = x`.\n- After the loop termination, `x >= n`.\n- After the loop termination, either `m = 1` or `m` is the maximum value of `x` such that `unknown()` returned true at some point during the loop execution. That is, `m <= x && (forall k: 1 <= k < m: !unknown())`.\n\nUsing implication, the assertion can be written as:\n```\nn <= 1 || m < n\n```\n\nPutting it all together, the loop invariants are:\n```\n/*@ \n    loop invariant x >= 1;\n    loop invariant m >= 1;\n    loop invariant x < n ==> m <= x;\n    loop invariant x < n ==> (forall k: 1 <= k < m ==> !unknown());\n    loop invariant x >= n ==> m <= n;\n    loop invariant n <= 1 || m < n;\n*/\n```",
+                    "Pre-conditions:\n- The function `unknown()` returns a Boolean value, but we do not know anything else about it.\n- Variable `n` is not initialized, so it could contain a garbage value.\n\nVariable assignments:\n- `x` is initialized to `1`.\n- `m` is initialized to `1`.\n\nLoop condition:\n- The loop runs as long as `x < n`.\n\nWe want to find loop invariants that are true:\n- Before the loop execution\n- In every iteration of the loop\n- After the loop termination\nsuch that the loop invariants imply the post-condition.\n\nBefore the loop execution, we can state that:\n- `x` is greater than or equal to `1` because it is initialized to `1`.\n- `m` is greater than or equal to `1` because it is initialized to `1`.\n- Since `n` is not initialized, we do not know any bounds on it. So we cannot state anything about it.\n\nIn every iteration of the loop, we can state that:\n- `x` is greater than or equal to `1` because it is initialized to `1` and only increments by `1`.\n- `m` is less than or equal to `x` because `m` only gets updated if `unknown()` returns true, and `x` only increases.\n- Since we do not know anything about `n`, we cannot state anything about it.\n\nAfter the loop termination, we can state that:\n- `x` is greater than or equal to `n`.\n- If `n > 1`, then `m < n`. \n\nWe can combine all these loop invariants into one block as follows:\n\n```\n/*@\n    loop invariant x >= 1;\n    loop invariant m >= 1;\n    loop invariant x >= n ==> (n > 1 ==> m < n);\n    loop invariant x < n ==>\n        (m <= x &&\n         x >= 1);\n*/\n```\nNote that we use implication to take care of the conditional nature of the code. We also use the guard condition `x < n` in an implication to make sure that the invariant holds only while the loop is still running.",
+                    "Pre-conditions:\n- x is initialized to 1.\n\nLoop condition:\n- x < n\n\nLoop invariants:\n1. Before the loop execution:\n- x >= 1\n- m >= 1\n- n is an integer and contains a garbage value\n\n2. In every iteration of the loop:\n- x >= 1\n- m >= 1\n- x <= n\n- m <= x\n\n3. After the loop termination:\n- x >= n\n- m >= 1\n- m <= n-1 ==> m < n\n\nExplanation:\n- Before the loop execution, x is initialized to 1, so x >= 1. Similarly, m is initialized to 1, so m >= 1. As n is an uninitialized variable, it can contain any garbage value.\n- In every iteration of the loop, x is incremented by 1, so x >= 1 and x <= n. If m is updated, it is set to x, so m <= x. As m is initialized to 1, m >= 1 holds in every iteration.\n- After the loop termination, x >= n as the loop terminates when x >= n. m can be at most n-1 as it is updated only when unknown() returns true, which is nondeterministic. So, we can use an implication to make the invariant true for all possible values of m:\n   - m <= n-1 ==> m < n\n\nFinally, we use implication to take care of the conditional nature of the assertion:\n- If n > 1, then m < n. This can be written as:\n   - n > 1 ==> m < n\n\nPutting everything together, we get the following loop invariants:\n```\n/*@ \n    loop invariant x >= 1;\n    loop invariant m >= 1;\n    loop invariant x <= n;\n    loop invariant m <= x;\n    loop invariant x >= n;\n    loop invariant m <= n-1 ==> m < n;\n*/\n```"
+                ],
+                "output": [
+                    "/*@ \n    loop invariant 1 <= x;\n    loop invariant 1 <= m;\n*/",
+                    "/*@\n    loop invariant 1 <= x <= n;\n    loop invariant m >= 1;\n    loop invariant n > 1;\n    loop invariant m <= x;\n    loop invariant x >= n ==> m < n;\n    loop invariant x >= n ==> x == n;\n    loop invariant x < n ==> x > \\at(x, Pre);\n    loop invariant x < n ==> (unknown() ==> m == x);\n    loop invariant x < n ==> (!unknown() ==> m >= \\at(m, Pre));\n    loop invariant x >= n ==> m <= n-1;\n*/",
+                    "/*@ \n    loop invariant x >= 1;\n    loop invariant m >= 1;\n    loop invariant m <= x;\n    loop invariant (x >= n) ==> (m < n);\n*/",
+                    [
+                        "ERROR: Output does not contain at least 1 complete code block",
+                        "Pre-conditions:\n- x is initialized to 1.\n- m is initialized to 1.\n- n is uninitialized and contains garbage value.\n\nLoop condition:\n- x < n\n\nPost-condition:\n- m < n if n > 1\n\nLoop invariants:\n1. Before the loop execution:\n- x >= 1 (initialized value)\n- m >= 1 (initialized value)\n- n > 1 ==> m < n (post-condition)\n\n2. In every iteration of the loop:\n- x >= 1 (initialized value)\n- m >= 1 (initialized value)\n- x <= n\n- m <= x\n- (m == \\old(m)) || (m == \\old(x) && unknown())\n\n3. After the loop termination:\n- x >= 1 (initialized value)\n- m >= 1 (initialized value)\n- x >= n\n- n > 1 ==> m < n (post-condition)\n\nExplanation:\n1. Before the loop, x and m are initialized to 1. n may have garbage value, but we know it should be greater than 1 for the post-condition to hold. Therefore, we need to add an implication in the loop invariant for the post-condition. \n\n2. In each iteration of the loop, x and m are non-negative integers, x is less than or equal to n, and m is less than or equal to x. The last conjunction is an implication that states if the unknown function returns true, then m is updated to the current value of x, otherwise m remains the same as the previous iteration.\n\n3. After the loop, x is greater than or equal to n. Again, we need to add an implication for the post-condition. \n\nNote that we did not add any bounds on the maximum or minimum values of x, m, or n, as they are not specified in the program."
+                    ],
+                    [
+                        "ERROR: Output does not contain at least 1 complete code block",
+                        "Pre-conditions:\n- `n` is an integer variable.\n\nLoop condition:\n- `x < n`\n\nLoop Invariants:\n- `x >= 1`\n- `m >= 1`\n- `m <= x`\n- `m < n ==> x >= m`\n- `x >= n ==> x - 1 >= m`\n\nExplanation:\n- The first two invariants are pre-conditions for the loop, as `x` and `m` are initialized to 1.\n- The third invariant ensures that `m` is always less than or equal to `x`.\n- The fourth invariant is true before the loop execution and in every iteration of the loop. It ensures that if `m` is less than `n`, then `x` must be greater than or equal to `m`. This is because if `m` is updated inside the loop, it can only be updated to a value less than or equal to `x`.\n- The fifth invariant is true after the loop termination. It ensures that if `n` is greater than 1, then `m` must be less than `n`. This is because if `m` is not less than `n`, then `x` must be greater than or equal to `n`. If `x` is greater than or equal to `n`, then `x-1` is also greater than or equal to `n-1`, and hence `m` must be less than `n`.\n- We do not need any implications as all variables are initialized and deterministic."
+                    ],
+                    "/*@ \n    loop invariant x >= 1; // minimum bound for x\n    loop invariant x <= n; // maximum bound for x\n    loop invariant (m == x) || (m < x); // m is either x or a value smaller than x\n*/\nwhile (x < n) {\n    if (unknown()) {\n        m = x;\n    }\n    x = x + 1;\n}\n/*@ \n    // loop invariant implies post-condition\n    loop invariant m < n ==> (n > 1);\n*/\nif(n > 1) {\n    {;\n        //@ assert(m < n);\n    }\n}",
+                    "/*@ \n    loop invariant x >= 1 && m >= 1 && n == \\old(n);\n    loop invariant x <= n;\n    loop invariant m <= n;\n    loop invariant n >= 1;\n    loop invariant (n > 1 && m >= x ==> m < n);\n*/",
+                    "/*@ \n    loop invariant x >= 1;\n    loop invariant m >= 1;\n    loop invariant n >= 1 ==> \\true;\n    loop invariant m <= x;\n    loop invariant (m < n ==> x < n);\n    loop invariant (m < n ==> m < n);\n*/",
+                    "/*@ \n    loop invariant 1 <= x <= n;\n    loop invariant 1 <= m <= x;\n    loop invariant !(unknown()) ==> (m == \\old(m));\n    loop invariant unknown() ==> (m == x);\n*/",
+                    "/*@ \n    loop invariant 1 <= x <= n;\n    loop invariant 1 <= m <= x;\n    loop invariant \\forall integer i; 0 <= i < x ==> (i < n ==> m < n);\n*/",
+                    "/*@ \n    loop invariant x >= 1;\n    loop invariant m >= 1;\n    loop invariant n >= x ==> n >= 1;\n    loop invariant n >= \\old(x) ==> n >= x;\n    loop invariant m <= x;\n    loop invariant (m == \\old(x)) ==> m <= x;\n    loop invariant (m != \\old(x)) ==> m <= x - 1;\n*/",
+                    "/*@ \n    loop invariant x >= n ==> m < n;\n*/",
+                    "/*@ \n    loop invariant x >= 1;\n    loop invariant m >= 1;\n    loop invariant x < n ==> m <= x;\n    loop invariant x < n ==> (forall k: 1 <= k < m ==> !unknown());\n    loop invariant x >= n ==> m <= n;\n    loop invariant n <= 1 || m < n;\n*/",
+                    "/*@\n    loop invariant x >= 1;\n    loop invariant m >= 1;\n    loop invariant x >= n ==> (n > 1 ==> m < n);\n    loop invariant x < n ==>\n        (m <= x &&\n         x >= 1);\n*/",
+                    "/*@ \n    loop invariant x >= 1;\n    loop invariant m >= 1;\n    loop invariant x <= n;\n    loop invariant m <= x;\n    loop invariant x >= n;\n    loop invariant m <= n-1 ==> m < n;\n*/"
+                ]
+            },
+            {
+                "step": "Checking individual completion",
+                "solver_calls": 13,
+                "completions": [
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant 1 <= x;\n    loop invariant 1 <= m;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant 1 <= x is inductive.\nloop invariant 1 <= m is inductive.\nAssertion m < n: Unproven\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@\n    loop invariant 1 <= x <= n;\n    loop invariant m >= 1;\n    loop invariant n > 1;\n    loop invariant m <= x;\n    loop invariant x >= n ==> m < n;\n    loop invariant x >= n ==> x == n;\n    loop invariant x < n ==> x > \\at(x, Pre);\n    loop invariant x < n ==> (unknown() ==> m == x);\n    loop invariant x < n ==> (!unknown() ==> m >= \\at(m, Pre));\n    loop invariant x >= n ==> m <= n-1;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "Annotation error on line 18: unexpected token ')'"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant x >= 1;\n    loop invariant m >= 1;\n    loop invariant m <= x;\n    loop invariant (x >= n) ==> (m < n);\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant x >= 1 is inductive.\nloop invariant m >= 1 is inductive.\nloop invariant m <= x is inductive.\nloop invariant (x >= n) ==> (m < n) is preserved but not established.\nAssertion m < n: Partially proven\n"
+                    },
+                    {
+                        "num_solver_calls": 0,
+                        "success": false,
+                        "llm_output": "Pre-conditions:\n- x is initialized to 1.\n- m is initialized to 1.\n- n is uninitialized and contains garbage value.\n\nLoop condition:\n- x < n\n\nPost-condition:\n- m < n if n > 1\n\nLoop invariants:\n1. Before the loop execution:\n- x >= 1 (initialized value)\n- m >= 1 (initialized value)\n- n > 1 ==> m < n (post-condition)\n\n2. In every iteration of the loop:\n- x >= 1 (initialized value)\n- m >= 1 (initialized value)\n- x <= n\n- m <= x\n- (m == \\old(m)) || (m == \\old(x) && unknown())\n\n3. After the loop termination:\n- x >= 1 (initialized value)\n- m >= 1 (initialized value)\n- x >= n\n- n > 1 ==> m < n (post-condition)\n\nExplanation:\n1. Before the loop, x and m are initialized to 1. n may have garbage value, but we know it should be greater than 1 for the post-condition to hold. Therefore, we need to add an implication in the loop invariant for the post-condition. \n\n2. In each iteration of the loop, x and m are non-negative integers, x is less than or equal to n, and m is less than or equal to x. The last conjunction is an implication that states if the unknown function returns true, then m is updated to the current value of x, otherwise m remains the same as the previous iteration.\n\n3. After the loop, x is greater than or equal to n. Again, we need to add an implication for the post-condition. \n\nNote that we did not add any bounds on the maximum or minimum values of x, m, or n, as they are not specified in the program.",
+                        "error": "Output does not contain at least 1 code block"
+                    },
+                    {
+                        "num_solver_calls": 0,
+                        "success": false,
+                        "llm_output": "Pre-conditions:\n- `n` is an integer variable.\n\nLoop condition:\n- `x < n`\n\nLoop Invariants:\n- `x >= 1`\n- `m >= 1`\n- `m <= x`\n- `m < n ==> x >= m`\n- `x >= n ==> x - 1 >= m`\n\nExplanation:\n- The first two invariants are pre-conditions for the loop, as `x` and `m` are initialized to 1.\n- The third invariant ensures that `m` is always less than or equal to `x`.\n- The fourth invariant is true before the loop execution and in every iteration of the loop. It ensures that if `m` is less than `n`, then `x` must be greater than or equal to `m`. This is because if `m` is updated inside the loop, it can only be updated to a value less than or equal to `x`.\n- The fifth invariant is true after the loop termination. It ensures that if `n` is greater than 1, then `m` must be less than `n`. This is because if `m` is not less than `n`, then `x` must be greater than or equal to `n`. If `x` is greater than or equal to `n`, then `x-1` is also greater than or equal to `n-1`, and hence `m` must be less than `n`.\n- We do not need any implications as all variables are initialized and deterministic.",
+                        "error": "Output does not contain at least 1 code block"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant x >= 1; // minimum bound for x\n    loop invariant x <= n; // maximum bound for x\n    loop invariant (m == x) || (m < x); // m is either x or a value smaller than x\n*/\nwhile (x < n) {\n    if (unknown()) {\n        m = x;\n    }\n    x = x + 1;\n}\n/*@ \n    // loop invariant implies post-condition\n    loop invariant m < n ==> (n > 1);\n*/\nif(n > 1) {\n    {;\n        //@ assert(m < n);\n    }\n}",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant x >= 1 is inductive.\nloop invariant x <= n is preserved but not established.\nloop invariant (m == x) || (m < x) is inductive.\nloop invariant m < n ==> (n > 1) is inductive.\nAssertion m < n: Unproven\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant x >= 1 && m >= 1 && n == \\old(n);\n    loop invariant x <= n;\n    loop invariant m <= n;\n    loop invariant n >= 1;\n    loop invariant (n > 1 && m >= x ==> m < n);\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "Annotation error on line 11: \\old undefined in this context. Ignoring loop annotation"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant x >= 1;\n    loop invariant m >= 1;\n    loop invariant n >= 1 ==> \\true;\n    loop invariant m <= x;\n    loop invariant (m < n ==> x < n);\n    loop invariant (m < n ==> m < n);\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant x >= 1 is inductive.\nloop invariant m >= 1 is inductive.\nloop invariant n >= 1 ==> \\true is inductive.\nloop invariant m <= x is inductive.\nloop invariant (m < n ==> x < n) is established but not preserved.\nloop invariant (m < n ==> m < n) is inductive.\nAssertion m < n: Unproven\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant 1 <= x <= n;\n    loop invariant 1 <= m <= x;\n    loop invariant !(unknown()) ==> (m == \\old(m));\n    loop invariant unknown() ==> (m == x);\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "Annotation error on line 13: unexpected token ')'"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant 1 <= x <= n;\n    loop invariant 1 <= m <= x;\n    loop invariant \\forall integer i; 0 <= i < x ==> (i < n ==> m < n);\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant 1 <= x <= n is preserved but not established.\nloop invariant 1 <= m <= x is inductive.\nloop invariant \\forall integer i; 0 <= i < x ==> (i < n ==> m < n) is preserved but not established.\nAssertion m < n: Partially proven\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant x >= 1;\n    loop invariant m >= 1;\n    loop invariant n >= x ==> n >= 1;\n    loop invariant n >= \\old(x) ==> n >= x;\n    loop invariant m <= x;\n    loop invariant (m == \\old(x)) ==> m <= x;\n    loop invariant (m != \\old(x)) ==> m <= x - 1;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "Annotation error on line 14: \\old undefined in this context. Ignoring loop annotation"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant x >= n ==> m < n;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant x >= n ==> m < n is neither established nor preserved.\nAssertion m < n: Partially proven\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant x >= 1;\n    loop invariant m >= 1;\n    loop invariant x < n ==> m <= x;\n    loop invariant x < n ==> (forall k: 1 <= k < m ==> !unknown());\n    loop invariant x >= n ==> m <= n;\n    loop invariant n <= 1 || m < n;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "Annotation error on line 14: unexpected token 'k'"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@\n    loop invariant x >= 1;\n    loop invariant m >= 1;\n    loop invariant x >= n ==> (n > 1 ==> m < n);\n    loop invariant x < n ==>\n        (m <= x &&\n         x >= 1);\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant x >= 1 is inductive.\nloop invariant m >= 1 is inductive.\nloop invariant x >= n ==> (n > 1 ==> m < n) is established but not preserved.\nAssertion m < n: Partially proven\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant x >= 1;\n    loop invariant m >= 1;\n    loop invariant x <= n;\n    loop invariant m <= x;\n    loop invariant x >= n;\n    loop invariant m <= n-1 ==> m < n;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant x >= 1 is inductive.\nloop invariant m >= 1 is inductive.\nloop invariant x <= n is preserved but not established.\nloop invariant m <= x is inductive.\nloop invariant x >= n is preserved but not established.\nloop invariant m <= n-1 ==> m < n is inductive.\nAssertion m < n: Unproven\n"
+                    }
+                ],
+                "success": false
+            },
+            {
+                "step": "Houdini for individual completion",
+                "success": true,
+                "completions": [
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant 1 <= x;\n    loop invariant 1 <= m;\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\n\nint main()\n{\n    int x = 1;\n    int m = 1;\n    int n;\n\n    /*@\nloop invariant i1: 1 <= x;\nloop invariant i2: 1 <= m;\n*/\nwhile (x < n) {\n        if (unknown()) {\n            m = x;\n        }\n        x = x + 1;\n    }\n\n    if(n > 1) {\n       {;\n//@ assert(m < n);\n}\n       \n    }\n}",
+                        "checker_output_after_prune": false
+                    },
+                    {
+                        "num_solver_calls": 7,
+                        "success": false,
+                        "invariants": "/*@\n    loop invariant 1 <= x <= n;\n    loop invariant m >= 1;\n    loop invariant n > 1;\n    loop invariant m <= x;\n    loop invariant x >= n ==> m < n;\n    loop invariant x >= n ==> x == n;\n    loop invariant x < n ==> x > \\at(x, Pre);\n    loop invariant x < n ==> (unknown() ==> m == x);\n    loop invariant x < n ==> (!unknown() ==> m >= \\at(m, Pre));\n    loop invariant x >= n ==> m <= n-1;\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\n\nint main()\n{\n    int x = 1;\n    int m = 1;\n    int n;\n\n    /*@\n\nloop invariant i2: m >= 1;\n\nloop invariant i4: m <= x;\n\n\n\n\n\n\n*/\nwhile (x < n) {\n        if (unknown()) {\n            m = x;\n        }\n        x = x + 1;\n    }\n\n    if(n > 1) {\n       {;\n//@ assert(m < n);\n}\n       \n    }\n}",
+                        "checker_output_after_prune": false
+                    },
+                    {
+                        "num_solver_calls": 2,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant x >= 1;\n    loop invariant m >= 1;\n    loop invariant m <= x;\n    loop invariant (x >= n) ==> (m < n);\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\n\nint main()\n{\n    int x = 1;\n    int m = 1;\n    int n;\n\n    /*@\nloop invariant i1: x >= 1;\nloop invariant i2: m >= 1;\nloop invariant i3: m <= x;\n\n*/\nwhile (x < n) {\n        if (unknown()) {\n            m = x;\n        }\n        x = x + 1;\n    }\n\n    if(n > 1) {\n       {;\n//@ assert(m < n);\n}\n       \n    }\n}",
+                        "checker_output_after_prune": false
+                    },
+                    {
+                        "num_solver_calls": 0,
+                        "success": false,
+                        "llm_output": "Pre-conditions:\n- x is initialized to 1.\n- m is initialized to 1.\n- n is uninitialized and contains garbage value.\n\nLoop condition:\n- x < n\n\nPost-condition:\n- m < n if n > 1\n\nLoop invariants:\n1. Before the loop execution:\n- x >= 1 (initialized value)\n- m >= 1 (initialized value)\n- n > 1 ==> m < n (post-condition)\n\n2. In every iteration of the loop:\n- x >= 1 (initialized value)\n- m >= 1 (initialized value)\n- x <= n\n- m <= x\n- (m == \\old(m)) || (m == \\old(x) && unknown())\n\n3. After the loop termination:\n- x >= 1 (initialized value)\n- m >= 1 (initialized value)\n- x >= n\n- n > 1 ==> m < n (post-condition)\n\nExplanation:\n1. Before the loop, x and m are initialized to 1. n may have garbage value, but we know it should be greater than 1 for the post-condition to hold. Therefore, we need to add an implication in the loop invariant for the post-condition. \n\n2. In each iteration of the loop, x and m are non-negative integers, x is less than or equal to n, and m is less than or equal to x. The last conjunction is an implication that states if the unknown function returns true, then m is updated to the current value of x, otherwise m remains the same as the previous iteration.\n\n3. After the loop, x is greater than or equal to n. Again, we need to add an implication for the post-condition. \n\nNote that we did not add any bounds on the maximum or minimum values of x, m, or n, as they are not specified in the program.",
+                        "error": "Output does not contain at least 1 code block"
+                    },
+                    {
+                        "num_solver_calls": 0,
+                        "success": false,
+                        "llm_output": "Pre-conditions:\n- `n` is an integer variable.\n\nLoop condition:\n- `x < n`\n\nLoop Invariants:\n- `x >= 1`\n- `m >= 1`\n- `m <= x`\n- `m < n ==> x >= m`\n- `x >= n ==> x - 1 >= m`\n\nExplanation:\n- The first two invariants are pre-conditions for the loop, as `x` and `m` are initialized to 1.\n- The third invariant ensures that `m` is always less than or equal to `x`.\n- The fourth invariant is true before the loop execution and in every iteration of the loop. It ensures that if `m` is less than `n`, then `x` must be greater than or equal to `m`. This is because if `m` is updated inside the loop, it can only be updated to a value less than or equal to `x`.\n- The fifth invariant is true after the loop termination. It ensures that if `n` is greater than 1, then `m` must be less than `n`. This is because if `m` is not less than `n`, then `x` must be greater than or equal to `n`. If `x` is greater than or equal to `n`, then `x-1` is also greater than or equal to `n-1`, and hence `m` must be less than `n`.\n- We do not need any implications as all variables are initialized and deterministic.",
+                        "error": "Output does not contain at least 1 code block"
+                    },
+                    {
+                        "num_solver_calls": 2,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant x >= 1; // minimum bound for x\n    loop invariant x <= n; // maximum bound for x\n    loop invariant (m == x) || (m < x); // m is either x or a value smaller than x\n*/\nwhile (x < n) {\n    if (unknown()) {\n        m = x;\n    }\n    x = x + 1;\n}\n/*@ \n    // loop invariant implies post-condition\n    loop invariant m < n ==> (n > 1);\n*/\nif(n > 1) {\n    {;\n        //@ assert(m < n);\n    }\n}",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\n\nint main()\n{\n    int x = 1;\n    int m = 1;\n    int n;\n\n    /*@\nloop invariant i1: x >= 1;\n\nloop invariant i3: (m == x) || (m < x);\nloop invariant i4: m < n ==> (n > 1);\n*/\nwhile (x < n) {\n        if (unknown()) {\n            m = x;\n        }\n        x = x + 1;\n    }\n\n    if(n > 1) {\n       {;\n//@ assert(m < n);\n}\n       \n    }\n}",
+                        "checker_output_after_prune": false
+                    },
+                    {
+                        "num_solver_calls": 5,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant x >= 1 && m >= 1 && n == \\old(n);\n    loop invariant x <= n;\n    loop invariant m <= n;\n    loop invariant n >= 1;\n    loop invariant (n > 1 && m >= x ==> m < n);\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\n\nint main()\n{\n    int x = 1;\n    int m = 1;\n    int n;\n\n    /*@\n\n\n\n\nloop invariant i5: (n > 1 && m >= x ==> m < n);\n*/\nwhile (x < n) {\n        if (unknown()) {\n            m = x;\n        }\n        x = x + 1;\n    }\n\n    if(n > 1) {\n       {;\n//@ assert(m < n);\n}\n       \n    }\n}",
+                        "checker_output_after_prune": false
+                    },
+                    {
+                        "num_solver_calls": 2,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant x >= 1;\n    loop invariant m >= 1;\n    loop invariant n >= 1 ==> \\true;\n    loop invariant m <= x;\n    loop invariant (m < n ==> x < n);\n    loop invariant (m < n ==> m < n);\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\n\nint main()\n{\n    int x = 1;\n    int m = 1;\n    int n;\n\n    /*@\nloop invariant i1: x >= 1;\nloop invariant i2: m >= 1;\nloop invariant i3: n >= 1 ==> \\true;\nloop invariant i4: m <= x;\n\nloop invariant i6: (m < n ==> m < n);\n*/\nwhile (x < n) {\n        if (unknown()) {\n            m = x;\n        }\n        x = x + 1;\n    }\n\n    if(n > 1) {\n       {;\n//@ assert(m < n);\n}\n       \n    }\n}",
+                        "checker_output_after_prune": false
+                    },
+                    {
+                        "num_solver_calls": 4,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant 1 <= x <= n;\n    loop invariant 1 <= m <= x;\n    loop invariant !(unknown()) ==> (m == \\old(m));\n    loop invariant unknown() ==> (m == x);\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\n\nint main()\n{\n    int x = 1;\n    int m = 1;\n    int n;\n\n    /*@\n\nloop invariant i2: 1 <= m <= x;\n\n\n*/\nwhile (x < n) {\n        if (unknown()) {\n            m = x;\n        }\n        x = x + 1;\n    }\n\n    if(n > 1) {\n       {;\n//@ assert(m < n);\n}\n       \n    }\n}",
+                        "checker_output_after_prune": false
+                    },
+                    {
+                        "num_solver_calls": 2,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant 1 <= x <= n;\n    loop invariant 1 <= m <= x;\n    loop invariant \\forall integer i; 0 <= i < x ==> (i < n ==> m < n);\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\n\nint main()\n{\n    int x = 1;\n    int m = 1;\n    int n;\n\n    /*@\n\nloop invariant i2: 1 <= m <= x;\n\n*/\nwhile (x < n) {\n        if (unknown()) {\n            m = x;\n        }\n        x = x + 1;\n    }\n\n    if(n > 1) {\n       {;\n//@ assert(m < n);\n}\n       \n    }\n}",
+                        "checker_output_after_prune": false
+                    },
+                    {
+                        "num_solver_calls": 4,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant x >= 1;\n    loop invariant m >= 1;\n    loop invariant n >= x ==> n >= 1;\n    loop invariant n >= \\old(x) ==> n >= x;\n    loop invariant m <= x;\n    loop invariant (m == \\old(x)) ==> m <= x;\n    loop invariant (m != \\old(x)) ==> m <= x - 1;\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\n\nint main()\n{\n    int x = 1;\n    int m = 1;\n    int n;\n\n    /*@\nloop invariant i1: x >= 1;\nloop invariant i2: m >= 1;\nloop invariant i3: n >= x ==> n >= 1;\n\nloop invariant i5: m <= x;\n\n\n*/\nwhile (x < n) {\n        if (unknown()) {\n            m = x;\n        }\n        x = x + 1;\n    }\n\n    if(n > 1) {\n       {;\n//@ assert(m < n);\n}\n       \n    }\n}",
+                        "checker_output_after_prune": false
+                    },
+                    {
+                        "num_solver_calls": 2,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant x >= n ==> m < n;\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\n\nint main()\n{\n    int x = 1;\n    int m = 1;\n    int n;\n\n    /*@\n\n*/\nwhile (x < n) {\n        if (unknown()) {\n            m = x;\n        }\n        x = x + 1;\n    }\n\n    if(n > 1) {\n       {;\n//@ assert(m < n);\n}\n       \n    }\n}",
+                        "checker_output_after_prune": false
+                    },
+                    {
+                        "num_solver_calls": 2,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant x >= 1;\n    loop invariant m >= 1;\n    loop invariant x < n ==> m <= x;\n    loop invariant x < n ==> (forall k: 1 <= k < m ==> !unknown());\n    loop invariant x >= n ==> m <= n;\n    loop invariant n <= 1 || m < n;\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\n\nint main()\n{\n    int x = 1;\n    int m = 1;\n    int n;\n\n    /*@\nloop invariant i1: x >= 1;\nloop invariant i2: m >= 1;\nloop invariant i3: x < n ==> m <= x;\n\n\nloop invariant i6: n <= 1 || m < n;\n*/\nwhile (x < n) {\n        if (unknown()) {\n            m = x;\n        }\n        x = x + 1;\n    }\n\n    if(n > 1) {\n       {;\n//@ assert(m < n);\n}\n       \n    }\n}",
+                        "checker_output_after_prune": true
+                    },
+                    {
+                        "num_solver_calls": 2,
+                        "success": false,
+                        "invariants": "/*@\n    loop invariant x >= 1;\n    loop invariant m >= 1;\n    loop invariant x >= n ==> (n > 1 ==> m < n);\n    loop invariant x < n ==>\n        (m <= x &&\n         x >= 1);\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\n\nint main()\n{\n    int x = 1;\n    int m = 1;\n    int n;\n\n    /*@\nloop invariant i1: x >= 1;\nloop invariant i2: m >= 1;\n\n*/\nwhile (x < n) {\n        if (unknown()) {\n            m = x;\n        }\n        x = x + 1;\n    }\n\n    if(n > 1) {\n       {;\n//@ assert(m < n);\n}\n       \n    }\n}",
+                        "checker_output_after_prune": false
+                    },
+                    {
+                        "num_solver_calls": 2,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant x >= 1;\n    loop invariant m >= 1;\n    loop invariant x <= n;\n    loop invariant m <= x;\n    loop invariant x >= n;\n    loop invariant m <= n-1 ==> m < n;\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\n\nint main()\n{\n    int x = 1;\n    int m = 1;\n    int n;\n\n    /*@\nloop invariant i1: x >= 1;\nloop invariant i2: m >= 1;\n\nloop invariant i4: m <= x;\n\nloop invariant i6: m <= n-1 ==> m < n;\n*/\nwhile (x < n) {\n        if (unknown()) {\n            m = x;\n        }\n        x = x + 1;\n    }\n\n    if(n > 1) {\n       {;\n//@ assert(m < n);\n}\n       \n    }\n}",
+                        "checker_output_after_prune": false
+                    }
+                ]
+            },
+            {
+                "step": "Houdini for combined completion",
+                "solver_calls": 14,
+                "success": true,
+                "code_with_combined_invariants": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\n\nint main()\n{\n    int x = 1;\n    int m = 1;\n    int n;\n\n    /*@\nloop invariant i1: 1 <= x;\nloop invariant i2: 1 <= m;\n\nloop invariant i4: m >= 1;\n\nloop invariant i6: m <= x;\n\n\n\n\n\n\nloop invariant i13: x >= 1;\n\n\nloop invariant i19: (m == x) || (m < x);\n\n\n\n\n\n\n\nloop invariant i31: (m < n ==> m < n);\nloop invariant i33: 1 <= m <= x;\n\n\n\n\n\n\n\nloop invariant i49: x < n ==> m <= x;\n\n\nloop invariant i52: n <= 1 || m < n;\n\n\n\n*/\nwhile (x < n) {\n        if (unknown()) {\n            m = x;\n        }\n        x = x + 1;\n    }\n\n    if(n > 1) {\n       {;\n//@ assert(m < n);\n}\n       \n    }\n}",
+                "checker_output": true
+            }
+        ]
+    },
+    "stats": {
+        "success": [
+            "../data/benchmarks/code2inv/1.c",
+            "../data/benchmarks/code2inv/2.c",
+            "../data/benchmarks/code2inv/9.c",
+            "../data/benchmarks/code2inv/10.c",
+            "../data/benchmarks/code2inv/12.c",
+            "../data/benchmarks/code2inv/14.c",
+            "../data/benchmarks/code2inv/15.c",
+            "../data/benchmarks/code2inv/16.c",
+            "../data/benchmarks/code2inv/17.c"
+        ],
+        "failure": [
+            "../data/benchmarks/code2inv/3.c",
+            "../data/benchmarks/code2inv/4.c",
+            "../data/benchmarks/code2inv/5.c",
+            "../data/benchmarks/code2inv/6.c",
+            "../data/benchmarks/code2inv/7.c",
+            "../data/benchmarks/code2inv/8.c",
+            "../data/benchmarks/code2inv/11.c",
+            "../data/benchmarks/code2inv/13.c"
+        ],
+        "skipped": [
+            "../data/benchmarks/code2inv/1.c",
+            "../data/benchmarks/code2inv/3.c",
+            "../data/benchmarks/code2inv/5.c",
+            "../data/benchmarks/code2inv/7.c",
+            "../data/benchmarks/code2inv/9.c",
+            "../data/benchmarks/code2inv/14.c"
+        ],
+        "total": 17,
+        "success_count": 9,
+        "failure_count": 8,
+        "success_rate": 0.5294117647058824
+    }
+}

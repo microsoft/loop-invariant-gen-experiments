@@ -1,0 +1,442 @@
+{
+    "logs": {
+        "file": "../data/benchmarks/code2inv/121.c",
+        "benchmark_code": "#define assume(e) if(!(e)) return 0;\n\nint main() {\n  \n  int i;\n  int sn;\n  \n  (sn = 0);\n  (i = 1);\n  \n  while ((i <= 8)) {\n    {\n    (i  = (i + 1));\n    (sn  = (sn + 1));\n    }\n\n  }\n  \nif ( (sn != 0) )\n{;\n//@ assert( (sn == 8) );\n}\n\n}",
+        "success": false,
+        "log": [
+            {
+                "step": "Prompting LLM",
+                "generating_annotation": "loop_invariants",
+                "success": true,
+                "llm_chat": [
+                    {
+                        "role": "system",
+                        "content": "You are a helpful AI software assistant that reasons about how code behaves. Given a program, you can find loop invariants, which can then be used to verify some property in the program. \nFrama-C is a software verification tool for C programs. The input to Frama-C is a C program file with ACSL (ANSI/ISO C Specification Language) annotations.\nFor the given program, find the necessary loop invariants of the while loop to help Frama-C verify the post-condition.\n\nInstructions:\n- Make a note of the pre-conditions or variable assignments in the program.\n- Analyze the loop body and make a note of the loop condition. \n- Output loop invariants that are true \n(i) before the loop execution, \n(ii) in every iteration of the loop and \n(iii) after the loop termination, \nsuch that the loop invariants imply the post condition.\n- If a loop invariant is a conjunction, split it into its parts.\n- Output all the loop invariants in one code block. For example:\n```\n/*@ \n    loop invariant i1;\n    loop invariant i2;\n*/\n```\nRules:\n- **Do not use variables or functions that are not declared in the program.** \n- **Do not make any assumptions about functions whose definitions are not given.**\n- **All undefined variables contain garbage values. Do not use variables that have garbage values.**\n- **Do not use keywords that are not supported in ACSL annotations for loops.**\n- **Variables that are not explicitly initialized, could have garbage values. Do not make any assumptions about such values.**\n- **Do not use the \\at(x, Pre) notation for any variable x.**\n- **Do not use non-deterministic function calls.**"
+                    },
+                    {
+                        "role": "user",
+                        "content": "\nConsider the following C program:\n```\n#define assume(e) if(!(e)) return 0;\n\nint main() {\n  \n  int i;\n  int sn;\n  \n  (sn = 0);\n  (i = 1);\n  \n  while ((i <= 8)) {\n    {\n    (i  = (i + 1));\n    (sn  = (sn + 1));\n    }\n\n  }\n  \nif ( (sn != 0) )\n{;\n//@ assert( (sn == 8) );\n}\n\n}\n```\n\nYou are allowed to use implication to take care of the conditional nature of the code. Use implication (==>) instead of using if-then.\n\nFor all variables, add conjunctions that bound the maximum and minimum values that they can take, if such bounds exist.\n\nIf a variable is always equal to or smaller or larger than another variable, add a conjunction for their relation.\n\nIf the assertion is guarded by a condition, use the guard condition in an implication.\n\nIf certain variables are non-deterministic at the beginning or end of the loop, use an implication to make the invariant trivially true at that location. \n\nOutput the loop invariants for the loop in the program above. Let's think step by step."
+                    },
+                    "Pre-conditions:\n- None\n\nVariable assignments:\n- `sn` is assigned the value 0\n- `i` is assigned the value 1\n\nLoop condition:\n- `i <= 8`\n\nLoop invariants:\n```\n/*@\n  loop invariant 1 <= i <= 9;\n  loop invariant 0 <= sn <= i - 1;\n  loop invariant (i > 8) ==> (sn == 8);\n*/\n```\n\nExplanation:\n- The first loop invariant ensures that the value of `i` is always between 1 and 9.\n- The second loop invariant ensures that the value of `sn` is always between 0 and `i-1`.\n- The third loop invariant ensures that if the loop terminates, then `sn` must be equal to 8. This is achieved by using implication to state that if `i` is greater than 8 (i.e., loop condition is false), then `sn` must be equal to 8. \n\nNote: Since the variables `sn` and `i` are initialized to 0 and 1 respectively, there is no need to add any implication for these variables.",
+                    "Pre-conditions:\n- None.\n\nVariable Assignments:\n- `sn` is assigned the value `0`.\n- `i` is assigned the value `1`.\n\nLoop Condition:\n- The loop continues as long as `i` is less than or equal to `8`.\n\nLoop Invariants:\n- `1 <= i <= 9`: `i` always has a value between `1` and `9`.\n- `0 <= sn <= 8`: `sn` always has a value between `0` and `8`.\n- `sn = i - 1`: before the loop execution, `sn` is `0` and `i` is `1`, so this invariant holds. In every iteration, `sn` is incremented by `1` and `i` is incremented by `1`, so this invariant holds. After the loop termination, `i` is `9` and `sn` is `8`, so this invariant holds.\n- `(i <= 9) ==> (sn = i - 1)`: this invariant is an implication, since the assertion is guarded by a condition. If `i` is less than or equal to `9`, then `sn` is equal to `i - 1`. This is true because `i` is incremented by `1` in each iteration of the loop, so it can never exceed `9`. If `i` is greater than `9`, then the implication is trivially true, since the assertion is not executed. This implication holds before the loop execution, in every iteration of the loop, and after the loop termination.\n\nPutting all the loop invariants together:\n```\n/*@ \n    loop invariant 1 <= i <= 9;\n    loop invariant 0 <= sn <= 8;\n    loop invariant sn == i - 1;\n    loop invariant (i <= 9) ==> (sn == i - 1);\n*/\n```",
+                    "Pre-conditions: None\n\nVariable assignments: \n- sn is assigned 0\n- i is assigned 1\n\nLoop condition: i <= 8\n\nLoop invariants:\n- Before the loop: None\n- In every iteration: \n    - sn is equal to the number of completed iterations of the loop\n    - i is always greater than or equal to 1 and less than or equal to 9\n- After the loop: \n    - sn is equal to the number of completed iterations of the loop\n    - i is equal to 9\n\nPutting it all together:\n```\n/*@ \nloop invariant 0 <= i <= 9;\nloop invariant sn == (i - 1);\n*/\nwhile (i <= 8) {\n    {\n    (i  = (i + 1));\n    (sn  = (sn + 1));\n    }\n}\n/*@ \nloop invariant i == 9;\nloop invariant sn == 8 ==> (sn == 8 && sn == i - 1);\n*/\nif (sn != 0)\n{;\n//@ assert sn == 8;\n}\n```",
+                    "We start by analyzing the given program:\n\n```\n#define assume(e) if(!(e)) return 0;\n\nint main() {\n  \n  int i;\n  int sn;\n  \n  (sn = 0);\n  (i = 1);\n  \n  while ((i <= 8)) {\n    {\n    (i  = (i + 1));\n    (sn  = (sn + 1));\n    }\n\n  }\n  \nif ( (sn != 0) )\n{;\n//@ assert( (sn == 8) );\n}\n\n}\n```\n\nThe program initializes two integer variables, `i` and `sn`, and enters a while loop that executes eight times. In each iteration of the loop, `i` is incremented by 1 and `sn` is incremented by 1. After the loop, the program checks if `sn` is not equal to 0, and if it is not, it asserts that `sn` is equal to 8.\n\nNext, we will find the necessary loop invariants:\n\n- Before the loop execution, `i` is greater than or equal to 1 and `sn` is equal to 0.\n```\n/*@ \n    loop invariant i >= 1;\n    loop invariant sn == 0;\n*/\n```\n\n- In every iteration of the loop, `i` is between 2 and 9, and `sn` is between 1 and 8.\n```\n/*@ \n    loop invariant i >= 2 && i <= 9;\n    loop invariant sn >= 1 && sn <= 8;\n*/\n```\n\n- After the loop termination, `i` is greater than or equal to 9 and `sn` is equal to 8, which implies that `sn` is not equal to 0 and `sn` is equal to 8, respectively.\n```\n/*@ \n    loop invariant i >= 1 && i <= 9;\n    loop invariant sn >= 0 && sn <= 8;\n    loop invariant (i > 8) ==> (sn == 8);\n*/\n```\n\nNote that we used the implication operator `==>` to handle the conditional nature of the code and the guard condition of the assertion. Also, we added a conjunction for the relation between `i` and `sn`, which is that `sn` is always equal to `i-1` at the end of each iteration.\n\nTherefore, the final loop invariants for the given program are:\n```\n/*@ \n    loop invariant i >= 1;\n    loop invariant sn == 0;\n    loop invariant i >= 2 && i <= 9;\n    loop invariant sn >= 1 && sn <= 8;\n    loop invariant i >= 1 && i <= 9;\n    loop invariant sn >= 0 && sn <= 8;\n    loop invariant (i > 8) ==> (sn == 8);\n*/\n```",
+                    "Pre-conditions or Variable Assignments:\n- Variables `i` and `sn` are declared as integers.\n- `sn` is assigned the value 0.\n- `i` is assigned the value 1.\n\nLoop Condition:\n- The loop will execute as long as `i` is less than or equal to 8.\n\nLoop Invariants:\n- Before the loop execution, the value of `sn` is 0.\n```\n/*@ loop invariant sn == 0; */\n```\n- In every iteration of the loop, the value of `i` is less than or equal to 9.\n```\n/*@ loop invariant i <= 9; */\n```\n- In every iteration of the loop, the value of `sn` is equal to `i - 1`.\n```\n/*@ loop invariant sn == i - 1; */\n```\n- After the loop termination, the value of `sn` is 8, which implies that the value of `i` is 9.\n```\n/*@ loop invariant sn == 8 ==> i == 9; */\n```\n\nSince `sn` is initialized to 0 and incremented by 1 in each iteration of the loop, its value after 8 iterations should be 8. Therefore, the post-condition that `(sn == 8)` is equivalent to `(i == 9)`.\n\nNote that since there are no non-deterministic variables in the program, no additional implications are necessary to make the invariants true.",
+                    "First, let's note down the pre-conditions and variable assignments:\n\nPre-conditions: None\n\nVariable assignments:\n- sn is assigned the value 0\n- i is assigned the value 1\n\nNext, let's analyze the loop body and make a note of the loop condition:\n\nLoop condition: i <= 8\n\nNow, let's find the necessary loop invariants. We need to find loop invariants that are true:\n(i) before the loop execution, \n(ii) in every iteration of the loop and \n(iii) after the loop termination, \nsuch that the loop invariants imply the post condition.\n\nWe need to prove that sn == 8 after the loop termination. \n\nLoop invariant 1: i is always less than or equal to 9\n```\n/*@ \n    loop invariant i <= 9;\n*/\n```\n\nLoop invariant 2: sn is always less than or equal to i-1\n```\n/*@ \n    loop invariant sn <= i-1;\n*/\n```\n\nLoop invariant 3: sn is always greater than or equal to 0\n```\n/*@ \n    loop invariant sn >= 0;\n*/\n```\n\nLoop invariant 4: if i is less than or equal to 8, then sn is equal to i-1\n```\n/*@ \n    loop invariant (i <= 8) ==> (sn == i-1);\n*/\n```\n\nLoop invariant 5: if i is greater than 8, then sn is equal to 8\n```\n/*@ \n    loop invariant (i > 8) ==> (sn == 8);\n*/\n```\n\nFinally, let's use an implication to make the invariant trivially true when sn is non-deterministic at the beginning of the loop:\n```\n/*@ \n    loop invariant (sn == 0) ==> (sn >= 0);\n*/\n```\n\nPutting all the loop invariants together:\n```\n/*@ \n    loop invariant i <= 9;\n    loop invariant sn <= i-1;\n    loop invariant sn >= 0;\n    loop invariant (i <= 8) ==> (sn == i-1);\n    loop invariant (i > 8) ==> (sn == 8);\n    loop invariant (sn == 0) ==> (sn >= 0);\n*/\n```\n\nThese loop invariants are sufficient to prove the post-condition.",
+                    "Pre-conditions:\n- None.\n\nVariable assignments:\n- `sn` is assigned the value 0.\n- `i` is assigned the value 1.\n\nLoop condition:\n- `i <= 8`.\n\nLoop invariants:\n- `sn >= 0`: since `sn` is assigned the value 0 before the loop, it will always be greater than or equal to 0.\n- `i >= 1`: since `i` is assigned the value 1 before the loop, it will always be greater than or equal to 1.\n- `i <= 9`: since the loop condition is `i <= 8`, and `i` is incremented by 1 in each iteration, it will always be less than or equal to 9 after the loop terminates.\n- `sn == i - 1`: this is true before the loop starts, since both `sn` and `i` are initialized to 0 and 1 respectively. In every iteration, `sn` is incremented by 1, so `sn == i - 1` holds at the end of each iteration. This is also true after the loop terminates, since `i` is incremented one last time before the loop terminates.\n\nUsing implication, we can modify the assertion as follows:\n```\nif (sn != 0) {\n  //@ assert i == 9 ==> (sn == 8);\n}\n```\n\nPutting everything together, the loop invariants are:\n```\n/*@ \n    loop invariant sn >= 0;\n    loop invariant i >= 1;\n    loop invariant i <= 9;\n    loop invariant sn == i - 1;\n*/\n```",
+                    "Pre-conditions:\n- None\n\nVariable Assignments:\n- `sn` is assigned 0\n- `i` is assigned 1\n\nLoop Invariants:\n- `1 <= i <= 9` (since `i` is incremented by 1 in every iteration and the loop condition is `i <= 8`)\n- `0 <= sn <= 8` (since `sn` starts at 0 and is incremented by 1 in every iteration)\n\nPost-Condition:\n- `sn == 8`\n\nTherefore, the loop invariants are:\n```\n/*@ \n    loop invariant 1 <= i <= 9;\n    loop invariant 0 <= sn <= 8;\n*/\n```\nThese loop invariants are true before the loop execution, in every iteration of the loop, and after the loop termination. \n\nTo verify the post-condition, we can use an implication:\n```\nif (sn != 0) {\n    //@ assert (sn == 8) ;\n}\n```\nThis assertion is only checked if `sn` is not 0. If `sn` is 0, the assertion is trivially true.",
+                    "Step 1: Pre-conditions or variable assignments\n```\nint i;\nint sn;\n(sn = 0);\n(i = 1);\n```\nThe program initializes two integer variables, `i` and `sn`. `sn` is explicitly initialized to 0 and `i` is initialized to 1.\n\nStep 2: Loop condition\n```\nwhile ((i <= 8))\n```\nThe loop will execute as long as the value of `i` is less than or equal to 8.\n\nStep 3: Loop invariants\n- Before the loop execution, the following loop invariants hold:\n```\n/*@ \n    loop invariant i >= 1 && i <= 9;\n    loop invariant sn == 0;\n*/\n```\nExplanation: \n- `i` is initialized to 1 before the loop starts and it increases by 1 in each iteration. Therefore, `i` is always greater than or equal to 1 and less than or equal to 9.\n- `sn` is explicitly initialized to 0 before the loop starts and is not modified outside the loop. Therefore, `sn` remains 0 throughout the loop execution.\n\n- In every iteration of the loop, the following loop invariant holds:\n```\n/*@ \n    loop invariant i >= 1 && i <= 9;\n    loop invariant sn == (i - 1);\n*/\n```\nExplanation: \n- `i` is incremented by 1 in each iteration, and its minimum and maximum bounds remain the same. Therefore, `i` is always greater than or equal to 1 and less than or equal to 9.\n- `sn` is initialized to 0 before the loop starts, and in each iteration, it is incremented by 1. Since the loop executes `i-1` times, `sn` is always equal to `i-1`.\n\n- After the loop termination, the following loop invariant holds:\n```\n/*@ \n    loop invariant i >= 9 && i <= 10;\n    loop invariant sn == 8 ==> i == 9;\n*/\n```\nExplanation: \n- Since the loop terminates when `i` becomes 9, its final value should be either 9 or 10. Therefore, `i` is always greater than or equal to 9 and less than or equal to 10.\n- `sn` is incremented by 1 in each iteration, and its final value should be 8. Therefore, if `sn` is equal to 8, then `i` must be equal to 9.",
+                    "Pre-conditions:\n- None.\n\nVariable Assignments:\n- `sn` is assigned 0.\n- `i` is assigned 1.\n\nLoop Condition:\n- The loop continues while `i` is less than or equal to 8.\n\nPost-condition:\n- If `sn` is not equal to 0, then it should be equal to 8.\n\nLoop Invariants:\n- The value of `sn` is always less than or equal to the number of iterations of the loop.\n- The value of `i` is always greater than or equal to 1 and less than or equal to 9.\n- In every iteration of the loop, the value of `i` is incremented by 1 and the value of `sn` is incremented by 1.\n- After the loop termination, if `sn` is not equal to 0, then it is equal to 8.\n\nPutting all the loop invariants together, we get:\n```\n/*@\nloop invariant 1 <= i <= 9;\nloop invariant 0 <= sn <= i - 1;\nloop invariant (\\forall integer k; 1 <= k <= i-1 ==> sn >= k);\nloop invariant (\\forall integer j; i <= j <= 8 ==> sn == 8 ==> (sn==j));\nloop invariant (sn != 0) ==> (sn == 8);\n*/\n\nwhile ((i <= 8)) {\n  {\n    (i  = (i + 1));\n    (sn  = (sn + 1));\n  }\n}\n``` \n\nNote that we used implication to take care of the conditional nature of the code. We also used conjunctions to bound the maximum and minimum values that `i` and `sn` can take. We used a universal quantifier to express that `sn` is always greater than or equal to the number of iterations completed so far. Finally, we used an implication to handle the case where `sn` is not equal to 0.",
+                    "Pre-conditions:\n- The program does not have any pre-conditions.\n- The variables i and sn are initialized to garbage values.\n\nLoop condition:\n- The loop continues as long as i is less than or equal to 8.\n\nLoop invariants:\n- Before the loop: None needed.\n- In every iteration: \n  - i is always less than or equal to 9.\n  - sn is always equal to (i - 1).\n- After the loop:\n  - If the loop terminates, then i is greater than 8 and sn is equal to 8.\n  - Implication: If sn is not equal to 0, then sn is equal to 8.\n\nPutting it all together:\n\n```\n/*@ \n    loop invariant i <= 9;\n    loop invariant sn == i - 1;\n    \n    loop variant 8 - i;\n*/\nwhile ((i <= 8)) {\n    {\n    (i  = (i + 1));\n    (sn  = (sn + 1));\n    }\n\n}\n\n//@ assert (sn == 8) ==> (sn == 8);\n```",
+                    "Pre-conditions:\n- None.\n\nVariable assignments:\n- sn is assigned the value 0.\n- i is assigned the value 1.\n\nLoop condition:\n- The loop continues as long as i is less than or equal to 8.\n\nLoop Invariants:\n- Before the loop execution: \n    - i is greater than or equal to 1.\n    - sn is equal to 0.\n- In every iteration of the loop:\n    - i is less than or equal to 9.\n    - sn is equal to i - 1.\n- After the loop termination:\n    - i is equal to 9.\n    - sn is equal to 8.\n\nExplanation:\n- Before the loop execution, i is initialized to 1 and sn is initialized to 0. Therefore, i is greater than or equal to 1 and sn is equal to 0.\n- In every iteration of the loop, i is incremented by 1 and sn is incremented by 1. Since the loop continues as long as i is less than or equal to 8, i will be less than or equal to 9 after the loop terminates. Therefore, in every iteration of the loop, i is less than or equal to 9. Since sn is incremented by 1 in every iteration, and its initial value is 0, it will be equal to i - 1 in every iteration.\n- After the loop termination, i is equal to 9 and sn is equal to the sum of the integers from 1 to 8, which is 8. Therefore, i is equal to 9 and sn is equal to 8.\n\nLoop Invariants:\n```\n/*@ \n    loop invariant i >= 1 && i <= 9;\n    loop invariant sn == i - 1;\n*/\n```",
+                    "Pre-conditions:\n- None\n\nVariable Assignments:\n- `sn` is assigned the value of 0.\n- `i` is assigned the value of 1.\n\nLoop Condition:\n- The loop continues as long as `i` is less than or equal to 8.\n\nWe want to find necessary loop invariants that will verify the post-condition `sn == 8`.\n\nLoop Invariants:\n- `i` is always greater than or equal to 1 and less than or equal to 9. `(1 <= i <= 9)`\n- `sn` is always greater than or equal to 0 and less than or equal to 8. `(0 <= sn <= 8)`\n- In each iteration of the loop, `i` is incremented by 1 and `sn` is incremented by 1. `(i' == i + 1 && sn' == sn + 1)`\n- If `i` is equal to 9, then `sn` is equal to 8. `(i == 9 ==> sn == 8)`\n\nPutting all these loop invariants together, we get:\n\n```\n/*@ \n    loop invariant 1 <= i <= 9;\n    loop invariant 0 <= sn <= 8;\n    loop invariant i' == i + 1 && sn' == sn + 1;\n    loop invariant i == 9 ==> sn == 8;\n*/\n```\n\nNote: Since there are no non-deterministic variables in the program, we do not need to use any implications to make the loop invariants trivially true.",
+                    "Pre-conditions:\n- None\n\nVariable assignments:\n- `sn = 0`\n- `i = 1`\n\nLoop condition:\n- `(i <= 8)`\n\nPost-condition:\n- `sn == 8`\n\nLoop invariants:\n- `sn >= 0` (minimum bound)\n- `i >= 1` (minimum bound)\n- `i <= 9` (maximum bound)\n- `sn <= i - 1` (relation between `i` and `sn`)\n- `(i <= 8) ==> (sn == (i - 1))` (invariant in every iteration)\n- `(i > 8) ==> (sn == 8)` (invariant after the loop termination)\n\nExplanation:\n- The minimum bound for `sn` is 0 because it is assigned 0 at the beginning of the program.\n- The minimum bound for `i` is 1 because it is assigned 1 at the beginning of the program.\n- The maximum bound for `i` is 9 because the loop condition is `(i <= 8)`, which means that the loop will terminate when `i` becomes 9.\n- The relation between `i` and `sn` is that `sn` is always equal to `i - 1`, since `sn` is incremented by 1 in every iteration of the loop and `i` is also incremented by 1 in every iteration.\n- The invariant `(i <= 8) ==> (sn == (i - 1))` is true in every iteration of the loop because if `i` is less than or equal to 8, then `sn` is always equal to `i - 1`.\n- The invariant `(i > 8) ==> (sn == 8)` is true after the loop termination because if `i` is greater than 8, then the loop has executed 8 times and `sn` is equal to 8. \n\nPutting it all together, the loop invariants are:\n```\n/*@ \n    loop invariant sn >= 0;\n    loop invariant i >= 1;\n    loop invariant i <= 9;\n    loop invariant sn <= i - 1;\n    loop invariant (i <= 8) ==> (sn == (i - 1));\n    loop invariant (i > 8) ==> (sn == 8);\n*/\n```",
+                    "Pre-conditions:\n- None.\n\nVariable assignments:\n- Assign 0 to sn.\n- Assign 1 to i.\n\nLoop condition:\n- i <= 8.\n\nLoop invariants:\n- Before the loop execution: None.\n- In every iteration of the loop:\n  - sn >= 0.\n  - sn <= i.\n  - i <= 9.\n- After the loop termination:\n  - sn == 8.\n\nExplanation:\n- Since sn is assigned 0 before the loop, it must be greater than or equal to 0 in every iteration.\n- Since sn is incremented by 1 in every iteration and it is initialized to 0, it must be less than or equal to i in every iteration.\n- Since i is incremented by 1 in every iteration and it is initialized to 1, it must be less than or equal to 9 in every iteration.\n- The loop terminates when i becomes 9 and sn should be equal to 8 at this point. \n- Since there are no non-deterministic values or function calls, we don't need any trivial invariants."
+                ],
+                "output": [
+                    "/*@\n  loop invariant 1 <= i <= 9;\n  loop invariant 0 <= sn <= i - 1;\n  loop invariant (i > 8) ==> (sn == 8);\n*/",
+                    "/*@ \n    loop invariant 1 <= i <= 9;\n    loop invariant 0 <= sn <= 8;\n    loop invariant sn == i - 1;\n    loop invariant (i <= 9) ==> (sn == i - 1);\n*/",
+                    "/*@ \nloop invariant 0 <= i <= 9;\nloop invariant sn == (i - 1);\n*/\nwhile (i <= 8) {\n    {\n    (i  = (i + 1));\n    (sn  = (sn + 1));\n    }\n}\n/*@ \nloop invariant i == 9;\nloop invariant sn == 8 ==> (sn == 8 && sn == i - 1);\n*/\nif (sn != 0)\n{;\n//@ assert sn == 8;\n}",
+                    "/*@ \n    loop invariant i >= 1;\n    loop invariant sn == 0;\n*/",
+                    "/*@ loop invariant sn == 0; */",
+                    "/*@ \n    loop invariant i <= 9;\n*/",
+                    "/*@ \n    loop invariant sn >= 0;\n    loop invariant i >= 1;\n    loop invariant i <= 9;\n    loop invariant sn == i - 1;\n*/",
+                    "/*@ \n    loop invariant 1 <= i <= 9;\n    loop invariant 0 <= sn <= 8;\n*/",
+                    "/*@ \n    loop invariant i >= 1 && i <= 9;\n    loop invariant sn == 0;\n*/",
+                    "/*@\nloop invariant 1 <= i <= 9;\nloop invariant 0 <= sn <= i - 1;\nloop invariant (\\forall integer k; 1 <= k <= i-1 ==> sn >= k);\nloop invariant (\\forall integer j; i <= j <= 8 ==> sn == 8 ==> (sn==j));\nloop invariant (sn != 0) ==> (sn == 8);\n*/\n\nwhile ((i <= 8)) {\n  {\n    (i  = (i + 1));\n    (sn  = (sn + 1));\n  }\n}",
+                    "/*@ \n    loop invariant i <= 9;\n    loop invariant sn == i - 1;\n    \n    loop variant 8 - i;\n*/\nwhile ((i <= 8)) {\n    {\n    (i  = (i + 1));\n    (sn  = (sn + 1));\n    }\n\n}\n\n//@ assert (sn == 8) ==> (sn == 8);",
+                    "/*@ \n    loop invariant i >= 1 && i <= 9;\n    loop invariant sn == i - 1;\n*/",
+                    "/*@ \n    loop invariant 1 <= i <= 9;\n    loop invariant 0 <= sn <= 8;\n    loop invariant i' == i + 1 && sn' == sn + 1;\n    loop invariant i == 9 ==> sn == 8;\n*/",
+                    "/*@ \n    loop invariant sn >= 0;\n    loop invariant i >= 1;\n    loop invariant i <= 9;\n    loop invariant sn <= i - 1;\n    loop invariant (i <= 8) ==> (sn == (i - 1));\n    loop invariant (i > 8) ==> (sn == 8);\n*/",
+                    [
+                        "ERROR: Output does not contain at least 1 complete code block",
+                        "Pre-conditions:\n- None.\n\nVariable assignments:\n- Assign 0 to sn.\n- Assign 1 to i.\n\nLoop condition:\n- i <= 8.\n\nLoop invariants:\n- Before the loop execution: None.\n- In every iteration of the loop:\n  - sn >= 0.\n  - sn <= i.\n  - i <= 9.\n- After the loop termination:\n  - sn == 8.\n\nExplanation:\n- Since sn is assigned 0 before the loop, it must be greater than or equal to 0 in every iteration.\n- Since sn is incremented by 1 in every iteration and it is initialized to 0, it must be less than or equal to i in every iteration.\n- Since i is incremented by 1 in every iteration and it is initialized to 1, it must be less than or equal to 9 in every iteration.\n- The loop terminates when i becomes 9 and sn should be equal to 8 at this point. \n- Since there are no non-deterministic values or function calls, we don't need any trivial invariants."
+                    ]
+                ]
+            },
+            {
+                "step": "Checking individual completion",
+                "solver_calls": 14,
+                "completions": [
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@\n  loop invariant 1 <= i <= 9;\n  loop invariant 0 <= sn <= i - 1;\n  loop invariant (i > 8) ==> (sn == 8);\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant 1 <= i <= 9 is inductive.\nloop invariant 0 <= sn <= i - 1 is inductive.\nloop invariant (i > 8) ==> (sn == 8) is established but not preserved.\nAssertion sn == 8: Partially proven\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": true,
+                        "invariants": "/*@ \n    loop invariant 1 <= i <= 9;\n    loop invariant 0 <= sn <= 8;\n    loop invariant sn == i - 1;\n    loop invariant (i <= 9) ==> (sn == i - 1);\n*/",
+                        "checker_output_for_invariants": true,
+                        "checker_message_for_invariants": "loop invariant 1 <= i <= 9 is inductive.\nloop invariant 0 <= sn <= 8 is inductive.\nloop invariant sn == i - 1 is inductive.\nloop invariant (i <= 9) ==> (sn == i - 1) is inductive.\nAssertion sn == 8: Valid\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \nloop invariant 0 <= i <= 9;\nloop invariant sn == (i - 1);\n*/\nwhile (i <= 8) {\n    {\n    (i  = (i + 1));\n    (sn  = (sn + 1));\n    }\n}\n/*@ \nloop invariant i == 9;\nloop invariant sn == 8 ==> (sn == 8 && sn == i - 1);\n*/\nif (sn != 0)\n{;\n//@ assert sn == 8;\n}",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant 0 <= i <= 9 is inductive.\nloop invariant sn == (i - 1) is inductive.\nloop invariant i == 9 is preserved but not established.\nloop invariant sn == 8 ==> (sn == 8 && sn == i - 1) is inductive.\nAssertion sn == 8: Partially proven\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant i >= 1;\n    loop invariant sn == 0;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant i >= 1 is inductive.\nloop invariant sn == 0 is established but not preserved.\nAssertion sn == 8: Partially proven\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ loop invariant sn == 0; */",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant sn == 0 is established but not preserved.\nAssertion sn == 8: Partially proven\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant i <= 9;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant i <= 9 is inductive.\nAssertion sn == 8: Unproven\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": true,
+                        "invariants": "/*@ \n    loop invariant sn >= 0;\n    loop invariant i >= 1;\n    loop invariant i <= 9;\n    loop invariant sn == i - 1;\n*/",
+                        "checker_output_for_invariants": true,
+                        "checker_message_for_invariants": "loop invariant sn >= 0 is inductive.\nloop invariant i >= 1 is inductive.\nloop invariant i <= 9 is inductive.\nloop invariant sn == i - 1 is inductive.\nAssertion sn == 8: Valid\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant 1 <= i <= 9;\n    loop invariant 0 <= sn <= 8;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant 1 <= i <= 9 is inductive.\nloop invariant 0 <= sn <= 8 is established but not preserved.\nAssertion sn == 8: Unproven\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant i >= 1 && i <= 9;\n    loop invariant sn == 0;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant i >= 1 && i <= 9 is inductive.\nloop invariant sn == 0 is established but not preserved.\nAssertion sn == 8: Partially proven\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@\nloop invariant 1 <= i <= 9;\nloop invariant 0 <= sn <= i - 1;\nloop invariant (\\forall integer k; 1 <= k <= i-1 ==> sn >= k);\nloop invariant (\\forall integer j; i <= j <= 8 ==> sn == 8 ==> (sn==j));\nloop invariant (sn != 0) ==> (sn == 8);\n*/\n\nwhile ((i <= 8)) {\n  {\n    (i  = (i + 1));\n    (sn  = (sn + 1));\n  }\n}",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant 1 <= i <= 9 is inductive.\nloop invariant 0 <= sn <= i - 1 is inductive.\nloop invariant (\\forall integer k; 1 <= k <= i-1 ==> sn >= k) is inductive.\nloop invariant (\\forall integer j; i <= j <= 8 ==> sn == 8 ==> (sn==j)) is inductive.\nloop invariant (sn != 0) ==> (sn == 8) is established but not preserved.\nAssertion sn == 8: Partially proven\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": true,
+                        "invariants": "/*@ \n    loop invariant i <= 9;\n    loop invariant sn == i - 1;\n    \n    loop variant 8 - i;\n*/\nwhile ((i <= 8)) {\n    {\n    (i  = (i + 1));\n    (sn  = (sn + 1));\n    }\n\n}\n\n//@ assert (sn == 8) ==> (sn == 8);",
+                        "checker_output_for_invariants": true,
+                        "checker_message_for_invariants": "loop invariant i <= 9 is inductive.\nloop invariant sn == i - 1 is inductive.\nAssertion sn == 8: Valid\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": true,
+                        "invariants": "/*@ \n    loop invariant i >= 1 && i <= 9;\n    loop invariant sn == i - 1;\n*/",
+                        "checker_output_for_invariants": true,
+                        "checker_message_for_invariants": "loop invariant i >= 1 && i <= 9 is inductive.\nloop invariant sn == i - 1 is inductive.\nAssertion sn == 8: Valid\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant 1 <= i <= 9;\n    loop invariant 0 <= sn <= 8;\n    loop invariant i' == i + 1 && sn' == sn + 1;\n    loop invariant i == 9 ==> sn == 8;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "No invariants found."
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": true,
+                        "invariants": "/*@ \n    loop invariant sn >= 0;\n    loop invariant i >= 1;\n    loop invariant i <= 9;\n    loop invariant sn <= i - 1;\n    loop invariant (i <= 8) ==> (sn == (i - 1));\n    loop invariant (i > 8) ==> (sn == 8);\n*/",
+                        "checker_output_for_invariants": true,
+                        "checker_message_for_invariants": "loop invariant sn >= 0 is inductive.\nloop invariant i >= 1 is inductive.\nloop invariant i <= 9 is inductive.\nloop invariant sn <= i - 1 is inductive.\nloop invariant (i <= 8) ==> (sn == (i - 1)) is inductive.\nloop invariant (i > 8) ==> (sn == 8) is inductive.\nAssertion sn == 8: Valid\n"
+                    },
+                    {
+                        "num_solver_calls": 0,
+                        "success": false,
+                        "llm_output": "Pre-conditions:\n- None.\n\nVariable assignments:\n- Assign 0 to sn.\n- Assign 1 to i.\n\nLoop condition:\n- i <= 8.\n\nLoop invariants:\n- Before the loop execution: None.\n- In every iteration of the loop:\n  - sn >= 0.\n  - sn <= i.\n  - i <= 9.\n- After the loop termination:\n  - sn == 8.\n\nExplanation:\n- Since sn is assigned 0 before the loop, it must be greater than or equal to 0 in every iteration.\n- Since sn is incremented by 1 in every iteration and it is initialized to 0, it must be less than or equal to i in every iteration.\n- Since i is incremented by 1 in every iteration and it is initialized to 1, it must be less than or equal to 9 in every iteration.\n- The loop terminates when i becomes 9 and sn should be equal to 8 at this point. \n- Since there are no non-deterministic values or function calls, we don't need any trivial invariants.",
+                        "error": "Output does not contain at least 1 code block"
+                    }
+                ],
+                "success": true
+            },
+            {
+                "step": "Houdini for individual completion",
+                "success": true,
+                "completions": [
+                    {
+                        "num_solver_calls": 2,
+                        "success": false,
+                        "invariants": "/*@\n  loop invariant 1 <= i <= 9;\n  loop invariant 0 <= sn <= i - 1;\n  loop invariant (i > 8) ==> (sn == 8);\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\n\nint main() {\n  \n  int i;\n  int sn;\n  \n  (sn = 0);\n  (i = 1);\n  \n  /*@\nloop invariant i1: 1 <= i <= 9;\nloop invariant i2: 0 <= sn <= i - 1;\n\n*/\nwhile ((i <= 8)) {\n    {\n    (i  = (i + 1));\n    (sn  = (sn + 1));\n    }\n\n  }\n  \nif ( (sn != 0) )\n{;\n//@ assert( (sn == 8) );\n}\n\n}",
+                        "checker_output_after_prune": false
+                    },
+                    {
+                        "num_solver_calls": 0,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant 1 <= i <= 9;\n    loop invariant 0 <= sn <= 8;\n    loop invariant sn == i - 1;\n    loop invariant (i <= 9) ==> (sn == i - 1);\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\n\nint main() {\n  \n  int i;\n  int sn;\n  \n  (sn = 0);\n  (i = 1);\n  \n  /*@\nloop invariant i1: 1 <= i <= 9;\nloop invariant i2: 0 <= sn <= 8;\nloop invariant i3: sn == i - 1;\nloop invariant i4: (i <= 9) ==> (sn == i - 1);\n*/\nwhile ((i <= 8)) {\n    {\n    (i  = (i + 1));\n    (sn  = (sn + 1));\n    }\n\n  }\n  \nif ( (sn != 0) )\n{;\n//@ assert( (sn == 8) );\n}\n\n}",
+                        "checker_output_after_prune": true
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \nloop invariant 0 <= i <= 9;\nloop invariant sn == (i - 1);\n*/\nwhile (i <= 8) {\n    {\n    (i  = (i + 1));\n    (sn  = (sn + 1));\n    }\n}\n/*@ \nloop invariant i == 9;\nloop invariant sn == 8 ==> (sn == 8 && sn == i - 1);\n*/\nif (sn != 0)\n{;\n//@ assert sn == 8;\n}",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\n\nint main() {\n  \n  int i;\n  int sn;\n  \n  (sn = 0);\n  (i = 1);\n  \n  /*@\nloop invariant i1: 0 <= i <= 9;\nloop invariant i2: sn == (i - 1);\n\nloop invariant i4: sn == 8 ==> (sn == 8 && sn == i - 1);\n*/\nwhile ((i <= 8)) {\n    {\n    (i  = (i + 1));\n    (sn  = (sn + 1));\n    }\n\n  }\n  \nif ( (sn != 0) )\n{;\n//@ assert( (sn == 8) );\n}\n\n}",
+                        "checker_output_after_prune": true
+                    },
+                    {
+                        "num_solver_calls": 2,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant i >= 1;\n    loop invariant sn == 0;\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\n\nint main() {\n  \n  int i;\n  int sn;\n  \n  (sn = 0);\n  (i = 1);\n  \n  /*@\nloop invariant i1: i >= 1;\n\n*/\nwhile ((i <= 8)) {\n    {\n    (i  = (i + 1));\n    (sn  = (sn + 1));\n    }\n\n  }\n  \nif ( (sn != 0) )\n{;\n//@ assert( (sn == 8) );\n}\n\n}",
+                        "checker_output_after_prune": false
+                    },
+                    {
+                        "num_solver_calls": 2,
+                        "success": false,
+                        "invariants": "/*@ loop invariant sn == 0; */",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\n\nint main() {\n  \n  int i;\n  int sn;\n  \n  (sn = 0);\n  (i = 1);\n  \n  /*@\n\n*/\nwhile ((i <= 8)) {\n    {\n    (i  = (i + 1));\n    (sn  = (sn + 1));\n    }\n\n  }\n  \nif ( (sn != 0) )\n{;\n//@ assert( (sn == 8) );\n}\n\n}",
+                        "checker_output_after_prune": false
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant i <= 9;\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\n\nint main() {\n  \n  int i;\n  int sn;\n  \n  (sn = 0);\n  (i = 1);\n  \n  /*@\nloop invariant i1: i <= 9;\n*/\nwhile ((i <= 8)) {\n    {\n    (i  = (i + 1));\n    (sn  = (sn + 1));\n    }\n\n  }\n  \nif ( (sn != 0) )\n{;\n//@ assert( (sn == 8) );\n}\n\n}",
+                        "checker_output_after_prune": false
+                    },
+                    {
+                        "num_solver_calls": 0,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant sn >= 0;\n    loop invariant i >= 1;\n    loop invariant i <= 9;\n    loop invariant sn == i - 1;\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\n\nint main() {\n  \n  int i;\n  int sn;\n  \n  (sn = 0);\n  (i = 1);\n  \n  /*@\nloop invariant i1: sn >= 0;\nloop invariant i2: i >= 1;\nloop invariant i3: i <= 9;\nloop invariant i4: sn == i - 1;\n*/\nwhile ((i <= 8)) {\n    {\n    (i  = (i + 1));\n    (sn  = (sn + 1));\n    }\n\n  }\n  \nif ( (sn != 0) )\n{;\n//@ assert( (sn == 8) );\n}\n\n}",
+                        "checker_output_after_prune": true
+                    },
+                    {
+                        "num_solver_calls": 2,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant 1 <= i <= 9;\n    loop invariant 0 <= sn <= 8;\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\n\nint main() {\n  \n  int i;\n  int sn;\n  \n  (sn = 0);\n  (i = 1);\n  \n  /*@\nloop invariant i1: 1 <= i <= 9;\n\n*/\nwhile ((i <= 8)) {\n    {\n    (i  = (i + 1));\n    (sn  = (sn + 1));\n    }\n\n  }\n  \nif ( (sn != 0) )\n{;\n//@ assert( (sn == 8) );\n}\n\n}",
+                        "checker_output_after_prune": false
+                    },
+                    {
+                        "num_solver_calls": 2,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant i >= 1 && i <= 9;\n    loop invariant sn == 0;\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\n\nint main() {\n  \n  int i;\n  int sn;\n  \n  (sn = 0);\n  (i = 1);\n  \n  /*@\nloop invariant i1: i >= 1 && i <= 9;\n\n*/\nwhile ((i <= 8)) {\n    {\n    (i  = (i + 1));\n    (sn  = (sn + 1));\n    }\n\n  }\n  \nif ( (sn != 0) )\n{;\n//@ assert( (sn == 8) );\n}\n\n}",
+                        "checker_output_after_prune": false
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@\nloop invariant 1 <= i <= 9;\nloop invariant 0 <= sn <= i - 1;\nloop invariant (\\forall integer k; 1 <= k <= i-1 ==> sn >= k);\nloop invariant (\\forall integer j; i <= j <= 8 ==> sn == 8 ==> (sn==j));\nloop invariant (sn != 0) ==> (sn == 8);\n*/\n\nwhile ((i <= 8)) {\n  {\n    (i  = (i + 1));\n    (sn  = (sn + 1));\n  }\n}",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\n\nint main() {\n  \n  int i;\n  int sn;\n  \n  (sn = 0);\n  (i = 1);\n  \n  /*@\nloop invariant i1: 1 <= i <= 9;\nloop invariant i2: 0 <= sn <= i - 1;\nloop invariant i3: (\\forall integer k; 1 <= k <= i-1 ==> sn >= k);\nloop invariant i4: (\\forall integer j; i <= j <= 8 ==> sn == 8 ==> (sn==j));\n\n*/\nwhile ((i <= 8)) {\n    {\n    (i  = (i + 1));\n    (sn  = (sn + 1));\n    }\n\n  }\n  \nif ( (sn != 0) )\n{;\n//@ assert( (sn == 8) );\n}\n\n}",
+                        "checker_output_after_prune": true
+                    },
+                    {
+                        "num_solver_calls": 0,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant i <= 9;\n    loop invariant sn == i - 1;\n    \n    loop variant 8 - i;\n*/\nwhile ((i <= 8)) {\n    {\n    (i  = (i + 1));\n    (sn  = (sn + 1));\n    }\n\n}\n\n//@ assert (sn == 8) ==> (sn == 8);",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\n\nint main() {\n  \n  int i;\n  int sn;\n  \n  (sn = 0);\n  (i = 1);\n  \n  /*@\nloop invariant i1: i <= 9;\nloop invariant i2: sn == i - 1;\n*/\nwhile ((i <= 8)) {\n    {\n    (i  = (i + 1));\n    (sn  = (sn + 1));\n    }\n\n  }\n  \nif ( (sn != 0) )\n{;\n//@ assert( (sn == 8) );\n}\n\n}",
+                        "checker_output_after_prune": true
+                    },
+                    {
+                        "num_solver_calls": 0,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant i >= 1 && i <= 9;\n    loop invariant sn == i - 1;\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\n\nint main() {\n  \n  int i;\n  int sn;\n  \n  (sn = 0);\n  (i = 1);\n  \n  /*@\nloop invariant i1: i >= 1 && i <= 9;\nloop invariant i2: sn == i - 1;\n*/\nwhile ((i <= 8)) {\n    {\n    (i  = (i + 1));\n    (sn  = (sn + 1));\n    }\n\n  }\n  \nif ( (sn != 0) )\n{;\n//@ assert( (sn == 8) );\n}\n\n}",
+                        "checker_output_after_prune": true
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant 1 <= i <= 9;\n    loop invariant 0 <= sn <= 8;\n    loop invariant i' == i + 1 && sn' == sn + 1;\n    loop invariant i == 9 ==> sn == 8;\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\n\nint main() {\n  \n  int i;\n  int sn;\n  \n  (sn = 0);\n  (i = 1);\n  \n  /*@\nloop invariant i1: 1 <= i <= 9;\nloop invariant i2: 0 <= sn <= 8;\nloop invariant i3: i' == i + 1 && sn' == sn + 1;\nloop invariant i4: i == 9 ==> sn == 8;\n*/\nwhile ((i <= 8)) {\n    {\n    (i  = (i + 1));\n    (sn  = (sn + 1));\n    }\n\n  }\n  \nif ( (sn != 0) )\n{;\n//@ assert( (sn == 8) );\n}\n\n}",
+                        "checker_output_after_prune": false
+                    },
+                    {
+                        "num_solver_calls": 0,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant sn >= 0;\n    loop invariant i >= 1;\n    loop invariant i <= 9;\n    loop invariant sn <= i - 1;\n    loop invariant (i <= 8) ==> (sn == (i - 1));\n    loop invariant (i > 8) ==> (sn == 8);\n*/",
+                        "code_after_prune": "#define assume(e) if(!(e)) return 0;\n\nint main() {\n  \n  int i;\n  int sn;\n  \n  (sn = 0);\n  (i = 1);\n  \n  /*@\nloop invariant i1: sn >= 0;\nloop invariant i2: i >= 1;\nloop invariant i3: i <= 9;\nloop invariant i4: sn <= i - 1;\nloop invariant i5: (i <= 8) ==> (sn == (i - 1));\nloop invariant i6: (i > 8) ==> (sn == 8);\n*/\nwhile ((i <= 8)) {\n    {\n    (i  = (i + 1));\n    (sn  = (sn + 1));\n    }\n\n  }\n  \nif ( (sn != 0) )\n{;\n//@ assert( (sn == 8) );\n}\n\n}",
+                        "checker_output_after_prune": true
+                    },
+                    {
+                        "num_solver_calls": 0,
+                        "success": false,
+                        "llm_output": "Pre-conditions:\n- None.\n\nVariable assignments:\n- Assign 0 to sn.\n- Assign 1 to i.\n\nLoop condition:\n- i <= 8.\n\nLoop invariants:\n- Before the loop execution: None.\n- In every iteration of the loop:\n  - sn >= 0.\n  - sn <= i.\n  - i <= 9.\n- After the loop termination:\n  - sn == 8.\n\nExplanation:\n- Since sn is assigned 0 before the loop, it must be greater than or equal to 0 in every iteration.\n- Since sn is incremented by 1 in every iteration and it is initialized to 0, it must be less than or equal to i in every iteration.\n- Since i is incremented by 1 in every iteration and it is initialized to 1, it must be less than or equal to 9 in every iteration.\n- The loop terminates when i becomes 9 and sn should be equal to 8 at this point. \n- Since there are no non-deterministic values or function calls, we don't need any trivial invariants.",
+                        "error": "Output does not contain at least 1 code block"
+                    }
+                ]
+            },
+            {
+                "step": "Houdini for combined completion",
+                "solver_calls": 1,
+                "success": false,
+                "code_with_combined_invariants": "#define assume(e) if(!(e)) return 0;\n\nint main() {\n  \n  int i;\n  int sn;\n  \n  (sn = 0);\n  (i = 1);\n  \n  /*@\nloop invariant i1: 1 <= i <= 9;\nloop invariant i2: 0 <= sn <= i - 1;\nloop invariant i3: (i > 8) ==> (sn == 8);\nloop invariant i5: 0 <= sn <= 8;\nloop invariant i6: sn == i - 1;\nloop invariant i7: (i <= 9) ==> (sn == i - 1);\nloop invariant i8: 0 <= i <= 9;\nloop invariant i9: sn == (i - 1);\nloop invariant i10: i == 9;\nloop invariant i11: sn == 8 ==> (sn == 8 && sn == i - 1);\nloop invariant i12: i >= 1;\nloop invariant i13: sn == 0;\nloop invariant i15: i <= 9;\nloop invariant i16: sn >= 0;\nloop invariant i22: i >= 1 && i <= 9;\nloop invariant i26: (\\forall integer k; 1 <= k <= i-1 ==> sn >= k);\nloop invariant i27: (\\forall integer j; i <= j <= 8 ==> sn == 8 ==> (sn==j));\nloop invariant i28: (sn != 0) ==> (sn == 8);\nloop invariant i35: i' == i + 1 && sn' == sn + 1;\nloop invariant i36: i == 9 ==> sn == 8;\nloop invariant i40: sn <= i - 1;\nloop invariant i41: (i <= 8) ==> (sn == (i - 1));\n*/\nwhile ((i <= 8)) {\n    {\n    (i  = (i + 1));\n    (sn  = (sn + 1));\n    }\n\n  }\n  \nif ( (sn != 0) )\n{;\n//@ assert( (sn == 8) );\n}\n\n}",
+                "checker_output": false
+            }
+        ]
+    },
+    "stats": {
+        "success": [
+            "../data/benchmarks/code2inv/1.c",
+            "../data/benchmarks/code2inv/2.c",
+            "../data/benchmarks/code2inv/9.c",
+            "../data/benchmarks/code2inv/10.c",
+            "../data/benchmarks/code2inv/12.c",
+            "../data/benchmarks/code2inv/14.c",
+            "../data/benchmarks/code2inv/15.c",
+            "../data/benchmarks/code2inv/16.c",
+            "../data/benchmarks/code2inv/17.c",
+            "../data/benchmarks/code2inv/18.c",
+            "../data/benchmarks/code2inv/19.c",
+            "../data/benchmarks/code2inv/20.c",
+            "../data/benchmarks/code2inv/25.c",
+            "../data/benchmarks/code2inv/30.c",
+            "../data/benchmarks/code2inv/35.c",
+            "../data/benchmarks/code2inv/36.c",
+            "../data/benchmarks/code2inv/38.c",
+            "../data/benchmarks/code2inv/42.c",
+            "../data/benchmarks/code2inv/46.c",
+            "../data/benchmarks/code2inv/49.c",
+            "../data/benchmarks/code2inv/53.c",
+            "../data/benchmarks/code2inv/55.c",
+            "../data/benchmarks/code2inv/56.c",
+            "../data/benchmarks/code2inv/59.c",
+            "../data/benchmarks/code2inv/70.c",
+            "../data/benchmarks/code2inv/71.c",
+            "../data/benchmarks/code2inv/77.c",
+            "../data/benchmarks/code2inv/78.c",
+            "../data/benchmarks/code2inv/79.c",
+            "../data/benchmarks/code2inv/80.c",
+            "../data/benchmarks/code2inv/81.c",
+            "../data/benchmarks/code2inv/82.c",
+            "../data/benchmarks/code2inv/87.c",
+            "../data/benchmarks/code2inv/89.c",
+            "../data/benchmarks/code2inv/90.c",
+            "../data/benchmarks/code2inv/91.c",
+            "../data/benchmarks/code2inv/92.c",
+            "../data/benchmarks/code2inv/93.c",
+            "../data/benchmarks/code2inv/94.c",
+            "../data/benchmarks/code2inv/95.c",
+            "../data/benchmarks/code2inv/96.c",
+            "../data/benchmarks/code2inv/97.c",
+            "../data/benchmarks/code2inv/98.c",
+            "../data/benchmarks/code2inv/99.c",
+            "../data/benchmarks/code2inv/100.c",
+            "../data/benchmarks/code2inv/102.c",
+            "../data/benchmarks/code2inv/104.c",
+            "../data/benchmarks/code2inv/105.c",
+            "../data/benchmarks/code2inv/108.c",
+            "../data/benchmarks/code2inv/113.c",
+            "../data/benchmarks/code2inv/114.c",
+            "../data/benchmarks/code2inv/115.c",
+            "../data/benchmarks/code2inv/116.c",
+            "../data/benchmarks/code2inv/117.c",
+            "../data/benchmarks/code2inv/119.c",
+            "../data/benchmarks/code2inv/120.c"
+        ],
+        "failure": [
+            "../data/benchmarks/code2inv/3.c",
+            "../data/benchmarks/code2inv/4.c",
+            "../data/benchmarks/code2inv/5.c",
+            "../data/benchmarks/code2inv/6.c",
+            "../data/benchmarks/code2inv/7.c",
+            "../data/benchmarks/code2inv/8.c",
+            "../data/benchmarks/code2inv/11.c",
+            "../data/benchmarks/code2inv/13.c",
+            "../data/benchmarks/code2inv/21.c",
+            "../data/benchmarks/code2inv/22.c",
+            "../data/benchmarks/code2inv/23.c",
+            "../data/benchmarks/code2inv/24.c",
+            "../data/benchmarks/code2inv/26.c",
+            "../data/benchmarks/code2inv/27.c",
+            "../data/benchmarks/code2inv/28.c",
+            "../data/benchmarks/code2inv/29.c",
+            "../data/benchmarks/code2inv/31.c",
+            "../data/benchmarks/code2inv/32.c",
+            "../data/benchmarks/code2inv/33.c",
+            "../data/benchmarks/code2inv/34.c",
+            "../data/benchmarks/code2inv/37.c",
+            "../data/benchmarks/code2inv/39.c",
+            "../data/benchmarks/code2inv/40.c",
+            "../data/benchmarks/code2inv/41.c",
+            "../data/benchmarks/code2inv/43.c",
+            "../data/benchmarks/code2inv/44.c",
+            "../data/benchmarks/code2inv/45.c",
+            "../data/benchmarks/code2inv/47.c",
+            "../data/benchmarks/code2inv/48.c",
+            "../data/benchmarks/code2inv/50.c",
+            "../data/benchmarks/code2inv/51.c",
+            "../data/benchmarks/code2inv/52.c",
+            "../data/benchmarks/code2inv/54.c",
+            "../data/benchmarks/code2inv/57.c",
+            "../data/benchmarks/code2inv/58.c",
+            "../data/benchmarks/code2inv/60.c",
+            "../data/benchmarks/code2inv/61.c",
+            "../data/benchmarks/code2inv/62.c",
+            "../data/benchmarks/code2inv/63.c",
+            "../data/benchmarks/code2inv/64.c",
+            "../data/benchmarks/code2inv/65.c",
+            "../data/benchmarks/code2inv/66.c",
+            "../data/benchmarks/code2inv/67.c",
+            "../data/benchmarks/code2inv/68.c",
+            "../data/benchmarks/code2inv/69.c",
+            "../data/benchmarks/code2inv/72.c",
+            "../data/benchmarks/code2inv/73.c",
+            "../data/benchmarks/code2inv/74.c",
+            "../data/benchmarks/code2inv/75.c",
+            "../data/benchmarks/code2inv/76.c",
+            "../data/benchmarks/code2inv/83.c",
+            "../data/benchmarks/code2inv/84.c",
+            "../data/benchmarks/code2inv/85.c",
+            "../data/benchmarks/code2inv/86.c",
+            "../data/benchmarks/code2inv/88.c",
+            "../data/benchmarks/code2inv/101.c",
+            "../data/benchmarks/code2inv/103.c",
+            "../data/benchmarks/code2inv/106.c",
+            "../data/benchmarks/code2inv/107.c",
+            "../data/benchmarks/code2inv/109.c",
+            "../data/benchmarks/code2inv/110.c",
+            "../data/benchmarks/code2inv/111.c",
+            "../data/benchmarks/code2inv/112.c",
+            "../data/benchmarks/code2inv/118.c",
+            "../data/benchmarks/code2inv/121.c"
+        ],
+        "skipped": [
+            "../data/benchmarks/code2inv/1.c",
+            "../data/benchmarks/code2inv/3.c",
+            "../data/benchmarks/code2inv/5.c",
+            "../data/benchmarks/code2inv/7.c",
+            "../data/benchmarks/code2inv/9.c",
+            "../data/benchmarks/code2inv/14.c",
+            "../data/benchmarks/code2inv/44.c",
+            "../data/benchmarks/code2inv/45.c",
+            "../data/benchmarks/code2inv/49.c",
+            "../data/benchmarks/code2inv/59.c",
+            "../data/benchmarks/code2inv/71.c",
+            "../data/benchmarks/code2inv/76.c",
+            "../data/benchmarks/code2inv/77.c",
+            "../data/benchmarks/code2inv/79.c",
+            "../data/benchmarks/code2inv/82.c",
+            "../data/benchmarks/code2inv/87.c",
+            "../data/benchmarks/code2inv/94.c",
+            "../data/benchmarks/code2inv/96.c",
+            "../data/benchmarks/code2inv/97.c",
+            "../data/benchmarks/code2inv/102.c",
+            "../data/benchmarks/code2inv/107.c",
+            "../data/benchmarks/code2inv/114.c"
+        ],
+        "total": 121,
+        "success_count": 56,
+        "failure_count": 65,
+        "success_rate": 0.4628099173553719
+    }
+}

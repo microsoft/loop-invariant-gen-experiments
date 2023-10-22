@@ -1,0 +1,283 @@
+{
+    "logs": {
+        "file": "../data/benchmarks/code2inv/77.c",
+        "benchmark_code": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\n\nint main() {\n  \n  int i;\n  int x;\n  int y;\n  \n  (i = 0);\n  assume((x >= 0));\n  assume((y >= 0));\n  assume((x >= y));\n  \n  while (unknown()) {\n    if ( (i < y) )\n    {\n    (i  = (i + 1));\n    }\n\n  }\n  \nif ( (i < y) )\n{;\n//@ assert( (i < x) );\n}\n}",
+        "success": true,
+        "log": [
+            {
+                "step": "Prompting LLM",
+                "generating_annotation": "loop_invariants",
+                "success": true,
+                "llm_chat": [
+                    {
+                        "role": "system",
+                        "content": "You are a helpful AI software assistant that reasons about how code behaves. Given a program, you can find loop invariants, which can then be used to verify some property in the program. \nFrama-C is a software verification tool for C programs. The input to Frama-C is a C program file with ACSL (ANSI/ISO C Specification Language) annotations.\nFor the given program, find the necessary loop invariants of the while loop to help Frama-C verify the post-condition.\n\nInstructions:\n- Make a note of the pre-conditions or variable assignments in the program.\n- Analyze the loop body and make a note of the loop condition. \n- Output loop invariants that are true \n(i) before the loop execution, \n(ii) in every iteration of the loop and \n(iii) after the loop termination, \nsuch that the loop invariants imply the post condition.\n- If a loop invariant is a conjunction, split it into its parts.\n- Output all the loop invariants in one code block. For example:\n```\n/*@ \n    loop invariant i1;\n    loop invariant i2;\n*/\n```\nRules:\n- **Do not use variables or functions that are not declared in the program.** \n- **Do not make any assumptions about functions whose definitions are not given.**\n- **All undefined variables contain garbage values. Do not use variables that have garbage values.**\n- **Do not use keywords that are not supported in ACSL annotations for loops.**\n- **Variables that are not explicitly initialized, could have garbage values. Do not make any assumptions about such values.**\n- **Do not use the \\at(x, Pre) notation for any variable x.**\n- **Do not use non-deterministic function calls.**"
+                    },
+                    {
+                        "role": "user",
+                        "content": "\nConsider the following C program:\n```\n#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\n\nint main() {\n  \n  int i;\n  int x;\n  int y;\n  \n  (i = 0);\n  assume((x >= 0));\n  assume((y >= 0));\n  assume((x >= y));\n  \n  while (unknown()) {\n    if ( (i < y) )\n    {\n    (i  = (i + 1));\n    }\n\n  }\n  \nif ( (i < y) )\n{;\n//@ assert( (i < x) );\n}\n}\n```\n\nYou are allowed to use implication to take care of the conditional nature of the code. Use implication (==>) instead of using if-then.\n\nFor all variables, add conjunctions that bound the maximum and minimum values that they can take, if such bounds exist.\n\nIf a variable is always equal to or smaller or larger than another variable, add a conjunction for their relation.\n\nIf the assertion is guarded by a condition, use the guard condition in an implication.\n\nIf certain variables are non-deterministic at the beginning or end of the loop, use an implication to make the invariant trivially true at that location. \n\nOutput the loop invariants for the loop in the program above. Let's think step by step."
+                    },
+                    "Pre-conditions:\n- `x` and `y` are non-negative integers.\n- `x >= y`\n- `i` is initialized to 0.\n\nLoop condition:\n- The loop continues as long as the result of the function call `unknown()` is non-zero. The behavior of `unknown()` is unknown.\n\nPost-condition:\n- If the loop exits with `i < y`, then it must be the case that `i < x`.\n\nLoop invariants:\n- `i >= 0`: `i` is a non-negative integer.\n- `i <= y`: `i` is always less than or equal to `y`.\n- `i <= x`: `i` is always less than or equal to `x`.\n- `(i < y) ==> (i < x)`: If `i` is less than `y`, then it must also be less than `x`. (This uses implication to take care of the conditional nature of the assertion.)\n- `x >= 0`: `x` is a non-negative integer. (This is a bound on `x`.)\n- `y >= 0`: `y` is a non-negative integer. (This is a bound on `y`.)\n- `x >= y`: `x` is greater than or equal to `y`. (This is a bound on the relation between `x` and `y`.) \n\nWe can put all the loop invariants together in one block as follows:\n```\n/*@ \n    loop invariant i >= 0;\n    loop invariant i <= y;\n    loop invariant i <= x;\n    loop invariant (i < y) ==> (i < x);\n    loop invariant x >= 0;\n    loop invariant y >= 0;\n    loop invariant x >= y;\n*/\n```",
+                    "Pre-conditions:\n\n- `x` is an integer variable with a value greater than or equal to 0.\n- `y` is an integer variable with a value greater than or equal to 0.\n- `x` is greater than or equal to `y`.\n\nVariable bounds:\n\n- `i` is an integer variable with a value greater than or equal to 0.\n\nLoop invariant:\n\n- `i` is less than or equal to `y`.\n\nExplanation:\n\n- Initially, `i` is assigned the value of 0.\n- The loop condition is `unknown()`, which means that we do not know how many times the loop will execute. Since we do not know the loop bound, we cannot bound `i` directly. Instead, we can use the loop invariant to bound `i`.\n- Inside the loop, if `i` is less than `y`, then `i` is incremented by 1.\n- We need to prove that after the loop, `i` is less than `x` if `i` is less than `y`.\n- Therefore, we can use implication to state this property: if `i` is less than `y`, then `i` is less than `x`.\n\nPutting it all together, the loop invariants are:\n```\n/*@ \n    loop invariant i >= 0 && i <= y;\n    loop assigns i;\n    loop variant unknown(); \n*/\n```",
+                    "Pre-conditions:\n- `i` is initialized to 0.\n- `x` and `y` are non-negative.\n- `x` is greater than or equal to `y`.\n\nLoop condition:\n- `unknown()` returns a non-zero value.\n\nPost-condition:\n- If the loop terminates, `i` is less than `y`, then `i` is less than `x`.\n\nLoop Invariants:\n- `i` is non-negative.\n- `i` is less than or equal to `y`.\n- If `i` is less than `y`, then `i` is less than `x`.\n- If `i` is greater than or equal to `y`, then the loop terminates.\n- If the loop terminates, then `i` is less than `y`.\n- `x` and `y` are non-negative.\n\nExplanation:\n- The first invariant, `i` is non-negative, is true before the loop execution since `i` is initialized to 0.\n- The second invariant, `i` is less than or equal to `y`, is also true before the loop execution since `i` is initialized to 0 and `y` is non-negative.\n- The third invariant, if `i` is less than `y`, then `i` is less than `x`, is true before the loop execution since `x` is greater than or equal to `y`.\n- The fourth invariant, if `i` is greater than or equal to `y`, then the loop terminates, is true in every iteration of the loop since the loop condition is `unknown()` which may or may not return non-zero value. If `i` is greater than or equal to `y`, then the loop condition evaluates to false and the loop terminates.\n- The fifth invariant, if the loop terminates, then `i` is less than `y`, is true after the loop termination since the loop condition is `unknown()` which may or may not return non-zero value. If the loop terminates, then `i` is less than `y`.\n- The last invariant, `x` and `y` are non-negative, is true before the loop execution since `x` and `y` are non-negative.",
+                    "Pre-conditions:\n- i is initialized to 0\n- x and y are non-negative (x >= 0 and y >= 0)\n- x is greater than or equal to y (x >= y)\n\nLoop condition:\n- The loop continues while the value returned by the unknown() function is non-zero.\n\nPost-condition:\n- If i is less than y, then i must be less than x.\n\nLoop invariants:\n- Before the loop execution:\n    - i is non-negative (i >= 0).\n    - x is non-negative (x >= 0).\n    - y is non-negative (y >= 0).\n    - x is greater than or equal to y (x >= y).\n    - The post-condition is true if the loop is not executed (i < y ==> i < x).\n- In every iteration of the loop:\n    - i is non-negative (i >= 0).\n    - x is non-negative (x >= 0).\n    - y is non-negative (y >= 0).\n    - x is greater than or equal to y (x >= y).\n    - The value of i is non-decreasing (i_old <= i).\n    - If i is less than y, then the post-condition must be true (i < y ==> i < x).\n- After the loop termination:\n    - i is non-negative (i >= 0).\n    - x is non-negative (x >= 0).\n    - y is non-negative (y >= 0).\n    - x is greater than or equal to y (x >= y).\n    - The value of i is less than or equal to y (i <= y).\n    - If i is less than y, then the post-condition must be true (i < y ==> i < x).\n\nLoop invariants can be written as follows:\n```\n/*@ \n    loop invariant i >= 0;\n    loop invariant x >= 0;\n    loop invariant y >= 0;\n    loop invariant x >= y;\n    loop invariant (i < y ==> i < x);\n    loop invariant i_old <= i;\n    loop invariant i <= y;\n    loop assigns i;\n*/\n```",
+                    "Pre-conditions:\n- The variables `x` and `y` are non-negative.\n- `x` is greater than or equal to `y`.\n\nLoop condition:\n- The loop executes as long as the result of the `unknown()` function is non-zero.\n\nLoop Invariants:\n- Before the loop execution: \n    - `i` is equal to 0.\n    - `x` is non-negative.\n    - `y` is non-negative.\n    - `x` is greater than or equal to `y`.\n- In every iteration of the loop:\n    - `i` is less than or equal to `y`.\n- After the loop termination:\n    - If `i` is less than `y`, then `i` is less than `x`.\n\nExplanation:\n- Before the loop execution, `i` is explicitly assigned the value of 0. The conditions `(x >= 0)` and `(y >= 0)` are also assumed to hold. The condition `(x >= y)` is also assumed to hold, which means that `x` is always greater than or equal to `y`.\n- In every iteration of the loop, the condition `(i < y)` is checked. If it holds, `i` is incremented by 1. Therefore, `i` is less than or equal to `y`.\n- After the loop termination, if `i` is less than `y`, then the assertion `assert( (i < x) )` is executed. To satisfy this assertion, it must be the case that `i` is less than `x`. Therefore, the loop invariant `(i < y)` implies `(i < x)`.\n\nConjunctions for variable bounds:\n- `i` is non-negative since it is assigned 0 at the beginning.\n- `x` is non-negative since it is assumed to be so at the beginning.\n- `y` is non-negative since it is assumed to be so at the beginning.\n- `x` is greater than or equal to `y` since it is assumed to be so at the beginning.\n\nTherefore, the final set of loop invariants is:\n\n```\n/*@ \n    loop invariant i >= 0;\n    loop invariant x >= 0;\n    loop invariant y >= 0;\n    loop invariant x >= y;\n    loop invariant i <= y;\n    loop invariant (i < y) ==> (i < x);\n*/\n```",
+                    "First, let's take note of the pre-conditions and variable assignments in the program:\n- `i` is assigned a value of 0.\n- `x` and `y` are assumed to be non-negative, and `x` is assumed to be greater than or equal to `y`.\n\nNow, let's analyze the loop body and make a note of the loop condition:\n- The loop condition is `unknown()`, which means that the loop can execute an unknown number of times.\n\nTo find the necessary loop invariants, we need to identify the properties that hold true before the loop, in every iteration of the loop, and after the loop. These loop invariants should also imply the post-condition: `(i < y) ==> (i < x)`.\n\nBefore the loop:\n- `i` is equal to 0.\n- `x` and `y` are non-negative, and `x` is greater than or equal to `y`.\n- The post-condition holds trivially since the loop has not yet executed.\n\nIn every iteration of the loop:\n- `i` is less than or equal to `y`.\n- The post-condition holds trivially since `i < y` is a guard for the assertion.\n\nAfter the loop:\n- `i` is greater than or equal to `y`.\n- `i` is less than `x`.\n- The post-condition holds since `(i < y) ==> (i < x)` is true when `i >= y`.\n\nWe can combine all of these loop invariants into one code block:\n\n```\n/*@ \n    loop invariant i >= 0;\n    loop invariant x >= 0;\n    loop invariant y >= 0;\n    loop invariant x >= y;\n    loop invariant i <= y;\n    loop invariant (i < y) ==> (i < x);\n    loop invariant i >= y;\n    loop invariant i < x;\n*/\n``` \n\nNote that we added a loop invariant to account for the non-deterministic behavior of `unknown()`. Since we cannot assume anything about the value returned by `unknown()`, we use an implication to make the loop invariant trivially true if `unknown()` returns false. This way, the loop invariant is always true regardless of the value returned by `unknown()`.",
+                    "Pre-conditions:\n- Variables `x` and `y` have non-negative values.\n- `x` is greater than or equal to `y`.\n- `i` is initialized to 0.\n\nLoop condition:\n- The loop continues as long as the function `unknown()` returns a non-zero value.\n\nPost-condition:\n- If the condition `(i < y)` is true at the end of the loop, then `(i < x)` holds.\n\nLoop Invariants:\n- `i` is greater than or equal to 0.\n- `x` is greater than or equal to 0.\n- `y` is greater than or equal to 0.\n- `x` is greater than or equal to `y`.\n- `(i < y) ==> (i < x)`\n\nExplanation:\n- The first three invariants come from the pre-conditions.\n- The fourth invariant comes from the fact that `x` is assumed to be greater than or equal to `y`.\n- The last invariant is an implication that uses the guarded assertion in the post-condition. If `(i < y)` is true at the end of the loop, then `(i < x)` must also be true. If `(i < y)` is false at the end of the loop, then the assertion is vacuously true.",
+                    "Pre-conditions:\n- `x` and `y` are non-negative.\n- `x` is greater than or equal to `y`.\n- `i` is initialized to 0.\n\nLoop condition: `unknown()` - the loop executes an unknown number of times, until `unknown()` returns 0.\n\nPost-condition: if `i` is less than `y`, then `i` is less than `x`.\n\nLoop invariants:\n```\n/*@ \n    loop invariant 0 <= i <= y;\n    loop invariant i <= x;\n*/\n```\nExplanation:\n- The first invariant ensures that `i` is between 0 and `y`, which is the range of values it can take within the loop.\n- The second invariant ensures that `i` is always less than or equal to `x`, which is necessary to imply the post-condition.\n- Since `unknown()` is non-deterministic, we cannot make any assumptions about the values of `x` and `y` during the loop execution. However, since the post-condition only depends on the final values of `i`, we do not need to consider their values during the loop execution.\n- The loop condition does not impose any additional constraints on the loop variables, so we do not need to include it in the loop invariants.\n- Finally, the post-condition is guarded by the condition `(i < y)`, so we need to use an implication to ensure that the post-condition holds only when this condition is true:\n```\n/*@ \n    loop invariant 0 <= i <= y;\n    loop invariant i <= x;\n    loop variant y - i;\n*/\nwhile (unknown()) {\n    if ( (i < y) )\n    {\n        (i  = (i + 1));\n    }\n}\nif ( (i < y) )\n{\n    //@ assert (i < x) ==> (i < y);\n}\n```",
+                    "The pre-conditions and variable assignments in the program are:\n```\nPre-conditions:\n- x >= 0\n- y >= 0\n- x >= y\n\nVariable assignments:\n- i = 0\n```\n\nThe loop condition is `unknown()`, which means the loop could iterate any number of times.\n\nTo find the necessary loop invariants, we need to analyze the loop body:\n```\nif (i < y) {\n    i = i + 1;\n}\n```\nThe loop body only updates `i` if `i` is less than `y`.\n\nNow, let's analyze the post-condition:\n```\nif (i < y) {\n    //@ assert( i < x );\n}\n```\nThe assertion is only checked if `i` is less than `y`.\n\nBased on the above analysis, we can derive the following loop invariants:\n```\n/*@ \n    loop invariant i >= 0 && i <= y + 1;\n    loop invariant x >= 0 && y >= 0 && x >= y;\n    loop invariant i < y ==> i < x;\n*/\n```\nExplanation:\n- The first loop invariant ensures that `i` is always greater than or equal to 0 and less than or equal to `y + 1`. This is because `i` is initialized to 0 and only incremented if `i` is less than `y`. Therefore, the maximum value `i` can take is `y + 1`.\n- The second loop invariant bounds the values of `x` and `y` to be greater than or equal to 0, and that `x` must be greater than or equal to `y`.\n- The third loop invariant states that if `i` is less than `y`, then `i` must be less than `x`. This implies the post-condition, since the assertion is only checked if `i` is less than `y`.\n\nNote that we do not need to add any invariants for the non-deterministic variables `unknown()` and the values of `x` and `y` at the end of the loop, since the invariants we have derived are sufficient to prove the post-condition.",
+                    "Pre-conditions:\n- Variables `x` and `y` are non-negative integers.\n- Variable `x` is greater than or equal to `y`.\n\nLoop condition:\n- The loop executes as long as the value returned by `unknown()` is non-zero.\n\nPost-condition:\n- If the loop terminates, then `i` is less than `y`. \n\nLoop invariants:\n```\n/*@ \n    loop invariant 0 <= i <= y;\n    loop invariant x >= 0;\n    loop invariant y >= 0;\n    loop invariant x >= y;\n    loop invariant (i < y) ==> (i < x);\n*/\n```\nExplanation:\n- The first loop invariant ensures that `i` is always between `0` and `y`.\n- The second and third loop invariants ensure that `x` and `y` are always non-negative.\n- The fourth loop invariant ensures that `x` is greater than or equal to `y`.\n- The fifth loop invariant uses implication to handle the assertion. If `i` is less than `y`, then `i` is also less than `x`. This invariant holds for all iterations of the loop. \n\nNote:\n- Since `unknown()` is a non-deterministic function, we cannot make any assumptions about the value of `i` at the beginning or end of the loop. Therefore, we do not add any loop invariants to bound the maximum or minimum values of `i`.",
+                    "The program initializes variables `i`, `x`, and `y`, and then enters a while loop. The loop executes an unknown number of times, and in each iteration, if `i` is less than `y`, it increments `i`. The loop terminates when `unknown()` returns 0. Finally, if `i` is less than `y`, it checks if `i` is less than `x`. \n\nThe pre-conditions and variable assignments are:\n```\n(i = 0);\nassume((x >= 0));\nassume((y >= 0));\nassume((x >= y));\n```\n\nWe can add the following loop invariants:\n\n1. Before the loop: `i >= 0 && x >= 0 && y >= 0 && x >= y`\n2. In every iteration: `(i < y ==> i + 1 < y) && (i >= y ==> i == \\old(i))`\n3. After the loop: `i >= 0 && x >= 0 && y >= 0 && x >= y && (i >= y ==> i >= \\old(i)) && (i < y ==> i >= \\old(i)) && (i < y ==> i < x)`\n\nExplanation:\n1. Before the loop, we know that `i`, `x`, and `y` are all non-negative, and `x` is greater than or equal to `y`.\n2. In every iteration, if `i` is less than `y`, then `i+1` is also less than `y`. If `i` is greater than or equal to `y`, then `i` remains unchanged.\n3. After the loop, we know that `i`, `x`, and `y` are all non-negative, `x` is greater than or equal to `y`, and if `i` is less than `y`, then it is also less than `x`. Additionally, if `i` is greater than or equal to `y`, then it is greater than or equal to its old value. \n\nNote that we did not need to add any implications or bounds on variables, as the program does not have any non-deterministic behavior or arithmetic operations that could cause undefined behavior.",
+                    "Let's first analyze the program and identify the pre-conditions and variable assignments:\n```\nPre-conditions:\n    x >= 0\n    y >= 0\n    x >= y\n\nVariable assignments:\n    i = 0\n```\n\nNow, let's analyze the loop body and the loop condition:\n```\nLoop body:\n    if (i < y) {\n        i = i + 1;\n    }\n\nLoop condition:\n    unknown()\n```\n\nTo prove the post-condition `(i < x)` holds after the loop, we need to find loop invariants that imply this condition. We can start by analyzing the loop body and identifying the following invariant:\n\n```\nLoop invariant:\n    i <= y\n```\nThis is true before the loop execution, since `i = 0`. It is also true in every iteration of the loop, since `i` is incremented by 1 only if `i < y`. Finally, it is true after the loop termination, since the loop terminates when `!(unknown())`, which means that the loop condition is false and therefore `i` cannot be less than `y`.\n\nHowever, this invariant alone does not imply the post-condition. To strengthen the invariant, we can use the fact that `x >= y` and the loop condition `unknown()` to derive the following:\n\n```\nLoop invariant:\n    i <= y ==> i < x\n```\n\nThis invariant is true before the loop execution, since `i = 0` and `i <= y` is true, which implies that `i < x` is also true since `x >= y`. It is also true in every iteration of the loop, since if `i <= y` is true and `i < x` is true, then `i + 1 <= y` is also true and `i + 1 < x` is also true (since `x >= y`). Finally, it is true after the loop termination, since if `i <= y` is true, then `i < x` is also true.\n\nWe can also add conjunctions that bound the maximum and minimum values that the variables can take. Since we are not given any bounds on `x`, `y`, or `unknown()`, we cannot add any such bounds.\n\nTherefore, the final loop invariants are:\n```\n/*@ \n    loop invariant i <= y ==> i < x;\n*/\n```",
+                    "Pre-conditions:\n- The program expects no input arguments.\n- The program defines and initializes three integer variables: `i`, `x`, and `y`.\n\nLoop condition:\n- The loop runs as long as the `unknown` function returns a non-zero value.\n\nPost-condition:\n- If `i` is less than `y` at the end of the loop, then `i` must be less than `x`.\n\nLoop invariants:\n- Since `i` is initialized to zero, we can add the following loop invariant:\n```\n/*@ loop invariant 0 <= i; */\n```\n- Since `x` and `y` are assumed to be greater than or equal to zero, we can add the following loop invariants:\n```\n/*@ loop invariant 0 <= x;\n    loop invariant 0 <= y; */\n```\n- Since `x` is assumed to be greater than or equal to `y`, we can add the following loop invariant:\n```\n/*@ loop invariant y <= x; */\n```\n- Since the loop runs as long as `unknown()` returns a non-zero value, we can add the following loop invariant:\n```\n/*@ loop invariant 0 <= i <= y ==> unknown(); */\n```\n- Since `i` is incremented by one every time the loop runs the body, we can add the following loop invariant:\n```\n/*@ loop invariant 0 <= i <= y && i <= \\at(i, Pre) + 1; */\n```\n- Since the post-condition is guarded by the condition `(i < y)`, we need to add it to the loop invariant as an implication:\n```\n/*@ loop invariant 0 <= i <= y ==> unknown();\n    loop invariant 0 <= i <= y && i <= \\at(i, Pre) + 1;\n    loop invariant (i >= y || i < y && !unknown()) ==> (i < y || i >= y && i < x); */\n```\n- Finally, since `unknown()` is a non-deterministic function, we need to handle the case where it returns zero at the beginning or end of the loop. We can add the following implications to make the loop invariant trivially true in these cases:\n```\n/*@ loop invariant (i == 0 && !unknown()) ==> (i < y || i >= y && i < x);\n    loop invariant (i == y && unknown()) ==> (i < y || i >= y && i < x); */\n```\n\nTherefore, the complete set of loop invariants are:\n```\n/*@ loop invariant 0 <= i <= y ==> unknown();\n    loop invariant 0 <= i <= y && i <= \\at(i, Pre) + 1;\n    loop invariant (i >= y || i < y && !unknown()) ==> (i < y || i >= y && i < x);\n    loop invariant (i == 0 && !unknown()) ==> (i < y || i >= y && i < x);\n    loop invariant (i == y && unknown()) ==> (i < y || i >= y && i < x);\n    loop invariant 0 <= x;\n    loop invariant 0 <= y;\n    loop invariant 0 <= i; \n    loop invariant y <= x; */\n```",
+                    "Pre-conditions:\n- i, x, and y are integer variables.\n- The value of i is initialized to 0.\n- x and y are non-negative integers.\n- x is greater than or equal to y.\n\nLoop condition:\n- The loop continues as long as the function `unknown()` returns a non-zero value.\n\nPost-condition:\n- If i is less than y, then i must be less than x.\n\nLoop invariants:\n- i is a non-negative integer.\n- i is less than or equal to y.\n- If i is less than y, then i is less than x.\n\nExplanation:\n- The first loop invariant ensures that i is always a non-negative integer.\n- The second loop invariant ensures that i is always less than or equal to y.\n- The third loop invariant ensures that if i is less than y, then it must be less than x. This is because the post-condition requires that if i is less than y, then it must be less than x. \n- Since the loop condition depends on the non-deterministic function `unknown()`, we cannot reason about the number of iterations that the loop will execute. Therefore, we cannot bound the maximum or minimum values that i can take. \n- Since x and y are non-negative integers and x is greater than or equal to y, we do not need to add any additional invariants for these variables.\n- Since the assertion is not guarded by any condition, we do not need to use an implication.",
+                    "Pre-conditions:\n- `x` and `y` are non-negative integers.\n- `x` is greater than or equal to `y`.\n- `i` is initialized to 0.\n\nLoop condition:\n- The loop executes while the result of `unknown()` is non-zero. The function `unknown()` is a non-deterministic function that returns an integer value that can be either 0 or non-zero.\n\nLoop invariants:\n- Before the loop execution: `i` is less than or equal to `y`.\n```\n/*@ loop invariant i <= y; */\n```\n- In every iteration of the loop: \n    - `i` is less than or equal to `y`. \n    - `i` is less than or equal to `x`.\n```\n/*@ \n    loop invariant i <= y;\n    loop invariant i <= x;\n*/\n```\n- After the loop termination: \n    - `i` is less than or equal to `y`. \n    - If `i` is less than `y`, then `i` is less than `x`.\n```\n/*@ \n    loop invariant i <= y;\n    loop invariant (i < y) ==> (i < x);\n*/\n```\n- Bound on variables:\n    - `x` is non-negative.\n    - `y` is non-negative.\n```\n/*@ \n    loop invariant i <= y;\n    loop invariant i <= x;\n    loop invariant x >= 0;\n    loop invariant y >= 0;\n    loop invariant x >= y;\n    loop invariant (i < y) ==> (i < x);\n*/\n```\n- Implication for non-deterministic value:\n    - Since the loop depends on a non-deterministic value returned by `unknown()`, we can add an implication that trivially holds when the value of `unknown()` is non-zero at the beginning or end of the loop. \n    - At the beginning of the loop, we can assume that `unknown()` returns a non-zero value. \n    - At the end of the loop, we can assume that `unknown()` returns a zero value.\n```\n/*@ \n    loop invariant i <= y;\n    loop invariant i <= x;\n    loop invariant x >= 0;\n    loop invariant y >= 0;\n    loop invariant x >= y;\n    loop invariant (i < y) ==> (i < x);\n    loop invariant (unknown() != 0) ==> (i <= y);\n    loop invariant (unknown() == 0) ==> ((i < y) ==> (i < x));\n*/\n``` \n\nTherefore, the final set of loop invariants for the given program is:\n```\n/*@ \n    loop invariant i <= y;\n    loop invariant i <= x;\n    loop invariant x >= 0;\n    loop invariant y >= 0;\n    loop invariant x >= y;\n    loop invariant (i < y) ==> (i < x);\n    loop invariant (unknown() != 0) ==> (i <= y);\n    loop invariant (unknown() == 0) ==> ((i < y) ==> (i < x));\n*/\n```"
+                ],
+                "output": [
+                    "/*@ \n    loop invariant i >= 0;\n    loop invariant i <= y;\n    loop invariant i <= x;\n    loop invariant (i < y) ==> (i < x);\n    loop invariant x >= 0;\n    loop invariant y >= 0;\n    loop invariant x >= y;\n*/",
+                    "/*@ \n    loop invariant i >= 0 && i <= y;\n    loop assigns i;\n    loop variant unknown(); \n*/",
+                    [
+                        "ERROR: Output does not contain at least 1 complete code block",
+                        "Pre-conditions:\n- `i` is initialized to 0.\n- `x` and `y` are non-negative.\n- `x` is greater than or equal to `y`.\n\nLoop condition:\n- `unknown()` returns a non-zero value.\n\nPost-condition:\n- If the loop terminates, `i` is less than `y`, then `i` is less than `x`.\n\nLoop Invariants:\n- `i` is non-negative.\n- `i` is less than or equal to `y`.\n- If `i` is less than `y`, then `i` is less than `x`.\n- If `i` is greater than or equal to `y`, then the loop terminates.\n- If the loop terminates, then `i` is less than `y`.\n- `x` and `y` are non-negative.\n\nExplanation:\n- The first invariant, `i` is non-negative, is true before the loop execution since `i` is initialized to 0.\n- The second invariant, `i` is less than or equal to `y`, is also true before the loop execution since `i` is initialized to 0 and `y` is non-negative.\n- The third invariant, if `i` is less than `y`, then `i` is less than `x`, is true before the loop execution since `x` is greater than or equal to `y`.\n- The fourth invariant, if `i` is greater than or equal to `y`, then the loop terminates, is true in every iteration of the loop since the loop condition is `unknown()` which may or may not return non-zero value. If `i` is greater than or equal to `y`, then the loop condition evaluates to false and the loop terminates.\n- The fifth invariant, if the loop terminates, then `i` is less than `y`, is true after the loop termination since the loop condition is `unknown()` which may or may not return non-zero value. If the loop terminates, then `i` is less than `y`.\n- The last invariant, `x` and `y` are non-negative, is true before the loop execution since `x` and `y` are non-negative."
+                    ],
+                    "/*@ \n    loop invariant i >= 0;\n    loop invariant x >= 0;\n    loop invariant y >= 0;\n    loop invariant x >= y;\n    loop invariant (i < y ==> i < x);\n    loop invariant i_old <= i;\n    loop invariant i <= y;\n    loop assigns i;\n*/",
+                    "/*@ \n    loop invariant i >= 0;\n    loop invariant x >= 0;\n    loop invariant y >= 0;\n    loop invariant x >= y;\n    loop invariant i <= y;\n    loop invariant (i < y) ==> (i < x);\n*/",
+                    "/*@ \n    loop invariant i >= 0;\n    loop invariant x >= 0;\n    loop invariant y >= 0;\n    loop invariant x >= y;\n    loop invariant i <= y;\n    loop invariant (i < y) ==> (i < x);\n    loop invariant i >= y;\n    loop invariant i < x;\n*/",
+                    [
+                        "ERROR: Output does not contain at least 1 complete code block",
+                        "Pre-conditions:\n- Variables `x` and `y` have non-negative values.\n- `x` is greater than or equal to `y`.\n- `i` is initialized to 0.\n\nLoop condition:\n- The loop continues as long as the function `unknown()` returns a non-zero value.\n\nPost-condition:\n- If the condition `(i < y)` is true at the end of the loop, then `(i < x)` holds.\n\nLoop Invariants:\n- `i` is greater than or equal to 0.\n- `x` is greater than or equal to 0.\n- `y` is greater than or equal to 0.\n- `x` is greater than or equal to `y`.\n- `(i < y) ==> (i < x)`\n\nExplanation:\n- The first three invariants come from the pre-conditions.\n- The fourth invariant comes from the fact that `x` is assumed to be greater than or equal to `y`.\n- The last invariant is an implication that uses the guarded assertion in the post-condition. If `(i < y)` is true at the end of the loop, then `(i < x)` must also be true. If `(i < y)` is false at the end of the loop, then the assertion is vacuously true."
+                    ],
+                    "/*@ \n    loop invariant 0 <= i <= y;\n    loop invariant i <= x;\n*/",
+                    "/*@ \n    loop invariant i >= 0 && i <= y + 1;\n    loop invariant x >= 0 && y >= 0 && x >= y;\n    loop invariant i < y ==> i < x;\n*/",
+                    "/*@ \n    loop invariant 0 <= i <= y;\n    loop invariant x >= 0;\n    loop invariant y >= 0;\n    loop invariant x >= y;\n    loop invariant (i < y) ==> (i < x);\n*/",
+                    "(i = 0);\nassume((x >= 0));\nassume((y >= 0));\nassume((x >= y));",
+                    "/*@ \n    loop invariant i <= y ==> i < x;\n*/",
+                    "/*@ loop invariant 0 <= i; */",
+                    [
+                        "ERROR: Output does not contain at least 1 complete code block",
+                        "Pre-conditions:\n- i, x, and y are integer variables.\n- The value of i is initialized to 0.\n- x and y are non-negative integers.\n- x is greater than or equal to y.\n\nLoop condition:\n- The loop continues as long as the function `unknown()` returns a non-zero value.\n\nPost-condition:\n- If i is less than y, then i must be less than x.\n\nLoop invariants:\n- i is a non-negative integer.\n- i is less than or equal to y.\n- If i is less than y, then i is less than x.\n\nExplanation:\n- The first loop invariant ensures that i is always a non-negative integer.\n- The second loop invariant ensures that i is always less than or equal to y.\n- The third loop invariant ensures that if i is less than y, then it must be less than x. This is because the post-condition requires that if i is less than y, then it must be less than x. \n- Since the loop condition depends on the non-deterministic function `unknown()`, we cannot reason about the number of iterations that the loop will execute. Therefore, we cannot bound the maximum or minimum values that i can take. \n- Since x and y are non-negative integers and x is greater than or equal to y, we do not need to add any additional invariants for these variables.\n- Since the assertion is not guarded by any condition, we do not need to use an implication."
+                    ],
+                    "/*@ loop invariant i <= y; */"
+                ]
+            },
+            {
+                "step": "Checking individual completion",
+                "solver_calls": 12,
+                "completions": [
+                    {
+                        "num_solver_calls": 1,
+                        "success": true,
+                        "invariants": "/*@ \n    loop invariant i >= 0;\n    loop invariant i <= y;\n    loop invariant i <= x;\n    loop invariant (i < y) ==> (i < x);\n    loop invariant x >= 0;\n    loop invariant y >= 0;\n    loop invariant x >= y;\n*/",
+                        "checker_output_for_invariants": true,
+                        "checker_message_for_invariants": "loop invariant i >= 0 is inductive.\nloop invariant i <= y is inductive.\nloop invariant i <= x is inductive.\nloop invariant (i < y) ==> (i < x) is inductive.\nloop invariant x >= 0 is inductive.\nloop invariant y >= 0 is inductive.\nloop invariant x >= y is inductive.\nAssertion i < x: Valid\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant i >= 0 && i <= y;\n    loop assigns i;\n    loop variant unknown(); \n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant i >= 0 && i <= y is inductive.\nAssertion i < x: Unproven\n"
+                    },
+                    {
+                        "num_solver_calls": 0,
+                        "success": false,
+                        "llm_output": "Pre-conditions:\n- `i` is initialized to 0.\n- `x` and `y` are non-negative.\n- `x` is greater than or equal to `y`.\n\nLoop condition:\n- `unknown()` returns a non-zero value.\n\nPost-condition:\n- If the loop terminates, `i` is less than `y`, then `i` is less than `x`.\n\nLoop Invariants:\n- `i` is non-negative.\n- `i` is less than or equal to `y`.\n- If `i` is less than `y`, then `i` is less than `x`.\n- If `i` is greater than or equal to `y`, then the loop terminates.\n- If the loop terminates, then `i` is less than `y`.\n- `x` and `y` are non-negative.\n\nExplanation:\n- The first invariant, `i` is non-negative, is true before the loop execution since `i` is initialized to 0.\n- The second invariant, `i` is less than or equal to `y`, is also true before the loop execution since `i` is initialized to 0 and `y` is non-negative.\n- The third invariant, if `i` is less than `y`, then `i` is less than `x`, is true before the loop execution since `x` is greater than or equal to `y`.\n- The fourth invariant, if `i` is greater than or equal to `y`, then the loop terminates, is true in every iteration of the loop since the loop condition is `unknown()` which may or may not return non-zero value. If `i` is greater than or equal to `y`, then the loop condition evaluates to false and the loop terminates.\n- The fifth invariant, if the loop terminates, then `i` is less than `y`, is true after the loop termination since the loop condition is `unknown()` which may or may not return non-zero value. If the loop terminates, then `i` is less than `y`.\n- The last invariant, `x` and `y` are non-negative, is true before the loop execution since `x` and `y` are non-negative.",
+                        "error": "Output does not contain at least 1 code block"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant i >= 0;\n    loop invariant x >= 0;\n    loop invariant y >= 0;\n    loop invariant x >= y;\n    loop invariant (i < y ==> i < x);\n    loop invariant i_old <= i;\n    loop invariant i <= y;\n    loop assigns i;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "Annotation error on line 21: unbound logic variable i_old. Ignoring loop annotation"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": true,
+                        "invariants": "/*@ \n    loop invariant i >= 0;\n    loop invariant x >= 0;\n    loop invariant y >= 0;\n    loop invariant x >= y;\n    loop invariant i <= y;\n    loop invariant (i < y) ==> (i < x);\n*/",
+                        "checker_output_for_invariants": true,
+                        "checker_message_for_invariants": "loop invariant i >= 0 is inductive.\nloop invariant x >= 0 is inductive.\nloop invariant y >= 0 is inductive.\nloop invariant x >= y is inductive.\nloop invariant i <= y is inductive.\nloop invariant (i < y) ==> (i < x) is inductive.\nAssertion i < x: Valid\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant i >= 0;\n    loop invariant x >= 0;\n    loop invariant y >= 0;\n    loop invariant x >= y;\n    loop invariant i <= y;\n    loop invariant (i < y) ==> (i < x);\n    loop invariant i >= y;\n    loop invariant i < x;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant i >= 0 is inductive.\nloop invariant x >= 0 is inductive.\nloop invariant y >= 0 is inductive.\nloop invariant x >= y is inductive.\nloop invariant i <= y is inductive.\nloop invariant (i < y) ==> (i < x) is inductive.\nloop invariant i >= y is preserved but not established.\nloop invariant i < x is preserved but not established.\nAssertion i < x: Partially proven\n"
+                    },
+                    {
+                        "num_solver_calls": 0,
+                        "success": false,
+                        "llm_output": "Pre-conditions:\n- Variables `x` and `y` have non-negative values.\n- `x` is greater than or equal to `y`.\n- `i` is initialized to 0.\n\nLoop condition:\n- The loop continues as long as the function `unknown()` returns a non-zero value.\n\nPost-condition:\n- If the condition `(i < y)` is true at the end of the loop, then `(i < x)` holds.\n\nLoop Invariants:\n- `i` is greater than or equal to 0.\n- `x` is greater than or equal to 0.\n- `y` is greater than or equal to 0.\n- `x` is greater than or equal to `y`.\n- `(i < y) ==> (i < x)`\n\nExplanation:\n- The first three invariants come from the pre-conditions.\n- The fourth invariant comes from the fact that `x` is assumed to be greater than or equal to `y`.\n- The last invariant is an implication that uses the guarded assertion in the post-condition. If `(i < y)` is true at the end of the loop, then `(i < x)` must also be true. If `(i < y)` is false at the end of the loop, then the assertion is vacuously true.",
+                        "error": "Output does not contain at least 1 code block"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant 0 <= i <= y;\n    loop invariant i <= x;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant 0 <= i <= y is inductive.\nloop invariant i <= x is established but not preserved.\nAssertion i < x: Unproven\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": true,
+                        "invariants": "/*@ \n    loop invariant i >= 0 && i <= y + 1;\n    loop invariant x >= 0 && y >= 0 && x >= y;\n    loop invariant i < y ==> i < x;\n*/",
+                        "checker_output_for_invariants": true,
+                        "checker_message_for_invariants": "loop invariant i >= 0 && i <= y + 1 is inductive.\nloop invariant x >= 0 && y >= 0 && x >= y is inductive.\nloop invariant i < y ==> i < x is inductive.\nAssertion i < x: Valid\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": true,
+                        "invariants": "/*@ \n    loop invariant 0 <= i <= y;\n    loop invariant x >= 0;\n    loop invariant y >= 0;\n    loop invariant x >= y;\n    loop invariant (i < y) ==> (i < x);\n*/",
+                        "checker_output_for_invariants": true,
+                        "checker_message_for_invariants": "loop invariant 0 <= i <= y is inductive.\nloop invariant x >= 0 is inductive.\nloop invariant y >= 0 is inductive.\nloop invariant x >= y is inductive.\nloop invariant (i < y) ==> (i < x) is inductive.\nAssertion i < x: Valid\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "(i = 0);\nassume((x >= 0));\nassume((y >= 0));\nassume((x >= y));",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "No invariants found."
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ \n    loop invariant i <= y ==> i < x;\n*/",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant i <= y ==> i < x is neither established nor preserved.\nAssertion i < x: Partially proven\n"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ loop invariant 0 <= i; */",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant 0 <= i is inductive.\nAssertion i < x: Unproven\n"
+                    },
+                    {
+                        "num_solver_calls": 0,
+                        "success": false,
+                        "llm_output": "Pre-conditions:\n- i, x, and y are integer variables.\n- The value of i is initialized to 0.\n- x and y are non-negative integers.\n- x is greater than or equal to y.\n\nLoop condition:\n- The loop continues as long as the function `unknown()` returns a non-zero value.\n\nPost-condition:\n- If i is less than y, then i must be less than x.\n\nLoop invariants:\n- i is a non-negative integer.\n- i is less than or equal to y.\n- If i is less than y, then i is less than x.\n\nExplanation:\n- The first loop invariant ensures that i is always a non-negative integer.\n- The second loop invariant ensures that i is always less than or equal to y.\n- The third loop invariant ensures that if i is less than y, then it must be less than x. This is because the post-condition requires that if i is less than y, then it must be less than x. \n- Since the loop condition depends on the non-deterministic function `unknown()`, we cannot reason about the number of iterations that the loop will execute. Therefore, we cannot bound the maximum or minimum values that i can take. \n- Since x and y are non-negative integers and x is greater than or equal to y, we do not need to add any additional invariants for these variables.\n- Since the assertion is not guarded by any condition, we do not need to use an implication.",
+                        "error": "Output does not contain at least 1 code block"
+                    },
+                    {
+                        "num_solver_calls": 1,
+                        "success": false,
+                        "invariants": "/*@ loop invariant i <= y; */",
+                        "checker_output_for_invariants": false,
+                        "checker_message_for_invariants": "loop invariant i <= y is inductive.\nAssertion i < x: Unproven\n"
+                    }
+                ],
+                "success": true
+            },
+            {
+                "step": "Houdini for combined completion",
+                "solver_calls": 2,
+                "success": true,
+                "code_with_combined_invariants": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\n\nint main() {\n  \n  int i;\n  int x;\n  int y;\n  \n  (i = 0);\n  assume((x >= 0));\n  assume((y >= 0));\n  assume((x >= y));\n  \n  /*@\nloop invariant i1: i >= 0;\nloop invariant i2: i <= y;\nloop invariant i3: i <= x;\n\nloop invariant i5: x >= 0;\nloop invariant i6: y >= 0;\nloop invariant i7: x >= y;\nloop invariant i8: i >= 0 && i <= y;\n\n\n\n\nloop invariant i30: 0 <= i <= y;\nloop invariant i32: i >= 0 && i <= y + 1;\nloop invariant i33: x >= 0 && y >= 0 && x >= y;\n\n\nloop invariant i41: 0 <= i;\n*/\nwhile (unknown()) {\n    if ( (i < y) )\n    {\n    (i  = (i + 1));\n    }\n\n  }\n  \nif ( (i < y) )\n{;\n//@ assert( (i < x) );\n}\n}",
+                "checker_output": true
+            }
+        ]
+    },
+    "stats": {
+        "success": [
+            "../data/benchmarks/code2inv/1.c",
+            "../data/benchmarks/code2inv/2.c",
+            "../data/benchmarks/code2inv/9.c",
+            "../data/benchmarks/code2inv/10.c",
+            "../data/benchmarks/code2inv/12.c",
+            "../data/benchmarks/code2inv/14.c",
+            "../data/benchmarks/code2inv/15.c",
+            "../data/benchmarks/code2inv/16.c",
+            "../data/benchmarks/code2inv/17.c",
+            "../data/benchmarks/code2inv/18.c",
+            "../data/benchmarks/code2inv/19.c",
+            "../data/benchmarks/code2inv/20.c",
+            "../data/benchmarks/code2inv/25.c",
+            "../data/benchmarks/code2inv/30.c",
+            "../data/benchmarks/code2inv/35.c",
+            "../data/benchmarks/code2inv/36.c",
+            "../data/benchmarks/code2inv/38.c",
+            "../data/benchmarks/code2inv/42.c",
+            "../data/benchmarks/code2inv/46.c",
+            "../data/benchmarks/code2inv/49.c",
+            "../data/benchmarks/code2inv/53.c",
+            "../data/benchmarks/code2inv/55.c",
+            "../data/benchmarks/code2inv/56.c",
+            "../data/benchmarks/code2inv/59.c",
+            "../data/benchmarks/code2inv/70.c",
+            "../data/benchmarks/code2inv/71.c",
+            "../data/benchmarks/code2inv/77.c"
+        ],
+        "failure": [
+            "../data/benchmarks/code2inv/3.c",
+            "../data/benchmarks/code2inv/4.c",
+            "../data/benchmarks/code2inv/5.c",
+            "../data/benchmarks/code2inv/6.c",
+            "../data/benchmarks/code2inv/7.c",
+            "../data/benchmarks/code2inv/8.c",
+            "../data/benchmarks/code2inv/11.c",
+            "../data/benchmarks/code2inv/13.c",
+            "../data/benchmarks/code2inv/21.c",
+            "../data/benchmarks/code2inv/22.c",
+            "../data/benchmarks/code2inv/23.c",
+            "../data/benchmarks/code2inv/24.c",
+            "../data/benchmarks/code2inv/26.c",
+            "../data/benchmarks/code2inv/27.c",
+            "../data/benchmarks/code2inv/28.c",
+            "../data/benchmarks/code2inv/29.c",
+            "../data/benchmarks/code2inv/31.c",
+            "../data/benchmarks/code2inv/32.c",
+            "../data/benchmarks/code2inv/33.c",
+            "../data/benchmarks/code2inv/34.c",
+            "../data/benchmarks/code2inv/37.c",
+            "../data/benchmarks/code2inv/39.c",
+            "../data/benchmarks/code2inv/40.c",
+            "../data/benchmarks/code2inv/41.c",
+            "../data/benchmarks/code2inv/43.c",
+            "../data/benchmarks/code2inv/44.c",
+            "../data/benchmarks/code2inv/45.c",
+            "../data/benchmarks/code2inv/47.c",
+            "../data/benchmarks/code2inv/48.c",
+            "../data/benchmarks/code2inv/50.c",
+            "../data/benchmarks/code2inv/51.c",
+            "../data/benchmarks/code2inv/52.c",
+            "../data/benchmarks/code2inv/54.c",
+            "../data/benchmarks/code2inv/57.c",
+            "../data/benchmarks/code2inv/58.c",
+            "../data/benchmarks/code2inv/60.c",
+            "../data/benchmarks/code2inv/61.c",
+            "../data/benchmarks/code2inv/62.c",
+            "../data/benchmarks/code2inv/63.c",
+            "../data/benchmarks/code2inv/64.c",
+            "../data/benchmarks/code2inv/65.c",
+            "../data/benchmarks/code2inv/66.c",
+            "../data/benchmarks/code2inv/67.c",
+            "../data/benchmarks/code2inv/68.c",
+            "../data/benchmarks/code2inv/69.c",
+            "../data/benchmarks/code2inv/72.c",
+            "../data/benchmarks/code2inv/73.c",
+            "../data/benchmarks/code2inv/74.c",
+            "../data/benchmarks/code2inv/75.c",
+            "../data/benchmarks/code2inv/76.c"
+        ],
+        "skipped": [
+            "../data/benchmarks/code2inv/1.c",
+            "../data/benchmarks/code2inv/3.c",
+            "../data/benchmarks/code2inv/5.c",
+            "../data/benchmarks/code2inv/7.c",
+            "../data/benchmarks/code2inv/9.c",
+            "../data/benchmarks/code2inv/14.c",
+            "../data/benchmarks/code2inv/44.c",
+            "../data/benchmarks/code2inv/45.c",
+            "../data/benchmarks/code2inv/49.c",
+            "../data/benchmarks/code2inv/59.c",
+            "../data/benchmarks/code2inv/71.c",
+            "../data/benchmarks/code2inv/76.c",
+            "../data/benchmarks/code2inv/77.c"
+        ],
+        "total": 77,
+        "success_count": 27,
+        "failure_count": 50,
+        "success_rate": 0.35064935064935066
+    }
+}
