@@ -194,9 +194,9 @@ def main(args):
 
     p = p.load_config(args.config_file)
 
-    p.run_sequence(max_benchmarks=args.max_benchmarks, start_index=args.start_index)
+    # p.run_sequence(max_benchmarks=args.max_benchmarks, start_index=args.start_index)
 
-    return
+    # return
 
     if args.provider == "local":
         p.run_local(
