@@ -2030,6 +2030,18 @@ class LoopyPipeline:
                         check_variant=True,
                         use_json_output=self.use_json_output,
                     )
+                    if "Annotation error on line " in checker_message:
+                        Logger.log_error(
+                            f"Annotation error in variant: {variant} for benchmark: {start_index + benchmark_index + 1}/{len(sliced_benchmarks)}"
+                        )
+                        variant_log_json[
+                            "checker_input"
+                        ] = checker_input_with_only_variant
+                        variant_log_json["checker_message"] = checker_message
+                        variant_log_json["success"] = False
+                        instance_log_json["variant_log"].append(variant_log_json)
+                        continue
+
                     if success:
                         Logger.log_success(
                             f"Found variant: {variant} for benchmark: {start_index + benchmark_index + 1}/{len(sliced_benchmarks)}"
