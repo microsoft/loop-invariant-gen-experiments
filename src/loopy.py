@@ -174,7 +174,7 @@ class LoopyPipeline:
         #     elif type(step) == str:
         #         self.steps.append(step)
         #     else:
-                raise Exception("Invalid step type in loopy sequence")
+        #         raise Exception("Invalid step type in loopy sequence")
 
         self.llm = LLM(
             self.model,
