@@ -99,9 +99,7 @@ def main(args):
         output_log_dir,
         "final.json",
     )
-    with open(
-        os.path.join(output_log_dir, output_log_file), "w", encoding="utf-8"
-    ) as f:
+    with open(output_log_file, "w", encoding="utf-8") as f:
         json.dump(output_log, f, indent=4, ensure_ascii=False)
 
     print(f"Time taken: {end_time - start_time}")
