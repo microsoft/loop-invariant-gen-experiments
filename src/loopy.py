@@ -2010,7 +2010,7 @@ class LoopyPipeline:
                     ) = self.llm.generate_annotation(
                         input={
                             "code": self.benchmark.get_code(benchmark_file),
-                            "loop_variant": variant,
+                            "loop_variant": "( " + ", ".join(variant) + " )",
                         },
                         prompt=invariants_prompt,
                         extraction_filter=self.checker.is_invariant,
@@ -2032,6 +2032,9 @@ class LoopyPipeline:
                         ],
                         "one_loop_one_method",
                     )
+                    Logger.log_info(
+                        f"Pruning invariants for variant: {variant} for benchmark: {start_index + benchmark_index + 1}/{len(sliced_benchmarks)}"
+                    )
                     (
                         success,
                         pruned_code,
@@ -2045,13 +2048,22 @@ class LoopyPipeline:
                         pruned_code
                     )
 
+                    if len(inductive_invariants) > 0:
+                        Logger.log_success(
+                            f"Found inductive invariants for variant: {variant} for benchmark: {start_index + benchmark_index + 1}/{len(sliced_benchmarks)}"
+                        )
+                    else:
+                        Logger.log_error(
+                            f"Could not find inductive invariants for variant: {variant} for benchmark: {start_index + benchmark_index + 1}/{len(sliced_benchmarks)}"
+                        )
+
                     variant_log_json["inductive_invariants"] = inductive_invariants
 
                     checker_input_with_variants = self.benchmark.combine_llm_outputs(
                         self.benchmark.get_code(benchmark_file),
                         (
                             inductive_invariants,
-                            ["loop variant " + variant + ";\n"],
+                            ["loop variant " + x + ";\n" for x in variant],
                         ),
                         "termination_one_loop_one_method",
                     )
@@ -2076,6 +2088,15 @@ class LoopyPipeline:
                         break
 
                 instance_log_json["success"] = success
+
+                if instance_log_json["success"]:
+                    Logger.log_success(
+                        f"Benchmark {start_index + benchmark_index + 1}/{len(sliced_benchmarks)} succeeded"
+                    )
+                else:
+                    Logger.log_error(
+                        f"Benchmark {start_index + benchmark_index + 1}/{len(sliced_benchmarks)} failed"
+                    )
 
             except Exception as e:
                 Logger.log_error(traceback.format_exc())
