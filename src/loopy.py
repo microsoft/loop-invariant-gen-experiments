@@ -93,6 +93,7 @@ class LoopyPipeline:
         self.benchmark = benchmark
         self.checker = checker
         self.model = model
+        self.provider = "azure-open-ai"
         self.debug = debug
         self.log_path = log_path
         self.benchmark_features = ""
@@ -112,6 +113,9 @@ class LoopyPipeline:
 
         if "analysis" in config:
             self.analysis = config["analysis"]
+
+        if "provider" in config:
+            self.provider = config["provider"]
 
         if not "benchmarks" in config:
             raise Exception("No benchmarks found in config file")
@@ -142,33 +146,35 @@ class LoopyPipeline:
         else:
             raise Exception(f"Invalid checker: {config['checker']}")
 
-        if "loopy_sequence" in config:
-            for step in config["loopy_sequence"]:
-                if type(step) == dict:
-                    assert len(step.keys()) == 1 and list(step.keys())[0] in [
-                        "prompt_llm",
-                        "repair_llm",
-                    ], "Invalid dict step in loopy sequence"
-                    if list(step.keys())[0] == "prompt_llm":
-                        prompt = Prompt().from_file(step["prompt_llm"])
-                        annotation_type = step["prompt_llm"]["extract_annotation"]
-                        self.steps.append(
-                            {"prompt": prompt, "annotation_type": annotation_type}
-                        )
-                    else:
-                        prompt = Prompt().from_file(step["repair_llm"])
-                        annotation_type = step["repair_llm"]["extract_annotation"]
-                        self.steps.append(
-                            {
-                                "repair": prompt,
-                                "annotation_type": annotation_type,
-                                "num_retries": step["repair_llm"]["num_retries"],
-                            }
-                        )
-                elif type(step) == str:
-                    self.steps.append(step)
+        if not "loopy_sequence" in config:
+            raise Exception("No Loopy sequence found in config file")
+
+        for step in config["loopy_sequence"]:
+            if type(step) == dict:
+                assert len(step.keys()) == 1 and list(step.keys())[0] in [
+                    "prompt_llm",
+                    "repair_llm",
+                ], "Invalid dict step in loopy sequence"
+                if list(step.keys())[0] == "prompt_llm":
+                    prompt = Prompt().from_file(step["prompt_llm"])
+                    annotation_type = step["prompt_llm"]["extract_annotation"]
+                    self.steps.append(
+                        {"prompt": prompt, "annotation_type": annotation_type}
+                    )
                 else:
-                    raise Exception("Invalid step type in loopy sequence")
+                    prompt = Prompt().from_file(step["repair_llm"])
+                    annotation_type = step["repair_llm"]["extract_annotation"]
+                    self.steps.append(
+                        {
+                            "repair": prompt,
+                            "annotation_type": annotation_type,
+                            "num_retries": step["repair_llm"]["num_retries"],
+                        }
+                    )
+            elif type(step) == str:
+                self.steps.append(step)
+            else:
+                raise Exception("Invalid step type in loopy sequence")
 
         self.llm = LLM(
             self.model,
@@ -1440,6 +1446,33 @@ class LoopyPipeline:
             start_index : start_index + max_benchmarks
         ]
 
+        # Make all the local LLM calls first before entering the loop
+        local_llm_outputs = {}
+        if self.provider == "local":
+            for step_index, step in enumerate(self.steps):
+                try:
+                    if type(step) == dict:
+                        prompt = step["prompt"]
+                        annotation_type = step["annotation_type"]
+                        Logger.log_info(
+                            f"[Step {step_index + 1}] Prompting Local LLM for {annotation_type}"
+                        )
+
+                        sliced_benchmarks = [
+                            (instance, {"code": self.benchmark.get_code(instance)})
+                            for instance in sliced_benchmarks
+                        ]
+
+                        outputs = self.llm.generate_annotations_local(sliced_benchmarks)
+                        local_llm_outputs[step_index] = outputs
+
+                except (Exception, KeyboardInterrupt) as e:
+                    print(traceback.format_exc())
+                    if isinstance(e, KeyboardInterrupt):
+                        break
+                    else:
+                        continue
+
         for benchmark_index, benchmark_file in enumerate(sliced_benchmarks):
             Logger.log_info(
                 f"Running benchmark: {start_index + benchmark_index + 1}/{len(sliced_benchmarks)}"
@@ -1483,14 +1516,33 @@ class LoopyPipeline:
                             raise Exception("Unsupported annotation type")
 
                         # Make the LLM query and get the code blocks, and the LLM output
-                        (
-                            generated_code_blocks,
-                            llm_output_text,
-                        ) = self.llm.generate_annotation(
-                            input={"code": self.benchmark.get_code(benchmark_file)},
-                            prompt=prompt,
-                            extraction_filter=extraction_filter,
-                        )
+                        if self.provider != "local":
+                            (
+                                generated_code_blocks,
+                                llm_output_text,
+                            ) = self.llm.generate_annotation(
+                                input={"code": self.benchmark.get_code(benchmark_file)},
+                                prompt=prompt,
+                                extraction_filter=extraction_filter,
+                            )
+                        else:
+                            assert (
+                                local_llm_outputs[step_index][benchmark_index]["file"]
+                                == benchmark_file
+                            )
+                            llm_output_text = (
+                                local_llm_outputs[step_index][benchmark_index]["input"]
+                                + local_llm_outputs[step_index][benchmark_index][
+                                    "output"
+                                ]
+                            )
+                            generated_code_blocks = []
+                            for output in local_llm_outputs[step_index]["output"]:
+                                code_block = self.llm.extract_code(
+                                    output["content"],
+                                    extraction_filter=extraction_filter,
+                                )
+                                generated_code_blocks.append(code_block)
 
                         step_log_json["llm_chat"] = llm_output_text
                         step_log_json["output"] = generated_code_blocks
