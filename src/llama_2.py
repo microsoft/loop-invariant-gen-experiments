@@ -83,7 +83,7 @@ def main(args):
             )
             benchmark_completions.extend(batch_results)
 
-        benchmark_log["output"].append(benchmark_completions)
+        benchmark_log["output"] = benchmark_completions
         benchmark_log_file = os.path.join(
             output_log_dir,
             input["file"].replace(".c", ".json").replace("../", "").replace("/", "__"),
