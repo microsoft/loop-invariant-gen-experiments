@@ -19,6 +19,12 @@ def parse_args(args):
         type=str,
     )
 
+    parser.add_argument(
+        "--termination-analysis",
+        help="Run the termination analysis algorithm",
+        action="store_true",
+    )
+
     # Checker to use
     parser.add_argument(
         "--checker",
@@ -193,6 +199,13 @@ def main(args):
     )
 
     p = p.load_config(args.config_file)
+
+    if args.termination_analysis:
+        p.run_termination_analysis(
+            max_benchmarks=args.max_benchmarks,
+            start_index=args.start_index,
+        )
+        return
 
     p.run_sequence(max_benchmarks=args.max_benchmarks, start_index=args.start_index)
 
