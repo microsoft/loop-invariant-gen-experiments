@@ -86,7 +86,7 @@ def main(args):
         benchmark_log["output"].append(benchmark_completions)
         benchmark_log_file = os.path.join(
             output_log_dir,
-            input[0].replace(".c", ".json").replace("../", "").replace("/", "__"),
+            input["file"].replace(".c", ".json").replace("../", "").replace("/", "__"),
         )
         with open(
             os.path.join(output_log_dir, benchmark_log_file), "w", encoding="utf-8"
