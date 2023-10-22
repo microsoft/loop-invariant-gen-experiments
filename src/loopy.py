@@ -1460,7 +1460,7 @@ class LoopyPipeline:
 
                         sliced_benchmark_inputs = [
                             (instance, {"code": self.benchmark.get_code(instance)})
-                            for instance in sliced_benchmark_inputs
+                            for instance in sliced_benchmarks
                         ]
 
                         outputs = self.llm.generate_annotations_local(
