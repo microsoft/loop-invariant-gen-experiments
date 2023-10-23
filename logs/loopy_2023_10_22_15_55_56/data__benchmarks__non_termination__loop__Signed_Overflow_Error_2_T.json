@@ -1,0 +1,166 @@
+{
+    "logs": {
+        "file": "../data/benchmarks/non_termination/loop/Signed_Overflow_Error_2_T.c",
+        "benchmark_code": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\nint main()\n{\n    int needed =  unknown_int();\n    int smallest = 1;\n    while( smallest <= needed )\n    {\n        if( smallest == 0 )\n            return 0;\n        smallest <<= 1;\n    }\n    return 0;\n}",
+        "success": true,
+        "variants": [
+            [
+                "needed - smallest + 1"
+            ],
+            [
+                "needed - smallest"
+            ],
+            [
+                "INT_MAX - smallest"
+            ]
+        ],
+        "variant_llm_output": [
+            {
+                "role": "system",
+                "content": "A ranking function (also called variant) is an expression over program variables that are live as the loop head. The value of the expression must decrease with every successive iteration of the loop. And the value must be positive for the loop to continue executing. Finding a ranking function that helps prove that the loop must terminate.\nLexicographic ranking functions are a generation. They are a sequence of expressions (e1, e2, ...) with the property that the value of each expression must be positive for the loop to execute. Either e1 must decrease or its value remains the same. If its value remains the same then the value of e2 must decrease.\nFind the ranking function for the loop in the following program and explain why it is a valid ranking function.\n\nInstructions:\n- Make note of the starting values or constraints for the variables that are live at the loop head.\n- Analyze the loop body and find a ranking function involving the variables in the loop body\n- Output the ranking function in one code block, in ACSL syntax. For example,\n```\n/*@\n    loop variant v;\n*/\n```\n- If the ranking function is a sequence of expressions, output them in different lines in their lexicographic order. \n\nRules:\n- **Do not use constants or functions not defined in the program. Use the ternary operator to describe the absolute value of an expression.**"
+            },
+            {
+                "role": "user",
+                "content": "Consider the following C program:  \n```\n#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\nint main()\n{\n    int needed =  unknown_int();\n    int smallest = 1;\n    while( smallest <= needed )\n    {\n        if( smallest == 0 )\n            return 0;\n        smallest <<= 1;\n    }\n    return 0;\n}\n```\nFind the ranking function for the loop in the given program. \n\nEnsure that the ranking function (or the sequence of expressions) is **decreasing** with every iteration of the loop, and evaluates to a **positive value** while the loop is executing.\n\n**If there is an upper bound to the loop variable, and the loop condition requires the loop variable to not decrease, output an expression involving the upper bound and the old value of the loop variable in every iteration.**\n\nLet's think step by step. "
+            },
+            "First, let's make note of the starting values or constraints for the variables that are live at the loop head:\n\n- `needed` is initialized to an unknown integer value.\n- `smallest` is initialized to 1.\n\nNow, let's analyze the loop body and find a ranking function involving the variables in the loop body:\n\nThe loop condition is `smallest <= needed`, and inside the loop, the value of `smallest` is doubled with each iteration (`smallest <<= 1`). \n\nSince `smallest` starts from 1 and is doubled with each iteration, and the loop continues as long as `smallest <= needed`, it is guaranteed that the loop must terminate eventually when `smallest` becomes greater than `needed`.\n\nA valid ranking function for this loop would be `needed - smallest + 1`. This expression is decreasing with every iteration of the loop, as the value of `smallest` is doubled, and it evaluates to a positive value while the loop is executing (since `smallest` is always less than or equal to `needed`). \n\nOutput the ranking function in ACSL syntax:\n\n```\n/*@\n    loop variant needed - smallest + 1;\n*/\n```",
+            "1. Note the starting values or constraints for the variables that are live at the loop head:\n- needed is assigned an unknown integer value.\n- smallest starts with the value 1.\n\n2. Analyze the loop body:\n- The loop continues as long as smallest <= needed.\n- Within the loop, if smallest == 0, the program returns 0. However, this condition will never be met since smallest starts at 1 and is only shifted left (doubled) in the loop.\n- smallest is doubled (left-shifted by 1) in each iteration.\n\nNow, let's find the ranking function for the loop:\n\nConsider the ranking function as the difference between needed and smallest. In every iteration, the value of smallest is doubled, which means the difference between needed and smallest decreases. The loop continues as long as smallest is less than or equal to needed, which means the ranking function is positive during loop execution.\n\nThe ranking function for the loop in the given program is:\n\n```\n/*@\n    loop variant needed - smallest;\n*/\n```",
+            "First, let's make note of the starting values or constraints for the variables that are live at the loop head:\n- `needed` is an unknown integer value, so it could be any integer.\n- `smallest` is initialized to 1.\n\nNow, let's analyze the loop body and find a ranking function involving the variables in the loop body:\n- The loop condition is `smallest <= needed`.\n- Inside the loop, `smallest` is doubled in every iteration by the left shift operation (`smallest <<= 1`).\n\nNow, let's output the ranking function in ACSL syntax:\n\n```\n/*@\n    loop variant needed - smallest;\n*/\n```\n\nThis is a valid ranking function because:\n- The value of `needed - smallest` is positive when the loop is executing, as `smallest <= needed`.\n- The value of `needed - smallest` is decreasing with every iteration of the loop, since `smallest` is doubled in each iteration, and `needed` remains constant.",
+            "First, let's make note of the starting values or constraints for the variables that are live at the loop head:\n- `needed` is an unknown integer value.\n- `smallest` starts with the value 1.\n\nNow, let's analyze the loop body:\n- If `smallest` is equal to 0, the program returns 0.\n- `smallest` is shifted left by 1 bit (effectively doubled) in each iteration.\n\nWe can see that the value of `smallest` is always positive and increases with every iteration. Moreover, the loop terminates when `smallest` becomes greater than `needed`.\n\nNow, let's find the ranking function for this loop. The ranking function should be decreasing with every iteration and should be positive while the loop is executing.\n\nA valid ranking function for this loop is the difference between the maximum value an integer can take and the value of `smallest`. Since `smallest` is always increasing, this difference will be decreasing with every iteration. Also, this difference will always be positive as long as `smallest` is less than or equal to the maximum value an integer can take.\n\nIn C, the maximum value of an integer is given by `INT_MAX`. Therefore, the ranking function is:\n\n```\n/*@\n    loop variant INT_MAX - smallest;\n*/\n```\n\nThis is a valid ranking function because it decreases with every iteration of the loop, and its value is positive as long as the loop is executing.",
+            "First, we need to identify the loop head and the variables that are live at the loop head. In this case, the loop head is the `while` statement, and the live variables are `smallest` and `needed`.\n\nNow, let's analyze the loop body. The loop continues as long as `smallest` is less than or equal to `needed`. Inside the loop, the value of `smallest` is doubled at every iteration (`smallest <<= 1`), and the value of `needed` remains unchanged.\n\nWe can use the upper bound of `smallest` and the loop condition to find a ranking function. Since the loop condition requires that `smallest <= needed`, we can use the difference `needed - smallest` as a ranking function.\n\nNow, let's express the ranking function in ACSL syntax:\n\n```\n/*@\n    loop variant needed - smallest;\n*/\n```\n\nThis ranking function is valid because it decreases with every iteration of the loop (as `smallest` is doubled, the difference `needed - smallest` becomes smaller), and it is positive while the loop is executing (since `smallest <= needed`)."
+        ],
+        "variant_log": [
+            {
+                "invariant_llm_output": [
+                    {
+                        "role": "system",
+                        "content": "A ranking function (also called variant) is an expression over program variables that are live at the loop head, whose value is non-negative and decreases with every iteration of the loop.\nA ranking function can be used to prove the termination of a loop. Lexicographic ranking functions are a sequence of expressions (e1, e2, ...) with the property that the value of each expression must be positive for the loop to execute. Either e1 must decrease or its value remains the same. If its value remains the same then the value of e2 must decrease.\nGiven a program with a ranking function for the loop in the program, find loop invariants that support the validity of the ranking function and prove the termination of the loop.\n\nInstructions:\n- Make note of the starting values or constraints for the variables that are live at the loop head.\n- Analyze the loop body and make a note of the loop condition and the given ranking function.\n- Output loop invariants that are true \n(i) before the loop execution, \n(ii) in every iteration of the loop and \n(iii) after the loop termination, \nsuch that the loop invariants imply that the ranking function decreases with every iteration.\n- If a loop invariant is a conjunction, split it into its parts.\n- Output all the loop invariants in one code block. For example:\n```\n/*@ \n    loop invariant i1;\n    loop invariant i2;\n*/\n```\nRules:\n- **Do not use variables or functions that are not declared in the program.** \n- **Do not make any assumptions about functions whose definitions are not given.**\n- **Assume all uninitialized variables to contain garbage values.**\n- **Assume non-deterministic functions to return any value permitted by its return type.**\n- **Do not use keywords that are not supported in ACSL annotations for loops.**\n- **Use the expression \"\\at(x, LoopEntry)\" to refer to the value of a variable \"x\" at the beginning of the loop.**"
+                    },
+                    {
+                        "role": "user",
+                        "content": "Consider the following C program:\n```\n#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\nint main()\n{\n    int needed =  unknown_int();\n    int smallest = 1;\n    while( smallest <= needed )\n    {\n        if( smallest == 0 )\n            return 0;\n        smallest <<= 1;\n    }\n    return 0;\n}\n```\n\nYou are allowed to use implication to take care of the conditional nature of the code. Use implication (==>) instead of using if-then.\n\nFor all variables, add conjunctions that bound the maximum and minimum values that they can take, if such bounds exist.\n\nIf a variable is always equal to or smaller or larger than another variable, add a conjunction for their relation.\n\nOutput the loop invariants to support the loop variant **(needed - smallest + 1)**, for the loop in the program above. Let's think step by step."
+                    },
+                    "First, let's note down the starting values or constraints for the variables that are live at the loop head:\n- needed: unknown_int() can be any integer value.\n- smallest: starts at 1.\n\nNext, let's analyze the loop body and make a note of the loop condition and the given ranking function:\n- Loop condition: smallest <= needed\n- Ranking function: (needed - smallest + 1)\n\nNow, let's output the loop invariants that are true before the loop execution, in every iteration of the loop, and after the loop termination, such that the loop invariants imply that the ranking function decreases with every iteration:\n\n```\n/*@ \n    loop invariant smallest >= 1;\n    loop invariant needed == \\at(needed, LoopEntry);\n    loop invariant smallest <= needed + 1;\n    loop invariant smallest == 1 << (\\at(smallest, LoopEntry) - 1);\n*/\n```",
+                    "First, let's analyze the program and gather information about the initial values and constraints of the variables and the loop condition.\n\n- needed is an unknown integer, so it can be any integer value.\n- smallest starts at 1.\n- The loop condition is (smallest <= needed).\n\nNow, let's write the loop invariants that support the ranking function (needed - smallest + 1) for the loop.\n\n```\n/*@ \n    loop invariant smallest >= 1;\n    loop invariant needed == \\at(needed, LoopEntry);\n    loop invariant smallest == 1 << (\\at(smallest, LoopEntry) - 1);\n*/\n```",
+                    "First, let's note the starting values or constraints for the variables that are live at the loop head:\n\n- `needed`: an unknown integer value.\n- `smallest`: initially set to 1.\n\nNow, let's analyze the loop condition and the given ranking function:\n\n- Loop condition: `smallest <= needed`\n- Ranking function: `(needed - smallest + 1)`\n\nNow, we can output the loop invariants that support the validity of the ranking function and prove the termination of the loop:\n\n```\n/*@ \n    loop invariant 1 <= smallest;\n    loop invariant smallest <= needed + 1;\n    loop invariant (smallest == 1) ==> (needed >= 0);\n    loop invariant (smallest > 1) ==> (needed >= smallest / 2 - 1);\n*/\n```",
+                    "First, let's analyze the loop and its variables:\n- `needed` is initialized to an unknown integer value before the loop.\n- `smallest` is initialized to 1 before the loop.\n- The loop condition is `smallest <= needed`.\n- Inside the loop, `smallest` is doubled in each iteration.\n\nNow, let's find the loop invariants that support the given loop variant `(needed - smallest + 1)`:\n- `needed` remains constant throughout the loop.\n- The value of `smallest` is always positive and increases with each iteration.\n- The value of `smallest` is always a power of 2.\n\nBased on the above analysis, we can write the following loop invariants:\n\n```\n/*@ \n    loop invariant 0 <= needed;\n    loop invariant 1 <= smallest;\n    loop invariant \\exists integer k; 0 <= k && smallest == (1 << k);\n    loop invariant smallest <= needed + 1;\n*/\n```",
+                    "First, let's identify the loop head and the variables that are live at the loop head. The loop head is the beginning of the `while` loop and the live variables are `needed` and `smallest`.\n\nNow, let's note the constraints for the variables:\n- `needed` is assigned an unknown integer value, so it can be any integer.\n- `smallest` is initialized to 1.\n\nThe loop condition is `smallest <= needed`.\n\nThe given ranking function is `(needed - smallest + 1)`.\n\nNow, let's output the loop invariants that support the validity of the ranking function and prove the termination of the loop:\n\n```\n/*@ \n    loop invariant smallest >= 1;\n    loop invariant needed >= \\at(needed, LoopEntry);\n    loop invariant smallest <= needed + 1;\n    loop invariant smallest <= \\at(smallest, LoopEntry) << (1 + (\\at(needed, LoopEntry) - needed));\n*/\n```"
+                ],
+                "invariant_code_blocks": [
+                    "/*@ \n    loop invariant smallest >= 1;\n    loop invariant needed == \\at(needed, LoopEntry);\n    loop invariant smallest <= needed + 1;\n    loop invariant smallest == 1 << (\\at(smallest, LoopEntry) - 1);\n*/",
+                    "/*@ \n    loop invariant smallest >= 1;\n    loop invariant needed == \\at(needed, LoopEntry);\n    loop invariant smallest == 1 << (\\at(smallest, LoopEntry) - 1);\n*/",
+                    "/*@ \n    loop invariant 1 <= smallest;\n    loop invariant smallest <= needed + 1;\n    loop invariant (smallest == 1) ==> (needed >= 0);\n    loop invariant (smallest > 1) ==> (needed >= smallest / 2 - 1);\n*/",
+                    "/*@ \n    loop invariant 0 <= needed;\n    loop invariant 1 <= smallest;\n    loop invariant \\exists integer k; 0 <= k && smallest == (1 << k);\n    loop invariant smallest <= needed + 1;\n*/",
+                    "/*@ \n    loop invariant smallest >= 1;\n    loop invariant needed >= \\at(needed, LoopEntry);\n    loop invariant smallest <= needed + 1;\n    loop invariant smallest <= \\at(smallest, LoopEntry) << (1 + (\\at(needed, LoopEntry) - needed));\n*/"
+                ],
+                "inductive_invariants": "loop invariant i1: smallest >= 1;\nloop invariant i2: needed == \\at(needed, LoopEntry);\nloop invariant i8: 1 <= smallest;\nloop invariant i11: (smallest > 1) ==> (needed >= smallest / 2 - 1);\nloop invariant i14: \\exists integer k; 0 <= k && smallest == (1 << k);\nloop invariant i17: needed >= \\at(needed, LoopEntry);",
+                "final_checker_input": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\nextern int unknown_int(void);\n\nint main()\n{\n    int needed =  unknown_int();\n    int smallest = 1;\n    /*@\nloop invariant i1: smallest >= 1;\nloop invariant i2: needed == \\at(needed, LoopEntry);\nloop invariant i8: 1 <= smallest;\nloop invariant i11: (smallest > 1) ==> (needed >= smallest / 2 - 1);\nloop invariant i14: \\exists integer k; 0 <= k && smallest == (1 << k);\nloop invariant i17: needed >= \\at(needed, LoopEntry);\nloop variant needed - smallest + 1;\n*/\nwhile( smallest <= needed )\n    {\n        if( smallest == 0 )\n            return 0;\n        smallest <<= 1;\n    }\n    return 0;\n}",
+                "checker_message": "loop invariant smallest >= 1 is inductive.\nloop invariant needed == \\at(needed, LoopEntry) is inductive.\nloop invariant 1 <= smallest is inductive.\nloop invariant (smallest > 1) ==> (needed >= smallest / 2 - 1) is inductive.\nloop invariant \\exists integer k; 0 <= k && smallest == (1 << k) is inductive.\nloop invariant needed >= \\at(needed, LoopEntry) is inductive.\n\nLoop variant is Valid.\n",
+                "success": true
+            }
+        ]
+    },
+    "stats": {
+        "success": [
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/PastaB7.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/BrockschmidtCookFuhs-CAV2013-Introduction_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/genady_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_b.12.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/WhileDecr.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_a.09_assume.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Bangalore_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_java_Break.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/PastaB2.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/CookSeeZuleger-TACAS2013-Fig8a-modified_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/LogMult.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/KroeningSharyginaTsitovichWintersteiger-CAV2010-Ex_true-termination.c",
+            "../data/benchmarks/non_termination/loop/Signed_Overflow_Error_3_T.c",
+            "../data/benchmarks/tpdb/C/Ultimate/Parallel_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/HeizmannHoenickeLeikePodelski-ATVA2013-Fig6_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex2.10_true-termination.c",
+            "../data/benchmarks/tpdb/C/Ultimate/Cairo_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/PastaC7.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChawdharyCookGulwaniSagivYang-ESOP2008-random1d_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_b.11.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/genady_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Nyala-2lex_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_ex3b.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_b.05.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex2.20_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_ex1.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/LeikeHeizmann-TACAS2014-Ex9_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_a.05.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/ChenFlurMukhopadhyay-SAS2012-Ex2.10_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_a.04.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/HeizmannHoenickeLeikePodelski-ATVA2013-Fig9_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/PastaA7.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/HeizmannHoenickeLeikePodelski-ATVA2013-Fig6_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/HeizmannHoenickeLeikePodelski-ATVA2013-Fig8_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_java_Continue1.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/AliasDarteFeautrierGonnord-SAS2010-random2d_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/aaron2_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/aaron2_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChawdharyCookGulwaniSagivYang-ESOP2008-random2d_true-termination.c",
+            "../data/benchmarks/tpdb/C/Ultimate/Gothenburg_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Toulouse-BranchesToLoop_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/PastaA4.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_fermat.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Overflow.c",
+            "../data/benchmarks/non_termination/loop/Signed_Overflow_Error_2_T.c"
+        ],
+        "failure": [
+            "../data/benchmarks/tpdb/C_Integer/Ton_Chanh_15/Hanoi_plus_false-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/UrbanMine-ESOP2014-Fig3_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Factorial.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Swingers.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex2.07_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Piecewise_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/PodelskiRybalchenko-LICS2004-Fig2-TACAS2011-Fig3_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex1.03_true-termination.c",
+            "../data/benchmarks/tpdb/C/Ultimate/Lobnya-Boolean-Reordered_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/ChenFlurMukhopadhyay-SAS2012-Ex2.22_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex3.04_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/AliasDarteFeautrierGonnord-SAS2010-speedpldi2_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex2.08_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex2.09_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/LeikeHeizmann-WST2014-Ex5_false-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex2.18_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex4.01_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_ex2.c",
+            "../data/benchmarks/tpdb/C_Integer/Ton_Chanh_15/Benghazi_nondet_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex1.02_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/GulwaniJainKoskinen-PLDI2009-Fig1_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/ChenFlurMukhopadhyay-SAS2012-Ex2.16_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Pure2Phase_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/PodelskiRybalchenko-LICS2004-Fig2_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/LeikeHeizmann-TACAS2014-Fig1_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Pure3Phase_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/svcomp_c.07.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex3.03_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/PlusSwap.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/AliasDarteFeautrierGonnord-SAS2010-counterex1a_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/aaron3_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Toulouse-MultiBranchesToLoop_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/AliasDarteFeautrierGonnord-SAS2010-counterex1a_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex1.01_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/min_rf_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Et1.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/2Nested_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/ChenFlurMukhopadhyay-SAS2012-Ex1.04_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/ChenFlurMukhopadhyay-SAS2012-Ex2.08_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/Masse-VMCAI2014-Fig1b_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/NoriSharma-FSE2013-Fig8_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/CookSeeZuleger-TACAS2013-Fig8b_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/MenloPark_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/ChenFlurMukhopadhyay-SAS2012-Ex2.13_true-termination.c",
+            "../data/benchmarks/tpdb/C_Integer/Stroeder_15/AliasDarteFeautrierGonnord-SAS2010-rsd_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/Toulouse-BranchesToLoop_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/TelAviv-Amir-Minimum_true-termination.c"
+        ],
+        "skipped": [],
+        "total": 92,
+        "success_count": 45,
+        "failure_count": 47,
+        "success_rate": 0.4891304347826087
+    }
+}
