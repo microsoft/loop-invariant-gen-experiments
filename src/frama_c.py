@@ -1325,14 +1325,15 @@ class FramaCBenchmark(Benchmark):
             elif self.is_interprocedural(code):
                 raise InvalidBenchmarkException("Found multiple methods")
 
-            if "multiple_loops" in features and self.get_total_loop_count(code) > 1:
+            if "multiple_loops" in features:
                 code = self.add_loop_labels(code)
-            elif "multiple_loops" in features and self.get_total_loop_count(code) <= 1:
-                raise InvalidBenchmarkException("Found less than 2 loops")
-            elif (not "multiple_loops" in features) and self.get_total_loop_count(
-                code
-            ) > 1:
+            elif self.is_multi_loop(code):
                 raise InvalidBenchmarkException("Found multiple loops")
+
+            if not (
+                self.is_interprocedural(code) or self.get_total_loop_count(code) > 1
+            ):
+                raise InvalidBenchmarkException("Not for SV-COMP benchmark set")
 
             num_lines = len(code.splitlines())
             if num_lines > max_lines:
@@ -1343,3 +1344,12 @@ class FramaCBenchmark(Benchmark):
         except Exception as e:
             raise InvalidBenchmarkException(str(e))
         return code
+
+
+code = """
+"""
+fb = FramaCBenchmark(features="multiple_loops_multiple_methods")
+ast = fb.parser.parse(bytes(code, "utf-8"))
+# print(ast.root_node.sexp())
+code = fb.preprocess(code, "multiple_loops_multiple_methods")
+print(code)
