@@ -2257,3 +2257,11 @@ class LoopyPipeline:
         log_file.close()
 
         return
+
+    def multiprocedural_loop_invariant_analysis(self, max_benchmarks=1, start_index=0):
+        pass
+
+    def loopy_wrapper(self, benchmark_file, variant, invariants):
+        # call other experiment specific functions from inside the wrapper
+        # This will handle logging, tracking frama-c calls, etc.
+        pass

@@ -1257,6 +1257,20 @@ class FramaCBenchmark(Benchmark):
             code = code[: l.start_byte] + loop_label + code[l.start_byte :]
         return code
 
+    def add_multi_procedural_loop_labels(self, code):
+        labels = string.ascii_uppercase
+        ast = self.parser.parse(bytes(code, "utf-8"))
+        loops = self.get_loops(ast.root_node)
+        loops = sorted(loops, key=lambda x: x.start_byte, reverse=True)
+
+        new_code = ""
+
+        for i, l in enumerate(loops):
+            loop_label = "/* Loop" + labels[len(loops) - i - 1] + " */  "
+            new_code += code[: l.start_byte] + loop_label + code[l.start_byte :]
+
+        return new_code
+
     def is_multi_loop(self, code):
         main_definition = self.get_main_definition(code)
         loops = self.get_loops(main_definition)
