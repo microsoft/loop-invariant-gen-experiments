@@ -25,9 +25,9 @@ for file in files_initial:
         valid_files.append(file.strip())
         print("Valid: " + file.strip())
     except InvalidBenchmarkException as e:
-        print(str(e))
+        print()
         invalid_files.append(file.strip())
-        print("Invalid: " + file.strip())
+        print(f"[{str(e)}] Invalid: {file.strip()}")
 
 with open("../experiments/svcomp_reachsafety_filtered.txt", "w") as f:
     f.write("\n".join(valid_files))
