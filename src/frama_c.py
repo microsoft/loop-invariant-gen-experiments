@@ -1151,7 +1151,7 @@ class FramaCBenchmark(Benchmark):
         errors = sorted(errors, key=lambda x: x.start_byte, reverse=True)
         for e in errors:
             code = (
-                code[: e.start_byte ]
+                code[: e.start_byte]
                 + "{ ERROR: {; \n//@ assert(\\false);\n}\n}"
                 + code[e.end_byte :]
             )
@@ -1325,9 +1325,13 @@ class FramaCBenchmark(Benchmark):
             elif self.is_interprocedural(code):
                 raise InvalidBenchmarkException("Found multiple methods")
 
-            if "multiple_loops" in features:
+            if "multiple_loops" in features and self.get_total_loop_count(code) > 1:
                 code = self.add_loop_labels(code)
-            elif self.is_multi_loop(code):
+            elif "multiple_loops" in features and self.get_total_loop_count(code) <= 1:
+                raise InvalidBenchmarkException("Found less than 2 loops")
+            elif (not "multiple_loops" in features) and self.get_total_loop_count(
+                code
+            ) > 1:
                 raise InvalidBenchmarkException("Found multiple loops")
 
             num_lines = len(code.splitlines())
