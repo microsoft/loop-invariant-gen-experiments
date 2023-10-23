@@ -1345,11 +1345,3 @@ class FramaCBenchmark(Benchmark):
             raise InvalidBenchmarkException(str(e))
         return code
 
-
-code = """
-"""
-fb = FramaCBenchmark(features="multiple_loops_multiple_methods")
-ast = fb.parser.parse(bytes(code, "utf-8"))
-# print(ast.root_node.sexp())
-code = fb.preprocess(code, "multiple_loops_multiple_methods")
-print(code)
