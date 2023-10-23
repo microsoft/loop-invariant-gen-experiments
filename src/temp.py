@@ -1,5 +1,6 @@
 import json
 import os
+import traceback
 
 from frama_c import FramaCBenchmark, InvalidBenchmarkException
 
@@ -7,7 +8,7 @@ files_initial = open(
     "../dataset_analysis/svcomp_reachsafety_files.txt", "r"
 ).read().split("\n")
 
-fb = FramaCBenchmark()
+fb = FramaCBenchmark(features="multiple_loops_multiple_methods")
 valid_files = []
 invalid_files = []
 
@@ -16,11 +17,15 @@ for file in files_initial:
         if not os.path.exists(file):
             print("File not found: " + file)
             file = file[:-2] + ".i"
+            if not os.path.exists(file):
+                print("File not found: " + file)
+                continue
         code = open(file.strip(), "r").read()
         fb.preprocess(code, "multiple_loops_multiple_methods")
         valid_files.append(file.strip())
         print("Valid: " + file.strip())
-    except InvalidBenchmarkException:
+    except InvalidBenchmarkException as e:
+        print(str(e))
         invalid_files.append(file.strip())
         print("Invalid: " + file.strip())
 
