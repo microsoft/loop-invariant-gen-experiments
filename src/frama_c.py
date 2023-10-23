@@ -727,6 +727,9 @@ class FramaCBenchmark(Benchmark):
         return "\n".join(loop_invariants)
 
     def remove_comments(self, code):
+        """
+        Removes all comments from the code
+        """
         comment_query = self.language.query(
             """
             (comment) @comment 
@@ -786,10 +789,21 @@ class FramaCBenchmark(Benchmark):
         return function_declarations
 
     def remove_verifier_function_declarations(self, code):
+        """
+        Remove verifier function declarations
+        """
         ast = self.parser.parse(bytes(code, "utf-8"))
 
         declarations = self.get_function_declarations(ast.root_node)
-        declarations = [d for d, e in declarations if e.startswith("__VERIFIER_")]
+        declarations = [
+            d
+            for d, e in declarations
+            if e.startswith("__VERIFIER_")
+            or e == "__assert_fail"
+            or e == "assume"
+            or e == "abort"
+            or e == "assert"
+        ]
         declarations = sorted(declarations, key=lambda x: x.start_byte, reverse=True)
         for declaration in declarations:
             code = code[: declaration.start_byte] + code[declaration.end_byte :]
@@ -813,12 +827,21 @@ class FramaCBenchmark(Benchmark):
         return function_definitions
 
     def remove_verifier_function_definitions(self, code):
+        """
+        Remove verifier function definitions
+        """
         ast = self.parser.parse(bytes(code, "utf-8"))
         definitions = self.get_function_definitions(ast.root_node)
         definitions = [
             d
             for d, e in definitions
-            if e.startswith("__VERIFIER_") or e == "reach_error"
+            if e.startswith("__VERIFIER_")
+            or e == "reach_error"
+            or e == "__assert_fail"
+            or e == "assume"
+            or e == "abort"
+            or e == "assert"
+            or e == "assume_abort_if_not"
         ]
         definitions = sorted(definitions, key=lambda x: x.start_byte, reverse=True)
         for definition in definitions:
@@ -835,16 +858,17 @@ class FramaCBenchmark(Benchmark):
                 new_code.append(line)
         return "\n".join(new_code)
 
-    def get_function_calls(self, main):
+    def get_function_calls(self, root):
         function_calls = []
-        nodes = [main]
+        nodes = [root]
         while len(nodes) > 0:
             node = nodes.pop()
             if node.type == "call_expression":
+                identifier = self.get_child_by_type(node, "identifier")
                 function_calls.append(
                     (
                         node,
-                        self.get_child_by_type(node, "identifier").text.decode("utf-8"),
+                        identifier.text.decode("utf-8"),
                     )
                 )
             else:
@@ -852,30 +876,21 @@ class FramaCBenchmark(Benchmark):
         return function_calls
 
     def replace_nondets_and_assert_assumes(self, code):
-        # get main
+        """
+        Replace all nondet functions with unknowns
+        """
         ast = self.parser.parse(bytes(code, "utf-8"))
-        main_query = self.language.query(
-            """
-            (((function_definition (function_declarator (identifier) @function_name)) @main_definition)
-            (#eq? @function_name "main"))
-            """
-        )
-        main = main_query.captures(ast.root_node)
-        main_definition = [m[0] for m in main if m[1] == "main_definition"]
 
-        if len(main_definition) != 1:
-            return "ERROR: No main function found"
-        main_definition = main_definition[0]
+        root = ast.root_node
+        if not "multiple_methods" in self.features:
+            root = self.get_main_definition(code)
 
         # replace nondet calls with unknowns
-        nondets_assert_assumes = self.get_function_calls(main_definition)
+        nondets = self.get_function_calls(root)
         verifier_nondet_calls = list(
             filter(
-                lambda x: len(
-                    re.findall(r"^(__VERIFIER_)?nondet(.*)", x[0].text.decode("utf-8"))
-                )
-                > 0,
-                nondets_assert_assumes,
+                lambda x: len(re.findall(r"^(__VERIFIER_)?nondet(.*)", x[1])) > 0,
+                nondets,
             )
         )
         verifier_nondet_calls = sorted(
@@ -898,25 +913,20 @@ class FramaCBenchmark(Benchmark):
         return self.replace_assumes(self.replace_asserts(code))
 
     def replace_assumes(self, code):
-        # replace __VERIFIER_assume calls with assumes
-        main_query = self.language.query(
-            """
-            (((function_definition (function_declarator (identifier) @function_name)) @main_definition)
-            (#eq? @function_name "main"))
-            """
-        )
+        """
+        Replace __VERIFIER_assume calls with assumes
+        """
         ast = self.parser.parse(bytes(code, "utf-8"))
-        main = main_query.captures(ast.root_node)
-        main_definition = [m[0] for m in main if m[1] == "main_definition"]
-        if len(main_definition) != 1:
-            raise InvalidBenchmarkException("No main function found")
 
-        main_definition = main_definition[0]
-        nondets_assert_assumes = self.get_function_calls(main_definition)
+        root = ast.root_node
+        if not "multiple_methods" in self.features:
+            root = self.get_main_definition(code)
+
+        nondets_assert_assumes = self.get_function_calls(root)
         verifier_assume_calls = list(
             filter(
                 lambda x: len(
-                    re.findall(r"^__VERIFIER_assume", x[0].text.decode("utf-8"))
+                    re.findall(r"^(__VERIFIER_assume|assume_abort_if_not)", x[1])
                 )
                 > 0,
                 nondets_assert_assumes,
@@ -929,7 +939,7 @@ class FramaCBenchmark(Benchmark):
             code = (
                 code[: assume_call[0].start_byte]
                 + re.sub(
-                    r"^(__VERIFIER_assume)",
+                    r"^(__VERIFIER_assume|assume_abort_if_not)",
                     "assume",
                     assume_call[0].text.decode("utf-8"),
                 )
@@ -939,21 +949,16 @@ class FramaCBenchmark(Benchmark):
         return code
 
     def replace_asserts(self, code):
-        # replace __VERIFIER_assert/sassert calls with asserts
-        main_query = self.language.query(
-            """
-            (((function_definition (function_declarator (identifier) @function_name)) @main_definition)
-            (#eq? @function_name "main"))
-            """
-        )
+        """
+        Replace __VERIFIER_assert/sassert/assert calls with asserts
+        """
         ast = self.parser.parse(bytes(code, "utf-8"))
-        main = main_query.captures(ast.root_node)
-        main_definition = [m[0] for m in main if m[1] == "main_definition"]
-        if len(main_definition) != 1:
-            raise InvalidBenchmarkException("No main function found")
-        main_definition = main_definition[0]
 
-        assert_assumes = self.get_function_calls(main_definition)
+        root = ast.root_node
+        if not "multiple_methods" in self.features:
+            root = self.get_main_definition(code)
+
+        assert_assumes = self.get_function_calls(root)
         assert_assumes = sorted(
             assert_assumes, key=lambda x: x[0].start_byte, reverse=True
         )
@@ -979,7 +984,7 @@ class FramaCBenchmark(Benchmark):
                 code[: assert_call.start_byte]
                 + re.sub(
                     r"^(__VERIFIER_|s)?assert\s*(?P<arg>\(.*\));(?P<rest>.*)",
-                    r"{;\n//@ assert\g<arg>;" + "\n" + r"\g<rest>}",
+                    r"{;\n//@ assert\g<arg>;" + "\n" + r"}\n\g<rest>",
                     assert_call.text.decode("utf-8"),
                 )
                 + code[assert_call.end_byte :]
@@ -988,23 +993,14 @@ class FramaCBenchmark(Benchmark):
         return code
 
     def analyze_main(self, code):
-        # Fix missing type for main. Default to int.
+        """
+        Some benchmarks have a missing return type for main.
+        Default this type to int, and make sure the return type
+        matches the value being returned.
+        """
         code = re.sub(r"^\s*main\s*\(", "int main(", code, flags=re.MULTILINE)
 
-        ast = self.parser.parse(bytes(code, "utf-8"))
-        main = self.language.query(
-            """
-            (((function_definition (function_declarator (identifier) @function_name)) @main_definition)
-            (#eq? @function_name "main"))
-            """
-        )
-        main = main.captures(ast.root_node)
-        main_definition = [m[0] for m in main if m[1] == "main_definition"]
-
-        if len(main_definition) != 1:
-            return "ERROR: No main function found"
-
-        main_definition = main_definition[0]
+        main_definition = self.get_main_definition(code)
         main_definition_type = main_definition.child_by_field_name("type")
         if main_definition_type is None:
             return "ERROR: No return type for main function"
@@ -1022,7 +1018,7 @@ class FramaCBenchmark(Benchmark):
 
         if main_definition_type == "void":
             for rv in return_stmt:
-                code = code[: rv[0].start_byte] + "return;" + code[rv[0].end_byte :]
+                code = code[: rv[0].start_byte] + "\nreturn;\n" + code[rv[0].end_byte :]
         else:
             for rv in return_stmt:
                 return_value = [
@@ -1033,7 +1029,7 @@ class FramaCBenchmark(Benchmark):
                     + (
                         rv[0].text.decode("utf-8")
                         if len(return_value) > 0
-                        else "return 0;"
+                        else "\nreturn 0;\n"
                     )
                     + code[rv[0].end_byte :]
                 )
@@ -1041,18 +1037,19 @@ class FramaCBenchmark(Benchmark):
         return code
 
     def remove_preprocess_lines(self, code):
+        """
+        Removes all preprocessor lines from the code
+        """
         lines = code.split("\n")
         lines = list(filter(lambda x: not re.match(r"^#\s\d+\s.*", x), lines))
         return "\n".join(lines)
 
     def remove_local_includes(self, code):
+        """
+        Removes all local includes from the code
+        """
         lines = code.split("\n")
         lines = list(filter(lambda x: not re.match(r"^#include \".*\"", x), lines))
-        return "\n".join(lines)
-
-    def remove_tmpl(self, code):
-        lines = code.split("\n")
-        lines = list(map(lambda x: re.sub(r"tmpl\s*\(.*\)\s*;", "", x), lines))
         return "\n".join(lines)
 
     def has_ill_formed_asserts(self, code):
@@ -1069,20 +1066,7 @@ class FramaCBenchmark(Benchmark):
         and after main is fixed."""
 
         # get main function
-        ast = self.parser.parse(bytes(code, "utf-8"))
-        main = self.language.query(
-            """
-            (((function_definition (function_declarator (identifier) @function_name)) @main_definition)
-            (#eq? @function_name "main"))
-            """
-        )
-        main = main.captures(ast.root_node)
-        main_definition = [m[0] for m in main if m[1] == "main_definition"]
-
-        if len(main_definition) != 1:
-            return "ERROR: No main function found"
-
-        main_definition = main_definition[0]
+        main_definition = self.get_main_definition(code)
 
         # catch non assume assert function calls
         function_calls = self.language.query(
@@ -1101,20 +1085,12 @@ class FramaCBenchmark(Benchmark):
         return len(function_calls) != 0
 
     def add_boiler_plate(self, code):
+        """
+        Add hash defines and externs for unknown functions
+        """
         ast = self.parser.parse(bytes(code, "utf-8"))
-        main = self.language.query(
-            """
-            (((function_definition (function_declarator (identifier) @function_name)) @main_definition)
-            (#eq? @function_name "main"))
-            """
-        )
-        main = main.captures(ast.root_node)
-        main_definition = [m[0] for m in main if m[1] == "main_definition"]
 
-        if len(main_definition) != 1:
-            return "ERROR: No main function found"
-
-        main_definition = main_definition[0]
+        main_definition = self.get_main_definition(code)
         main_definition_type = main_definition.child_by_field_name("type")
 
         code = (
@@ -1124,18 +1100,23 @@ class FramaCBenchmark(Benchmark):
                 else "#define assume(e) if(!(e)) return 0;\n"
             )
             + ("#define LARGE_INT 1000000\n" if "LARGE_INT" in code else "")
-            + ("extern int unknown(void);\n" if "unknown" in code else "")
-            + ("extern int unknown_int(void);\n" if "unknown_int" in code else "")
+            + ("extern int unknown(void);\n" if "unknown()" in code else "")
+            + ("extern int unknown_int(void);\n" if "unknown_int()" in code else "")
             + (
                 "extern unsigned int unknown_uint(void);\n"
                 if "unknown_uint" in code
                 else ""
             )
-            + ("extern _Bool unknown_bool(void);\n" if "unknown_bool" in code else "")
-            + ("extern char unknown_char(void);\n" if "unknown_char" in code else "")
+            + ("extern _Bool unknown_bool(void);\n" if "unknown_bool()" in code else "")
+            + ("extern char unknown_char(void);\n" if "unknown_char()" in code else "")
             + (
                 "extern unsigned short unknown_ushort(void);\n"
-                if "unknown_ushort" in code
+                if "unknown_ushort()" in code
+                else ""
+            )
+            + (
+                "extern unsigned char unknown_uchar(void);\n"
+                if "unknown_uchar()" in code
                 else ""
             )
             + "\n"
@@ -1143,48 +1124,38 @@ class FramaCBenchmark(Benchmark):
         )
         return code
 
-    def get_error_labels(self, main_node):
-        nodes = [main_node]
+    def get_error_labels(self, root):
+        nodes = [root]
         error_nodes = []
         while len(nodes) > 0:
             node = nodes.pop()
             if node.type == "labeled_statement":
                 if node.child_by_field_name("label").text.decode("utf-8") == "ERROR":
-                    error_nodes.append(node.child_by_field_name("label"))
+                    error_nodes.append(node)
             nodes += node.children
         return error_nodes
 
-    def add_frama_c_asserts(self, code):
+    def error_label_to_frama_c_assert(self, code):
         # get main function
         ast = self.parser.parse(bytes(code, "utf-8"))
-        main = self.language.query(
-            """
-            (((function_definition (function_declarator (identifier) @function_name)) @main_definition)
-            (#eq? @function_name "main"))
-            """
-        )
-        main = main.captures(ast.root_node)
-        main_definition = [m[0] for m in main if m[1] == "main_definition"]
-
-        if len(main_definition) != 1:
-            return "ERROR: No main function found"
-
-        main_definition = main_definition[0]
+        root = ast.root_node
+        if not "multiple_methods" in self.features:
+            root = self.get_main_definition(code)
 
         # catch ERROR: in main
-        errors = self.get_error_labels(main_definition)
+        errors = self.get_error_labels(root)
         errors = sorted(errors, key=lambda x: x.start_byte, reverse=True)
         for e in errors:
             code = (
-                code[: e.end_byte + 1]  # +1 to account for the colon
-                + "{; \n//@ assert(\\false);\n}"
-                + code[e.end_byte + 1 :]
+                code[: e.start_byte]
+                + "{ ERROR: {; \n//@ assert(\\false);\n}\n}"
+                + code[e.end_byte :]
             )
 
         return code
 
-    def get_loops(self, main_definition):
-        nodes = [main_definition]
+    def get_loops(self, root):
+        nodes = [root]
         loops = []
         while len(nodes) > 0:
             node = nodes.pop()
@@ -1235,52 +1206,77 @@ class FramaCBenchmark(Benchmark):
     def add_loop_labels(self, code):
         labels = string.ascii_uppercase
         ast = self.parser.parse(bytes(code, "utf-8"))
-        main = self.language.query(
-            """
-            (((function_definition (function_declarator (identifier) @function_name)) @main_definition)
-            (#eq? @function_name "main"))
-            """
-        )
-        main = main.captures(ast.root_node)
-        main_definition = [m[0] for m in main if m[1] == "main_definition"]
 
-        if len(main_definition) != 1:
-            return "ERROR: No main function found"
+        root = ast.root_node
+        if not "multiple_methods" in self.features:
+            root = self.get_main_definition(code)
 
-        main_definition = main_definition[0]
-
-        loops = self.get_loops(main_definition)
+        loops = self.get_loops(root)
         loops = sorted(loops, key=lambda x: x.start_byte, reverse=True)
 
         for i, l in enumerate(loops):
-            loop_label = "/* Loop" + labels[len(loops) - i - 1] + " */  "
+            loop_label = "/* Loop_" + labels[len(loops) - i - 1] + " */  "
             code = code[: l.start_byte] + loop_label + code[l.start_byte :]
         return code
 
-    def add_multi_procedural_loop_labels(self, code):
-        labels = string.ascii_uppercase
-        ast = self.parser.parse(bytes(code, "utf-8"))
-        loops = self.get_loops(ast.root_node)
-        loops = sorted(loops, key=lambda x: x.start_byte, reverse=True)
-
-        new_code = ""
-
-        for i, l in enumerate(loops):
-            loop_label = "/* Loop" + labels[len(loops) - i - 1] + " */  "
-            new_code += code[: l.start_byte] + loop_label + code[l.start_byte :]
-
-        return new_code
-
     def is_multi_loop(self, code):
-        main_definition = self.get_main_definition(code)
-        loops = self.get_loops(main_definition)
+        ast = self.parser.parse(bytes(code, "utf-8"))
+        root = ast.root_node
+        if not "multiple_methods" in self.features:
+            root = self.get_main_definition(code)
+        loops = self.get_loops(root)
         return len(loops) > 1
 
     def apply_patches(self, code):
-        # All last minute patches go here
+        """
+        Miscellaneous patches to fix benchmarks.
+        Frama-C panics on seeing while(true) without stdbool.
+        tmpl() is not supported by Frama-C.
+        """
         while_true_loops = re.findall(r"while\s*\(true\)", code)
         for l in while_true_loops:
             code = code.replace(l, "while(1)")
+
+        lines = code.split("\n")
+        lines = list(map(lambda x: re.sub(r"tmpl\s*\(.*\)\s*;", "", x), lines))
+        return "\n".join(lines)
+
+        return code
+
+    def remove_reach_error_calls(self, code):
+        ast = self.parser.parse(bytes(code, "utf-8"))
+        root = ast.root_node
+        if not "multiple_methods" in self.features:
+            root = self.get_main_definition(code)
+
+        function_calls = self.get_function_calls(root)
+        function_calls = sorted(
+            function_calls, key=lambda x: x[0].start_byte, reverse=True
+        )
+        for function_call in function_calls:
+            if function_call[1] == "reach_error":
+                code = (
+                    code[: function_call[0].start_byte]
+                    + "{; \n//@ assert(\\false);\n}"
+                    + code[function_call[0].end_byte :]
+                )
+
+        return code
+
+    def add_method_label(self, code):
+        ast = self.parser.parse(bytes(code, "utf-8"))
+        function_definitions = self.get_function_definitions(ast.root_node)
+        function_definitions = sorted(
+            function_definitions, key=lambda x: x[0].start_byte, reverse=True
+        )
+        for function_definition in function_definitions:
+            code = (
+                code[: function_definition[0].start_byte]
+                + "\n/* Method_"
+                + function_definition[1]
+                + " */\n"
+                + code[function_definition[0].start_byte :]
+            )
         return code
 
     def preprocess(self, code, features, max_lines=500):
@@ -1294,35 +1290,48 @@ class FramaCBenchmark(Benchmark):
             code = self.replace_nondets_and_assert_assumes(code)
             code = self.apply_patches(code)
             code = self.add_boiler_plate(code)
-            code = self.add_frama_c_asserts(code)
-            code = self.remove_tmpl(code)
+            code = self.error_label_to_frama_c_assert(code)
+            code = self.remove_reach_error_calls(code)
             code = self.clean_newlines(code)
+
+            """
+            Remove unqualified benchmarks
+            """
             if self.has_ill_formed_asserts(code):
                 raise InvalidBenchmarkException("Ill-formed asserts")
-
-            if self.get_total_loop_count(code) < 1:
-                raise InvalidBenchmarkException("No loop found")
-
-            # Filter out benchmarks with multiple methods or loops based on features
-            if (not "multiple_methods" in features) and self.is_interprocedural(code):
-                raise InvalidBenchmarkException("Found multiple methods")
-            if (not "multiple_loops" in features) and self.is_multi_loop(code):
-                raise InvalidBenchmarkException("Found multiple loops")
-
+            if self.get_total_loop_count(code) < 1 and not self.is_interprocedural(
+                code
+            ):
+                raise InvalidBenchmarkException(
+                    "No loop or multiple methods found. Cannot infer any annotations"
+                )
+            """
+            We do not support benchmarks with arrays or pointers.
+            """
             if (not "arrays" in features) and self.uses_arrays(code):
                 raise InvalidBenchmarkException("Found arrays")
             if (not "pointers" in features) and self.uses_pointers(code):
                 raise InvalidBenchmarkException("Found pointers")
+
+            """
+            Add labels or raise exception depending on the features set
+            """
+            if "multiple_methods" in features:
+                code = self.add_method_label(code)
+            elif self.is_interprocedural(code):
+                raise InvalidBenchmarkException("Found multiple methods")
+
+            if "multiple_loops" in features:
+                code = self.add_loop_labels(code)
+            elif self.is_multi_loop(code):
+                raise InvalidBenchmarkException("Found multiple loops")
+
             num_lines = len(code.splitlines())
             if num_lines > max_lines:
                 raise InvalidBenchmarkException(
-                    "Number of lines ({}) exceeded max_lines ({})".format(
-                        num_lines, max_lines
-                    )
+                    f"Number of lines ({num_lines}) exceeded max_lines ({max_lines})"
                 )
-            # add benchmark specific annotations
-            if "multiple_loops" in features:
-                code = self.add_loop_labels(code)
+
         except Exception as e:
             raise InvalidBenchmarkException(str(e))
         return code
