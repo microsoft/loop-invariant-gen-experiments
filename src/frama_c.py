@@ -23,7 +23,7 @@ class FramaCChecker(Checker):
         self.parser = Parser()
         self.parser.set_language(self.language)
 
-    def check(self, input, check_variant, use_json_dump_for_invariants=True):
+    def check(self, input, check_variant, use_json_dump_for_invariants=False):
         temp_file = datetime.datetime.now().strftime(
             "/tmp/temp_eval_%Y_%m_%d_%H_%M_%S_"
         ) + str(random.randint(0, 1000000))
@@ -1513,4 +1513,3 @@ class FramaCBenchmark(Benchmark):
         except Exception as e:
             raise InvalidBenchmarkException(str(e))
         return code
-

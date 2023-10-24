@@ -207,9 +207,9 @@ def main(args):
         )
         return
 
-    p.run_sequence(max_benchmarks=args.max_benchmarks, start_index=args.start_index)
+    # p.run_sequence(max_benchmarks=args.max_benchmarks, start_index=args.start_index)
 
-    return
+    # return
 
     if args.provider == "local":
         p.run_local(

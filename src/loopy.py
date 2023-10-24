@@ -862,14 +862,13 @@ class LoopyPipeline:
                     checker_input = self.benchmark.combine_llm_outputs(
                         instance["benchmark_code"],
                         [llm_output if not llm_output.startswith("ERROR") else ""],
-                        self.analysis,
+                        "one_loop_one_method",
                     )
                     completion["invariants"] = llm_output
                     completion["code_with_invariants"] = checker_input
                     success, checker_message = self.checker.check(
                         checker_input,
                         ("termination" in self.analysis),
-                        use_json_output=self.use_json_output,
                     )
                     completion["success"] = success
                     completion["checker_message"] = checker_message
@@ -882,13 +881,11 @@ class LoopyPipeline:
                                 pruned_code,
                             ) = self.checker.houdini(
                                 checker_input,
-                                self.analysis,
-                                use_json_output=self.use_json_output,
+                                "one_loop_one_method",
                             )
                             success, checker_message = self.checker.check(
                                 pruned_code,
                                 ("termination" in self.analysis),
-                                use_json_output=self.use_json_output,
                             )
                             completion["success_after_prune"] = success
                             completion["pruned_code"] = pruned_code
@@ -915,12 +912,11 @@ class LoopyPipeline:
                             "ERROR: Output does not contain at least 1 complete code block"
                         )
                     ],
-                    self.analysis,
+                    "one_loop_one_method",
                 )
                 success, checker_message = self.checker.check(
                     checker_input,
                     ("termination" in self.analysis),
-                    use_json_output=self.use_json_output,
                 )
 
                 instance_log_json["code_with_combined_invariants"] = checker_input
@@ -932,13 +928,11 @@ class LoopyPipeline:
                     try:
                         success, pruned_code = self.checker.houdini(
                             checker_input,
-                            self.analysis,
-                            use_json_output=self.use_json_output,
+                            "one_loop_one_method",
                         )
                         success, checker_message = self.checker.check(
                             pruned_code,
                             ("termination" in self.analysis),
-                            use_json_output=self.use_json_output,
                         )
                         instance_log_json["code_after_combine_and_prune"] = pruned_code
                         instance_log_json[
