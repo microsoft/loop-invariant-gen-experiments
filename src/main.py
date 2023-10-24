@@ -220,7 +220,7 @@ def main(args):
         return
 
     if args.svcomp_files:
-        p.svcomp_files(
+        p.multiprocedural_loop_invariant_analysis(
             max_benchmarks=args.max_benchmarks,
             start_index=args.start_index,
         )
