@@ -2317,7 +2317,7 @@ class LoopyPipeline:
 
         pre_post_prompt = Prompt(
             system_text_file="templates/svcomp_system_message.txt",
-            prompt_text_file="templates/svcomp_loops_prompt.txt",
+            prompt_text_file="templates/svcomp_prompt.txt",
             num_completions=5,
         )
 
