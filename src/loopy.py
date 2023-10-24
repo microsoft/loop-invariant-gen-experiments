@@ -2361,6 +2361,8 @@ class LoopyPipeline:
                         completions.append(completion_json)
                         continue
 
+                    Logger.log_info(f"Checking completion {len(completions) + 1}")
+                    
                     checker_input_with_annotations = self.benchmark.combine_llm_outputs(
                         self.benchmark.get_code(benchmark_file),
                         [block],
