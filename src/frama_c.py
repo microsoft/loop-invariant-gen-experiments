@@ -40,7 +40,6 @@ class FramaCChecker(Checker):
                 -kernel-log a:{temp_kernel_log_file} -then -no-unicode -report -report-csv {temp_output_dump_file}"
         p = subprocess.Popen(cmd.split(), stdout=subprocess.PIPE)
         frama_c_std_output, err = p.communicate()
-        print(frama_c_std_output.decode("utf-8"))
 
         """
         Check kernel log for syntax error line
@@ -479,7 +478,12 @@ class FramaCChecker(Checker):
         for i, line in enumerate(checker_input.splitlines()):
             if self.has_invariant(line):
                 for inv in non_inductive_invariants:
-                    if "loop invariant " in line and inv in line:
+                    inv_match = re.findall(r"loop invariant (\w+: )?(.+);", line)
+                    if (
+                        len(inv_match) == 1
+                        and len(inv_match[0]) == 2
+                        and inv_match[0][1] == inv
+                    ):
                         non_inductive_invariant_line_nos.append(i)
                         break
 
