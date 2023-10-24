@@ -25,6 +25,12 @@ def parse_args(args):
         action="store_true",
     )
 
+    parser.add_argument(
+        "--svcomp-files",
+        help="Run the SVCOMP benchmarks",
+        action="store_true",
+    )
+
     # Checker to use
     parser.add_argument(
         "--checker",
@@ -208,6 +214,13 @@ def main(args):
 
     if args.termination_analysis:
         p.termination_analysis(
+            max_benchmarks=args.max_benchmarks,
+            start_index=args.start_index,
+        )
+        return
+
+    if args.svcomp_files:
+        p.svcomp_files(
             max_benchmarks=args.max_benchmarks,
             start_index=args.start_index,
         )
