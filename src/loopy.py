@@ -809,21 +809,31 @@ class LoopyPipeline:
         total = len(benchmark_subset)
         for i, instance in enumerate(benchmark_subset):
             if "completions" not in instance.keys():
+                Logger.log_info(
+                    f"Skipping benchmark: {i}/{total} because it does not have completions"
+                )
                 stats["skipped"].append(i)
                 log_json.append(instance)
                 continue
 
             if "checker_output" in instance and instance["checker_output"]:
+                Logger.log_info(
+                    f"Skipping benchmark: {i}/{total} because it already succeeded"
+                )
                 stats["success"].append(i)
                 log_json.append(instance)
                 continue
 
-            if "checker_output_after_combine_and_prune" in instance and instance[
-                "checker_output_after_combine_and_prune"
-            ]:
+            if (
+                "checker_output_after_combine_and_prune" in instance
+                and instance["checker_output_after_combine_and_prune"]
+            ):
+                Logger.log_info(
+                    f"Skipping benchmark: {i}/{total} because it already succeeded"
+                )
                 stats["success"].append(i)
                 log_json.append(instance)
-                continue 
+                continue
 
             print(
                 "Rechecking benchmark: {i}/{n}".format(i=start_index + i + 1, n=total)
