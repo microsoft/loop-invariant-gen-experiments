@@ -741,8 +741,6 @@ class FramaCBenchmark(Benchmark):
         annotations = {}
         for label in labels:
             annotation = ""
-            print(label[1])
-            print(code_block)
             begin = re.findall(r"<\s*" + label[1] + r"\s*>", code_block)
             end = re.findall(r"<\s*/\s*" + label[1] + r"\s*>", code_block)
             if len(begin) == 1 and len(end) == 1:
@@ -750,8 +748,8 @@ class FramaCBenchmark(Benchmark):
                     code_block.find(begin[0]) + len(begin[0]) : code_block.find(end[0])
                 ]
             else:
-                print(begin, end)
-                raise Exception("Invalid annotation")
+                print("Ill-formatted annotation found")
+                continue
             annotations[label[1]] = annotation
 
         return annotations
