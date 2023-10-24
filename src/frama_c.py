@@ -12,11 +12,16 @@ from copy import deepcopy
 from benchmark import Benchmark, InvalidBenchmarkException
 from checker import Checker
 from tree_sitter import Language, Parser
+from llm_utils import Logger
 
 
 class FramaCChecker(Checker):
     def __init__(self):
         super().__init__("frama-c")
+        lib_path = os.path.join(os.path.dirname(__file__), "tree_sitter_lib/build/")
+        self.language = Language(lib_path + "c-tree-sitter.so", "c")
+        self.parser = Parser()
+        self.parser.set_language(self.language)
 
     def check(self, input, check_variant, use_json_dump_for_invariants=True):
         temp_file = datetime.datetime.now().strftime(
@@ -58,8 +63,15 @@ class FramaCChecker(Checker):
                 return False, error_message
 
         checker_output = []
+        loop_invariants = []
+        user_assertions = []
+        loop_variant = ""
+        function_contracts = []
         success = False
 
+        """
+        Get the status of each loop invariant
+        """
         if use_json_dump_for_invariants:
             if not os.path.exists(temp_wp_json_report_file):
                 return False, "No JSON report found"
@@ -93,13 +105,6 @@ class FramaCChecker(Checker):
                         for inv_id in loop_invariant_status
                     ]
                 )
-                success = all(
-                    [
-                        loop_invariant_status[inv_id]["preserved"]
-                        and loop_invariant_status[inv_id]["established"]
-                        for inv_id in loop_invariant_status
-                    ]
-                )
 
                 invariants_with_ids = self.get_invariants_with_ids(input.splitlines())
 
@@ -110,49 +115,42 @@ class FramaCChecker(Checker):
                         loop_invariant_status[inv]["preserved"]
                         and loop_invariant_status[inv]["established"]
                     ):
-                        checker_output.append(
+                        loop_invariants.append(
                             f"loop invariant {invariants_with_ids[inv]} is inductive."
                         )
                     elif (
                         not loop_invariant_status[inv]["preserved"]
                         and loop_invariant_status[inv]["established"]
                     ):
-                        checker_output.append(
+                        loop_invariants.append(
                             f"loop invariant {invariants_with_ids[inv]} is established but not preserved."
                         )
                     elif (
                         loop_invariant_status[inv]["preserved"]
                         and not loop_invariant_status[inv]["established"]
                     ):
-                        checker_output.append(
+                        loop_invariants.append(
                             f"loop invariant {invariants_with_ids[inv]} is preserved but not established."
                         )
                     else:
-                        checker_output.append(
+                        loop_invariants.append(
                             f"loop invariant {invariants_with_ids[inv]} is neither established nor preserved."
                         )
 
-                checker_output = "\n".join(checker_output)
+                loop_invariants = "\n".join(loop_invariants)
 
         else:
             # Parse the output dump
-            if not check_variant and not os.path.exists(temp_output_dump_file):
+            if not os.path.exists(temp_output_dump_file):
                 return False, "No CSV output dump found from Frama-C"
 
             with open(temp_output_dump_file, "r", encoding="utf-8") as f:
-                checker_output = [row for row in csv.DictReader(f, delimiter="\t")]
+                csv_dump = [row for row in csv.DictReader(f, delimiter="\t")]
 
-                success = all(
-                    row["status"] == "Valid"
-                    for row in checker_output
-                    if row["property kind"] == "loop invariant"
-                    or row["property kind"] == "user assertion"
-                )
-
-                checker_output = "\n".join(
+                loop_invariants = "\n".join(
                     [
                         f"Invariant {row['property']} on line {row['line']}: {row['status']}"
-                        for row in checker_output
+                        for row in csv_dump
                         if row["property kind"] == "loop invariant"
                     ]
                 )
@@ -160,16 +158,20 @@ class FramaCChecker(Checker):
         if not check_variant and not os.path.exists(temp_output_dump_file):
             return False, "No CSV output dump found from Frama-C"
 
+        """
+        Get the status of each user assertion
+        and the function contracts
+        """
         with open(temp_output_dump_file, "r", encoding="utf-8") as f:
-            assertion_output = [row for row in csv.DictReader(f, delimiter="\t")]
+            csv_dump = [row for row in csv.DictReader(f, delimiter="\t")]
 
             success = success and all(
                 row["status"] == "Valid"
-                for row in assertion_output
+                for row in csv_dump
                 if row["property kind"] == "user assertion"
             )
 
-            user_assertion = "\n".join(
+            user_assertions = "\n".join(
                 [
                     f"Assertion {row['property']}: "
                     + (
@@ -177,15 +179,27 @@ class FramaCChecker(Checker):
                         if row["status"] == "Unknown"
                         else f"{row['status']}"
                     )
-                    for row in assertion_output
+                    for row in csv_dump
                     if row["property kind"] == "user assertion"
                 ]
             )
 
-        checker_output = checker_output + "\n" + user_assertion + "\n"
+            for row in csv_dump:
+                if row["property kind"] == "precondition":
+                    function_contracts.append(
+                        f"Pre-condition {row['property']} on line {row['line']}: {row['status']}"
+                    )
+                elif row["property kind"] == "postcondition":
+                    function_contracts.append(
+                        f"Post-condition {row['property']} on line {row['line']}: {row['status']}"
+                    )
 
+            function_contracts = "\n".join(function_contracts)
+
+        """
+        Check the status of the loop variant
+        """
         if check_variant:
-            # print(str(frama_c_std_output, "UTF-8"))
             msg = str(frama_c_std_output, "UTF-8").split("\n")
             result = list(filter(lambda x: "Loop variant" in x, msg))
             if len(result) < 1:
@@ -193,11 +207,22 @@ class FramaCChecker(Checker):
                 return False, "No variant found (wrong mode?)"
 
             if "Valid" in result[0]:
-                checker_output = checker_output + "Loop variant is Valid.\n"
+                loop_variant = "Loop variant is Valid.\n"
                 success = success and True
             else:
-                checker_output = checker_output + "Loop variant is Invalid.\n"
+                loop_variant = "Loop variant is Invalid.\n"
                 success = False
+
+        checker_output = (
+            loop_invariants
+            + "\n"
+            + user_assertions
+            + "\n"
+            + function_contracts
+            + "\n"
+            + loop_variant
+        )
+        checker_output = checker_output.strip()
 
         os.remove(temp_c_file)
         os.remove(temp_wp_json_report_file)
@@ -207,7 +232,7 @@ class FramaCChecker(Checker):
         return success, checker_output
 
     def houdini(self, input_code, features, use_json_dump_for_invariants=False):
-        print("Pruning annotations...")
+        Logger.log_info("Houdini procedure initiated")
 
         annotation_line_mapping = {}
         lines = input_code.splitlines()
@@ -278,7 +303,7 @@ class FramaCChecker(Checker):
                     code_queue.append("\n".join(code_lines))
 
             else:
-                # TODO: What about TIMEOUT?
+                # What about TIMEOUT?
                 # If any invariant causes a Timeout, it's marked as "Unknown"
                 # because the prover could not prove it. So removing it for now.
                 unknown_inv_lines = self.get_unknown_inv_no_from_error_msg(
@@ -304,6 +329,7 @@ class FramaCChecker(Checker):
                         code_lines__ = deepcopy(code_lines)
                         code_lines__[line_no] = ""
                         code_queue.append("\n".join(code_lines__))
+
             num_frama_c_calls += 1
 
         if num_frama_c_calls == 1000:
@@ -405,6 +431,24 @@ class FramaCChecker(Checker):
                 if inv not in variants:
                     variants.append(inv)
         return variants
+
+    def has_annotations(self, code):
+        ast = self.parser.parse(bytes(code, "utf-8"))
+        comment_query = self.language.query(
+            """
+            (comment) @comment 
+            """
+        )
+        comments = comment_query.captures(ast.root_node)
+        annotations = list(
+            filter(lambda x: x[0].text.decode("utf-8").startswith("/*@"), comments)
+        )
+        annotation_texts = [
+            x[0].text.decode("utf-8")[3:-2].strip() for x in annotations
+        ]
+        annotation_texts = "".join(annotation_texts)
+
+        return len(annotation_texts) > 0
 
     def get_variant_expressions(self, completions):
         variants = []
@@ -1455,10 +1499,10 @@ class FramaCBenchmark(Benchmark):
             elif self.is_multi_loop(code):
                 raise InvalidBenchmarkException("Found multiple loops")
 
-            if not (
-                self.is_interprocedural(code) or self.get_total_loop_count(code) > 1
-            ):
-                raise InvalidBenchmarkException("Not for SV-COMP benchmark set")
+            # if not (
+            #     self.is_interprocedural(code) or self.get_total_loop_count(code) > 1
+            # ):
+            #     raise InvalidBenchmarkException("Not for SV-COMP benchmark set")
 
             num_lines = len(code.splitlines())
             if num_lines > max_lines:
@@ -1470,294 +1514,3 @@ class FramaCBenchmark(Benchmark):
             raise InvalidBenchmarkException(str(e))
         return code
 
-
-code = """
-unsigned int base2flt(unsigned int m , int e ) 
-{ unsigned int res ;
-  unsigned int __retres4 ;
-
-  {
-  if (! m) {
-    __retres4 = 0U;
-    goto return_label;
-  } else {
-
-  }
-  if (m < 1U << 24U) {
-    {
-    while (1) {
-      while_0_continue: /* CIL Label */ ;
-      if (e <= -128) {
-        __retres4 = 0U;
-        goto return_label;
-      } else {
-
-      }
-      e = e - 1;
-      m = m << 1U;
-      if (m < 1U << 24U) {
-
-      } else {
-        goto while_0_break;
-      }
-    }
-    while_0_break: /* CIL Label */ ;
-    }
-  } else {
-    {
-    while (1) {
-      while_1_continue: /* CIL Label */ ;
-      if (m >= 1U << 25U) {
-
-      } else {
-        goto while_1_break;
-      }
-      if (e >= 127) {
-        __retres4 = 4294967295U;
-        goto return_label;
-      } else {
-
-      }
-      e = e + 1;
-      m = m >> 1U;
-    }
-    while_1_break: /* CIL Label */ ;
-    }
-  }
-  m = m & ~ (1U << 24U);
-  res = m | ((unsigned int )(e + 128) << 24U);
-  __retres4 = res;
-  return_label: /* CIL Label */ 
-  return (__retres4);
-}
-}
-unsigned int addflt(unsigned int a , unsigned int b ) 
-{ unsigned int res ;
-  unsigned int ma ;
-  unsigned int mb ;
-  unsigned int delta ;
-  int ea ;
-  int eb ;
-  unsigned int tmp ;
-  unsigned int __retres10 ;
-
-  {
-  if (a < b) {
-    tmp = a;
-    a = b;
-    b = tmp;
-  } else {
-
-  }
-  if (! b) {
-    __retres10 = a;
-    goto return_label;
-  } else {
-
-  }
-  {
-  ma = a & ((1U << 24U) - 1U);
-  ea = (int )(a >> 24U) - 128;
-  ma = ma | (1U << 24U);
-  mb = b & ((1U << 24U) - 1U);
-  eb = (int )(b >> 24U) - 128;
-  mb = mb | (1U << 24U);
-  __VERIFIER_assert(ea >= eb);
-  delta = ea - eb;
-  if(!(delta < sizeof(mb) * 8)) {abort();}
-  mb = mb >> delta;
-  }
-  if (! mb) {
-    __retres10 = a;
-    goto return_label;
-  } else {
-
-  }
-  ma = ma + mb;
-  if (ma & (1U << 25U)) {
-    if (ea == 127) {
-      __retres10 = 4294967295U;
-      goto return_label;
-    } else {
-
-    }
-    ea = ea + 1;
-    ma = ma >> 1U;
-  } else {
-
-  }
-  {
-  __VERIFIER_assert(ma < 1U << 25U);
-  ma = ma & ((1U << 24U) - 1U);
-  res = ma | ((unsigned int )(ea + 128) << 24U);
-  }
-  __retres10 = res;
-  return_label: /* CIL Label */ 
-  return (__retres10);
-}
-}
-unsigned int mulflt(unsigned int a , unsigned int b ) 
-{ unsigned int res ;
-  unsigned int ma ;
-  unsigned int mb ;
-  unsigned long long accu ;
-  int ea ;
-  int eb ;
-  unsigned int tmp ;
-  unsigned int __retres10 ;
-
-  {
-  if (a < b) {
-    tmp = a;
-    a = b;
-    b = tmp;
-  } else {
-
-  }
-  if (! b) {
-    __retres10 = 0U;
-    goto return_label;
-  } else {
-
-  }
-  ma = a & ((1U << 24U) - 1U);
-  ea = (int )(a >> 24U) - 128;
-  ma = ma | (1U << 24U);
-  mb = b & ((1U << 24U) - 1U);
-  eb = (int )(b >> 24U) - 128;
-  mb = mb | (1U << 24U);
-  ea = ea + eb;
-  ea = ea + 24;
-  if (ea > 127) {
-    __retres10 = 4294967295U;
-    goto return_label;
-  } else {
-
-  }
-  if (ea < -128) {
-    __retres10 = 0U;
-    goto return_label;
-  } else {
-
-  }
-  accu = ma;
-  accu = accu * (unsigned long long )mb;
-  accu = accu >> 24U;
-  if (accu >= (unsigned long long )(1U << 25U)) {
-    if (ea == 127) {
-      __retres10 = 4294967295U;
-      goto return_label;
-    } else {
-
-    }
-    ea = ea + 1;
-    accu = accu >> 1U;
-    if (accu >= (unsigned long long )(1U << 25U)) {
-      __retres10 = 4294967295U;
-      goto return_label;
-    } else {
-
-    }
-  } else {
-
-  }
-  {
-  __VERIFIER_assert(accu < (unsigned long long )(1U << 25U));
-  __VERIFIER_assert(accu & (unsigned long long )(1U << 24U));
-  ma = accu;
-  ma = ma & ~ (1U << 24U);
-  res = ma | (unsigned int )((ea + 128) << 24U);
-  }
-  __retres10 = res;
-  return_label: /* CIL Label */ 
-  return (__retres10);
-}
-}
-int main(void) 
-{ unsigned int a ;
-  unsigned int ma  = __VERIFIER_nondet_uint();
-  signed char ea  = __VERIFIER_nondet_char();
-  unsigned int b ;
-  unsigned int mb  = __VERIFIER_nondet_uint();
-  signed char eb  = __VERIFIER_nondet_char();
-  unsigned int r_add1 ;
-  unsigned int r_add2 ;
-  unsigned int zero ;
-  int tmp ;
-  int tmp___0 ;
-  int __retres14 ;
-
-  {
-  {
-  zero = base2flt(0, 0);
-  a = base2flt(ma, ea);
-  b = base2flt(mb, eb);
-  r_add1 = addflt(a, b);
-  r_add2 = addflt(b, a);
-  }
-  if (r_add1 < r_add2) {
-    tmp___0 = -1;
-  } else {
-    if (r_add1 > r_add2) {
-      tmp = 1;
-    } else {
-      tmp = 0;
-    }
-    tmp___0 = tmp;
-  }
-  {
-  __VERIFIER_assert(tmp___0 == 0);
-  }
-  __retres14 = 0;
-  return (__retres14);
-}
-}
-
-"""
-fb = FramaCBenchmark(features="multiple_loops_multiple_methods")
-ast = fb.parser.parse(bytes(code, "utf-8"))
-# print(ast.root_node.sexp())
-code = fb.preprocess(code, "multiple_loops_multiple_methods")
-llm_output = """
-/*@
-    <Function_base2flt>
-        requires m >= 0 && e >= -128 && e <= 127;
-        ensures \\result >= 0;
-    </Function_base2flt>
-
-    <Function_addflt>
-        requires a >= 0 && b >= 0;
-        ensures \\result >= 0;
-    </Function_addflt>
-
-    <Function_mulflt>
-        requires a >= 0 && b >= 0;
-        ensures \\result >= 0;
-    </Function_mulflt>
-
-    <Function_main>
-        requires ma >= 0 && ea >= -128 && ea <= 127 && mb >= 0 && eb >= -128 && eb <= 127;
-        ensures \\result == 0;
-    </Function_main>
-
-    <Loop_A>
-        loop invariant m >= 0;
-        loop invariant e >= -128;
-    </Loop_A>
-
-    <Loop_B>
-        loop invariant m >= 0;
-        loop invariant e <= 127;
-    </Loop_B>
-*/
-"""
-
-llm_output1 = """
-\n/*@\n    <Function_base2flt> \n        requires 0 <= e && e <= 255;\n        ensures \\result == (\\at(m, Pre) | ((\\at(e, Pre) << 24U) & ~ (1U << 24U)));\n    </Function_base2flt>\n\n    <Function_addflt> \n        requires 0 <= a && a <= 4294967295U;\n        requires 0 <= b && b <= 4294967295U;\n        ensures \\result >= a && \\result >= b;\n    </Function_addflt>\n\n    <Function_mulflt> \n        requires 0 <= a && a <= 4294967295U;\n        requires 0 <= b && b <= 4294967295U;\n        ensures \\result >= a && \\result >= b;\n    </Function_mulflt>\n\n    <Function_main> \n        requires 0 <= ma && ma <= 4294967295U;\n        requires -128 <= ea && ea <= 127;\n        requires 0 <= mb && mb <= 4294967295U;\n        requires -128 <= eb && eb <= 127;\n        ensures \\result == 0;\n    </Function_main>\n\n    <Loop_A>\n        loop invariant m >= \\at(m, LoopEntry);\n        loop invariant e <= \\at(e, LoopEntry);\n    </Loop_A>\n\n    <Loop_B>\n        loop invariant m <= \\at(m, LoopEntry);\n        loop invariant e >= \\at(e, LoopEntry);\n    </Loop_B>\n*/\n
-"""
-combined_output = fb.combine_llm_outputs(
-    code, [llm_output, llm_output1], "multiple_loops_multiple_methods"
-)
-print(combined_output)
-with open("combined.c", "w") as f:
-    f.write(combined_output)
