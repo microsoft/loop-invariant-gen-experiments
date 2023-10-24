@@ -289,7 +289,7 @@ class LoopyPipeline:
                             success,
                             pruned_code,
                             num_frama_c_calls,
-                        ) = self.checker.prune_annotations_and_check(
+                        ) = self.checker.houdini(
                             checker_input_with_invariants,
                             "one_loop_one_method",
                             use_json_output=self.use_json_output,
@@ -403,7 +403,7 @@ class LoopyPipeline:
                         success,
                         pruned_code,
                         num_frama_c_calls,
-                    ) = self.checker.prune_annotations_and_check(
+                    ) = self.checker.houdini(
                         code_with_combined_invariants,
                         "one_loop_one_method",
                         use_json_output=self.use_json_output,
@@ -673,7 +673,7 @@ class LoopyPipeline:
                             success,
                             pruned_code,
                             num_solver_calls,
-                        ) = self.checker.prune_annotations_and_check(
+                        ) = self.checker.houdini(
                             checker_input,
                             self.analysis,
                             use_json_output=self.use_json_output,
@@ -704,7 +704,7 @@ class LoopyPipeline:
                         success,
                         pruned_code,
                         num_solver_calls,
-                    ) = self.checker.prune_annotations_and_check(
+                    ) = self.checker.houdini(
                         checker_input,
                         self.analysis,
                         use_json_output=self.use_json_output,
@@ -880,7 +880,7 @@ class LoopyPipeline:
                             (
                                 success,
                                 pruned_code,
-                            ) = self.checker.prune_annotations_and_check(
+                            ) = self.checker.houdini(
                                 checker_input,
                                 self.analysis,
                                 use_json_output=self.use_json_output,
@@ -930,7 +930,7 @@ class LoopyPipeline:
                 if not success:
                     print("Pruning combined completion")
                     try:
-                        success, pruned_code = self.checker.prune_annotations_and_check(
+                        success, pruned_code = self.checker.houdini(
                             checker_input,
                             self.analysis,
                             use_json_output=self.use_json_output,
@@ -1087,7 +1087,7 @@ class LoopyPipeline:
                             (
                                 success,
                                 pruned_code,
-                            ) = self.checker.prune_annotations_and_check(
+                            ) = self.checker.houdini(
                                 checker_input,
                                 self.analysis,
                                 use_json_output=self.use_json_output,
@@ -1137,7 +1137,7 @@ class LoopyPipeline:
                 if not success:
                     print("Pruning combined completion")
                     try:
-                        success, pruned_code = self.checker.prune_annotations_and_check(
+                        success, pruned_code = self.checker.houdini(
                             checker_input,
                             self.analysis,
                             use_json_output=self.use_json_output,
@@ -1511,9 +1511,9 @@ class LoopyPipeline:
 
                         extraction_filter = None
                         if annotation_type == "loop_invariants":
-                            extraction_filter = self.checker.is_invariant
+                            extraction_filter = self.checker.has_invariant
                         elif annotation_type == "loop_variants":
-                            extraction_filter = self.checker.is_variant
+                            extraction_filter = self.checker.has_variant
                         else:
                             raise Exception("Unsupported annotation type")
 
@@ -1784,7 +1784,7 @@ class LoopyPipeline:
                                 success,
                                 pruned_code,
                                 num_frama_c_calls,
-                            ) = self.checker.prune_annotations_and_check(
+                            ) = self.checker.houdini(
                                 checker_input_with_invariants,
                                 "one_loop_one_method",
                                 use_json_output=self.use_json_output,
@@ -1844,7 +1844,7 @@ class LoopyPipeline:
                             success,
                             pruned_code,
                             num_frama_c_calls,
-                        ) = self.checker.prune_annotations_and_check(
+                        ) = self.checker.houdini(
                             code_with_combined_invariants,
                             "one_loop_one_method",
                             use_json_output=self.use_json_output,
@@ -1990,7 +1990,7 @@ class LoopyPipeline:
                 variant_code_blocks, variant_llm_output = self.llm.generate_annotation(
                     input={"code": self.benchmark.get_code(benchmark_file)},
                     prompt=variants_prompt,
-                    extraction_filter=self.checker.is_variant,
+                    extraction_filter=self.checker.has_variant,
                 )
                 variants = self.checker.get_variant_expressions(
                     [
@@ -2084,7 +2084,7 @@ class LoopyPipeline:
                             "loop_variant": "(" + ", ".join(variant) + ")",
                         },
                         prompt=invariants_prompt,
-                        extraction_filter=self.checker.is_invariant,
+                        extraction_filter=self.checker.has_invariant,
                     )
 
                     variant_log_json["invariant_llm_output"] = invariant_llm_output
@@ -2110,7 +2110,7 @@ class LoopyPipeline:
                         success,
                         pruned_code,
                         num_frama_c_calls,
-                    ) = self.checker.prune_annotations_and_check(
+                    ) = self.checker.houdini(
                         code_with_combined_annotations,
                         "one_loop_one_method",
                         use_json_output=self.use_json_output,

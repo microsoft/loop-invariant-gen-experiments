@@ -18,13 +18,18 @@ class FramaCChecker(Checker):
     def __init__(self):
         super().__init__("frama-c")
 
-    def is_invariant(self, line):
+    def has_invariant(self, line):
         inv = re.findall(r"loop invariant (.+);", line)
         return len(inv) > 0
 
-    def is_variant(self, line):
+    def has_variant(self, line):
         inv = re.findall(r"loop variant (.+);", line)
         return len(inv) > 0
+
+    def has_function_contract(self, lines):
+        requires = re.findall(r"requires .+;", lines)
+        ensures = re.findall(r"ensures .+;", lines)
+        return len(requires) > 0 or len(ensures) > 0
 
     def get_annotation_error_from_kernel_logs(self, error_line):
         line_num = re.search(r"\:(\d+)\:", error_line)
@@ -36,7 +41,7 @@ class FramaCChecker(Checker):
         error_message = f"Annotation error on line {line_num}: {error_message}"
         return error_message
 
-    def check(self, input, check_variant, verbose=False, use_json_output=False):
+    def check(self, input, check_variant, use_json_dump_for_invariants=True):
         temp_file = datetime.datetime.now().strftime(
             "/tmp/temp_eval_%Y_%m_%d_%H_%M_%S_"
         ) + str(random.randint(0, 1000000))
@@ -48,23 +53,20 @@ class FramaCChecker(Checker):
         with open(temp_c_file, "w") as f:
             f.write(input)
 
-        if verbose:
-            print("==============================")
-        cmd = f"frama-c -wp -wp-verbose 100 -wp-debug 100 -wp-timeout 3 \
+        cmd = f"frama-c -wp -wp-verbose 100 -wp-debug 100 -wp-timeout 5 \
                 -wp-prover=alt-ergo,z3,cvc4 {temp_c_file} -wp-report-json {temp_wp_json_report_file} -kernel-warn-key annot-error=active \
                 -kernel-log a:{temp_kernel_log_file} -then -no-unicode -report -report-csv {temp_output_dump_file}"
         p = subprocess.Popen(cmd.split(), stdout=subprocess.PIPE)
         frama_c_std_output, err = p.communicate()
 
-        # Look for errors in the kernel logs
+        """
+        Check kernel log for syntax error line
+        """
         if not os.path.exists(temp_kernel_log_file):
             return False, "No kernel logs found"
         with open(temp_kernel_log_file, "r", encoding="utf-8") as f:
             kernel_logs = f.read()
             kl_lines = kernel_logs.splitlines()
-            # if len(kl_lines) > 1:
-            # print("More than 1 line in Frama-C kernel logs.")
-            # print(kernel_logs)
             error_line = None
             for line in kl_lines:
                 if "[kernel:annot-error]" in line:
@@ -81,7 +83,7 @@ class FramaCChecker(Checker):
         checker_output = []
         success = False
 
-        if use_json_output:
+        if use_json_dump_for_invariants:
             if not os.path.exists(temp_wp_json_report_file):
                 return False, "No JSON report found"
 
@@ -259,7 +261,7 @@ class FramaCChecker(Checker):
         lines = code.splitlines()
         incorrect_invariants = []
         for line_number in line_numbers:
-            if self.is_invariant(lines[int(line_number)]):
+            if self.has_invariant(lines[int(line_number)]):
                 incorrect_invariants.append(lines[int(line_number)].strip())
         return "\n".join(incorrect_invariants)
 
@@ -267,7 +269,7 @@ class FramaCChecker(Checker):
         invariants = []
         invariant_expressions = []
         for line in lines:
-            if self.is_invariant(line):
+            if self.has_invariant(line):
                 inv = re.findall(r"(loop invariant (i\d+: )?(.+);)", line)[0]
                 if inv[2] not in invariant_expressions:
                     invariants.append(inv[0])
@@ -277,7 +279,7 @@ class FramaCChecker(Checker):
     def get_invariants_with_ids(self, lines):
         invariants = {}
         for line in lines:
-            if self.is_invariant(line):
+            if self.has_invariant(line):
                 inv = re.findall(r"loop invariant (\w+:)?(.+);", line)[0]
                 invariants[inv[0].rstrip(":")] = inv[1].strip()
         return invariants
@@ -288,7 +290,7 @@ class FramaCChecker(Checker):
     def get_variants(self, lines):
         variants = []
         for line in lines:
-            if self.is_variant(line):
+            if self.has_variant(line):
                 inv = re.findall(r"(loop variant .+;)", line)[0]
                 if inv not in variants:
                     variants.append(inv)
@@ -299,7 +301,7 @@ class FramaCChecker(Checker):
         for c in completions:
             c_variant = []
             for line in c.split("\n"):
-                if self.is_variant(line):
+                if self.has_variant(line):
                     inv = re.findall(r"loop variant (.+);", line)[0]
                     if inv not in c_variant:
                         c_variant.append(inv)
@@ -320,7 +322,7 @@ class FramaCChecker(Checker):
 
         non_inductive_invariant_line_nos = []
         for i, line in enumerate(checker_input.splitlines()):
-            if self.is_invariant(line):
+            if self.has_invariant(line):
                 for inv in non_inductive_invariants:
                     if "loop invariant " in line and inv in line:
                         non_inductive_invariant_line_nos.append(i)
@@ -328,15 +330,13 @@ class FramaCChecker(Checker):
 
         return non_inductive_invariant_line_nos
 
-    def prune_annotations_and_check(
-        self, input_code, features, verbose=False, use_json_output=False
-    ):
+    def houdini(self, input_code, features, verbose=False, use_json_output=False):
         print("Pruning annotations...")
 
         annotation_line_mapping = {}
         lines = input_code.splitlines()
         for no, line in enumerate(lines):
-            if self.is_invariant(line) or self.is_variant(line):
+            if self.has_invariant(line) or self.has_variant(line):
                 annotation_line_mapping[no] = line
 
         if len(annotation_line_mapping) == 0:
@@ -371,7 +371,7 @@ class FramaCChecker(Checker):
                 input_code,
                 ("termination" in features),
                 verbose,
-                use_json_output=use_json_output,
+                use_json_dump_for_invariants=use_json_output,
             )
 
             if verbose:
@@ -471,6 +471,102 @@ class FramaCBenchmark(Benchmark):
         self.features = features
 
     def combine_llm_outputs(self, checker_input, llm_outputs, features):
+        checker_input_ast = self.parser.parse(bytes(checker_input, "utf-8"))
+        root = checker_input_ast.root_node
+        loops = self.get_loops(root)
+        functions = self.get_function_definitions(root)
+        if len(functions) > 1:
+            assert "multiple_methods" in features, "Multiple methods found"
+        if len(loops) > 1:
+            assert "multiple_loops" in features, "Multiple loops found"
+
+        labels = self.get_labels(checker_input)
+        annotations = None
+        if len(labels) > 0:
+            annotations = {}
+            inv_count = 0
+            for llm_output in llm_outputs:
+                annotation = self.get_annotations(llm_output, labels)
+                for label, ann in annotation.items():
+                    if label not in annotations:
+                        annotations[label] = ""
+                    if "Function_" in label:
+                        """
+                        Find all the requires clauses for this function
+                        """
+                        requires_clauses = ""
+                        if label == "Function_main":
+                            requires_clauses = "requires \\true;"
+                        else:
+                            requires_clauses = []
+                            for line in ann.split("\n"):
+                                requires = re.findall(r"(requires .+;)", line)
+                                if len(requires) > 0:
+                                    requires_clauses.append(requires[0])
+
+                            if len(requires_clauses) < 1:
+                                new_re = re.compile(r"(requires .+;)", re.MULTILINE)
+                                requires_clauses = new_re.findall(ann)
+                                if len(requires_clauses) < 1:
+                                    requires_clauses = ["requires \\true;"]
+
+                            requires_clauses = "\n".join(requires_clauses)
+
+                        """
+                        Find all the ensures clauses for this function
+                        """
+                        ensures_clauses = []
+                        for line in ann.split("\n"):
+                            ensures = re.findall(r"(ensures .+;)", line)
+                            if len(ensures) > 0:
+                                ensures_clauses.append(ensures[0])
+
+                        if len(ensures_clauses) < 1:
+                            new_re = re.compile(r"(ensures .+;)", re.MULTILINE)
+                            ensures_clauses = new_re.findall(ann)
+                            if len(ensures_clauses) < 1:
+                                ensures_clauses = ["ensures \\true;"]
+
+                        ensures_clauses = "\n".join(ensures_clauses)
+
+                        old_annotation = annotations[label]
+                        annotations[label] = (
+                            requires_clauses
+                            + "\n"
+                            + old_annotation
+                            + "\n"
+                            + ensures_clauses
+                        )
+                    else:
+                        invariants = {}
+                        for line in ann.split("\n"):
+                            invariant = re.findall(r"loop invariant (.+);", line)
+                            if len(invariant) > 0:
+                                inv_id = re.findall(r"loop invariant (\w+:) ", line)
+                                if len(inv_id) > 0:
+                                    invariant = [invariant[0].replace(inv_id[0], "")]
+                                invariant = f"loop invariant i{inv_count + 1}: {invariant[0]};"  # add loop invariant label
+                                invariants[invariant] = True
+                                inv_count += 1
+
+                        annotations[label] = (
+                            annotations[label]
+                            + "\n"
+                            + "\n".join(list(invariants.keys()))
+                        )
+
+            labels = sorted(labels, key=lambda x: x[0][0].start_byte, reverse=True)
+            for (node, _), label in labels:
+                checker_input = (
+                    checker_input[: node.start_byte]
+                    + "/*@\n"
+                    + annotations[label]
+                    + "\n*/\n"
+                    + checker_input[node.end_byte :]
+                )
+
+            return checker_input
+
         invariants = {}
         variant = None
         if "multiple_methods" in features:
@@ -586,6 +682,55 @@ class FramaCBenchmark(Benchmark):
 
         else:
             raise Exception("Unknown feature set")
+
+    def get_annotations(self, code_block, labels):
+        """
+        Returns all the annotations in the code block
+        """
+        annotations = {}
+        for label in labels:
+            annotation = ""
+            print(label[1])
+            print(code_block)
+            begin = re.findall(r"<\s*" + label[1] + r"\s*>", code_block)
+            end = re.findall(r"<\s*/\s*" + label[1] + r"\s*>", code_block)
+            if len(begin) == 1 and len(end) == 1:
+                annotation = code_block[
+                    code_block.find(begin[0]) + len(begin[0]) : code_block.find(end[0])
+                ]
+            else:
+                print(begin, end)
+                raise Exception("Invalid annotation")
+            annotations[label[1]] = annotation
+
+        return annotations
+
+    def get_labels(self, code):
+        """
+        This has to be called only on code that
+        has been passed through the parser because
+        ths assumes comments to be ACSL asserts or labels
+        """
+        labels = {}
+        ast = self.parser.parse(bytes(code, "utf-8"))
+        comment_query = self.language.query(
+            """
+            (comment) @comment 
+            """
+        )
+        comments = comment_query.captures(ast.root_node)
+        comments = list(
+            filter(lambda x: not x[0].text.decode("utf-8").startswith("//@"), comments)
+        )
+        comments = sorted(comments, key=lambda x: x[0].start_byte, reverse=True)
+
+        labels = []
+        for comment in comments:
+            comment_text = re.findall(r"\/\*(.+)\*\/", comment[0].text.decode("utf-8"))
+            comment_text = comment_text[0].strip()
+            labels.append((comment, comment_text))
+
+        return labels
 
     def generate_lexicographic_variants(self, checker_input, invariants, variants):
         # Assume all the variant expressions are unique
@@ -1344,4 +1489,3 @@ class FramaCBenchmark(Benchmark):
         except Exception as e:
             raise InvalidBenchmarkException(str(e))
         return code
-

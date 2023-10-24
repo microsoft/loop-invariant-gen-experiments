@@ -20,10 +20,13 @@ class Checker:
         else:
             return False, output
 
-    def is_invariant(self, line):
+    def has_invariant(self, line):
         return "invariant" in line
     
-    def is_variant(self, line):
+    def has_variant(self, line):
+        raise NotImplementedError
+
+    def has_function_contract(self, lines):
         raise NotImplementedError
 
     def get_line_no_from_error_msg(self, error_string):
@@ -43,18 +46,18 @@ class Checker:
         lines = code.splitlines()
         incorrect_invariants = []
         for line_number in line_numbers:
-            if self.is_invariant(lines[int(line_number)]):
+            if self.has_invariant(lines[int(line_number)]):
                 incorrect_invariants.append(lines[int(line_number)].strip())
         return "\n".join(incorrect_invariants)
 
-    def prune_annotations_and_check(self, input_code, features, use_json_output=False):
+    def houdini(self, input_code, features, use_json_output=False):
         print("Pruning annotations")
         while True:
             status, error_string = self.check(input_code)
             invariant_line_mapping = {}
             lines = input_code.splitlines()
             for no, line in enumerate(lines):
-                if self.is_invariant(line):
+                if self.has_invariant(line):
                     invariant_line_mapping[no] = line
             if len(invariant_line_mapping) == 0:
                 raise Exception("No invariants found")

@@ -42,7 +42,7 @@ def run_parallel(inputs, func):
 
 def prune_wrapper(checker_input):
     checker = FramaCChecker()
-    success, pruned_code = checker.prune_annotations_and_check(
+    success, pruned_code = checker.houdini(
         checker_input, features="one_loop_one_method", use_json_output=True
     )
     return success
@@ -59,7 +59,7 @@ def check_wrapper(input):
         success, _ = checker.check(
             checker_input,
             check_variant=("termination" in "one_loop_one_method"),
-            use_json_output=True,
+            use_json_dump_for_invariants=True,
         )
         if success:
             return True
