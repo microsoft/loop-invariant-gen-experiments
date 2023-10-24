@@ -515,7 +515,7 @@ class FramaCBenchmark(Benchmark):
         labels = self.get_labels(checker_input)
         annotations = None
         if len(labels) > 0:
-            annotations = {}
+            annotations = {label[1]: "" for label in labels}
             inv_count = 0
             for llm_output in llm_outputs:
                 annotation = self.get_annotations(llm_output, labels)
@@ -591,9 +591,11 @@ class FramaCBenchmark(Benchmark):
             for (node, _), label in labels:
                 checker_input = (
                     checker_input[: node.start_byte]
-                    + "/*@\n"
-                    + annotations[label]
-                    + "\n*/\n"
+                    + (
+                        ""
+                        if annotations[label] == ""
+                        else "/*@\n" + annotations[label] + "\n*/\n"
+                    )
                     + checker_input[node.end_byte :]
                 )
 
