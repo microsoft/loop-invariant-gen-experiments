@@ -234,39 +234,17 @@ class FramaCChecker(Checker):
     def houdini(self, input_code, features, use_json_dump_for_invariants=False):
         Logger.log_info("Houdini procedure initiated")
 
-        annotation_line_mapping = {}
-        lines = input_code.splitlines()
-        for no, line in enumerate(lines):
-            if self.has_invariant(line) or self.has_variant(line):
-                annotation_line_mapping[no] = line
+        if not self.has_annotations(input_code):
+            raise Exception("No annotations found")
 
-        if len(annotation_line_mapping) == 0:
-            raise Exception("No invariants/variants found")
-
-        inv_line_list = list(annotation_line_mapping.keys())
-
-        (invariant_line_start, invariant_line_end) = (
-            inv_line_list[0],
-            inv_line_list[-1],
-        )
-
-        input_code = "\n".join(
-            lines[:invariant_line_start]
-            + self.get_invariants(lines)
-            + self.get_variants(lines)
-            + lines[invariant_line_end + 1 :]
-        )
         code_queue = [input_code]
         num_frama_c_calls = 0
 
         while len(code_queue) > 0 and num_frama_c_calls < 1000:
             input_code = code_queue.pop(0)
             code_lines = input_code.splitlines()
-            if (
-                len(self.get_invariants(lines)) == 0
-                and len(self.get_variants(lines)) == 0
-            ):
-                print("No invariants/variants found")
+            if not self.has_annotations(input_code):
+                print("No annotations found")
                 continue
             success, checker_message = self.check(
                 input_code,
@@ -277,7 +255,10 @@ class FramaCChecker(Checker):
             if success:
                 break
 
-            if "Pre-condition" in checker_message or "Post-condition" in checker_message:
+            if (
+                "Pre-condition" in checker_message
+                or "Post-condition" in checker_message
+            ):
                 """
                 If there are any function contracts, this block will remove "Unknown" clauses from them
                 """
@@ -343,12 +324,12 @@ class FramaCChecker(Checker):
             num_frama_c_calls += 1
 
         if num_frama_c_calls == 1000:
-            print("Crossed 1000 iterations. Stopping pruning...")
+            Logger.log_error("Crossed 1000 iterations. Stopping pruning...")
 
         if not success:
-            print("Invariants not strong enough to prove or benchmark is invalid.")
+            Logger.log_error("Could not find strong enough annotations.")
         else:
-            print("Found strong enough invariants.")
+            Logger.log_info("Found strong enough annotations.")
 
         return success, input_code, num_frama_c_calls
 
