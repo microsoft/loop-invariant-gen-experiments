@@ -813,6 +813,18 @@ class LoopyPipeline:
                 log_json.append(instance)
                 continue
 
+            if "checker_output" in instance and instance["checker_output"]:
+                stats["success"].append(i)
+                log_json.append(instance)
+                continue
+
+            if "checker_output_after_combine_and_prune" in instance and instance[
+                "checker_output_after_combine_and_prune"
+            ]:
+                stats["success"].append(i)
+                log_json.append(instance)
+                continue 
+
             print(
                 "Rechecking benchmark: {i}/{n}".format(i=start_index + i + 1, n=total)
             )
@@ -873,19 +885,19 @@ class LoopyPipeline:
                     )
                     completion["invariants"] = llm_output
                     completion["code_with_invariants"] = checker_input
-                    success, checker_message = self.checker.check(
+                    __success, checker_message = self.checker.check(
                         checker_input,
                         ("termination" in self.analysis),
                         use_json_dump_for_invariants=self.use_json_output,
                     )
-                    completion["success"] = success
+                    completion["success"] = __success
                     completion["checker_message"] = checker_message
 
-                    if not success:
+                    if not __success:
                         print(f"Pruning completion {j + 1}/{len(llm_outputs)}")
                         try:
                             (
-                                success,
+                                __success,
                                 pruned_code,
                                 frama_c_calls,
                             ) = self.checker.houdini(
@@ -910,6 +922,7 @@ class LoopyPipeline:
                             success = False
 
                     completions.append(completion)
+                    success = success or __success
 
                 instance_log_json["completions"] = completions
 
@@ -927,7 +940,7 @@ class LoopyPipeline:
                     ],
                     "one_loop_one_method",
                 )
-                success, checker_message = self.checker.check(
+                __success, checker_message = self.checker.check(
                     checker_input,
                     ("termination" in self.analysis),
                     use_json_dump_for_invariants=self.use_json_output,
@@ -937,15 +950,15 @@ class LoopyPipeline:
                 instance_log_json["checker_output"] = success
                 instance_log_json["checker_message"] = checker_message
 
-                if not success:
+                if not __success:
                     print("Pruning combined completion")
                     try:
-                        success, pruned_code, frama_c_calls = self.checker.houdini(
+                        __success, pruned_code, frama_c_calls = self.checker.houdini(
                             checker_input,
                             "one_loop_one_method",
                             use_json_dump_for_invariants=self.use_json_output,
                         )
-                        success, checker_message = self.checker.check(
+                        __success, checker_message = self.checker.check(
                             pruned_code,
                             ("termination" in self.analysis),
                             use_json_dump_for_invariants=self.use_json_output,
@@ -970,6 +983,7 @@ class LoopyPipeline:
                         ] = e.args[0]
                         success = False
 
+                success = success or __success
                 if success:
                     stats["success"].append(i)
                 else:
