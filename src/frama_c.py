@@ -165,7 +165,19 @@ class FramaCChecker(Checker):
         with open(temp_output_dump_file, "r", encoding="utf-8") as f:
             csv_dump = [row for row in csv.DictReader(f, delimiter="\t")]
 
-            success = success and all(
+            for row in csv_dump:
+                if row["property kind"] == "precondition":
+                    function_contracts.append(
+                        f"Pre-condition {row['property']} on line {row['line']}: {row['status']}"
+                    )
+                elif row["property kind"] == "postcondition":
+                    function_contracts.append(
+                        f"Post-condition {row['property']} on line {row['line']}: {row['status']}"
+                    )
+
+            function_contracts = "\n".join(function_contracts)
+
+            success = all(
                 row["status"] == "Valid"
                 for row in csv_dump
                 if row["property kind"] == "user assertion"
@@ -184,18 +196,6 @@ class FramaCChecker(Checker):
                 ]
             )
 
-            for row in csv_dump:
-                if row["property kind"] == "precondition":
-                    function_contracts.append(
-                        f"Pre-condition {row['property']} on line {row['line']}: {row['status']}"
-                    )
-                elif row["property kind"] == "postcondition":
-                    function_contracts.append(
-                        f"Post-condition {row['property']} on line {row['line']}: {row['status']}"
-                    )
-
-            function_contracts = "\n".join(function_contracts)
-
         """
         Check the status of the loop variant
         """
@@ -208,7 +208,7 @@ class FramaCChecker(Checker):
 
             if "Valid" in result[0]:
                 loop_variant = "Loop variant is Valid.\n"
-                success = success and True
+                success = True
             else:
                 loop_variant = "Loop variant is Invalid.\n"
                 success = False
