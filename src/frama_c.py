@@ -268,14 +268,24 @@ class FramaCChecker(Checker):
             ):
                 print("No invariants/variants found")
                 continue
-            status, checker_message = self.check(
+            success, checker_message = self.check(
                 input_code,
                 ("termination" in features),
                 use_json_dump_for_invariants=use_json_dump_for_invariants,
             )
 
-            if status:
+            if success:
                 break
+
+            if "Pre-condition" in checker_message or "Post-condition" in checker_message:
+                """
+                If there are any function contracts, this block will remove "Unknown" clauses from them
+                """
+                unknown_clause_lines = self.get_line_nums_for_unknown_contract_clauses(
+                    checker_message
+                )
+                for line_no in unknown_clause_lines:
+                    code_lines[line_no] = ""
 
             if "Annotation error " in checker_message:
                 # TODO: Why not remove all annotation errors?
@@ -305,7 +315,7 @@ class FramaCChecker(Checker):
             else:
                 # What about TIMEOUT?
                 # If any invariant causes a Timeout, it's marked as "Unknown"
-                # because the prover could not prove it. So removing it for now.
+                # because the prover could not prove it. So removing it.
                 unknown_inv_lines = self.get_unknown_inv_no_from_error_msg(
                     checker_message
                 )
@@ -335,12 +345,12 @@ class FramaCChecker(Checker):
         if num_frama_c_calls == 1000:
             print("Crossed 1000 iterations. Stopping pruning...")
 
-        if not status:
+        if not success:
             print("Invariants not strong enough to prove or benchmark is invalid.")
         else:
             print("Found strong enough invariants.")
 
-        return status, input_code, num_frama_c_calls
+        return success, input_code, num_frama_c_calls
 
     def has_invariant(self, line):
         inv = re.findall(r"loop invariant (.+);", line)
@@ -354,6 +364,18 @@ class FramaCChecker(Checker):
         requires = re.findall(r"requires (.+);", lines)
         ensures = re.findall(r"ensures (.+);", lines)
         return len(requires) > 0 or len(ensures) > 0
+
+    def get_line_nums_for_unknown_contract_clauses(self, checker_message):
+        lines = checker_message.splitlines()
+        line_numbers = []
+        for line in lines:
+            if line.startswith("Pre-condition") or line.startswith("Post-condition"):
+                line_num = re.findall(r"on line (\d+): (\w+)", line)
+                if len(line_num) == 1 and len(line_num[0]) == 2:
+                    if line_num[0][1] == "Unknown":
+                        line_numbers.append(int(line_num[0][0]) - 1)
+
+        return line_numbers
 
     def get_annotation_error_from_kernel_logs(self, error_line):
         line_num = re.search(r"\:(\d+)\:", error_line)
