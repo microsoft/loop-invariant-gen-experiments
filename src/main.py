@@ -181,6 +181,12 @@ def parse_args(args):
         default="",
     )
 
+    parser.add_argument(
+        "--loopy-sequence",
+        help="Run the loopy sequence algorithm",
+        action="store_true",
+    )
+
     return parser.parse_args(args)
 
 
@@ -207,9 +213,9 @@ def main(args):
         )
         return
 
-    # p.run_sequence(max_benchmarks=args.max_benchmarks, start_index=args.start_index)
-
-    # return
+    if args.loopy_sequence:
+        p.run_sequence(max_benchmarks=args.max_benchmarks, start_index=args.start_index)
+        return
 
     if args.provider == "local":
         p.run_local(
