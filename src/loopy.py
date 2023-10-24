@@ -2296,7 +2296,9 @@ class LoopyPipeline:
         if self.llm is None or self.benchmark is None or self.checker is None:
             raise Exception("Pipeline not initialized. Call load_config first.")
 
-        if not all([x in ["loop_invariants", "pre_post_conditions"] for x in self.analysis]):
+        if not all(
+            [x in ["loop_invariants", "pre_post_conditions"] for x in self.analysis]
+        ):
             raise Exception("Unsupported analysis for sequence pipeline")
 
         log_json = []
@@ -2362,7 +2364,7 @@ class LoopyPipeline:
                         continue
 
                     Logger.log_info(f"Checking completion {len(completions) + 1}")
-                    
+
                     checker_input_with_annotations = self.benchmark.combine_llm_outputs(
                         self.benchmark.get_code(benchmark_file),
                         [block],
@@ -2396,7 +2398,7 @@ class LoopyPipeline:
 
                     success = __success or success
 
-                    if success:
+                    if __success:
                         Logger.log_success(
                             f"Completion {len(completions) + 1} is correct"
                         )
@@ -2425,11 +2427,24 @@ class LoopyPipeline:
                     "multiple_loops_multiple_methods",
                 )
 
+                Logger.log_info(
+                    f"Checking combined annotations for benchmark: {start_index + benchmark_index + 1}/{len(sliced_benchmarks)}"
+                )
+
                 __success, checker_message = self.checker.check(
                     checker_input_with_combined_annotations,
                     False,
                     use_json_dump_for_invariants=self.use_json_output,
                 )
+
+                if __success:
+                    Logger.log_success(
+                        f"Combined annotations are correct for benchmark: {start_index + benchmark_index + 1}/{len(sliced_benchmarks)}"
+                    )
+                else:
+                    Logger.log_error(
+                        f"Combined annotations are incorrect for benchmark: {start_index + benchmark_index + 1}/{len(sliced_benchmarks)}"
+                    )
 
                 instance_log_json["checker_output_for_combined_annotations"] = __success
                 instance_log_json[
@@ -2441,17 +2456,31 @@ class LoopyPipeline:
 
                 success = __success or success
 
-                __success, pruned_code, num_frama_c_calls = self.checker.houdini(
-                    checker_input_with_combined_annotations,
-                    "multiple_loops_multiple_methods",
-                    use_json_dump_for_invariants=self.use_json_output,
-                )
+                if not __success:
+                    Logger.log_info(
+                        f"Houdini for combined annotations for benchmark: {start_index + benchmark_index + 1}/{len(sliced_benchmarks)}"
+                    )
 
-                instance_log_json["combined_annotation_num_solver_calls"] = (
-                    num_frama_c_calls + 1
-                )
-                instance_log_json["code_after_prune"] = pruned_code
-                instance_log_json["checker_output_after_prune"] = __success
+                    __success, pruned_code, num_frama_c_calls = self.checker.houdini(
+                        checker_input_with_combined_annotations,
+                        "multiple_loops_multiple_methods",
+                        use_json_dump_for_invariants=self.use_json_output,
+                    )
+
+                    if __success:
+                        Logger.log_success(
+                            f"Houdini for combined annotations successful for benchmark: {start_index + benchmark_index + 1}/{len(sliced_benchmarks)}"
+                        )
+                    else:
+                        Logger.log_error(
+                            f"Houdini for combined annotations unsuccessful for benchmark: {start_index + benchmark_index + 1}/{len(sliced_benchmarks)}"
+                        )
+
+                    instance_log_json["combined_annotation_num_solver_calls"] = (
+                        num_frama_c_calls + 1
+                    )
+                    instance_log_json["code_after_prune"] = pruned_code
+                    instance_log_json["checker_output_after_prune"] = __success
 
                 success = __success or success
 
