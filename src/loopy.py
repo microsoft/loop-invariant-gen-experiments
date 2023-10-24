@@ -838,7 +838,9 @@ class LoopyPipeline:
                     )
                     continue
                 llm_outputs = [
-                    self.llm.extract_code(x["content"])
+                    self.llm.extract_code(
+                        x["content"], filter=self.checker.has_invariant
+                    )
                     for x in instance["llm_conversation"][-1]
                 ]
 
@@ -846,14 +848,11 @@ class LoopyPipeline:
                 for j, llm_output in enumerate(llm_outputs):
                     print(f"Checking completion {j + 1}/{len(llm_outputs)}")
                     completion = {}
-                    if llm_output.startswith(
+                    if len(llm_output) == 2 and llm_output[0] == (
                         "ERROR: Output does not contain at least 1 complete code block"
                     ):
                         completion["success"] = False
-                        completion["llm_output"] = llm_output.replace(
-                            "ERROR: Output does not contain at least 1 complete code block\nOutput:\n",
-                            "",
-                        )
+                        completion["llm_output"] = llm_output[1]
                         completion[
                             "error"
                         ] = "Output does not contain at least 1 code block"
@@ -861,7 +860,15 @@ class LoopyPipeline:
 
                     checker_input = self.benchmark.combine_llm_outputs(
                         instance["benchmark_code"],
-                        [llm_output if not llm_output.startswith("ERROR") else ""],
+                        [
+                            llm_output
+                            if not (
+                                len(llm_output) == 2
+                                and llm_output[0]
+                                == "ERROR: Output does not contain at least 1 complete code block"
+                            )
+                            else ""
+                        ],
                         "one_loop_one_method",
                     )
                     completion["invariants"] = llm_output
@@ -869,6 +876,7 @@ class LoopyPipeline:
                     success, checker_message = self.checker.check(
                         checker_input,
                         ("termination" in self.analysis),
+                        use_json_dump_for_invariants=self.use_json_output,
                     )
                     completion["success"] = success
                     completion["checker_message"] = checker_message
@@ -879,14 +887,16 @@ class LoopyPipeline:
                             (
                                 success,
                                 pruned_code,
-                                frama_c_calls
+                                frama_c_calls,
                             ) = self.checker.houdini(
                                 checker_input,
                                 "one_loop_one_method",
+                                use_json_dump_for_invariants=self.use_json_output,
                             )
                             success, checker_message = self.checker.check(
                                 pruned_code,
                                 ("termination" in self.analysis),
+                                use_json_dump_for_invariants=self.use_json_output,
                             )
                             completion["success_after_prune"] = success
                             completion["pruned_code"] = pruned_code
@@ -909,8 +919,10 @@ class LoopyPipeline:
                     [
                         llm_output
                         for llm_output in llm_outputs
-                        if not llm_output.startswith(
-                            "ERROR: Output does not contain at least 1 complete code block"
+                        if not (
+                            len(llm_output) == 2
+                            and llm_output[0]
+                            == "ERROR: Output does not contain at least 1 complete code block"
                         )
                     ],
                     "one_loop_one_method",
@@ -918,6 +930,7 @@ class LoopyPipeline:
                 success, checker_message = self.checker.check(
                     checker_input,
                     ("termination" in self.analysis),
+                    use_json_dump_for_invariants=self.use_json_output,
                 )
 
                 instance_log_json["code_with_combined_invariants"] = checker_input
@@ -930,10 +943,12 @@ class LoopyPipeline:
                         success, pruned_code, frama_c_calls = self.checker.houdini(
                             checker_input,
                             "one_loop_one_method",
+                            use_json_dump_for_invariants=self.use_json_output,
                         )
                         success, checker_message = self.checker.check(
                             pruned_code,
                             ("termination" in self.analysis),
+                            use_json_dump_for_invariants=self.use_json_output,
                         )
                         instance_log_json["code_after_combine_and_prune"] = pruned_code
                         instance_log_json[
