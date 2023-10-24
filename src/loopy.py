@@ -879,6 +879,7 @@ class LoopyPipeline:
                             (
                                 success,
                                 pruned_code,
+                                frama_c_calls
                             ) = self.checker.houdini(
                                 checker_input,
                                 "one_loop_one_method",
@@ -926,7 +927,7 @@ class LoopyPipeline:
                 if not success:
                     print("Pruning combined completion")
                     try:
-                        success, pruned_code = self.checker.houdini(
+                        success, pruned_code, frama_c_calls = self.checker.houdini(
                             checker_input,
                             "one_loop_one_method",
                         )
