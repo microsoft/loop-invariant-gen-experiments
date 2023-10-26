@@ -277,7 +277,6 @@ class FramaCChecker(Checker):
                     checker_message
                 )[0]
 
-                print("Removing line " + code_lines[annotation_error_line_no])
                 code_lines[annotation_error_line_no] = ""
                 input_code = "\n".join(code_lines)
                 code_queue.append(input_code)

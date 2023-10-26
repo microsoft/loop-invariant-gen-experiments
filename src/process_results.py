@@ -7,6 +7,7 @@ import multiprocessing
 import os
 import random
 import sys
+import traceback
 
 import numpy as np
 
@@ -42,9 +43,15 @@ def run_parallel(inputs, func):
 
 def prune_wrapper(checker_input):
     checker = FramaCChecker()
-    success, pruned_code = checker.houdini(
-        checker_input, features="one_loop_one_method", use_json_dump_for_invariants=True
-    )
+    try:
+        success, pruned_code, num_frama_c_calls = checker.houdini(
+            checker_input,
+            features="one_loop_one_method",
+            use_json_dump_for_invariants=True,
+        )
+    except Exception as e:
+        print(e)
+        traceback.print_exc()
     return success
 
 
@@ -142,10 +149,14 @@ def main(args):
 
     if args.input_log1 is not None:
         expt_log_1 = expt_log_1["logs"]
-        expt_log_1 = expt_log_1[args.start_index : args.start_index + args.max_benchmarks]
+        expt_log_1 = expt_log_1[
+            args.start_index : args.start_index + args.max_benchmarks
+        ]
     if args.input_log_21 is not None:
         expt_log_21 = expt_log_21["logs"]
-        expt_log_21 = expt_log_21[args.start_index : args.start_index + args.max_benchmarks]
+        expt_log_21 = expt_log_21[
+            args.start_index : args.start_index + args.max_benchmarks
+        ]
 
     final_log = {
         "logs": [],
@@ -154,6 +165,8 @@ def main(args):
             for k in range(args.start_k, args.end_k + 1)
         },
     }
+    logs_to_recheck = {}
+    failure_at_eight = []
     for i, benchmark in enumerate(expt_log):
         assert benchmark["file"] == expt_log_2[i]["file"]
         assert benchmark["benchmark_code"] == expt_log_2[i]["benchmark_code"]
@@ -281,6 +294,20 @@ def main(args):
                 )
                 try:
                     results = run_parallel(checker_inputs, prune_wrapper)
+                    for i in range(len(results) - 1):
+                        if results[i] > results[i + 1]:
+                            logs_to_recheck[benchmark["file"]] = {
+                                "benchmark_code": benchmark_code,
+                                "pass_at_k_candidate": candidates_batch,
+                            }
+                    if k == 8 and results[-1] == 0.0:
+                        failure_at_eight.append(
+                            {
+                                "file": benchmark["file"],
+                                "benchmark_code": benchmark_code,
+                                "pass_at_k_candidate": candidates_batch,
+                            }
+                        )
                     pass_k_prune += sum(results)
                     logger.log_info(
                         f"[Batch {m+1}/{max_m}]: Combine and Prune with k = {pass_k_prune / len(results)} for k={k}, {len(candidates_batch)} parallel benchmarks, for benchmark: {benchmark['file']}"
