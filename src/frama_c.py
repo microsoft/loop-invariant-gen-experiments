@@ -505,8 +505,7 @@ class FramaCBenchmark(Benchmark):
         checker_input_ast = self.parser.parse(bytes(checker_input, "utf-8"))
         root = checker_input_ast.root_node
         loops = self.get_loops(root)
-        functions = self.get_function_definitions(root)
-        if len(functions) > 1:
+        if self.is_interprocedural(checker_input):
             assert "multiple_methods" in features, "Multiple methods found"
         if len(loops) > 1:
             assert "multiple_loops" in features, "Multiple loops found"
