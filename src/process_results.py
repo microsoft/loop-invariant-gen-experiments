@@ -299,6 +299,7 @@ def main(args):
                             logs_to_recheck[benchmark["file"]] = {
                                 "benchmark_code": benchmark_code,
                                 "pass_at_k_candidate": candidates_batch,
+                                "results": results,
                             }
                     if k == 8 and results[-1] == 0.0:
                         failure_at_eight.append(
