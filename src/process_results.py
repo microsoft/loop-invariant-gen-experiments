@@ -327,6 +327,8 @@ def main(args):
             )
 
         final_log["logs"].append(benchmark_json)
+        final_log["files_to_revisit"] = logs_to_recheck
+        final_log["failure_at_eight"] = failure_at_eight
         with open(
             os.path.join(
                 output_log_dir,
