@@ -31,6 +31,22 @@ def parse_args(args):
         action="store_true",
     )
 
+    parser.add_argument(
+        "--loop-invariants",
+        help="Run the loop invariant analysis algorithm",
+        action="store_true",
+    )
+
+    parser.add_argument(
+        "--loopy-prompt",
+        help="Prompt to use for loopy",
+        type=str,
+        choices=[
+            "with_nudges",
+            "without_nudges",
+        ],
+    )
+
     # Checker to use
     parser.add_argument(
         "--checker",
@@ -223,6 +239,14 @@ def main(args):
         p.multiprocedural_loop_invariant_analysis(
             max_benchmarks=args.max_benchmarks,
             start_index=args.start_index,
+        )
+        return
+
+    if args.loop_invariants:
+        p.loop_invariant_analysis(
+            max_benchmarks=args.max_benchmarks,
+            start_index=args.start_index,
+            prompt=args.loopy_prompt,
         )
         return
 
