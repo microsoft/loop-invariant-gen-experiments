@@ -1265,7 +1265,17 @@ class FramaCBenchmark(Benchmark):
         If there are, the code is ill-formed, because the verifier functions
         should have been removed in the preprocessing.
         """
-        if len(re.findall(r"__VERIFIER_assert", code)) > 0:
+        ast = self.parser.parse(bytes(code, "utf-8"))
+        root = ast.root_node
+        function_calls = self.get_function_calls(root)
+
+        function_calls = [
+            f
+            for f in function_calls
+            if f[1] == "__VERIFIER_assert" or f[1] == "reach_error"
+        ]
+
+        if len(function_calls) > 0:
             return True
 
     def is_interprocedural(self, code):
@@ -1506,9 +1516,15 @@ class FramaCBenchmark(Benchmark):
             """
             if self.has_ill_formed_asserts(code):
                 raise InvalidBenchmarkException("Ill-formed asserts")
-            
-            return self.get_total_loop_count(code), self.is_interprocedural(code), self.uses_arrays(code), self.uses_pointers(code), len(code.splitlines())
-            
+
+            return (
+                self.get_total_loop_count(code),
+                self.is_interprocedural(code),
+                self.uses_arrays(code),
+                self.uses_pointers(code),
+                len(code.splitlines()),
+            )
+
             if self.get_total_loop_count(code) < 1 and not self.is_interprocedural(
                 code
             ):
