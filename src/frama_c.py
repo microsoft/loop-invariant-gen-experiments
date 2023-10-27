@@ -23,7 +23,7 @@ class FramaCChecker(Checker):
         self.parser = Parser()
         self.parser.set_language(self.language)
 
-    def check(self, input, check_variant=False, use_json_dump_for_invariants=False):
+    def check(self, input, check_variant=False,  use_json_dump_for_invariants=False, check_contracts=False):
         temp_file = datetime.datetime.now().strftime(
             "/tmp/temp_eval_%Y_%m_%d_%H_%M_%S_"
         ) + str(random.randint(0, 1000000))
@@ -174,24 +174,31 @@ class FramaCChecker(Checker):
             return False, "No CSV output dump found from Frama-C"
 
         """
-        Get the status of each user assertion
-        and the function contracts
+        Get the status of each user assertion and function contract
         """
         with open(temp_output_dump_file, "r", encoding="utf-8") as f:
             csv_dump = [row for row in csv.DictReader(f, delimiter="\t")]
 
-            for row in csv_dump:
-                if row["property kind"] == "precondition":
-                    function_contracts.append(
-                        f"Pre-condition {row['property']} on line {row['line']}: {row['status']}"
-                    )
-                elif row["property kind"] == "postcondition":
-                    function_contracts.append(
-                        f"Post-condition {row['property']} on line {row['line']}: {row['status']}"
-                    )
+            if check_contracts:
+                success = success and all(
+                    row["status"] == "Valid"
+                    for row in csv_dump
+                    if row["property kind"] == "precondition"
+                    or row["property kind"] == "postcondition"
+                )
 
-            function_contracts = "\n".join(function_contracts)
+                for row in csv_dump:
+                    if row["property kind"] == "precondition":
+                        function_contracts.append(
+                            f"Pre-condition {row['property']} on line {row['line']}: {row['status']}"
+                        )
+                    elif row["property kind"] == "postcondition":
+                        function_contracts.append(
+                            f"Post-condition {row['property']} on line {row['line']}: {row['status']}"
+                        )
 
+                function_contracts = "\n".join(function_contracts)
+        
             success = success and all(
                 row["status"] == "Valid"
                 for row in csv_dump
