@@ -957,7 +957,7 @@ class FramaCBenchmark(Benchmark):
         main_definition = [m[0] for m in main if m[1] == "main_definition"]
 
         if len(main_definition) != 1:
-            return "ERROR: No main function found"
+            raise Exception("No single main definition found")
         return main_definition[0]
 
     def get_child_by_type(self, node, type):
@@ -1190,7 +1190,7 @@ class FramaCBenchmark(Benchmark):
             code = (
                 code[: assert_call.start_byte]
                 + re.sub(
-                    r"^(__VERIFIER_|s)?assert\s*(?P<arg>\(.*\));(?P<rest>.*)",
+                    r"^(__VERIFIER_|s)?assert\s*(?P<arg>\(.*\))\s*;(?P<rest>.*)",
                     r"{;\n//@ assert\g<arg>;" + "\n" + r"}\n\g<rest>",
                     assert_call.text.decode("utf-8"),
                 )
@@ -1268,6 +1268,9 @@ class FramaCBenchmark(Benchmark):
         ast = self.parser.parse(bytes(code, "utf-8"))
         root = ast.root_node
         function_calls = self.get_function_calls(root)
+        if not "multiple_methods" in self.features:
+            root = self.get_main_definition(code)
+            function_calls = self.get_function_calls(root)
 
         function_calls = [
             f
@@ -1529,7 +1532,7 @@ class FramaCBenchmark(Benchmark):
                 code
             ):
                 raise InvalidBenchmarkException(
-                    "No loop or multiple methods found. Cannot infer any annotations"
+                    "No loop found. Cannot infer loop invariants"
                 )
             """
             We do not support benchmarks with arrays or pointers.
