@@ -106,6 +106,14 @@ class FramaCChecker(Checker):
                     ]
                 )
 
+                success = all(
+                    [
+                        loop_invariant_status[inv_id]["preserved"]
+                        and loop_invariant_status[inv_id]["established"]
+                        for inv_id in loop_invariant_status
+                    ]
+                )
+
                 invariants_with_ids = self.get_invariants_with_ids(input.splitlines())
 
                 for inv in sorted(
@@ -147,6 +155,13 @@ class FramaCChecker(Checker):
             with open(temp_output_dump_file, "r", encoding="utf-8") as f:
                 csv_dump = [row for row in csv.DictReader(f, delimiter="\t")]
 
+                success = all(
+                    row["status"] == "Valid"
+                    for row in checker_output
+                    if row["property kind"] == "loop invariant"
+                    or row["property kind"] == "user assertion"
+                )
+
                 loop_invariants = "\n".join(
                     [
                         f"Invariant {row['property']} on line {row['line']}: {row['status']}"
@@ -177,7 +192,7 @@ class FramaCChecker(Checker):
 
             function_contracts = "\n".join(function_contracts)
 
-            success = all(
+            success = success and all(
                 row["status"] == "Valid"
                 for row in csv_dump
                 if row["property kind"] == "user assertion"
@@ -208,7 +223,7 @@ class FramaCChecker(Checker):
 
             if "Valid" in result[0]:
                 loop_variant = "Loop variant is Valid.\n"
-                success = True
+                success = success and True
             else:
                 loop_variant = "Loop variant is Invalid.\n"
                 success = False
