@@ -1,16 +1,14 @@
 import json
 import os
 import traceback
+import pandas as pd
 
 from frama_c import FramaCBenchmark, InvalidBenchmarkException
 
-files_initial = open(
-    "../dataset_analysis/svcomp_reachsafety_files.txt", "r"
-).read().split("\n")
+files_initial = open("../dataset_analysis/svcomp_files.txt", "r").read().split("\n")
 
 fb = FramaCBenchmark(features="multiple_loops_multiple_methods")
-valid_files = []
-invalid_files = []
+file_features = []
 
 for file in files_initial:
     try:
@@ -21,16 +19,37 @@ for file in files_initial:
                 print("File not found: " + file)
                 continue
         code = open(file.strip(), "r").read()
-        fb.preprocess(code, "multiple_loops_multiple_methods")
-        valid_files.append(file.strip())
-        print("Valid: " + file.strip())
+        (
+            num_loops,
+            more_than_one_method,
+            uses_arrays,
+            uses_pointers,
+            num_lines,
+        ) = fb.preprocess(code, "multiple_loops_multiple_methods")
+        file_features.append(
+            {
+                "file": file.strip(),
+                "num_loops": num_loops,
+                "more_than_one_method": more_than_one_method,
+                "uses_arrays": uses_arrays,
+                "uses_pointers": uses_pointers,
+                "num_lines": num_lines,
+            }
+        )
+
     except InvalidBenchmarkException as e:
-        print()
-        invalid_files.append(file.strip())
+        file_features.append(
+            {
+                "file": file.strip(),
+                "num_loops": None,
+                "more_than_one_method": None,
+                "uses_arrays": None,
+                "uses_pointers": None,
+                "num_lines": None,
+                "error": str(e),
+            }
+        )
         print(f"[{str(e)}] Invalid: {file.strip()}")
 
-with open("../experiments/svcomp_reachsafety_filtered.txt", "w") as f:
-    f.write("\n".join(valid_files))
-
-with open("invalid_files.txt", "w") as f:
-    f.write("\n".join(invalid_files))
+with open("svcomp_features.json", "w") as f:
+    json.dump(file_features, f, indent=4)

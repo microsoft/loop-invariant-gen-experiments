@@ -1506,6 +1506,9 @@ class FramaCBenchmark(Benchmark):
             """
             if self.has_ill_formed_asserts(code):
                 raise InvalidBenchmarkException("Ill-formed asserts")
+            
+            return self.get_total_loop_count(code), self.is_interprocedural(code), self.uses_arrays(code), self.uses_pointers(code), len(code.splitlines())
+            
             if self.get_total_loop_count(code) < 1 and not self.is_interprocedural(
                 code
             ):
