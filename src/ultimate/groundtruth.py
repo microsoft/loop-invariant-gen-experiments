@@ -81,7 +81,7 @@ def run_ultimate(code):
     with open("temp.c", "w") as f:
         f.write(code)
 
-    cmd = f"Ultimate --core.toolchain.timeout.in.seconds 300 -tc AutomizerTermination.xml -s svcomp-Termination-64bit-Automizer_Default.epf -i temp.c"
+    cmd = f"Ultimate --core.toolchain.timeout.in.seconds 300 -tc utoolchain.xml -s svcomp-Reach-64bit-Automizer_Default.epf -i temp.c"
     p = subprocess.Popen(cmd.split(), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     output, err = p.communicate()
     if err is not None:
@@ -104,7 +104,7 @@ def main(file_name):
         print("Input file does not exist")
         return -1
 
-    fc_b = FramaCBenchmark()
+    fc_b = FramaCBenchmark(features="one_loop_one_method")
 
     input_data = None
     with open(input_file, "r") as f:

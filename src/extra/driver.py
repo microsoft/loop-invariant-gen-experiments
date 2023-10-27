@@ -17,4 +17,4 @@ with open(sys.argv[1], "r") as f, open(sys.argv[2], "r") as llm_out:
     checker_input, loop_list = bench.preprocess(input_code)
 #    checker_input = bench.raw_input_to_checker_input(preprocessed_input)
     inv_code = bench.combine_llm_outputs(checker_input, [llm_outputs], sys.argv[3])
-    success, inv = checker.prune_annotations_and_check(inv_code, sys.argv[3], True)
+    success, inv = checker.houdini(inv_code, sys.argv[3], True)
