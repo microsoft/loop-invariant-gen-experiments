@@ -23,7 +23,13 @@ class FramaCChecker(Checker):
         self.parser = Parser()
         self.parser.set_language(self.language)
 
-    def check(self, input, check_variant=False,  use_json_dump_for_invariants=False, check_contracts=False):
+    def check(
+        self,
+        input,
+        check_variant=False,
+        use_json_dump_for_invariants=False,
+        check_contracts=False,
+    ):
         temp_file = datetime.datetime.now().strftime(
             "/tmp/temp_eval_%Y_%m_%d_%H_%M_%S_"
         ) + str(random.randint(0, 1000000))
@@ -197,8 +203,8 @@ class FramaCChecker(Checker):
                             f"Post-condition {row['property']} on line {row['line']}: {row['status']}"
                         )
 
-                function_contracts = "\n".join(function_contracts)
-        
+            function_contracts = "\n".join(function_contracts)
+
             success = success and all(
                 row["status"] == "Valid"
                 for row in csv_dump
