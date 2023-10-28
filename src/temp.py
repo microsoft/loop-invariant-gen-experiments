@@ -1,14 +1,13 @@
 import json
 import os
 import traceback
-import pandas as pd
 from llm_utils import Logger
 
 from frama_c import FramaCBenchmark, InvalidBenchmarkException
 
-files_initial = open("../experiments/svcomp_files.txt", "r").read().split("\n")
+files_initial = open("../experiments/all_benchmarks.txt", "r").read().split("\n")
 
-fb = FramaCBenchmark(features="multiple_loops_multiple_methods")
+fb = FramaCBenchmark(features="one_loop_one_method")
 file_features = []
 
 for index, file in enumerate(files_initial):
@@ -27,7 +26,7 @@ for index, file in enumerate(files_initial):
             uses_arrays,
             uses_pointers,
             num_lines,
-        ) = fb.preprocess(code, "multiple_loops_multiple_methods")
+        ) = fb.preprocess(code, "one_loop_one_method")
         Logger.log_info(
             f"Num loops: {num_loops}, more than one method: {more_than_one_method}, uses arrays: {uses_arrays}, uses pointers: {uses_pointers}, num lines: {num_lines}"
         )
