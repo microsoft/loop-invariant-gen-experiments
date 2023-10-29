@@ -228,6 +228,10 @@ def main(args):
 
     p = p.load_config(args.config_file)
 
+    if args.loopy_sequence:
+        p.run_sequence(max_benchmarks=args.max_benchmarks, start_index=args.start_index)
+        return
+
     if args.termination_analysis:
         p.termination_analysis(
             max_benchmarks=args.max_benchmarks,
@@ -248,10 +252,6 @@ def main(args):
             start_index=args.start_index,
             prompt=args.loopy_prompt,
         )
-        return
-
-    if args.loopy_sequence:
-        p.run_sequence(max_benchmarks=args.max_benchmarks, start_index=args.start_index)
         return
 
     if args.provider == "local":
