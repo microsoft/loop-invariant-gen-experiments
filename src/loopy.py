@@ -3075,7 +3075,7 @@ class LoopyPipeline:
 
                     if success or houdini_success:
                         Logger.log_success(
-                            f"Repair successful for benchmark: {start_index + benchmark_index + 1}/{len(generation_log_1)} with {num_repair_calls + 1} repair calls"
+                            f"Repair successful for benchmark: {start_index + benchmark_index + 1}/{len(generation_log_1)} with {num_repair_calls} repair calls"
                         )
                         repair_try_json["success"] = True
                         repair_try_json["checker_message"] = checker_message
@@ -3089,7 +3089,7 @@ class LoopyPipeline:
 
                     else:
                         Logger.log_error(
-                            f"Repair unsuccessful for benchmark: {start_index + benchmark_index + 1}/{len(generation_log_1)} with {num_repair_calls + 1} repair calls"
+                            f"Repair unsuccessful for benchmark: {start_index + benchmark_index + 1}/{len(generation_log_1)} with {num_repair_calls} repair calls"
                         )
                         failing_candidate = new_checker_input
                         repair_try_json["success"] = False
