@@ -2914,6 +2914,10 @@ class LoopyPipeline:
                 gen_benchmark_log["file"] == generation_log_2[benchmark_index]["file"]
             ), "Mismatch in benchmark logs"
 
+            Logger.log_info(
+                f"Running benchmark: {start_index + benchmark_index + 1}/{len(generation_log_1)}"
+            )
+
             benchmark_code = gen_benchmark_log["benchmark_code"]
             instance_log_json = {
                 "file": gen_benchmark_log["file"],
