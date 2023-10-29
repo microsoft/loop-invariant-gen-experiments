@@ -3117,7 +3117,6 @@ class LoopyPipeline:
 
                         instance_log_json["success"] = True
                         repair_tries.append(repair_try_json)
-                        stats["repair_success"].append(gen_benchmark_log["file"])
                         break
 
                     else:
