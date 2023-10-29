@@ -3145,6 +3145,28 @@ class LoopyPipeline:
                     )
                     stats["repair_failure"].append(gen_benchmark_log["file"])
 
+                with open(
+                    os.path.join(
+                        self.log_path,
+                        gen_benchmark_log["file"]
+                        .replace(".c", ".json")
+                        .replace("../", "")
+                        .replace("/", "__"),
+                    ),
+                    "w",
+                    encoding="utf-8",
+                ) as f:
+                    f.write(
+                        json.dumps(
+                            {
+                                "logs": instance_log_json,
+                                "stats": stats,
+                            },
+                            indent=4,
+                            ensure_ascii=False,
+                        )
+                    )
+
             except Exception as e:
                 Logger.log_error(traceback.format_exc())
                 if isinstance(e, KeyboardInterrupt):
