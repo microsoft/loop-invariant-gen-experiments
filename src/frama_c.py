@@ -89,7 +89,7 @@ class FramaCChecker(Checker):
             with open(temp_output_dump_file, "r", encoding="utf-8") as f:
                 csv_dump = [row for row in csv.DictReader(f, delimiter="\t")]
                 csv_loop_invariants = {
-                    row["property"]: row["status"]
+                    int(row["line"]): row["status"]
                     for row in csv_dump
                     if row["property kind"] == "loop invariant"
                 }
@@ -99,6 +99,7 @@ class FramaCChecker(Checker):
                 json_output = re.sub(r"(\d+)\.,", r"\1.0,", json_output)
                 json_output = json.loads(json_output)
                 loop_invariant_status = {}
+                json_invariant_line = {}
                 for item in json_output:
                     if "_loop_invariant_" in item["goal"]:
                         inv_id = re.findall(
@@ -112,6 +113,8 @@ class FramaCChecker(Checker):
                         if inv_id[0] not in loop_invariant_status:
                             loop_invariant_status[inv_id[0]] = {}
                         loop_invariant_status[inv_id[0]][inv_id[1]] = item["passed"]
+                        if inv_id[0] not in json_invariant_line:
+                            json_invariant_line[inv_id[0]] = item["line"]
 
                 assert all(
                     [
@@ -142,8 +145,8 @@ class FramaCChecker(Checker):
                         and loop_invariant_status[inv]["established"]
                     ):
                         if (
-                            inv in csv_loop_invariants
-                            and csv_loop_invariants[inv] == "Valid"
+                            json_invariant_line[inv] in csv_loop_invariants
+                            and csv_loop_invariants[json_invariant_line[inv]] == "Valid"
                         ):
                             loop_invariants.append(
                                 f"loop invariant {invariants_with_ids[inv]} is inductive."
@@ -1597,3 +1600,71 @@ class FramaCBenchmark(Benchmark):
         except Exception as e:
             raise InvalidBenchmarkException(str(e))
         return code
+
+
+# code = """
+# #include "myassert.h"
+
+# int main(void) {
+#   unsigned int x = 0;
+
+#   while (x < 0x0fffffff) {
+#     x += 2;
+#   }
+
+#   __VERIFIER_assert(!(x % 2));
+# }
+
+# """
+# fb = FramaCBenchmark(features="multiple_loops_multiple_methods")
+# pcode = fb.preprocess(code, "multiple_loops_multiple_methods")
+# with open("temp.c", "w") as f:
+#     f.write(fb.preprocess(code, "multiple_loops_multiple_methods"))
+
+# annotations = r"""
+# /*@
+#     <Function_main>
+#         requires \true;
+#         ensures \result == 0;
+#     </Function_main>
+
+#     <Loop_A>
+#         loop invariant x <= 0x0fffffff;
+#         loop invariant x % 2 == 0 || x == 0;
+#     </Loop_A>
+
+#     <Loop_B>
+#         loop invariant y <= 0x0fffffff;
+#         loop invariant y % 2 == 0 || y == 0;
+#     </Loop_B>
+
+#     <Loop_C>
+#         loop invariant z <= 0x0fffffff;
+#         loop invariant z % 4 == 1 || z == 0;
+#     </Loop_C>
+# */
+# """
+# checker_input = fb.combine_llm_outputs(pcode, [annotations], "multiple_loops_multiple_methods")
+# with open("checker_input.c", "w", encoding='utf-8') as f:
+#     f.write(checker_input)
+
+code = """
+int main(void) {
+  unsigned int x = 0;
+
+  /*@
+  loop invariant i1: 0 <= x <= 0x10000000;
+  loop invariant i2: x % 2 == 0;  
+  */
+  while (x < 0x0fffffff) {
+    x += 2;
+  }
+
+  //@ assert(!(x % 2));
+}
+
+"""
+fc = FramaCChecker()
+success, checker_message = fc.check(code, False, True, False)
+print(success)
+print(checker_message)

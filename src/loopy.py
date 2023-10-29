@@ -3036,7 +3036,7 @@ class LoopyPipeline:
                         "repair_candidate": failing_candidate,
                     }
 
-                    if "Annotation error" in checker_message:
+                    if "Annotation error on line" in checker_message:
                         matches = re.findall(
                             r"Annotation error on line (\d+): ", checker_message
                         )
