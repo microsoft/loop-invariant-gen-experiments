@@ -2908,11 +2908,19 @@ class LoopyPipeline:
 
         log_file = open(self.log_path + "final.json", "w", encoding="utf-8")
 
-        repair_prompt = Prompt(
-            system_text_file="templates/healing_system_message.txt",
-            prompt_text_file="templates/healing_prompt.txt",
-            num_completions=1,
-        )
+        repair_prompt = None
+        if self.use_json_output:
+            repair_prompt = Prompt(
+                system_text_file="templates/healing_system_message.txt",
+                prompt_text_file="templates/healing_prompt.txt",
+                num_completions=1,
+            )
+        else:
+            repair_prompt = Prompt(
+                system_text_file="templates/csv_format_healing_system_message.txt",
+                prompt_text_file="templates/csv_format_healing_prompt.txt",
+                num_completions=1,
+            )
 
         for benchmark_index, gen_benchmark_log in enumerate(generation_log_1):
             assert (

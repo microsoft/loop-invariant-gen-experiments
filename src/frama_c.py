@@ -41,7 +41,7 @@ class FramaCChecker(Checker):
         with open(temp_c_file, "w") as f:
             f.write(input)
 
-        cmd = f"frama-c -wp -wp-verbose 100 -wp-debug 100 -wp-timeout 5 \
+        cmd = f"frama-c -wp -wp-verbose 100 -wp-debug 100 -wp-timeout 3 \
                 -wp-prover=alt-ergo,z3,cvc4 {temp_c_file} -wp-report-json {temp_wp_json_report_file} -kernel-warn-key annot-error=active \
                 -kernel-log a:{temp_kernel_log_file} -then -no-unicode -report -report-csv {temp_output_dump_file}"
         p = subprocess.Popen(cmd.split(), stdout=subprocess.PIPE)
@@ -343,10 +343,10 @@ class FramaCChecker(Checker):
                         # to prune further. example, there's an assertion inside the loop which is Unknown
                         break
 
-                    for line_no in partially_proven_inv_line_nos:
-                        code_lines__ = deepcopy(code_lines)
-                        code_lines__[line_no] = ""
-                        code_queue.append("\n".join(code_lines__))
+                    # for line_no in partially_proven_inv_line_nos:
+                    #     code_lines__ = deepcopy(code_lines)
+                    #     code_lines__[line_no] = ""
+                    #     code_queue.append("\n".join(code_lines__))
 
             num_frama_c_calls += 1
 
