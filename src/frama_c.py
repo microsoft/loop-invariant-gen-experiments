@@ -73,6 +73,7 @@ class FramaCChecker(Checker):
         user_assertions = []
         loop_variant = ""
         function_contracts = []
+        csv_loop_invariants = {}
         success = False
 
         """
@@ -81,6 +82,17 @@ class FramaCChecker(Checker):
         if use_json_dump_for_invariants:
             if not os.path.exists(temp_wp_json_report_file):
                 return False, "No JSON report found"
+
+            if not os.path.exists(temp_output_dump_file):
+                return False, "No CSV output dump found from Frama-C"
+
+            with open(temp_output_dump_file, "r", encoding="utf-8") as f:
+                csv_dump = [row for row in csv.DictReader(f, delimiter="\t")]
+                csv_loop_invariants = {
+                    row["property"]: row["status"]
+                    for row in csv_dump
+                    if row["property kind"] == "loop invariant"
+                }
 
             with open(temp_wp_json_report_file, "r", encoding="utf-8") as f:
                 json_output = f.read()
@@ -129,9 +141,17 @@ class FramaCChecker(Checker):
                         loop_invariant_status[inv]["preserved"]
                         and loop_invariant_status[inv]["established"]
                     ):
-                        loop_invariants.append(
-                            f"loop invariant {invariants_with_ids[inv]} is inductive."
-                        )
+                        if (
+                            inv in csv_loop_invariants
+                            and csv_loop_invariants[inv] == "Valid"
+                        ):
+                            loop_invariants.append(
+                                f"loop invariant {invariants_with_ids[inv]} is inductive."
+                            )
+                        else:
+                            loop_invariants.append(
+                                f"loop invariant {invariants_with_ids[inv]} is partially proven to be inductive."
+                            )
                     elif (
                         not loop_invariant_status[inv]["preserved"]
                         and loop_invariant_status[inv]["established"]
