@@ -50,8 +50,7 @@ def parse_args(args):
     parser.add_argument(
         "--repair-invariants",
         help="Repair invariants",
-        type=int,
-        default=1,
+        action="store_true",
     )
 
     parser.add_argument(
