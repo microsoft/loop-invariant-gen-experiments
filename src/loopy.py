@@ -27,7 +27,6 @@ def combine_and_prune_with_k(
     combine_llm_output_lambda=None,
     features="one_loop_one_method",
 ):
-    logger = Logger()
     invariants_1 = [b["invariants"] for b in benchmark["completions"]]
     invariants_2 = [b["invariants"] for b in benchmark2["completions"]]
     invariants_from_completions = invariants_1 + invariants_2
@@ -51,18 +50,18 @@ def combine_and_prune_with_k(
     pass_k_prune = 0.0
     for m in range(0, max_m):
         checker_inputs = candidate_inputs[m * max_cores : (m + 1) * max_cores]
-        logger.log_action(
+        Logger.log_action(
             "Combine and Pruning",
             f"[Batch {m+1}/{max_m}]: {len(checker_inputs)} candidates in parallel, k={k}, File: {benchmark['file']}",
         )
         try:
             results = run_parallel(checker_inputs, prune_wrapper)
             pass_k_prune += sum(results)
-            logger.log_info(
+            Logger.log_info(
                 f"[Batch {m+1}/{max_m}]: Combine and Prune with k = {pass_k_prune / len(results)} for k={k}, {len(checker_inputs)} parallel benchmarks, File: {benchmark['file']}"
             )
         except Exception as e:
-            logger.log_error(str(e))
+            Logger.log_error(str(e))
 
     pass_k_prune = pass_k_prune / len(candidates)
     Logger.log_success(
@@ -2886,9 +2885,6 @@ class LoopyPipeline:
         if self.llm is None or self.benchmark is None or self.checker is None:
             raise Exception("Pipeline not initialized. Call load_config first.")
 
-        if not all([x in ["loop_invariants"] for x in self.analysis]):
-            raise Exception("Unsupported analysis for sequence pipeline")
-
         log_json = []
         stats = {
             "gen_success": [],
@@ -2926,6 +2922,39 @@ class LoopyPipeline:
                 "repair_tries": [],
             }
             success = False
+
+            if (
+                "completions" not in gen_benchmark_log
+                or "completions" not in generation_log_2[benchmark_index]
+            ):
+                Logger.log_info(
+                    f"Skipping benchmark without completions: {start_index + benchmark_index + 1}/{len(generation_log_1)}"
+                )
+                instance_log_json["success"] = False
+                stats["gen_skipped"].append(gen_benchmark_log["file"])
+                log_json.append(instance_log_json)
+                with open(
+                    os.path.join(
+                        self.log_path,
+                        gen_benchmark_log["file"]
+                        .replace(".c", ".json")
+                        .replace("../", "")
+                        .replace("/", "__"),
+                    ),
+                    "w",
+                    encoding="utf-8",
+                ) as f:
+                    f.write(
+                        json.dumps(
+                            {
+                                "logs": instance_log_json,
+                                "stats": stats,
+                            },
+                            indent=4,
+                            ensure_ascii=False,
+                        )
+                    )
+                continue
 
             try:
                 pass_8_success, candidates = combine_and_prune_with_k(
@@ -3103,22 +3132,14 @@ class LoopyPipeline:
             stats["gen_skipped_count"] = len(stats["gen_skipped"])
             stats["repair_skipped_count"] = len(stats["repair_skipped"])
 
-        with open(
-            os.path.join(self.log_path, "final.json"),
-            "w",
-            encoding="utf-8",
-        ) as f:
-            f.write(
-                json.dumps(
-                    {
-                        "params": self.arg_params,
-                        "logs": log_json,
-                        "stats": stats,
-                    },
-                    indent=4,
-                    ensure_ascii=False,
-                )
+        log_file.write(
+            json.dumps(
+                {"params": self.arg_params, "logs": log_json, "stats": stats},
+                indent=4,
+                ensure_ascii=False,
             )
+        )
+        log_file.close()
 
         return
 
