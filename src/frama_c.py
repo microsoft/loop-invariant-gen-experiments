@@ -1600,3 +1600,4 @@ class FramaCBenchmark(Benchmark):
         except Exception as e:
             raise InvalidBenchmarkException(str(e))
         return code
+

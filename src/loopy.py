@@ -3014,14 +3014,6 @@ class LoopyPipeline:
                     continue
 
                 failing_candidate = random.choice(candidates)
-                success, checker_message = self.checker.check(
-                    failing_candidate,
-                    False,
-                    use_json_dump_for_invariants=self.use_json_output,
-                )
-
-                if success:
-                    raise Exception("Failing candidate is not failing")
 
                 Logger.log_info(
                     f"Starting repair for benchmark: {start_index + benchmark_index + 1}/{len(generation_log_1)}"
@@ -3032,8 +3024,31 @@ class LoopyPipeline:
                 success = False
                 houdini_success = False
                 while num_repair_calls < num_repairs:
+                    success, checker_message = self.checker.check(
+                        failing_candidate,
+                        False,
+                        use_json_dump_for_invariants=self.use_json_output,
+                    )
+
+                    if success:
+                        Logger.log_success(
+                            f"Repair successful for benchmark: {start_index + benchmark_index + 1}/{len(generation_log_1)} with {num_repair_calls} repair calls"
+                        )
+                        instance_log_json["success"] = True
+                        repair_tries.append(
+                            {
+                                "repair_candidate": failing_candidate,
+                                "llm_conversation": [],
+                                "success": True,
+                                "checker_message": checker_message,
+                            }
+                        )
+                        stats["repair_success"].append(gen_benchmark_log["file"])
+                        break
+
                     repair_try_json = {
                         "repair_candidate": failing_candidate,
+                        "repair_error_message": checker_message,
                     }
 
                     if "Annotation error on line" in checker_message:
@@ -3077,7 +3092,7 @@ class LoopyPipeline:
                         repair_annotation_blocks,
                         "one_loop_one_method",
                     )
-                    repair_try_json["final_checker_input"] = new_checker_input
+                    repair_try_json["repaired_checker_input"] = new_checker_input
 
                     success, checker_message = self.checker.check(
                         new_checker_input,
