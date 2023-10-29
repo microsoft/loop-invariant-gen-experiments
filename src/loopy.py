@@ -3036,6 +3036,16 @@ class LoopyPipeline:
                         "repair_candidate": failing_candidate,
                     }
 
+                    if "Annotation error" in checker_message:
+                        matches = re.findall(
+                            r"Annotation error on line (\d+): ", checker_message
+                        )
+                        line_num = int(matches[0]) - 1
+                        checker_message = checker_message.replace(
+                            f"Annotation error on line {line_num + 1}: ",
+                            f"Syntax error on line '{failing_candidate.splitlines()[line_num]}': ",
+                        )
+
                     (
                         repair_annotation_blocks,
                         repair_llm_outputs,
