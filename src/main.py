@@ -47,6 +47,27 @@ def parse_args(args):
         ],
     )
 
+    parser.add_argument(
+        "--repair-invariants",
+        help="Repair invariants",
+        type=int,
+        default=1,
+    )
+
+    parser.add_argument(
+        "--repair-1",
+        help="Repair invariants input 1",
+        type=str,
+        default="",
+    )
+
+    parser.add_argument(
+        "--repair-2",
+        help="Repair invariants input 2",
+        type=str,
+        default="",
+    )
+
     # Checker to use
     parser.add_argument(
         "--checker",
@@ -251,6 +272,15 @@ def main(args):
             max_benchmarks=args.max_benchmarks,
             start_index=args.start_index,
             prompt=args.loopy_prompt,
+        )
+        return
+
+    if args.repair_invariants:
+        p.repair_invariants(
+            max_benchmarks=args.max_benchmarks,
+            start_index=args.start_index,
+            input_log_1=args.repair_1,
+            input_log_2=args.repair_2,
         )
         return
 

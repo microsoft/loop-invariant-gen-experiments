@@ -23,7 +23,7 @@ def combine_and_prune_with_k(
     n,
     k,
     shuffle_times=10,
-    max_cores=16,
+    max_cores=4,
     combine_llm_output_lambda=None,
     features="one_loop_one_method",
 ):
@@ -42,35 +42,33 @@ def combine_and_prune_with_k(
         shuffle(invariants_from_completions) for _ in range(shuffle_times)
     ]
     candidates = [rp[:k] for rp in random_permutations]
+    candidate_inputs = [
+        combine_llm_output_lambda(benchmark["benchmark_code"], candidate, features)
+        for candidate in candidates
+    ]
 
     max_m = (len(candidates) // max_cores) + 1
     pass_k_prune = 0.0
     for m in range(0, max_m):
-        candidates_batch = candidates[m * max_cores : (m + 1) * max_cores]
-        checker_inputs = [
-            combine_llm_output_lambda(
-                benchmark["benchmark_code"], pass_at_k_candidate, features
-            )
-            for pass_at_k_candidate in candidates_batch
-        ]
+        checker_inputs = candidate_inputs[m * max_cores : (m + 1) * max_cores]
         logger.log_action(
             "Combine and Pruning",
-            f"[Batch {m+1}/{max_m}]: {len(candidates_batch)} candidates in parallel, k={k}, File: {benchmark['file']}",
+            f"[Batch {m+1}/{max_m}]: {len(checker_inputs)} candidates in parallel, k={k}, File: {benchmark['file']}",
         )
         try:
             results = run_parallel(checker_inputs, prune_wrapper)
             pass_k_prune += sum(results)
             logger.log_info(
-                f"[Batch {m+1}/{max_m}]: Combine and Prune with k = {pass_k_prune / len(results)} for k={k}, {len(candidates_batch)} parallel benchmarks, File: {benchmark['file']}"
+                f"[Batch {m+1}/{max_m}]: Combine and Prune with k = {pass_k_prune / len(results)} for k={k}, {len(checker_inputs)} parallel benchmarks, File: {benchmark['file']}"
             )
         except Exception as e:
             logger.log_error(str(e))
 
     pass_k_prune = pass_k_prune / len(candidates)
-    if pass_k_prune == 0.0:
-        return 0.0, random.choice(candidates)
-    else:
-        return pass_k_prune, None
+    Logger.log_success(
+        f"Combine and Prune with k = {pass_k_prune} for k={k}, {len(candidates)} benchmarks, File: {benchmark['file']}"
+    )
+    return pass_k_prune, checker_inputs
 
 
 class LoopyPipeline:
@@ -2863,6 +2861,264 @@ class LoopyPipeline:
             )
         )
         log_file.close()
+
+        return
+
+    def repair_invariants(
+        self,
+        max_benchmarks=1,
+        start_index=0,
+        input_log_1="",
+        input_log_2="",
+        k=8,
+        num_repairs=7,
+    ):
+        generation_log_1 = json.load(open(input_log_1, "r", encoding="utf-8"))
+        generation_log_2 = json.load(open(input_log_2, "r", encoding="utf-8"))
+
+        generation_log_1 = generation_log_1["logs"][
+            start_index : start_index + max_benchmarks
+        ]
+        generation_log_2 = generation_log_2["logs"][
+            start_index : start_index + max_benchmarks
+        ]
+
+        if self.llm is None or self.benchmark is None or self.checker is None:
+            raise Exception("Pipeline not initialized. Call load_config first.")
+
+        if not all([x in ["loop_invariants"] for x in self.analysis]):
+            raise Exception("Unsupported analysis for sequence pipeline")
+
+        log_json = []
+        stats = {
+            "gen_success": [],
+            "repair_success": [],
+            "repair_failure": [],
+            "gen_skipped": [],
+            "repair_skipped": [],
+            "total": 0,
+        }
+
+        self.log_path = datetime.datetime.now().strftime(
+            f"../logs/repair_loopy_%Y_%m_%d_%H_%M_%S/"
+        )
+        if not os.path.exists(os.path.dirname(self.log_path)):
+            os.makedirs(os.path.dirname(self.log_path))
+
+        log_file = open(self.log_path + "final.json", "w", encoding="utf-8")
+
+        repair_prompt = Prompt(
+            system_text_file="templates/healing_system_message.txt",
+            prompt_text_file="templates/healing_prompt.txt",
+            num_completions=1,
+        )
+
+        for benchmark_index, gen_benchmark_log in enumerate(generation_log_1):
+            assert (
+                gen_benchmark_log["file"] == generation_log_2[benchmark_index]["file"]
+            ), "Mismatch in benchmark logs"
+
+            benchmark_code = gen_benchmark_log["benchmark_code"]
+            instance_log_json = {
+                "file": gen_benchmark_log["file"],
+                "benchmark_code": benchmark_code,
+                "success": False,
+                "repair_tries": [],
+            }
+            success = False
+
+            try:
+                pass_8_success, candidates = combine_and_prune_with_k(
+                    gen_benchmark_log,
+                    generation_log_2[benchmark_index],
+                    15,
+                    k,
+                    combine_llm_output_lambda=self.benchmark.combine_llm_outputs,
+                )
+                if pass_8_success:
+                    Logger.log_success(
+                        f"Skipping successful for benchmark: {start_index + benchmark_index + 1}/{len(generation_log_1)}"
+                    )
+                    instance_log_json["success"] = True
+                    instance_log_json["candidates"] = candidates
+                    stats["gen_success"].append(gen_benchmark_log["file"])
+
+                    log_json.append(instance_log_json)
+                    with open(
+                        os.path.join(
+                            self.log_path,
+                            gen_benchmark_log["file"]
+                            .replace(".c", ".json")
+                            .replace("../", "")
+                            .replace("/", "__"),
+                        ),
+                        "w",
+                        encoding="utf-8",
+                    ) as f:
+                        f.write(
+                            json.dumps(
+                                {
+                                    "logs": instance_log_json,
+                                    "stats": stats,
+                                },
+                                indent=4,
+                                ensure_ascii=False,
+                            )
+                        )
+                    continue
+
+                failing_candidate = random.choice(candidates)
+                success, checker_message = self.checker.check(
+                    failing_candidate,
+                    False,
+                    use_json_dump_for_invariants=self.use_json_output,
+                )
+
+                if success:
+                    raise Exception("Failing candidate is not failing")
+
+                Logger.log_info(
+                    f"Starting repair for benchmark: {start_index + benchmark_index + 1}/{len(generation_log_1)}"
+                )
+
+                num_repair_calls = 0
+                repair_tries = []
+                success = False
+                houdini_success = False
+                while num_repair_calls < num_repairs:
+                    repair_try_json = {
+                        "repair_candidate": failing_candidate,
+                    }
+
+                    (
+                        repair_annotation_blocks,
+                        repair_llm_outputs,
+                    ) = self.llm.generate_annotation(
+                        input={"code": failing_candidate, "error": checker_message},
+                        prompt=repair_prompt,
+                        extraction_filter=lambda x: self.checker.has_invariant(x),
+                    )
+                    num_repair_calls += 1
+
+                    repair_try_json["llm_conversation"] = repair_llm_outputs
+                    repair_try_json["annotation_blocks"] = repair_annotation_blocks
+
+                    new_checker_input = self.benchmark.combine_llm_outputs(
+                        benchmark_code,
+                        [repair_annotation_blocks],
+                        "one_loop_one_method",
+                    )
+                    repair_try_json["final_checker_input"] = new_checker_input
+
+                    success, checker_message = self.checker.check(
+                        new_checker_input,
+                        False,
+                        use_json_dump_for_invariants=self.use_json_output,
+                    )
+
+                    houdini_success, pruned_code, _ = self.checker.houdini(
+                        new_checker_input,
+                        "one_loop_one_method",
+                        use_json_dump_for_invariants=self.use_json_output,
+                    )
+
+                    if success or houdini_success:
+                        Logger.log_success(
+                            f"Repair successful for benchmark: {start_index + benchmark_index + 1}/{len(generation_log_1)} with {num_repair_calls + 1} repair calls"
+                        )
+                        repair_try_json["success"] = True
+                        repair_try_json["checker_message"] = checker_message
+                        repair_try_json["success_after_prune"] = houdini_success
+                        repair_try_json["code_after_prune"] = pruned_code
+
+                        instance_log_json["success"] = True
+                        repair_tries.append(repair_try_json)
+                        stats["repair_success"].append(gen_benchmark_log["file"])
+                        break
+
+                    else:
+                        Logger.log_error(
+                            f"Repair unsuccessful for benchmark: {start_index + benchmark_index + 1}/{len(generation_log_1)} with {num_repair_calls + 1} repair calls"
+                        )
+                        failing_candidate = new_checker_input
+                        repair_try_json["success"] = False
+                        repair_try_json["checker_message"] = checker_message
+                        repair_try_json["success_after_prune"] = houdini_success
+                        repair_try_json["code_after_prune"] = pruned_code
+                        repair_tries.append(repair_try_json)
+                        continue
+
+                instance_log_json["repair_tries"] = repair_tries
+                instance_log_json["success"] = success or houdini_success
+
+                if instance_log_json["success"]:
+                    Logger.log_success(
+                        f"Benchmark {start_index + benchmark_index + 1}/{len(generation_log_1)} succeeded"
+                    )
+                    stats["repair_success"].append(gen_benchmark_log["file"])
+                else:
+                    Logger.log_error(
+                        f"Benchmark {start_index + benchmark_index + 1}/{len(generation_log_1)} failed"
+                    )
+                    stats["repair_failure"].append(gen_benchmark_log["file"])
+
+            except Exception as e:
+                Logger.log_error(traceback.format_exc())
+                if isinstance(e, KeyboardInterrupt):
+                    instance_log_json["success"] = False
+                    stats["repair_skipped"].append(gen_benchmark_log["file"])
+                    break
+                else:
+                    instance_log_json["error"] = str(e)
+                    instance_log_json["success"] = False
+                    stats["repair_skipped"].append(gen_benchmark_log["file"])
+                    log_json.append(instance_log_json)
+                    with open(
+                        os.path.join(
+                            self.log_path,
+                            gen_benchmark_log["file"]
+                            .replace(".c", ".json")
+                            .replace("../", "")
+                            .replace("/", "__"),
+                        ),
+                        "w",
+                        encoding="utf-8",
+                    ) as f:
+                        f.write(
+                            json.dumps(
+                                {
+                                    "logs": instance_log_json,
+                                    "stats": stats,
+                                },
+                                indent=4,
+                                ensure_ascii=False,
+                            )
+                        )
+                    continue
+
+            stats["total"] += 1
+            stats["gen_success_count"] = len(stats["gen_success"])
+            stats["repair_success_count"] = len(stats["repair_success"])
+            stats["repair_failure_count"] = len(stats["repair_failure"])
+            stats["gen_skipped_count"] = len(stats["gen_skipped"])
+            stats["repair_skipped_count"] = len(stats["repair_skipped"])
+
+        with open(
+            os.path.join(self.log_path, "final.json"),
+            "w",
+            encoding="utf-8",
+        ) as f:
+            f.write(
+                json.dumps(
+                    {
+                        "params": self.arg_params,
+                        "logs": log_json,
+                        "stats": stats,
+                    },
+                    indent=4,
+                    ensure_ascii=False,
+                )
+            )
 
         return
 
