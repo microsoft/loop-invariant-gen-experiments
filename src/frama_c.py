@@ -520,7 +520,10 @@ class FramaCChecker(Checker):
         lines = checker_message.splitlines()
         non_inductive_invariants = []
         for line in lines:
-            if "is inductive." in line:
+            if (
+                "is inductive." in line
+                or "is partially proven to be inductive." in line
+            ):
                 continue
             else:
                 inv_exp = re.findall(r"loop invariant (.+) is", line)
@@ -1600,4 +1603,3 @@ class FramaCBenchmark(Benchmark):
         except Exception as e:
             raise InvalidBenchmarkException(str(e))
         return code
-
