@@ -722,7 +722,8 @@ class FramaCBenchmark(Benchmark):
                     if len(invariant) > 0:
                         inv_id = re.findall(r"loop invariant ([a-zA-Z_][a-zA-Z_0-9]*:\s*)", line)
                         if len(inv_id) > 0:
-                            invariant = [invariant[0].replace(inv_id[0], "")]
+                            line = line.replace("loop invariant " + inv_id[0], "loop invariant ")
+                            invariant = re.findall(r"loop invariant (.+);", line)
                         if invariant[0] not in invariant_expressions:
                             invariant_expressions[invariant[0]] = True
                             invariant = f"loop invariant i{inv_count + 1}: {invariant[0]};"  # add loop invariant label
