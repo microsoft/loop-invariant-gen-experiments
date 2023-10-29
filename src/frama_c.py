@@ -712,19 +712,22 @@ class FramaCBenchmark(Benchmark):
             return annotated_candidates
 
         elif "one_loop_one_method" in features:
-            invariants = {}
+            invariants = []
+            invariant_expressions = {}
             inv_count = 0
             for llm_output in llm_outputs:
                 lines = llm_output.splitlines()
                 for line in lines:
                     invariant = re.findall(r"loop invariant (.+);", line)
                     if len(invariant) > 0:
-                        inv_id = re.findall(r"loop invariant (\w+:) ", line)
+                        inv_id = re.findall(r"loop invariant ([a-zA-Z_][a-zA-Z_0-9]*:\s*)", line)
                         if len(inv_id) > 0:
                             invariant = [invariant[0].replace(inv_id[0], "")]
-                        invariant = f"loop invariant i{inv_count + 1}: {invariant[0]};"  # add loop invariant label
-                        invariants[invariant] = True
-                        inv_count += 1
+                        if invariant[0] not in invariant_expressions:
+                            invariant_expressions[invariant[0]] = True
+                            invariant = f"loop invariant i{inv_count + 1}: {invariant[0]};"  # add loop invariant label
+                            invariants.append(invariant)
+                            inv_count += 1
 
             loop = self.get_loops(self.get_main_definition(checker_input))
             if len(loop) != 1:
@@ -733,7 +736,7 @@ class FramaCBenchmark(Benchmark):
             output = (
                 checker_input[: loop.start_byte]
                 + "/*@\n"
-                + "\n".join(list(invariants.keys()))
+                + "\n".join(invariants)
                 + "\n*/\n"
                 + checker_input[loop.start_byte :]
             )

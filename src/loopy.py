@@ -64,9 +64,14 @@ def combine_and_prune_with_k(
             Logger.log_error(str(e))
 
     pass_k_prune = pass_k_prune / len(candidates)
-    Logger.log_success(
-        f"Combine and Prune with k = {pass_k_prune} for k={k}, {len(candidates)} benchmarks, File: {benchmark['file']}"
-    )
+    if pass_k_prune > 0.0:
+        Logger.log_success(
+            f"Combine and Prune with k = {pass_k_prune} for k={k}, {len(candidates)} benchmarks, File: {benchmark['file']}"
+        )
+    else:
+        Logger.log_error(
+            f"Combine and Prune with k = {pass_k_prune} for k={k}, {len(candidates)} benchmarks, File: {benchmark['file']}"
+        )
     return pass_k_prune, checker_inputs
 
 
@@ -2970,7 +2975,7 @@ class LoopyPipeline:
                 )
                 if pass_8_success:
                     Logger.log_success(
-                        f"Skipping successful for benchmark: {start_index + benchmark_index + 1}/{len(generation_log_1)}"
+                        f"Skipping successful benchmark: {start_index + benchmark_index + 1}/{len(generation_log_1)}"
                     )
                     instance_log_json["success"] = True
                     instance_log_json["candidates"] = candidates
@@ -3031,6 +3036,19 @@ class LoopyPipeline:
                         prompt=repair_prompt,
                         extraction_filter=lambda x: self.checker.has_invariant(x),
                     )
+
+                    assert len(repair_annotation_blocks) == 1, "Invalid repair"
+
+                    if len(
+                        repair_annotation_blocks[0]
+                    ) == 2 and repair_annotation_blocks[0] == (
+                        "ERROR: Output does not contain at least 1 complete code block"
+                    ):
+                        Logger.log_error(
+                            f"LLM query failed for benchmark: {start_index + benchmark_index + 1}/{len(generation_log_1)}"
+                        )
+                        continue
+
                     num_repair_calls += 1
 
                     repair_try_json["llm_conversation"] = repair_llm_outputs
@@ -3038,7 +3056,7 @@ class LoopyPipeline:
 
                     new_checker_input = self.benchmark.combine_llm_outputs(
                         benchmark_code,
-                        [repair_annotation_blocks],
+                        repair_annotation_blocks,
                         "one_loop_one_method",
                     )
                     repair_try_json["final_checker_input"] = new_checker_input
