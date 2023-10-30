@@ -3290,10 +3290,13 @@ class LoopyPipeline:
                 }
 
                 completions = []
-                for completion in annotation_blocks:
+                for i, completion in enumerate(annotation_blocks):
                     if len(completion) == 2 and completion[0] == (
                         "ERROR: Output does not contain at least 1 complete code block"
                     ):
+                        Logger.log_error(
+                            f"Completion {i + 1} does not contain at least 1 code block"
+                        )
                         completions.append(
                             {
                                 "success": False,
@@ -3303,7 +3306,7 @@ class LoopyPipeline:
                         )
                         continue
 
-                    Logger.log_info(f"Checking completion {len(completions) + 1}")
+                    Logger.log_info(f"Checking completion {i + 1}")
 
                     checker_input_with_annotations = self.benchmark.combine_llm_outputs(
                         instance[1]["code"], [completion], "one_loop_one_method"
@@ -3315,9 +3318,7 @@ class LoopyPipeline:
                     )
 
                     if __success:
-                        Logger.log_success(
-                            f"Completion {len(completions) + 1} is correct"
-                        )
+                        Logger.log_success(f"Completion {i + 1} is correct")
                         completions.append(
                             {
                                 "invariants": completion,
