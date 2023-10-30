@@ -1,0 +1,123 @@
+{
+    "logs": {
+        "file": "../data/benchmarks/code2inv/36.c",
+        "benchmark_code": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\n\nint main() {\n  \n  int c;\n  \n  (c = 0);\n  \n  while (unknown()) {\n    {\n      if ( unknown() ) {\n        if ( (c != 40) )\n        {\n        (c  = (c + 1));\n        }\n      } else {\n        if ( (c == 40) )\n        {\n        (c  = 1);\n        }\n      }\n\n    }\n\n  }\n  \nif ( (c != 40) )\n{;\n//@ assert( (c <= 40) );\n}\n\n}",
+        "success": true,
+        "llm_conversation": [
+            {
+                "role": "system",
+                "content": "You are a helpful AI software assistant that reasons about how code behaves. Given a program, you can find loop invariants, which can then be used to verify some property in the program. \nFrama-C is a software verification tool for C programs. The input to Frama-C is a C program file with ACSL (ANSI/ISO C Specification Language) annotations.\nFor the given program, find the necessary loop invariants of the while loop to help Frama-C verify the post-condition.\n\nInstructions:\n- Make a note of the pre-conditions or variable assignments in the program.\n- Analyze the loop body and make a note of the loop condition. \n- Output loop invariants that are true \n(i) before the loop execution, \n(ii) in every iteration of the loop and \n(iii) after the loop termination, \nsuch that the loop invariants imply the post condition.\n- If a loop invariant is a conjunction, split it into its parts.\n- Output all the loop invariants in one code block. For example:\n```\n/*@ \n    loop invariant i1;\n    loop invariant i2;\n*/\n```\nRules:\n- **Do not use variables or functions that are not declared in the program.** \n- **Do not make any assumptions about functions whose definitions are not given.**\n- **All undefined variables contain garbage values. Do not use variables that have garbage values.**\n- **Do not use keywords that are not supported in ACSL annotations for loops.**\n- **Variables that are not explicitly initialized, could have garbage values. Do not make any assumptions about such values.**\n- **Do not use the \\at(x, Pre) notation for any variable x.**\n- **Do not use non-deterministic function calls.**"
+            },
+            {
+                "role": "user",
+                "content": "\nConsider the following C program:\n```\n#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\n\nint main() {\n  \n  int c;\n  \n  (c = 0);\n  \n  while (unknown()) {\n    {\n      if ( unknown() ) {\n        if ( (c != 40) )\n        {\n        (c  = (c + 1));\n        }\n      } else {\n        if ( (c == 40) )\n        {\n        (c  = 1);\n        }\n      }\n\n    }\n\n  }\n  \nif ( (c != 40) )\n{;\n//@ assert( (c <= 40) );\n}\n\n}\n```\n\nYou are allowed to use implication to take care of the conditional nature of the code. Use implication (==>) instead of using if-then.\n\nFor all variables, add conjunctions that bound the maximum and minimum values that they can take, if such bounds exist.\n\nIf a variable is always equal to or smaller or larger than another variable, add a conjunction for their relation.\n\nIf the assertion is guarded by a condition, use the guard condition in an implication.\n\nIf certain variables are non-deterministic at the beginning or end of the loop, use an implication to make the invariant trivially true at that location. \n\nOutput the loop invariants for the loop in the program above. Let's think step by step."
+            },
+            "Pre-conditions and variable assignments:\n- The program does not have any pre-conditions.\n- The program declares an integer variable `c` and assigns it a value of 0.\n\nLoop condition:\n- The loop condition is `unknown()`, which means that the loop executes an unknown number of times until the condition becomes false.\n\nLoop invariants:\n- Before the loop execution: `c == 0`.\n- In every iteration of the loop:\n    - If `unknown()` is true:\n        - If `c != 40`, then `c` is incremented by 1: `c' == c + 1`.\n        - If `c == 40`, then `c` is reset to 1: `c' == 1`.\n    - If `unknown()` is false, then `c` remains the same: `c' == c`.\n- After the loop termination: \n    - If `c != 40`, then `c <= 40`.\n    - If `c == 40`, then `c == 40`.\n\nWe can combine these loop invariants into one code block as follows:\n```\n/*@\n    loop invariant c == 0;\n    loop invariant \\forall integer i; 0 <= i < c ==> i < 40;\n    loop invariant \\forall integer i; 0 <= i < c ==> i < c';\n    loop invariant \\forall integer i; c <= i < 40 ==> i == 40;\n    loop invariant \\forall integer i; c <= i < 40 ==> i == c';\n*/\n``` \n\nExplanation:\n- The first loop invariant ensures that `c` is initialized to 0 before the loop execution.\n- The second loop invariant ensures that all the values of `c` before `c'` are less than 40.\n- The third loop invariant ensures that all the values of `c` after `c'` and before 40 are equal to `c'`.\n- The fourth loop invariant ensures that all the values of `c` after `c'` and before 40 are equal to 40.\n- Finally, the post-condition is implied by the last two loop invariants. If `c` is not equal to 40, then it must be less than or equal to 40 according to the second invariant. If `c` is equal to 40, then it must be equal to 40 according to the fourth invariant.",
+            "Pre-conditions:\n- None\n\nVariable Assignments:\n- `c` is assigned the value 0 initially.\n\nLoop Condition:\n- The loop executes as long as the return value of the `unknown()` function is non-zero.\n\nLoop Invariants:\n- `c` is always positive or zero. `(c >= 0)`\n- `c` is always less than or equal to 40. `(c <= 40)`\n- If `unknown()` returns 0, then `c` is equal to 1. `(unknown() == 0 ==> c == 1)`\n- If `unknown()` returns 1 and `c` is not equal to 40, then `c` is incremented by 1. `(unknown() == 1 && c != 40 ==> c_old + 1 == c)`\n- If `unknown()` returns 1 and `c` is equal to 40, then `c` is reset to 1. `(unknown() == 1 && c == 40 ==> c == 1)`\n\nPutting it all together, we get:\n```\n/*@ \n    loop invariant (c >= 0);\n    loop invariant (c <= 40);\n    loop invariant (unknown() == 0 ==> c == 1);\n    loop invariant (unknown() == 1 && c != 40 ==> c_old + 1 == c);\n    loop invariant (unknown() == 1 && c == 40 ==> c == 1);\n*/\n``` \n\nNote that in the loop invariant `(unknown() == 1 && c != 40 ==> c_old + 1 == c)`, `c_old` represents the value of `c` before the execution of the loop body. Since we cannot use the `\\at` notation to refer to `c` before the loop body, we use `c_old` as a placeholder to represent the old value of `c`.",
+            "Pre-conditions:\n- None\n\nVariable assignments:\n- c is assigned the value 0 at the beginning of the program.\n\nLoop condition:\n- The loop continues to execute as long as the function `unknown()` returns a non-zero value.\n\nLoop invariants:\n- Before the loop execution, `c` is equal to 0.\n- In every iteration of the loop, `c` is always less than or equal to 40.\n- In every iteration of the loop, if `unknown()` returns a non-zero value, then either `c` is increased by 1 or its value remains the same, but it is still less than or equal to 40.\n- In every iteration of the loop, if `unknown()` returns a zero value, then either `c` is set to 1 or its value remains the same, but it is still less than or equal to 40.\n- After the loop termination, `c` is less than or equal to 40 and if it is not equal to 40, then it is less than or equal to 39.\n\nLoop invariants with ACSL annotations:\n\n```\n/*@ \n    loop invariant c >= 0 && c <= 40;\n    loop invariant \\forall integer i; 0 <= i < c ==> i < 40;\n    loop invariant \\forall integer i; 0 <= i < c ==> i < 40;\n    loop invariant \\forall integer i; 0 <= i < c ==> i <= 40;\n    loop invariant \\forall integer i; 0 <= i < c ==> i <= c;\n    loop invariant !unknown() ==> c <= 40;\n    loop invariant !unknown() && c != 40 ==> c <= 39;\n*/\n``` \n\nNote that we added the bounds on `c` at the beginning and in every iteration of the loop. We also used implications to make the invariants true at the beginning and end of the loop for the non-deterministic behavior of `unknown()`. Finally, we used the quantifier `\\forall` to express that all values of `i` less than `c` are less than or equal to 40, and also less than or equal to `c`.",
+            "Pre-conditions or variable assignments:\n- The program defines a macro `assume(e)` which takes a Boolean expression `e` and returns 0 if `e` evaluates to false.\n- The program declares an external function `unknown()` which returns an integer value. We do not know the implementation of this function and cannot make any assumptions about its behavior.\n- The program declares an integer variable `c` but does not initialize it.\n\nLoop condition:\n- The while loop condition is `unknown()`, which means that the loop will execute an unknown number of times.\n\nLoop invariants:\n- Before the loop execution, `c` is non-negative and less than or equal to 40:\n```\n/*@ loop invariant 0 <= c <= 40; */\n```\n- In every iteration of the loop, `c` is non-negative and less than or equal to 40:\n```\n/*@ loop invariant 0 <= c <= 40; */\n```\n- After the loop termination, if `c` is not equal to 40, then it is less than or equal to 40:\n```\n/*@ loop invariant (c != 40) ==> (c <= 40); */\n```\n\nReasoning:\n- Before the loop execution, `c` is assigned the value 0, which satisfies the first loop invariant.\n- In every iteration of the loop, `c` is either incremented by 1 or reset to 1, but the value of `c` is always non-negative and less than or equal to 40. Therefore, the second loop invariant holds.\n- After the loop termination, if `c` is not equal to 40, then it must be less than or equal to 40 because `c` is incremented by 1 or reset to 1 in the loop. Therefore, the third loop invariant holds.\n\nNote that we do not need to add any additional constraints on the behavior of `unknown()` or the macro `assume()` because they are not used in the loop or the post-condition.",
+            "Pre-conditions:\n- The function `unknown()` returns a non-deterministic boolean value.\n\nVariable Assignments:\n- The variable `c` is assigned the value `0`.\n\nLoop Condition:\n- The loop executes as long as `unknown()` returns a non-zero value.\n\nLoop Invariants:\n- Since `c` is initialized to `0` before the loop, we can add the loop invariant `0 <= c <= 40` to bound its values.\n- We can also add the loop invariant `c != 41` to ensure that `c` never exceeds its upper bound.\n\nIn the loop body, we have a conditional statement with two branches. We can use implication to handle the conditionals.\n\nFirst Branch (if `unknown()` is true):\n- If `unknown()` is true, then `c` can only be incremented if it is less than or equal to `40`. We can add the loop invariant `unknown() ==> (c <= 40)` to handle this.\n- We can also add the loop invariant `(unknown() && (c != 40)) ==> (c + 1 <= 40)` to ensure that `c` does not exceed its upper bound when it is incremented.\n\nSecond Branch (if `unknown()` is false):\n- If `unknown()` is false, then `c` can only be assigned the value `1` if it is equal to `40`. We can add the loop invariant `(!unknown() && (c == 40)) ==> (c == 1)` to handle this.\n\nAfter the loop, we have an assertion that `c` is less than or equal to `40`. We can use implication to handle the conditional.\n- If `c` is not equal to `40`, then the assertion is trivially true. We can add the loop invariant `(c != 40) ==> (c <= 40)` to handle this.\n\nPutting it all together, the loop invariants for the program are:\n```\n/*@ \n    loop invariant 0 <= c <= 40;\n    loop invariant c != 41;\n    loop invariant unknown() ==> (c <= 40);\n    loop invariant (unknown() && (c != 40)) ==> (c + 1 <= 40);\n    loop invariant (!unknown() && (c == 40)) ==> (c == 1);\n*/\n```"
+        ],
+        "annotation_blocks": [
+            "/*@\n    loop invariant c == 0;\n    loop invariant \\forall integer i; 0 <= i < c ==> i < 40;\n    loop invariant \\forall integer i; 0 <= i < c ==> i < c';\n    loop invariant \\forall integer i; c <= i < 40 ==> i == 40;\n    loop invariant \\forall integer i; c <= i < 40 ==> i == c';\n*/",
+            "/*@ \n    loop invariant (c >= 0);\n    loop invariant (c <= 40);\n    loop invariant (unknown() == 0 ==> c == 1);\n    loop invariant (unknown() == 1 && c != 40 ==> c_old + 1 == c);\n    loop invariant (unknown() == 1 && c == 40 ==> c == 1);\n*/",
+            "/*@ \n    loop invariant c >= 0 && c <= 40;\n    loop invariant \\forall integer i; 0 <= i < c ==> i < 40;\n    loop invariant \\forall integer i; 0 <= i < c ==> i < 40;\n    loop invariant \\forall integer i; 0 <= i < c ==> i <= 40;\n    loop invariant \\forall integer i; 0 <= i < c ==> i <= c;\n    loop invariant !unknown() ==> c <= 40;\n    loop invariant !unknown() && c != 40 ==> c <= 39;\n*/",
+            "/*@ loop invariant 0 <= c <= 40; */",
+            "/*@ \n    loop invariant 0 <= c <= 40;\n    loop invariant c != 41;\n    loop invariant unknown() ==> (c <= 40);\n    loop invariant (unknown() && (c != 40)) ==> (c + 1 <= 40);\n    loop invariant (!unknown() && (c == 40)) ==> (c == 1);\n*/"
+        ],
+        "completions": [
+            {
+                "num_solver_calls": 3,
+                "annotations": "/*@\n    loop invariant c == 0;\n    loop invariant \\forall integer i; 0 <= i < c ==> i < 40;\n    loop invariant \\forall integer i; 0 <= i < c ==> i < c';\n    loop invariant \\forall integer i; c <= i < 40 ==> i == 40;\n    loop invariant \\forall integer i; c <= i < 40 ==> i == c';\n*/",
+                "checker_output_for_annotations": false,
+                "checker_message_for_annotations": "Annotation error on line 13: lexical error, illegal character '",
+                "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\n\nint main() {\n  \n  int c;\n  \n  (c = 0);\n  \n  /*@\nloop invariant i1: c == 0;\nloop invariant i2: \\forall integer i; 0 <= i < c ==> i < 40;\n\nloop invariant i4: \\forall integer i; c <= i < 40 ==> i == 40;\nloop invariant i5: \\forall integer i; c <= i < 40 ==> i == c';\n*/\nwhile (unknown()) {\n    {\n      if ( unknown() ) {\n        if ( (c != 40) )\n        {\n        (c  = (c + 1));\n        }\n      } else {\n        if ( (c == 40) )\n        {\n        (c  = 1);\n        }\n      }\n\n    }\n\n  }\n  \nif ( (c != 40) )\n{;\n//@ assert( (c <= 40) );\n}\n\n}",
+                "checker_output_after_prune": false
+            },
+            {
+                "num_solver_calls": 4,
+                "annotations": "/*@ \n    loop invariant (c >= 0);\n    loop invariant (c <= 40);\n    loop invariant (unknown() == 0 ==> c == 1);\n    loop invariant (unknown() == 1 && c != 40 ==> c_old + 1 == c);\n    loop invariant (unknown() == 1 && c == 40 ==> c == 1);\n*/",
+                "checker_output_for_annotations": false,
+                "checker_message_for_annotations": "Annotation error on line 13: unexpected token ')'",
+                "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\n\nint main() {\n  \n  int c;\n  \n  (c = 0);\n  \n  /*@\nloop invariant i1: (c >= 0);\nloop invariant i2: (c <= 40);\n\n\n\n*/\nwhile (unknown()) {\n    {\n      if ( unknown() ) {\n        if ( (c != 40) )\n        {\n        (c  = (c + 1));\n        }\n      } else {\n        if ( (c == 40) )\n        {\n        (c  = 1);\n        }\n      }\n\n    }\n\n  }\n  \nif ( (c != 40) )\n{;\n//@ assert( (c <= 40) );\n}\n\n}",
+                "checker_output_after_prune": true
+            },
+            {
+                "num_solver_calls": 3,
+                "annotations": "/*@ \n    loop invariant c >= 0 && c <= 40;\n    loop invariant \\forall integer i; 0 <= i < c ==> i < 40;\n    loop invariant \\forall integer i; 0 <= i < c ==> i < 40;\n    loop invariant \\forall integer i; 0 <= i < c ==> i <= 40;\n    loop invariant \\forall integer i; 0 <= i < c ==> i <= c;\n    loop invariant !unknown() ==> c <= 40;\n    loop invariant !unknown() && c != 40 ==> c <= 39;\n*/",
+                "checker_output_for_annotations": false,
+                "checker_message_for_annotations": "Annotation error on line 15: unexpected token ')'",
+                "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\n\nint main() {\n  \n  int c;\n  \n  (c = 0);\n  \n  /*@\nloop invariant i1: c >= 0 && c <= 40;\nloop invariant i2: \\forall integer i; 0 <= i < c ==> i < 40;\nloop invariant i3: \\forall integer i; 0 <= i < c ==> i <= 40;\nloop invariant i4: \\forall integer i; 0 <= i < c ==> i <= c;\n\n\n*/\nwhile (unknown()) {\n    {\n      if ( unknown() ) {\n        if ( (c != 40) )\n        {\n        (c  = (c + 1));\n        }\n      } else {\n        if ( (c == 40) )\n        {\n        (c  = 1);\n        }\n      }\n\n    }\n\n  }\n  \nif ( (c != 40) )\n{;\n//@ assert( (c <= 40) );\n}\n\n}",
+                "checker_output_after_prune": true
+            },
+            {
+                "num_solver_calls": 1,
+                "annotations": "/*@ loop invariant 0 <= c <= 40; */",
+                "checker_output_for_annotations": true,
+                "checker_message_for_annotations": "loop invariant 0 <= c <= 40 is inductive.\nAssertion c <= 40: Valid"
+            },
+            {
+                "num_solver_calls": 4,
+                "annotations": "/*@ \n    loop invariant 0 <= c <= 40;\n    loop invariant c != 41;\n    loop invariant unknown() ==> (c <= 40);\n    loop invariant (unknown() && (c != 40)) ==> (c + 1 <= 40);\n    loop invariant (!unknown() && (c == 40)) ==> (c == 1);\n*/",
+                "checker_output_for_annotations": false,
+                "checker_message_for_annotations": "Annotation error on line 13: unexpected token ')'",
+                "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\n\nint main() {\n  \n  int c;\n  \n  (c = 0);\n  \n  /*@\nloop invariant i1: 0 <= c <= 40;\nloop invariant i2: c != 41;\n\n\n\n*/\nwhile (unknown()) {\n    {\n      if ( unknown() ) {\n        if ( (c != 40) )\n        {\n        (c  = (c + 1));\n        }\n      } else {\n        if ( (c == 40) )\n        {\n        (c  = 1);\n        }\n      }\n\n    }\n\n  }\n  \nif ( (c != 40) )\n{;\n//@ assert( (c <= 40) );\n}\n\n}",
+                "checker_output_after_prune": true
+            }
+        ],
+        "checker_output_for_combined_annotations": false,
+        "checker_message_for_combined_annotations": "Annotation error on line 13: lexical error, illegal character '",
+        "code_with_combined_annotations": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\n\nint main() {\n  \n  int c;\n  \n  (c = 0);\n  \n  /*@\nloop invariant i1: c == 0;\nloop invariant i2: \\forall integer i; 0 <= i < c ==> i < 40;\nloop invariant i3: \\forall integer i; 0 <= i < c ==> i < c';\nloop invariant i4: \\forall integer i; c <= i < 40 ==> i == 40;\nloop invariant i5: \\forall integer i; c <= i < 40 ==> i == c';\nloop invariant i6: (c >= 0);\nloop invariant i7: (c <= 40);\nloop invariant i8: (unknown() == 0 ==> c == 1);\nloop invariant i9: (unknown() == 1 && c != 40 ==> c_old + 1 == c);\nloop invariant i10: (unknown() == 1 && c == 40 ==> c == 1);\nloop invariant i11: c >= 0 && c <= 40;\nloop invariant i12: \\forall integer i; 0 <= i < c ==> i <= 40;\nloop invariant i13: \\forall integer i; 0 <= i < c ==> i <= c;\nloop invariant i14: !unknown() ==> c <= 40;\nloop invariant i15: !unknown() && c != 40 ==> c <= 39;\nloop invariant i16: 0 <= c <= 40;\nloop invariant i17: c != 41;\nloop invariant i18: unknown() ==> (c <= 40);\nloop invariant i19: (unknown() && (c != 40)) ==> (c + 1 <= 40);\nloop invariant i20: (!unknown() && (c == 40)) ==> (c == 1);\n*/\nwhile (unknown()) {\n    {\n      if ( unknown() ) {\n        if ( (c != 40) )\n        {\n        (c  = (c + 1));\n        }\n      } else {\n        if ( (c == 40) )\n        {\n        (c  = 1);\n        }\n      }\n\n    }\n\n  }\n  \nif ( (c != 40) )\n{;\n//@ assert( (c <= 40) );\n}\n\n}",
+        "combined_annotation_num_solver_calls": 3,
+        "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\n\nint main() {\n  \n  int c;\n  \n  (c = 0);\n  \n  /*@\nloop invariant i1: c == 0;\nloop invariant i2: \\forall integer i; 0 <= i < c ==> i < 40;\n\nloop invariant i4: \\forall integer i; c <= i < 40 ==> i == 40;\nloop invariant i5: \\forall integer i; c <= i < 40 ==> i == c';\nloop invariant i6: (c >= 0);\nloop invariant i7: (c <= 40);\nloop invariant i8: (unknown() == 0 ==> c == 1);\nloop invariant i9: (unknown() == 1 && c != 40 ==> c_old + 1 == c);\nloop invariant i10: (unknown() == 1 && c == 40 ==> c == 1);\nloop invariant i11: c >= 0 && c <= 40;\nloop invariant i12: \\forall integer i; 0 <= i < c ==> i <= 40;\nloop invariant i13: \\forall integer i; 0 <= i < c ==> i <= c;\nloop invariant i14: !unknown() ==> c <= 40;\nloop invariant i15: !unknown() && c != 40 ==> c <= 39;\nloop invariant i16: 0 <= c <= 40;\nloop invariant i17: c != 41;\nloop invariant i18: unknown() ==> (c <= 40);\nloop invariant i19: (unknown() && (c != 40)) ==> (c + 1 <= 40);\nloop invariant i20: (!unknown() && (c == 40)) ==> (c == 1);\n*/\nwhile (unknown()) {\n    {\n      if ( unknown() ) {\n        if ( (c != 40) )\n        {\n        (c  = (c + 1));\n        }\n      } else {\n        if ( (c == 40) )\n        {\n        (c  = 1);\n        }\n      }\n\n    }\n\n  }\n  \nif ( (c != 40) )\n{;\n//@ assert( (c <= 40) );\n}\n\n}",
+        "checker_output_after_prune": false
+    },
+    "stats": {
+        "success": [
+            "../data/benchmarks/code2inv/1.c",
+            "../data/benchmarks/code2inv/2.c",
+            "../data/benchmarks/code2inv/3.c",
+            "../data/benchmarks/code2inv/4.c",
+            "../data/benchmarks/code2inv/5.c",
+            "../data/benchmarks/code2inv/8.c",
+            "../data/benchmarks/code2inv/10.c",
+            "../data/benchmarks/code2inv/12.c",
+            "../data/benchmarks/code2inv/15.c",
+            "../data/benchmarks/code2inv/17.c",
+            "../data/benchmarks/code2inv/20.c",
+            "../data/benchmarks/code2inv/22.c",
+            "../data/benchmarks/code2inv/25.c",
+            "../data/benchmarks/code2inv/30.c",
+            "../data/benchmarks/code2inv/34.c",
+            "../data/benchmarks/code2inv/35.c",
+            "../data/benchmarks/code2inv/36.c"
+        ],
+        "failure": [
+            "../data/benchmarks/code2inv/7.c",
+            "../data/benchmarks/code2inv/9.c",
+            "../data/benchmarks/code2inv/11.c",
+            "../data/benchmarks/code2inv/13.c",
+            "../data/benchmarks/code2inv/14.c",
+            "../data/benchmarks/code2inv/19.c",
+            "../data/benchmarks/code2inv/21.c",
+            "../data/benchmarks/code2inv/23.c",
+            "../data/benchmarks/code2inv/24.c",
+            "../data/benchmarks/code2inv/26.c",
+            "../data/benchmarks/code2inv/27.c",
+            "../data/benchmarks/code2inv/29.c",
+            "../data/benchmarks/code2inv/31.c",
+            "../data/benchmarks/code2inv/32.c",
+            "../data/benchmarks/code2inv/33.c"
+        ],
+        "skipped": [
+            "../data/benchmarks/code2inv/6.c",
+            "../data/benchmarks/code2inv/16.c",
+            "../data/benchmarks/code2inv/18.c",
+            "../data/benchmarks/code2inv/28.c"
+        ],
+        "total": 32,
+        "success_count": 17,
+        "failure_count": 15,
+        "success_rate": 0.53125
+    }
+}

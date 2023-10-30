@@ -1,0 +1,148 @@
+{
+    "logs": {
+        "file": "../data/benchmarks/code2inv/57.c",
+        "benchmark_code": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\n\nint main() {\n  \n  int c;\n  int n;\n  int v1;\n  int v2;\n  int v3;\n  \n  (c = 0);\n  assume((n > 0));\n  \n  while (unknown()) {\n    {\n      if ( unknown() ) {\n        if ( (c > n) )\n        {\n        (c  = (c + 1));\n        }\n      } else {\n        if ( (c == n) )\n        {\n        (c  = 1);\n        }\n      }\n\n    }\n\n  }\n  \nif ( (n > -1) )\n{;\n//@ assert( (c != n) );\n}\n\n}",
+        "success": true,
+        "llm_conversation": [
+            {
+                "role": "system",
+                "content": "You are a helpful AI software assistant that reasons about how code behaves. Given a program, you can find loop invariants, which can then be used to verify some property in the program. \nFrama-C is a software verification tool for C programs. The input to Frama-C is a C program file with ACSL (ANSI/ISO C Specification Language) annotations.\nFor the given program, find the necessary loop invariants of the while loop to help Frama-C verify the post-condition.\n\nInstructions:\n- Make a note of the pre-conditions or variable assignments in the program.\n- Analyze the loop body and make a note of the loop condition. \n- Output loop invariants that are true \n(i) before the loop execution, \n(ii) in every iteration of the loop and \n(iii) after the loop termination, \nsuch that the loop invariants imply the post condition.\n- If a loop invariant is a conjunction, split it into its parts.\n- Output all the loop invariants in one code block. For example:\n```\n/*@ \n    loop invariant i1;\n    loop invariant i2;\n*/\n```\nRules:\n- **Do not use variables or functions that are not declared in the program.** \n- **Do not make any assumptions about functions whose definitions are not given.**\n- **All undefined variables contain garbage values. Do not use variables that have garbage values.**\n- **Do not use keywords that are not supported in ACSL annotations for loops.**\n- **Variables that are not explicitly initialized, could have garbage values. Do not make any assumptions about such values.**\n- **Do not use the \\at(x, Pre) notation for any variable x.**\n- **Do not use non-deterministic function calls.**"
+            },
+            {
+                "role": "user",
+                "content": "\nConsider the following C program:\n```\n#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\n\nint main() {\n  \n  int c;\n  int n;\n  int v1;\n  int v2;\n  int v3;\n  \n  (c = 0);\n  assume((n > 0));\n  \n  while (unknown()) {\n    {\n      if ( unknown() ) {\n        if ( (c > n) )\n        {\n        (c  = (c + 1));\n        }\n      } else {\n        if ( (c == n) )\n        {\n        (c  = 1);\n        }\n      }\n\n    }\n\n  }\n  \nif ( (n > -1) )\n{;\n//@ assert( (c != n) );\n}\n\n}\n```\n\nYou are allowed to use implication to take care of the conditional nature of the code. Use implication (==>) instead of using if-then.\n\nFor all variables, add conjunctions that bound the maximum and minimum values that they can take, if such bounds exist.\n\nIf a variable is always equal to or smaller or larger than another variable, add a conjunction for their relation.\n\nIf the assertion is guarded by a condition, use the guard condition in an implication.\n\nIf certain variables are non-deterministic at the beginning or end of the loop, use an implication to make the invariant trivially true at that location. \n\nOutput the loop invariants for the loop in the program above. Let's think step by step."
+            },
+            "Pre-conditions:\n- The variable `n` is greater than 0.\n\nVariable assignments:\n- The variable `c` is initialized to 0.\n\nLoop condition:\n- The loop continues as long as the function `unknown()` returns a non-zero value.\n\nLoop invariants:\n- Before the loop: None needed.\n- In every iteration:\n    - `c <= n`\n    - If `c == n`, then `unknown()` is false.\n    - If `c < n`, then `unknown()` is true.\n    - `v1 <= n`\n    - `v2 <= n`\n    - `v3 <= n`\n    - `v1 >= 0`\n    - `v2 >= 0`\n    - `v3 >= 0`\n    - `v1 >= c`\n    - `v2 >= c`\n    - `v3 >= c`\n- After the loop:\n    - If `c == n`, then `unknown()` is false.\n    - If `c != n` and `n > -1`, then `c != n`.\n\nExplanation:\n- `c <= n` ensures that `c` never exceeds `n`.\n- If `c == n`, then the loop can only continue if `unknown()` is false because otherwise `c` would be incremented to a value greater than `n`, which is not allowed. This is captured by the implication `c == n ==> !unknown()`.\n- If `c < n`, then `unknown()` must be true, because otherwise `c` would not be incremented and the loop condition would not hold. This is captured by the implication `c < n ==> unknown()`.\n- `v1`, `v2`, and `v3` are non-deterministic variables that are not initialized in the program. Therefore, we must add constraints to bound their values. Since these variables are compared with `c` at various points in the loop, we add the constraints `v1 >= c`, `v2 >= c`, and `v3 >= c`. We also add the constraints `v1 <= n`, `v2 <= n`, and `v3 <= n` to bound their maximum values, and `v1 >= 0`, `v2 >= 0`, and `v3 >= 0` to bound their minimum values.\n- After the loop, we need to ensure that `c` is not equal to `n` if the assertion is going to be checked. If `c != n`, this is already true, so we don't need to add anything. If `c == n`, we need to ensure that `unknown()` is false to satisfy the implication in the assertion. This is captured by the implication `c == n ==> !unknown()`. Finally, if `n > -1`, we can use this condition to guard the assertion and add the implication `n > -1 ==> (c != n)`.",
+            "Pre-conditions: \n- None\n\nVariable Assignments: \n- `c` is assigned 0\n\nLoop Condition: \n- `unknown()` \n\nLoop Invariants:\n- `0 <= c <= n`\n- `(c == n) ==> (1 <= c <= n)`\n- `(c != n) ==> (1 <= c <= (n-1))`\n\nExplanation:\n- Since `c` is assigned 0 at the beginning, we know that `0 <= c` holds before the loop execution.\n- `c` is incremented only when `(c > n)` holds. Therefore, we can add `c <= n` as a loop invariant to ensure that the increment operation does not violate the upper bound of `c`.\n- If `(c == n)` holds, then we know that the next value of `c` should be 1. Therefore, we add `(c == n) ==> (1 <= c)` as a loop invariant.\n- If `(c != n)` holds, then we know that the next value of `c` should be greater than the current value. Therefore, we add `(c != n) ==> (c < n)` as a loop invariant. Combining this with the previous invariant, we get `(c != n) ==> (1 <= c < n)`.\n- Finally, we know that the assertion `(c != n)` holds after the loop execution only if the loop condition fails in the last iteration. Therefore, we add the guard condition `(n > -1)` to the assertion and use implication to get `(n > -1) ==> (c != n)`. \n\nPutting it all together, we get the following loop invariants:\n```\n/*@ \n    loop invariant 0 <= c <= n;\n    loop invariant c <= n;\n    loop invariant (c == n) ==> (1 <= c <= n);\n    loop invariant (c != n) ==> (1 <= c < n);\n*/\n```",
+            "Pre-conditions:\n- The variable `n` is greater than 0.\n\nVariable assignments:\n- The variables `c`, `v1`, `v2`, and `v3` are initialized to garbage values.\n\nLoop condition:\n- The loop condition is `unknown()` which means that it is unknown whether the loop should execute or terminate.\n\nLoop invariants:\n- `0 < c <= n` (true before the loop execution)\n- `(\\forall i: 1 <= i <= n ==> (i < c ==> (v1 = 0 && v2 = 0 && v3 = 0)))` (true before the loop execution)\n- `0 < c <= n && (\\forall i: 1 <= i <= n ==> (i < c ==> (v1 = 0 && v2 = 0 && v3 = 0)))` (true in every iteration of the loop)\n- `n > -1 ==> (c != n)` (true after the loop termination)\n\nExplanation:\n- The first invariant ensures that `c` is always greater than 0 and less than or equal to `n`.\n- The second invariant states that if `i` is less than `c`, then `v1`, `v2`, and `v3` are all equal to 0. This is because these variables are not modified in the loop body when `i` is less than `c`.\n- The third invariant is the conjunction of the first and second invariants, and it ensures that both conditions hold true in every iteration of the loop.\n- The fourth invariant is the given assertion, but with a guard condition that `n` is greater than -1. This is because if `n` is less than -1, then the assertion is vacuously true. \n\nNote:\n- Since `unknown()` is a non-deterministic function, we cannot make any assumptions about the loop termination condition. Thus, we cannot add any loop invariants that depend on the loop termination condition.",
+            "Pre-conditions:\n- The variable `n` is positive.\n\nVariable Assignments:\n- `c` is initialized to 0.\n\nLoop Condition:\n- The loop continues as long as the function `unknown()` returns a non-zero value.\n\nLoop Invariants:\n- `0 <= c <= n`: `c` is always between 0 and `n`, inclusive.\n- If `c == n`, then the next value of `c` is 1: `(c == n) ==> (c == 1)`\n- If `c > n`, then the next value of `c` is `c + 1`: `(c > n) ==> (c == c_old + 1)`\n- `(n > -1)` ==> `(c != n)`: If `n` is non-negative, then `c` is never equal to `n`. \n\nPutting everything together, the loop invariants are:\n```\n/*@ \n    loop invariant 0 <= c <= n;\n    loop invariant (c == n) ==> (c == 1);\n    loop invariant (c > n) ==> (c == \\old(c) + 1);\n*/\n```\nAnd the post-condition with the guard condition is:\n```\nif (n > -1) {\n  //@ assert (c != n);\n}\n```",
+            "First, let's note the preconditions and variable assignments in the program:\n\n- Preconditions: None explicitly stated, but assume((n > 0)) implies that n is greater than 0.\n- Variable assignments: \n    - c is initialized to 0.\n    - n, v1, v2, v3 are not explicitly initialized and may contain garbage values.\n\nNow, let's analyze the loop body and make a note of the loop condition:\n\n- Loop body: \n    - There is an if-else statement inside the loop.\n    - If the condition inside the if statement is true, c is incremented if it is less than or equal to n.\n    - If the condition inside the if statement is false, c is set to 1 if it is equal to n.\n- Loop condition: unknown()\n\nNext, we will find loop invariants that are true before the loop execution, in every iteration of the loop, and after the loop termination, and that imply the post-condition (n > -1) ==> (c != n).\n\n- Before the loop execution:\n    - n > 0 (from assume statement)\n    - c >= 0 (since it is initialized to 0)\n    - v1, v2, v3 are unconstrained and may contain garbage values\n- In every iteration of the loop:\n    - c <= n (from the if statement, where c is incremented only if it is less than or equal to n)\n    - c >= 0 (since it is initialized to 0 and can only be incremented or set to 1)\n    - v1, v2, v3 are unconstrained and may contain garbage values\n- After the loop termination:\n    - n > 0 (from assume statement)\n    - c <= n (from the loop invariant)\n    - c > 0 (since the loop invariant c >= 0 holds and the loop condition is unknown(), which implies that the loop executes at least once)\n    - v1, v2, v3 are unconstrained and may contain garbage values\n    - (n > -1) ==> (c != n) (from the post-condition)\n\nPutting it all together, the loop invariants are:\n\n```\n/*@ \n    loop invariant n > 0;\n    loop invariant c >= 0;\n    loop invariant c <= n;\n    loop invariant c > 0 ==> unknown();\n    loop invariant (n > -1) ==> (c != n);\n    loop invariant \\forall int x; (x == v1 || x == v2 || x == v3) ==> unknown();\n*/\n``` \n\nNote that we have added an extra loop invariant to handle the unconstrained variables v1, v2, and v3, which may contain garbage values and do not have any constraints within the loop. The loop invariant states that for any integer x that is equal to v1, v2, or v3, it implies that the loop condition is true. This handles the case where the values of v1, v2, and v3 are non-deterministic."
+        ],
+        "annotation_blocks": [
+            [
+                "ERROR: Output does not contain at least 1 complete code block",
+                "Pre-conditions:\n- The variable `n` is greater than 0.\n\nVariable assignments:\n- The variable `c` is initialized to 0.\n\nLoop condition:\n- The loop continues as long as the function `unknown()` returns a non-zero value.\n\nLoop invariants:\n- Before the loop: None needed.\n- In every iteration:\n    - `c <= n`\n    - If `c == n`, then `unknown()` is false.\n    - If `c < n`, then `unknown()` is true.\n    - `v1 <= n`\n    - `v2 <= n`\n    - `v3 <= n`\n    - `v1 >= 0`\n    - `v2 >= 0`\n    - `v3 >= 0`\n    - `v1 >= c`\n    - `v2 >= c`\n    - `v3 >= c`\n- After the loop:\n    - If `c == n`, then `unknown()` is false.\n    - If `c != n` and `n > -1`, then `c != n`.\n\nExplanation:\n- `c <= n` ensures that `c` never exceeds `n`.\n- If `c == n`, then the loop can only continue if `unknown()` is false because otherwise `c` would be incremented to a value greater than `n`, which is not allowed. This is captured by the implication `c == n ==> !unknown()`.\n- If `c < n`, then `unknown()` must be true, because otherwise `c` would not be incremented and the loop condition would not hold. This is captured by the implication `c < n ==> unknown()`.\n- `v1`, `v2`, and `v3` are non-deterministic variables that are not initialized in the program. Therefore, we must add constraints to bound their values. Since these variables are compared with `c` at various points in the loop, we add the constraints `v1 >= c`, `v2 >= c`, and `v3 >= c`. We also add the constraints `v1 <= n`, `v2 <= n`, and `v3 <= n` to bound their maximum values, and `v1 >= 0`, `v2 >= 0`, and `v3 >= 0` to bound their minimum values.\n- After the loop, we need to ensure that `c` is not equal to `n` if the assertion is going to be checked. If `c != n`, this is already true, so we don't need to add anything. If `c == n`, we need to ensure that `unknown()` is false to satisfy the implication in the assertion. This is captured by the implication `c == n ==> !unknown()`. Finally, if `n > -1`, we can use this condition to guard the assertion and add the implication `n > -1 ==> (c != n)`."
+            ],
+            "/*@ \n    loop invariant 0 <= c <= n;\n    loop invariant c <= n;\n    loop invariant (c == n) ==> (1 <= c <= n);\n    loop invariant (c != n) ==> (1 <= c < n);\n*/",
+            [
+                "ERROR: Output does not contain at least 1 complete code block",
+                "Pre-conditions:\n- The variable `n` is greater than 0.\n\nVariable assignments:\n- The variables `c`, `v1`, `v2`, and `v3` are initialized to garbage values.\n\nLoop condition:\n- The loop condition is `unknown()` which means that it is unknown whether the loop should execute or terminate.\n\nLoop invariants:\n- `0 < c <= n` (true before the loop execution)\n- `(\\forall i: 1 <= i <= n ==> (i < c ==> (v1 = 0 && v2 = 0 && v3 = 0)))` (true before the loop execution)\n- `0 < c <= n && (\\forall i: 1 <= i <= n ==> (i < c ==> (v1 = 0 && v2 = 0 && v3 = 0)))` (true in every iteration of the loop)\n- `n > -1 ==> (c != n)` (true after the loop termination)\n\nExplanation:\n- The first invariant ensures that `c` is always greater than 0 and less than or equal to `n`.\n- The second invariant states that if `i` is less than `c`, then `v1`, `v2`, and `v3` are all equal to 0. This is because these variables are not modified in the loop body when `i` is less than `c`.\n- The third invariant is the conjunction of the first and second invariants, and it ensures that both conditions hold true in every iteration of the loop.\n- The fourth invariant is the given assertion, but with a guard condition that `n` is greater than -1. This is because if `n` is less than -1, then the assertion is vacuously true. \n\nNote:\n- Since `unknown()` is a non-deterministic function, we cannot make any assumptions about the loop termination condition. Thus, we cannot add any loop invariants that depend on the loop termination condition."
+            ],
+            "/*@ \n    loop invariant 0 <= c <= n;\n    loop invariant (c == n) ==> (c == 1);\n    loop invariant (c > n) ==> (c == \\old(c) + 1);\n*/",
+            "/*@ \n    loop invariant n > 0;\n    loop invariant c >= 0;\n    loop invariant c <= n;\n    loop invariant c > 0 ==> unknown();\n    loop invariant (n > -1) ==> (c != n);\n    loop invariant \\forall int x; (x == v1 || x == v2 || x == v3) ==> unknown();\n*/"
+        ],
+        "completions": [
+            {
+                "num_solver_calls": 0,
+                "success": false,
+                "llm_output": "Pre-conditions:\n- The variable `n` is greater than 0.\n\nVariable assignments:\n- The variable `c` is initialized to 0.\n\nLoop condition:\n- The loop continues as long as the function `unknown()` returns a non-zero value.\n\nLoop invariants:\n- Before the loop: None needed.\n- In every iteration:\n    - `c <= n`\n    - If `c == n`, then `unknown()` is false.\n    - If `c < n`, then `unknown()` is true.\n    - `v1 <= n`\n    - `v2 <= n`\n    - `v3 <= n`\n    - `v1 >= 0`\n    - `v2 >= 0`\n    - `v3 >= 0`\n    - `v1 >= c`\n    - `v2 >= c`\n    - `v3 >= c`\n- After the loop:\n    - If `c == n`, then `unknown()` is false.\n    - If `c != n` and `n > -1`, then `c != n`.\n\nExplanation:\n- `c <= n` ensures that `c` never exceeds `n`.\n- If `c == n`, then the loop can only continue if `unknown()` is false because otherwise `c` would be incremented to a value greater than `n`, which is not allowed. This is captured by the implication `c == n ==> !unknown()`.\n- If `c < n`, then `unknown()` must be true, because otherwise `c` would not be incremented and the loop condition would not hold. This is captured by the implication `c < n ==> unknown()`.\n- `v1`, `v2`, and `v3` are non-deterministic variables that are not initialized in the program. Therefore, we must add constraints to bound their values. Since these variables are compared with `c` at various points in the loop, we add the constraints `v1 >= c`, `v2 >= c`, and `v3 >= c`. We also add the constraints `v1 <= n`, `v2 <= n`, and `v3 <= n` to bound their maximum values, and `v1 >= 0`, `v2 >= 0`, and `v3 >= 0` to bound their minimum values.\n- After the loop, we need to ensure that `c` is not equal to `n` if the assertion is going to be checked. If `c != n`, this is already true, so we don't need to add anything. If `c == n`, we need to ensure that `unknown()` is false to satisfy the implication in the assertion. This is captured by the implication `c == n ==> !unknown()`. Finally, if `n > -1`, we can use this condition to guard the assertion and add the implication `n > -1 ==> (c != n)`.",
+                "error": "Output does not contain at least 1 code block"
+            },
+            {
+                "num_solver_calls": 3,
+                "annotations": "/*@ \n    loop invariant 0 <= c <= n;\n    loop invariant c <= n;\n    loop invariant (c == n) ==> (1 <= c <= n);\n    loop invariant (c != n) ==> (1 <= c < n);\n*/",
+                "checker_output_for_annotations": false,
+                "checker_message_for_annotations": "loop invariant 0 <= c <= n is partially proven to be inductive.\nloop invariant c <= n is partially proven to be inductive.\nloop invariant (c == n) ==> (1 <= c <= n) is partially proven to be inductive.\nloop invariant (c != n) ==> (1 <= c < n) is preserved but not established.\nAssertion c != n: Partially proven",
+                "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\n\nint main() {\n  \n  int c;\n  int n;\n  int v1;\n  int v2;\n  int v3;\n  \n  (c = 0);\n  assume((n > 0));\n  \n  /*@\nloop invariant i1: 0 <= c <= n;\nloop invariant i2: c <= n;\nloop invariant i3: (c == n) ==> (1 <= c <= n);\n\n*/\nwhile (unknown()) {\n    {\n      if ( unknown() ) {\n        if ( (c > n) )\n        {\n        (c  = (c + 1));\n        }\n      } else {\n        if ( (c == n) )\n        {\n        (c  = 1);\n        }\n      }\n\n    }\n\n  }\n  \nif ( (n > -1) )\n{;\n//@ assert( (c != n) );\n}\n\n}",
+                "checker_output_after_prune": false
+            },
+            {
+                "num_solver_calls": 0,
+                "success": false,
+                "llm_output": "Pre-conditions:\n- The variable `n` is greater than 0.\n\nVariable assignments:\n- The variables `c`, `v1`, `v2`, and `v3` are initialized to garbage values.\n\nLoop condition:\n- The loop condition is `unknown()` which means that it is unknown whether the loop should execute or terminate.\n\nLoop invariants:\n- `0 < c <= n` (true before the loop execution)\n- `(\\forall i: 1 <= i <= n ==> (i < c ==> (v1 = 0 && v2 = 0 && v3 = 0)))` (true before the loop execution)\n- `0 < c <= n && (\\forall i: 1 <= i <= n ==> (i < c ==> (v1 = 0 && v2 = 0 && v3 = 0)))` (true in every iteration of the loop)\n- `n > -1 ==> (c != n)` (true after the loop termination)\n\nExplanation:\n- The first invariant ensures that `c` is always greater than 0 and less than or equal to `n`.\n- The second invariant states that if `i` is less than `c`, then `v1`, `v2`, and `v3` are all equal to 0. This is because these variables are not modified in the loop body when `i` is less than `c`.\n- The third invariant is the conjunction of the first and second invariants, and it ensures that both conditions hold true in every iteration of the loop.\n- The fourth invariant is the given assertion, but with a guard condition that `n` is greater than -1. This is because if `n` is less than -1, then the assertion is vacuously true. \n\nNote:\n- Since `unknown()` is a non-deterministic function, we cannot make any assumptions about the loop termination condition. Thus, we cannot add any loop invariants that depend on the loop termination condition.",
+                "error": "Output does not contain at least 1 code block"
+            },
+            {
+                "num_solver_calls": 3,
+                "annotations": "/*@ \n    loop invariant 0 <= c <= n;\n    loop invariant (c == n) ==> (c == 1);\n    loop invariant (c > n) ==> (c == \\old(c) + 1);\n*/",
+                "checker_output_for_annotations": false,
+                "checker_message_for_annotations": "Annotation error on line 18: \\old undefined in this context. Ignoring loop annotation",
+                "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\n\nint main() {\n  \n  int c;\n  int n;\n  int v1;\n  int v2;\n  int v3;\n  \n  (c = 0);\n  assume((n > 0));\n  \n  /*@\nloop invariant i1: 0 <= c <= n;\nloop invariant i2: (c == n) ==> (c == 1);\n\n*/\nwhile (unknown()) {\n    {\n      if ( unknown() ) {\n        if ( (c > n) )\n        {\n        (c  = (c + 1));\n        }\n      } else {\n        if ( (c == n) )\n        {\n        (c  = 1);\n        }\n      }\n\n    }\n\n  }\n  \nif ( (n > -1) )\n{;\n//@ assert( (c != n) );\n}\n\n}",
+                "checker_output_after_prune": false
+            },
+            {
+                "num_solver_calls": 3,
+                "annotations": "/*@ \n    loop invariant n > 0;\n    loop invariant c >= 0;\n    loop invariant c <= n;\n    loop invariant c > 0 ==> unknown();\n    loop invariant (n > -1) ==> (c != n);\n    loop invariant \\forall int x; (x == v1 || x == v2 || x == v3) ==> unknown();\n*/",
+                "checker_output_for_annotations": false,
+                "checker_message_for_annotations": "Annotation error on line 19: unexpected token ')'",
+                "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\n\nint main() {\n  \n  int c;\n  int n;\n  int v1;\n  int v2;\n  int v3;\n  \n  (c = 0);\n  assume((n > 0));\n  \n  /*@\nloop invariant i1: n > 0;\nloop invariant i2: c >= 0;\nloop invariant i3: c <= n;\n\nloop invariant i5: (n > -1) ==> (c != n);\n\n*/\nwhile (unknown()) {\n    {\n      if ( unknown() ) {\n        if ( (c > n) )\n        {\n        (c  = (c + 1));\n        }\n      } else {\n        if ( (c == n) )\n        {\n        (c  = 1);\n        }\n      }\n\n    }\n\n  }\n  \nif ( (n > -1) )\n{;\n//@ assert( (c != n) );\n}\n\n}",
+                "checker_output_after_prune": true
+            }
+        ],
+        "checker_output_for_combined_annotations": false,
+        "checker_message_for_combined_annotations": "Annotation error on line 24: unexpected token ')'",
+        "code_with_combined_annotations": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\n\nint main() {\n  \n  int c;\n  int n;\n  int v1;\n  int v2;\n  int v3;\n  \n  (c = 0);\n  assume((n > 0));\n  \n  /*@\nloop invariant i1: 0 <= c <= n;\nloop invariant i2: c <= n;\nloop invariant i3: (c == n) ==> (1 <= c <= n);\nloop invariant i4: (c != n) ==> (1 <= c < n);\nloop invariant i5: (c == n) ==> (c == 1);\nloop invariant i6: (c > n) ==> (c == \\old(c) + 1);\nloop invariant i7: n > 0;\nloop invariant i8: c >= 0;\nloop invariant i9: c > 0 ==> unknown();\nloop invariant i10: (n > -1) ==> (c != n);\nloop invariant i11: \\forall int x; (x == v1 || x == v2 || x == v3) ==> unknown();\n*/\nwhile (unknown()) {\n    {\n      if ( unknown() ) {\n        if ( (c > n) )\n        {\n        (c  = (c + 1));\n        }\n      } else {\n        if ( (c == n) )\n        {\n        (c  = 1);\n        }\n      }\n\n    }\n\n  }\n  \nif ( (n > -1) )\n{;\n//@ assert( (c != n) );\n}\n\n}",
+        "combined_annotation_num_solver_calls": 5,
+        "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern int unknown(void);\n\nint main() {\n  \n  int c;\n  int n;\n  int v1;\n  int v2;\n  int v3;\n  \n  (c = 0);\n  assume((n > 0));\n  \n  /*@\nloop invariant i1: 0 <= c <= n;\nloop invariant i2: c <= n;\nloop invariant i3: (c == n) ==> (1 <= c <= n);\n\nloop invariant i5: (c == n) ==> (c == 1);\n\nloop invariant i7: n > 0;\nloop invariant i8: c >= 0;\n\nloop invariant i10: (n > -1) ==> (c != n);\n\n*/\nwhile (unknown()) {\n    {\n      if ( unknown() ) {\n        if ( (c > n) )\n        {\n        (c  = (c + 1));\n        }\n      } else {\n        if ( (c == n) )\n        {\n        (c  = 1);\n        }\n      }\n\n    }\n\n  }\n  \nif ( (n > -1) )\n{;\n//@ assert( (c != n) );\n}\n\n}",
+        "checker_output_after_prune": true
+    },
+    "stats": {
+        "success": [
+            "../data/benchmarks/code2inv/1.c",
+            "../data/benchmarks/code2inv/2.c",
+            "../data/benchmarks/code2inv/3.c",
+            "../data/benchmarks/code2inv/4.c",
+            "../data/benchmarks/code2inv/5.c",
+            "../data/benchmarks/code2inv/8.c",
+            "../data/benchmarks/code2inv/10.c",
+            "../data/benchmarks/code2inv/12.c",
+            "../data/benchmarks/code2inv/15.c",
+            "../data/benchmarks/code2inv/17.c",
+            "../data/benchmarks/code2inv/20.c",
+            "../data/benchmarks/code2inv/22.c",
+            "../data/benchmarks/code2inv/25.c",
+            "../data/benchmarks/code2inv/30.c",
+            "../data/benchmarks/code2inv/34.c",
+            "../data/benchmarks/code2inv/35.c",
+            "../data/benchmarks/code2inv/36.c",
+            "../data/benchmarks/code2inv/38.c",
+            "../data/benchmarks/code2inv/40.c",
+            "../data/benchmarks/code2inv/42.c",
+            "../data/benchmarks/code2inv/43.c",
+            "../data/benchmarks/code2inv/44.c",
+            "../data/benchmarks/code2inv/45.c",
+            "../data/benchmarks/code2inv/46.c",
+            "../data/benchmarks/code2inv/47.c",
+            "../data/benchmarks/code2inv/48.c",
+            "../data/benchmarks/code2inv/50.c",
+            "../data/benchmarks/code2inv/51.c",
+            "../data/benchmarks/code2inv/52.c",
+            "../data/benchmarks/code2inv/54.c",
+            "../data/benchmarks/code2inv/55.c",
+            "../data/benchmarks/code2inv/56.c",
+            "../data/benchmarks/code2inv/57.c"
+        ],
+        "failure": [
+            "../data/benchmarks/code2inv/7.c",
+            "../data/benchmarks/code2inv/9.c",
+            "../data/benchmarks/code2inv/11.c",
+            "../data/benchmarks/code2inv/13.c",
+            "../data/benchmarks/code2inv/14.c",
+            "../data/benchmarks/code2inv/19.c",
+            "../data/benchmarks/code2inv/21.c",
+            "../data/benchmarks/code2inv/23.c",
+            "../data/benchmarks/code2inv/24.c",
+            "../data/benchmarks/code2inv/26.c",
+            "../data/benchmarks/code2inv/27.c",
+            "../data/benchmarks/code2inv/29.c",
+            "../data/benchmarks/code2inv/31.c",
+            "../data/benchmarks/code2inv/32.c",
+            "../data/benchmarks/code2inv/33.c",
+            "../data/benchmarks/code2inv/41.c"
+        ],
+        "skipped": [
+            "../data/benchmarks/code2inv/6.c",
+            "../data/benchmarks/code2inv/16.c",
+            "../data/benchmarks/code2inv/18.c",
+            "../data/benchmarks/code2inv/28.c",
+            "../data/benchmarks/code2inv/37.c",
+            "../data/benchmarks/code2inv/39.c",
+            "../data/benchmarks/code2inv/49.c",
+            "../data/benchmarks/code2inv/53.c"
+        ],
+        "total": 49,
+        "success_count": 33,
+        "failure_count": 16,
+        "success_rate": 0.673469387755102
+    }
+}
