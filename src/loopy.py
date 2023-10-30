@@ -3226,7 +3226,7 @@ class LoopyPipeline:
 
         return
 
-    def local_loopy(self, max_benchmarks=1, start_index=0):
+    def local_loopy(self, max_benchmarks=1, start_index=0, local_output=""):
         if self.llm is None or self.benchmark is None or self.checker is None:
             raise Exception("Pipeline not initialized. Call load_config first.")
 
@@ -3260,10 +3260,13 @@ class LoopyPipeline:
             num_completions=15,
         )
 
-        outputs = self.llm.generate_annotations_local(
-            sliced_benchmarks,
-            prompt=loopy_prompt,
-        )
+        if local_output == "":
+            outputs = self.llm.generate_annotations_local(
+                sliced_benchmarks,
+                prompt=loopy_prompt,
+            )
+        else:
+            outputs = json.load(open(local_output, "r", encoding="utf-8"))
 
         for i, instance in enumerate(sliced_benchmarks):
             try:
@@ -3274,7 +3277,7 @@ class LoopyPipeline:
 
                 llm_conversation = outputs[i]["input"] + outputs[i]["output"]
                 annotation_blocks = [
-                    self.llm.extract_code(block, self.checker.has_invariant)
+                    self.llm.extract_code(block["content"], self.checker.has_invariant)
                     for block in outputs[i]["output"]
                 ]
 

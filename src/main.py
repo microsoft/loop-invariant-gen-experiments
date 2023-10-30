@@ -258,6 +258,7 @@ def main(args):
         p.local_loopy(
             max_benchmarks=args.max_benchmarks,
             start_index=args.start_index,
+            local_output=args.local_llm_output,
         )
         return
 
