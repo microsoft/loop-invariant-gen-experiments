@@ -20,6 +20,12 @@ def parse_args(args):
     )
 
     parser.add_argument(
+        "--local-loopy",
+        help="Run local loopy",
+        action="store_true",
+    )
+
+    parser.add_argument(
         "--termination-analysis",
         help="Run the termination analysis algorithm",
         action="store_true",
@@ -247,6 +253,13 @@ def main(args):
     )
 
     p = p.load_config(args.config_file)
+
+    if args.local_loopy:
+        p.local_loopy(
+            max_benchmarks=args.max_benchmarks,
+            start_index=args.start_index,
+        )
+        return
 
     if args.loopy_sequence:
         p.run_sequence(max_benchmarks=args.max_benchmarks, start_index=args.start_index)
