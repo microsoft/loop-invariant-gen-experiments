@@ -3263,7 +3263,6 @@ class LoopyPipeline:
         outputs = self.llm.generate_annotations_local(
             sliced_benchmarks,
             prompt=loopy_prompt,
-            extraction_filter=lambda x: self.checker.has_invariant(x),
         )
 
         for i, instance in enumerate(sliced_benchmarks):
