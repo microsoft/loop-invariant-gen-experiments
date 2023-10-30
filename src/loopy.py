@@ -1056,7 +1056,14 @@ class LoopyPipeline:
         ]
 
         if local_llm_output == "":
-            outputs = self.llm.generate_annotations_local(sliced_benchmarks)
+            loopy_prompt = Prompt(
+                system_text_file="templates/simplified_system_message.txt",
+                prompt_text_file="templates/simplified_prompt_with_nudges.txt",
+                num_completions=15,
+            )
+            outputs = self.llm.generate_annotations_local(
+                sliced_benchmarks, loopy_prompt
+            )
         else:
             with open(local_llm_output, "r", encoding="utf-8") as f:
                 outputs = json.load(f)

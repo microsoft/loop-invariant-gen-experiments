@@ -64,8 +64,6 @@ class FramaCChecker(Checker):
                     continue
             if error_line is not None:
                 error_message = self.get_annotation_error_from_kernel_logs(error_line)
-                if "unexpected token ''" in error_message:
-                    error_message = "No invariants found."
                 return False, error_message
 
         checker_output = []
