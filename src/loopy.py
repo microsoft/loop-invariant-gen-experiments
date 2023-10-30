@@ -3226,6 +3226,282 @@ class LoopyPipeline:
 
         return
 
+    def local_loopy(self, max_benchmarks=1, start_index=0):
+        if self.llm is None or self.benchmark is None or self.checker is None:
+            raise Exception("Pipeline not initialized. Call load_config first.")
+
+        if not all([x in ["loop_invariants"] for x in self.analysis]):
+            raise Exception("Unsupported analysis for sequence pipeline")
+
+        log_json = []
+        stats = {"success": [], "failure": [], "skipped": [], "total": 0}
+
+        # create logs dir
+        self.log_path = datetime.datetime.now().strftime(
+            f"../logs/loopy_%Y_%m_%d_%H_%M_%S/"
+        )
+        if not os.path.exists(os.path.dirname(self.log_path)):
+            os.makedirs(os.path.dirname(self.log_path))
+
+        log_file = open(self.log_path + "final.json", "w", encoding="utf-8")
+
+        sliced_benchmarks = self.benchmark.input_file_paths[
+            start_index : start_index + max_benchmarks
+        ]
+
+        sliced_benchmarks = [
+            (instance, {"code": self.benchmark.get_code(instance)})
+            for instance in sliced_benchmarks
+        ]
+
+        loopy_prompt = Prompt(
+            system_text_file="templates/simplified_system_message.txt",
+            prompt_text_file="templates/simplified_prompt.txt",
+            num_completions=15,
+        )
+
+        outputs = self.llm.generate_annotations_local(
+            sliced_benchmarks,
+            prompt=loopy_prompt,
+            extraction_filter=lambda x: self.checker.has_invariant(x),
+        )
+
+        for i, instance in enumerate(sliced_benchmarks):
+            try:
+                assert instance[0] == outputs[i]["file"]
+                print(
+                    f"Running benchmark: {start_index + i + 1}/{len(sliced_benchmarks)}"
+                )
+
+                llm_conversation = outputs[i]["input"] + outputs[i]["output"]
+                annotation_blocks = [
+                    self.llm.extract_code(block, self.checker.has_invariant)
+                    for block in outputs[i]["output"]
+                ]
+
+                instance_log_json = {
+                    "file": instance[0],
+                    "benchmark_code": instance[1]["code"],
+                    "success": False,
+                    "llm_conversation": llm_conversation,
+                    "invariants": annotation_blocks,
+                }
+
+                completions = []
+                for completion in annotation_blocks:
+                    if len(completion) == 2 and completion[0] == (
+                        "ERROR: Output does not contain at least 1 complete code block"
+                    ):
+                        completions.append(
+                            {
+                                "success": False,
+                                "llm_output": completion[1],
+                                "error": "Output does not contain at least 1 code block",
+                            }
+                        )
+                        continue
+
+                    Logger.log_info(f"Checking completion {len(completions) + 1}")
+
+                    checker_input_with_annotations = self.benchmark.combine_llm_outputs(
+                        instance[1]["code"], [completion], "one_loop_one_method"
+                    )
+                    __success, checker_message = self.checker.check(
+                        checker_input_with_annotations,
+                        False,
+                        use_json_dump_for_invariants=self.use_json_output,
+                    )
+
+                    if __success:
+                        Logger.log_success(
+                            f"Completion {len(completions) + 1} is correct"
+                        )
+                        completions.append(
+                            {
+                                "invariants": completion,
+                                "success": __success,
+                                "checker_message": checker_message,
+                            }
+                        )
+                    else:
+                        (
+                            __success,
+                            pruned_code,
+                            num_frama_c_calls,
+                        ) = self.checker.houdini(
+                            checker_input_with_annotations,
+                            "one_loop_one_method",
+                            use_json_dump_for_invariants=self.use_json_output,
+                        )
+                        completions.append(
+                            {
+                                "invariants": completion,
+                                "success": __success,
+                                "checker_message": checker_message,
+                                "code_after_prune": pruned_code,
+                                "success_after_prune": __success,
+                            }
+                        )
+
+                instance_log_json["completions"] = completions
+
+                checker_input_with_combined_annotations = self.benchmark.combine_llm_outputs(
+                    instance[1]["code"],
+                    [
+                        block
+                        for block in annotation_blocks
+                        if not (
+                            len(block) == 2
+                            and block[0]
+                            == (
+                                "ERROR: Output does not contain at least 1 complete code block"
+                            )
+                        )
+                    ],
+                    "one_loop_one_method",
+                )
+
+                Logger.log_info(
+                    f"Checking combined annotations for benchmark: {start_index + i + 1}/{len(sliced_benchmarks)}"
+                )
+
+                __success, checker_message = self.checker.check(
+                    checker_input_with_combined_annotations,
+                    False,
+                    use_json_dump_for_invariants=self.use_json_output,
+                )
+
+                if __success:
+                    Logger.log_success(
+                        f"Combined annotations are correct for benchmark: {start_index + i + 1}/{len(sliced_benchmarks)}"
+                    )
+                else:
+                    Logger.log_error(
+                        f"Combined annotations are incorrect for benchmark: {start_index + i + 1}/{len(sliced_benchmarks)}"
+                    )
+
+                instance_log_json["checker_output"] = __success
+                instance_log_json["checker_message"] = checker_message
+                instance_log_json[
+                    "code_with_combined_annotations"
+                ] = checker_input_with_combined_annotations
+
+                success = __success or success
+
+                if not __success:
+                    Logger.log_info(
+                        f"Houdini for combined annotations for benchmark: {start_index + i + 1}/{len(sliced_benchmarks)}"
+                    )
+
+                    __success, pruned_code, num_frama_c_calls = self.checker.houdini(
+                        checker_input_with_combined_annotations,
+                        "one_loop_one_method",
+                        use_json_dump_for_invariants=self.use_json_output,
+                    )
+
+                    if __success:
+                        Logger.log_success(
+                            f"Houdini for combined annotations successful for benchmark: {start_index + i + 1}/{len(sliced_benchmarks)}"
+                        )
+                    else:
+                        Logger.log_error(
+                            f"Houdini for combined annotations unsuccessful for benchmark: {start_index + i + 1}/{len(sliced_benchmarks)}"
+                        )
+
+                    instance_log_json["combined_annotation_num_solver_calls"] = (
+                        num_frama_c_calls + 1
+                    )
+                    instance_log_json["code_after_prune"] = pruned_code
+                    instance_log_json["checker_output_after_prune"] = __success
+
+                success = __success or success
+
+                instance_log_json["success"] = success
+
+                if instance_log_json["success"]:
+                    Logger.log_success(
+                        f"Benchmark {start_index + i + 1}/{len(sliced_benchmarks)} succeeded"
+                    )
+                    stats["success"].append(instance[0])
+                else:
+                    Logger.log_error(
+                        f"Benchmark {start_index + i + 1}/{len(sliced_benchmarks)} failed"
+                    )
+                    stats["failure"].append(instance[0])
+
+                log_json.append(instance_log_json)
+
+                with open(
+                    os.path.join(
+                        self.log_path,
+                        instance[0]
+                        .replace(".c", ".json")
+                        .replace("../", "")
+                        .replace("/", "__"),
+                    ),
+                    "w",
+                    encoding="utf-8",
+                ) as f:
+                    f.write(
+                        json.dumps(
+                            {
+                                "logs": instance_log_json,
+                                "stats": stats,
+                            },
+                            indent=4,
+                            ensure_ascii=False,
+                        )
+                    )
+
+            except Exception as e:
+                Logger.log_error(traceback.format_exc())
+                if isinstance(e, KeyboardInterrupt):
+                    stats["skipped"].append(instance[0])
+                    break
+                else:
+                    stats["skipped"].append(instance[0])
+                    log_json.append(instance_log_json)
+                    with open(
+                        os.path.join(
+                            self.log_path,
+                            instance[0]
+                            .replace(".c", ".json")
+                            .replace("../", "")
+                            .replace("/", "__"),
+                        ),
+                        "w",
+                        encoding="utf-8",
+                    ) as f:
+                        f.write(
+                            json.dumps(
+                                {
+                                    "logs": instance_log_json,
+                                    "stats": stats,
+                                },
+                                indent=4,
+                                ensure_ascii=False,
+                            )
+                        )
+                    continue
+
+            stats["total"] += 1
+            stats["success_count"] = len(stats["success"])
+            stats["failure_count"] = len(stats["failure"])
+            stats["success_rate"] = (
+                stats["success_count"] / stats["total"] if stats["total"] != 0 else 0
+            )
+
+        log_file.write(
+            json.dumps(
+                {"params": self.arg_params, "logs": log_json, "stats": stats},
+                indent=4,
+                ensure_ascii=False,
+            )
+        )
+        log_file.close()
+
+        return
+
     def loopy_wrapper(self, benchmark_file, variant, invariants):
         # call other experiment specific functions from inside the wrapper
         # This will handle logging, tracking frama-c calls, etc.
