@@ -47,7 +47,7 @@ def check_candidate(candidate_to_check):
     (checker_input, completions) = candidate_to_check
     fb = FramaCBenchmark(features="one_loop_one_method")
     for completion in completions:
-        if completion["success"]:
+        if "success" in completion and completion["success"]:
             return (
                 True,
                 completion["invariants"]
