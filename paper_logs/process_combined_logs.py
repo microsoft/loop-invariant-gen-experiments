@@ -8,6 +8,7 @@ import copy
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "../src/"))
 from frama_c import FramaCChecker, FramaCBenchmark
+from llm_utils import Logger
 
 
 def shuffle(input_list):
@@ -100,6 +101,12 @@ for k in range(start_k, end_k + 1):
         total_success = sum(r[0] for r in results)
         pass_at_k_prune = total_success / len(results)
         benchmark_log["pass_at_k_prune"] = pass_at_k_prune
+
+        Logger.log_info(
+            "Benchmark: {} k: {} pass_at_k: {} pass_at_k_prune: {}".format(
+                benchmark["file"], k, pass_at_k, pass_at_k_prune
+            )
+        )
 
         k_log["logs"].append(benchmark_log)
 
