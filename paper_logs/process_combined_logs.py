@@ -96,8 +96,7 @@ for benchmark in combined_json["logs"][start_index:end_index]:
         pass_at_k = 0.0
         for candidate in candidates:
             if any(c["success"] for c in candidate):
-                pass_at_k += 1
-                break
+                pass_at_k += 1.0
         pass_at_k /= len(candidates)
 
         pass_at_k_prune = 0.0
