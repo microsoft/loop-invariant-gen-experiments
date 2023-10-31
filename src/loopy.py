@@ -27,7 +27,7 @@ def combine_and_prune_with_k(
     combine_llm_output_lambda=None,
     features="one_loop_one_method",
 ):
-    invariants_1 = [b["invariants"] for b in benchmark["completions"]]
+    invariants_1 = [b["annotation_blocks"] for b in benchmark["completions"]]
     # invariants_2 = [b["invariants"] for b in benchmark2["completions"]]
     invariants_from_completions = invariants_1 # + invariants_2
 
