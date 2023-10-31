@@ -48,7 +48,12 @@ def check_candidate(candidate_to_check):
     fb = FramaCBenchmark(features="one_loop_one_method")
     for completion in completions:
         if completion["success"]:
-            return True, completion["code_with_invariants"]
+            return (
+                True,
+                completion["invariants"]
+                if not "code_with_invariants" in completion
+                else completion["code_with_invariants"],
+            )
         if "success_after_prune" in completion and completion["success_after_prune"]:
             return True, completion["pruned_code"]
 
