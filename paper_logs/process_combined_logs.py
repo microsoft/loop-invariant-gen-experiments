@@ -79,18 +79,19 @@ main_log = {
     "logs": [],
 }
 
-for k in range(start_k, end_k + 1):
-    k_log = {
-        "k": k,
-        "logs": [],
+for benchmark in combined_json["logs"][start_index:end_index]:
+    benchmark_log = {
+        "file": benchmark["file"],
+        "benchmark_code": benchmark["benchmark_code"],
+        "pass_at_k": {k: 0.0 for k in range(start_k, end_k + 1)},
+        "pass_at_k_prune": {k: 0.0 for k in range(start_k, end_k + 1)},
     }
-    for benchmark in combined_json["logs"][start_index:end_index]:
-        benchmark_log = {
-            "file": benchmark["file"],
-            "benchmark_code": benchmark["benchmark_code"],
-        }
-        completions = benchmark["completions"]
-        shufflings = [shuffle(completions) for _ in range(10)]
+    completions = benchmark["completions"]
+    shufflings = [shuffle(completions) for _ in range(10)]
+
+    for k in range(start_k, end_k + 1):
+        pass_at_k = 0.0
+
         candidates = [shuffling[:k] for shuffling in shufflings]
         pass_at_k = 0.0
         for candidate in candidates:
@@ -98,7 +99,6 @@ for k in range(start_k, end_k + 1):
                 pass_at_k += 1
                 break
         pass_at_k /= len(candidates)
-        benchmark_log["pass_at_k"] = pass_at_k
 
         pass_at_k_prune = 0.0
         results = run_parallel(
@@ -108,7 +108,9 @@ for k in range(start_k, end_k + 1):
 
         total_success = sum(r[0] for r in results)
         pass_at_k_prune = total_success / len(results)
-        benchmark_log["pass_at_k_prune"] = pass_at_k_prune
+
+        benchmark_log["pass_at_k"][k] = pass_at_k
+        benchmark_log["pass_at_k_prune"][k] = pass_at_k_prune
 
         Logger.log_info(
             "Benchmark: {} k: {} pass_at_k: {} pass_at_k_prune: {}".format(
@@ -118,6 +120,6 @@ for k in range(start_k, end_k + 1):
 
         k_log["logs"].append(benchmark_log)
 
-    main_log["logs"].append(k_log)
+    main_log["logs"].append(benchmark_log)
 
 json.dump(main_log, open(output_path, "w", encoding="utf-8"), indent=4)
