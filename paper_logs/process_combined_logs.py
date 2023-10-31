@@ -42,7 +42,8 @@ def prune_wrapper(checker_input):
     return success, pruned_code
 
 
-def check_candidate(checker_input, completions):
+def check_candidate(candidate_to_check):
+    (checker_input, completions) = candidate_to_check
     fb = FramaCBenchmark(features="one_loop_one_method")
     for completion in completions:
         if completion["success"]:
@@ -63,6 +64,8 @@ combined_json = json.load(open(sys.argv[1], "r", encoding="utf-8"))
 output_path = sys.argv[1].replace(".json", "_processed.json")
 start_k = int(sys.argv[2])
 end_k = int(sys.argv[3])
+start_index = int(sys.argv[4])
+end_index = int(sys.argv[5])
 
 main_log = {
     "logs": [],
@@ -73,7 +76,7 @@ for k in range(start_k, end_k + 1):
         "k": k,
         "logs": [],
     }
-    for benchmark in combined_json["logs"]:
+    for benchmark in combined_json["logs"][start_index:end_index]:
         benchmark_log = {
             "file": benchmark["file"],
             "benchmark_code": benchmark["benchmark_code"],
