@@ -18,7 +18,7 @@ failure_candidates = []
 culprits = {}
 
 code2inv_stats = {"without_houdini": {}, "with_houdini": {}}
-code2inv_file = json.load(open("code2inv/loopy_2023_10_30_08_06_57/final.json", "r"))
+code2inv_file = json.load(open("code2inv/loopy_2023_10_22_01_14_08/final.json", "r"))
 
 for code2inv in code2inv_file["logs"]:
     success = False
@@ -68,7 +68,7 @@ print("=================================================================")
 
 
 old_benchmarks_stats = {"without_houdini": {}, "with_houdini": {}}
-old_benchmarks = json.load(open("old_mix/loopy_2023_09_24_21_35_45/final.json", "r"))
+old_benchmarks = json.load(open("old_mix/loopy_2023_09_25_08_57_18/final.json", "r"))
 
 for benchmark in old_benchmarks["logs"]:
     success = False
@@ -117,7 +117,7 @@ print("============================================================")
 
 
 diff_files_stats = {"without_houdini": {}, "with_houdini": {}}
-diff_files = json.load(open("diff_files/loopy_2023_10_27_12_17_19/final.json", "r"))
+diff_files = json.load(open("diff_files/loopy_2023_10_30_17_04_27/final.json", "r"))
 
 for diff_file in diff_files["logs"]:
     success = False
@@ -188,59 +188,59 @@ print(
 print("Failure candidates: ", len(failure_candidates))
 print("Culprits: ", len(culprits))
 
-with open("files_to_rerun.txt", "w") as f:
-    for file in to_rerun:
-        f.write(file + "\n")
+# with open("files_to_rerun.txt", "w") as f:
+#     for file in to_rerun:
+#         f.write(file + "\n")
 
-with open("culprit_files.txt", "w") as f:
-    for file in culprits:
-        f.write(file + "\n")
+# with open("culprit_files.txt", "w") as f:
+#     for file in culprits:
+#         f.write(file + "\n")
 
-def run_parallel(inputs, func):
-    assert len(inputs) <= 32
+# def run_parallel(inputs, func):
+#     assert len(inputs) <= 32
 
-    pool = multiprocessing.Pool(processes=len(inputs))
-    results = pool.map(func, inputs)
-    pool.close()
-    pool.join()
-    return results
-
-
-def prune_wrapper(checker_input):
-    checker = FramaCChecker()
-    success = False
-    pruned_code = None
-    try:
-        success, pruned_code, _ = checker.houdini(
-            checker_input,
-            features="one_loop_one_method",
-            use_json_dump_for_invariants=True,
-        )
-    except Exception as e:
-        print(e)
-        traceback.print_exc()
-    return success, pruned_code
+#     pool = multiprocessing.Pool(processes=len(inputs))
+#     results = pool.map(func, inputs)
+#     pool.close()
+#     pool.join()
+#     return results
 
 
-rechecking_json = {"logs": []}
-checker = FramaCChecker()
+# def prune_wrapper(checker_input):
+#     checker = FramaCChecker()
+#     success = False
+#     pruned_code = None
+#     try:
+#         success, pruned_code, _ = checker.houdini(
+#             checker_input,
+#             features="one_loop_one_method",
+#             use_json_dump_for_invariants=True,
+#         )
+#     except Exception as e:
+#         print(e)
+#         traceback.print_exc()
+#     return success, pruned_code
 
-max_iters = len(failure_candidates) // 32 + 1
 
-for i in range(0, max_iters):
-    Logger.log_info(f"Rechecking {i+1}/{len(failure_candidates)}")
-    benchmarks = failure_candidates[i : i + 32]
-    benchmarks = [x[1] for x in benchmarks]
-    results = run_parallel(benchmarks, prune_wrapper)
-    for benchmark, result in zip(benchmarks, results):
-        benchmark_json = {"file": benchmark[0], "code": benchmark[1]}
-        benchmark_json["checker_output"] = result[0]
-        benchmark_json["code_with_pruned_annotations"] = result[1]
-        rechecking_json["logs"].append(benchmark_json)
-        if result[0]:
-            Logger.log_success(f"Rechecking {i+1}/{len(failure_candidates)}: Success")
-        else:
-            Logger.log_error(f"Rechecking {i+1}/{len(failure_candidates)}: Failure")
+# rechecking_json = {"logs": []}
+# checker = FramaCChecker()
 
-with open("rechecking.json", "w") as f:
-    json.dump(rechecking_json, f, indent=4)
+# max_iters = len(failure_candidates) // 32 + 1
+
+# for i in range(0, max_iters):
+#     Logger.log_info(f"Rechecking {i+1}/{len(failure_candidates)}")
+#     benchmarks = failure_candidates[i : i + 32]
+#     benchmarks = [x[1] for x in benchmarks]
+#     results = run_parallel(benchmarks, prune_wrapper)
+#     for benchmark, result in zip(benchmarks, results):
+#         benchmark_json = {"file": benchmark[0], "code": benchmark[1]}
+#         benchmark_json["checker_output"] = result[0]
+#         benchmark_json["code_with_pruned_annotations"] = result[1]
+#         rechecking_json["logs"].append(benchmark_json)
+#         if result[0]:
+#             Logger.log_success(f"Rechecking {i+1}/{len(failure_candidates)}: Success")
+#         else:
+#             Logger.log_error(f"Rechecking {i+1}/{len(failure_candidates)}: Failure")
+
+# with open("rechecking.json", "w") as f:
+#     json.dump(rechecking_json, f, indent=4)

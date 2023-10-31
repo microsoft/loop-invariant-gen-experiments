@@ -19,7 +19,7 @@ from process_results import prune_wrapper, run_parallel, shuffle
 
 def combine_and_prune_with_k(
     benchmark,
-    benchmark2,
+    # benchmark2,
     n,
     k,
     shuffle_times=10,
@@ -28,8 +28,8 @@ def combine_and_prune_with_k(
     features="one_loop_one_method",
 ):
     invariants_1 = [b["invariants"] for b in benchmark["completions"]]
-    invariants_2 = [b["invariants"] for b in benchmark2["completions"]]
-    invariants_from_completions = invariants_1 + invariants_2
+    # invariants_2 = [b["invariants"] for b in benchmark2["completions"]]
+    invariants_from_completions = invariants_1 # + invariants_2
 
     if len(invariants_from_completions) < n:
         invariants_from_completions = invariants_from_completions + [
@@ -2885,14 +2885,14 @@ class LoopyPipeline:
         num_repairs=7,
     ):
         generation_log_1 = json.load(open(input_log_1, "r", encoding="utf-8"))
-        generation_log_2 = json.load(open(input_log_2, "r", encoding="utf-8"))
+        # generation_log_2 = json.load(open(input_log_2, "r", encoding="utf-8"))
 
         generation_log_1 = generation_log_1["logs"][
             start_index : start_index + max_benchmarks
         ]
-        generation_log_2 = generation_log_2["logs"][
-            start_index : start_index + max_benchmarks
-        ]
+        # generation_log_2 = generation_log_2["logs"][
+        #     start_index : start_index + max_benchmarks
+        # ]
 
         if self.llm is None or self.benchmark is None or self.checker is None:
             raise Exception("Pipeline not initialized. Call load_config first.")
@@ -2930,9 +2930,9 @@ class LoopyPipeline:
             )
 
         for benchmark_index, gen_benchmark_log in enumerate(generation_log_1):
-            assert (
-                gen_benchmark_log["file"] == generation_log_2[benchmark_index]["file"]
-            ), "Mismatch in benchmark logs"
+            # assert (
+            #     gen_benchmark_log["file"] == generation_log_2[benchmark_index]["file"]
+            # ), "Mismatch in benchmark logs"
 
             Logger.log_info(
                 f"Running benchmark: {start_index + benchmark_index + 1}/{len(generation_log_1)}"
@@ -2949,7 +2949,7 @@ class LoopyPipeline:
 
             if (
                 "completions" not in gen_benchmark_log
-                or "completions" not in generation_log_2[benchmark_index]
+                # or "completions" not in generation_log_2[benchmark_index]
             ):
                 Logger.log_info(
                     f"Skipping benchmark without completions: {start_index + benchmark_index + 1}/{len(generation_log_1)}"
@@ -2983,7 +2983,7 @@ class LoopyPipeline:
             try:
                 pass_8_success, candidates = combine_and_prune_with_k(
                     gen_benchmark_log,
-                    generation_log_2[benchmark_index],
+                    # generation_log_2[benchmark_index],
                     15,
                     k,
                     combine_llm_output_lambda=self.benchmark.combine_llm_outputs,

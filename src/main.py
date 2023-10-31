@@ -293,7 +293,7 @@ def main(args):
             max_benchmarks=args.max_benchmarks,
             start_index=args.start_index,
             input_log_1=args.repair_1,
-            input_log_2=args.repair_2,
+            # input_log_2=args.repair_2,
         )
         return
 
