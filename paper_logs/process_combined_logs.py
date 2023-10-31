@@ -118,8 +118,6 @@ for benchmark in combined_json["logs"][start_index:end_index]:
             )
         )
 
-        k_log["logs"].append(benchmark_log)
-
     main_log["logs"].append(benchmark_log)
 
 json.dump(main_log, open(output_path, "w", encoding="utf-8"), indent=4)
