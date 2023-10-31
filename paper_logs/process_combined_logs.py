@@ -67,11 +67,13 @@ def check_candidate(candidate_to_check):
 # first argument is the path to the combined log file
 
 combined_json = json.load(open(sys.argv[1], "r", encoding="utf-8"))
-output_path = sys.argv[1].replace(".json", "_processed.json")
 start_k = int(sys.argv[2])
 end_k = int(sys.argv[3])
 start_index = int(sys.argv[4])
 end_index = int(sys.argv[5])
+output_path = (
+    sys.argv[1][:-5] + f"_k_{start_k}_{end_k}_index_{start_index}_{end_index}.json"
+)
 
 main_log = {
     "logs": [],
