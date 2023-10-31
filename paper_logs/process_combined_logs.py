@@ -85,11 +85,12 @@ for k in range(start_k, end_k + 1):
         completions = benchmark["completions"]
         shufflings = [shuffle(completions) for _ in range(10)]
         candidates = [shuffling[:k] for shuffling in shufflings]
-        pass_at_k = None
+        pass_at_k = 0.0
         for candidate in candidates:
             if any(c["success"] for c in candidate):
-                pass_at_k = candidate
+                pass_at_k += 1
                 break
+        pass_at_k /= len(candidates)
         benchmark_log["pass_at_k"] = pass_at_k
 
         pass_at_k_prune = 0.0
