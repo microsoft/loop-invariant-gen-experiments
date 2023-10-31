@@ -23,13 +23,13 @@ code2inv_file = json.load(open("code2inv/loopy_2023_10_22_01_14_08/final.json", 
 for code2inv in code2inv_file["logs"]:
     success = False
     sprune = False
-    if "completions" not in code2inv:
+    if "completions" not in code2inv["log"][1]:
         to_rerun.append(code2inv["file"])
         continue
     any_success = False
-    for completion in code2inv["completions"]:
-        if "success" in completion:
-            any_success = any_success or completion["success"]
+    for completion in code2inv["log"][1]["completions"]:
+        if "checker_output_for_invariants" in completion:
+            any_success = any_success or completion["checker_output_for_invariants"]
         elif "checker_output_for_annotations" in completion:
             any_success = any_success or completion["checker_output_for_annotations"]
 
@@ -42,22 +42,22 @@ for code2inv in code2inv_file["logs"]:
         success = True
         code2inv_stats["without_houdini"][(code2inv["file"])] = True
     else:
-        if "checker_output_after_prune" in code2inv:
-            if code2inv["checker_output_after_prune"]:
+        if "checker_output" in code2inv["log"][-1]:
+            if code2inv["log"][-1]["checker_output"]:
                 success = True
                 code2inv_stats["with_houdini"][(code2inv["file"])] = True
             elif sprune:
                 culprits[code2inv["file"]] = True
                 continue
-        elif "checker_output" in code2inv:
-            if code2inv["checker_output"]:
-                success = True
-                code2inv_stats["with_houdini"][(code2inv["file"])] = True
+        # elif "checker_output" in code2inv:
+        #     if code2inv["checker_output"]:
+        #         success = True
+        #         code2inv_stats["with_houdini"][(code2inv["file"])] = True
         else:
             to_rerun.append(code2inv["file"])
     if not success:
         failure_candidates.append(
-            (code2inv["file"], code2inv["code_with_combined_annotations"])
+            (code2inv["file"], code2inv["log"][-1]["code_with_combined_invariants"])
         )
 
 print("====================== Code2Inv benchmarks ======================")
@@ -74,7 +74,7 @@ for benchmark in old_benchmarks["logs"]:
     success = False
     sprune = False
     if "completions" not in benchmark:
-        to_rerun.append(benchmark["file"])
+        to_rerun.append(benchmark["file"][0])
         continue
     any_success = False
     for completion in benchmark["completions"]:
@@ -83,30 +83,30 @@ for benchmark in old_benchmarks["logs"]:
         
         if "success_after_prune" in completion:
             if completion["success_after_prune"]:
-                old_benchmarks_stats["with_houdini"][benchmark["file"]] = True
+                old_benchmarks_stats["with_houdini"][benchmark["file"][0]] = True
                 sprune = True
 
     if any_success:
         success = True
-        old_benchmarks_stats["without_houdini"][(benchmark["file"])] = True
+        old_benchmarks_stats["without_houdini"][(benchmark["file"][0])] = True
     else:
         if "checker_output_after_combine_and_prune" in benchmark:
             if benchmark["checker_output_after_combine_and_prune"]:
                 success = True
-                old_benchmarks_stats["with_houdini"][(benchmark["file"])] = True
+                old_benchmarks_stats["with_houdini"][(benchmark["file"][0])] = True
             elif sprune:
-                culprits[benchmark["file"]] = True
+                culprits[benchmark["file"][0]] = True
                 continue
         elif "checker_output" in benchmark:
             if benchmark["checker_output"]:
                 success = True
-                old_benchmarks_stats["with_houdini"][(benchmark["file"])] = True
+                old_benchmarks_stats["with_houdini"][(benchmark["file"][0])] = True
         else:
-            print("No prune output for ", benchmark["file"])
-            to_rerun.append(benchmark["file"])
+            print("No prune output for ", benchmark["file"][0])
+            to_rerun.append(benchmark["file"][0])
     if not success:
         failure_candidates.append(
-            (benchmark["file"], benchmark["code_with_combined_invariants"])
+            (benchmark["file"][0], benchmark["code_with_combined_invariants"])
         )
 
 print("====================== Old benchmarks ======================")
