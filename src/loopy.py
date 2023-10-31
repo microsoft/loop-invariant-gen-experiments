@@ -3269,6 +3269,7 @@ class LoopyPipeline:
             outputs = json.load(open(local_output, "r", encoding="utf-8"))
 
         for i, instance in enumerate(sliced_benchmarks):
+            success = False
             try:
                 assert instance[0] == outputs[i]["file"]
                 print(
