@@ -95,7 +95,8 @@ for benchmark in combined_json["logs"][start_index:end_index]:
         candidates = [shuffling[:k] for shuffling in shufflings]
         pass_at_k = 0.0
         for candidate in candidates:
-            if any(c["success"] for c in candidate):
+            candidates_with_success = [c for c in candidate if "success" in c]
+            if any(c["success"] for c in candidates_with_success):
                 pass_at_k += 1.0
         pass_at_k /= len(candidates)
 
