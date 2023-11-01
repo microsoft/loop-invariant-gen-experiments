@@ -1,0 +1,184 @@
+{
+    "params": {
+        "config_file": "../config/expt2.yaml",
+        "local_loopy": false,
+        "termination_analysis": false,
+        "svcomp_files": false,
+        "loop_invariants": false,
+        "loopy_prompt": null,
+        "repair_invariants": true,
+        "repair_1": "../paper_logs/gpt_4/with_nudges/diff_files/loopy_2023_10_27_10_53_58/final.json",
+        "repair_2": "",
+        "checker": "frama-c",
+        "model": "gpt-4",
+        "temperature": 0.7,
+        "num_completions": 1,
+        "benchmark_file": "benchmarks.txt",
+        "repair_input": "",
+        "recheck_input": "",
+        "output_dir": "../logs/loopy_2023_10_31_09_32_35/",
+        "repair_input_2": "",
+        "repair_retries": 5,
+        "repair_from_k": 0,
+        "max_benchmarks": 25,
+        "start_index": 0,
+        "problem_ids": [],
+        "provider": "azure-open-ai",
+        "benchmark_features": "one_loop_one_method",
+        "debug": false,
+        "json_output": false,
+        "local_llm_output": "",
+        "classify": false,
+        "ground_truth_file": "",
+        "loopy_sequence": false
+    },
+    "logs": [
+        {
+            "file": "../data/benchmarks/sv-benchmarks/loops-crafted-1/Mono1_1-2.c",
+            "benchmark_code": "#define assume(e) if(!(e)) return 0;\n\nint main(void) {\n  unsigned int x = 0;\n\n  while (x < 100000000) {\n    if (x < 10000000) {\n      x++;\n    } else {\n      x += 2;\n    }\n  }\n\n  {;\n//@ assert(x == 100000000);\n}\n\n}",
+            "success": true,
+            "repair_tries": [],
+            "candidates": [
+                "#define assume(e) if(!(e)) return 0;\n\nint main(void) {\n  unsigned int x = 0;\n\n  /*@\nloop invariant i1: x >= 0;\nloop invariant i2: x <= 100000000;\nloop invariant i3: \\forall integer k; 0 <= k < LoopEntry -> \\at(x, LoopCurrent) >= \\at(x, k);\nloop invariant i4: 0 <= x;\nloop invariant i5: (x < 10000000) ==> (x % 2 == 0);\nloop invariant i6: (x >= 10000000) ==> (x % 2 == 1);\nloop invariant i7: x % 2 == 0 ==> x >= 10000000;\nloop invariant i8: x < 10000000 ==> x < 100000000;\nloop invariant i9: x >= 10000000 ==> x < 100000000 - 1;\nloop invariant i10: \\forall integer i; 0 <= i < \\old(x) ==> x != i;\nloop invariant i11: x >= \\at(x, LoopEntry) ==> (x - \\at(x, LoopEntry)) % 2 == 0;\n*/\nwhile (x < 100000000) {\n    if (x < 10000000) {\n      x++;\n    } else {\n      x += 2;\n    }\n  }\n\n  {;\n//@ assert(x == 100000000);\n}\n\n}",
+                "#define assume(e) if(!(e)) return 0;\n\nint main(void) {\n  unsigned int x = 0;\n\n  /*@\nloop invariant i1: 0 <= x;\nloop invariant i2: x <= 100000000;\nloop invariant i3: x % 2 == 0 ==> x >= 10000000;\nloop invariant i4: 0 <= x <= 100000000;\nloop invariant i5: x < 10000000 ==> x == \\at(x - 1, LoopEntry);\nloop invariant i6: x >= 10000000 ==> x == \\at(x - 2, LoopEntry);\nloop invariant i7: x >= 10000000 ==> (x - 10000000) % 2 == 0;\nloop invariant i8: x >= 0;\nloop invariant i9: x < 10000000 ==> x < 100000000;\nloop invariant i10: x >= 10000000 ==> x < 100000000 - 1;\nloop invariant i11: x % 2 != 0 ==> x < 10000000;\nloop invariant i12: x % 2 == 1 ==> x < 10000000;\nloop invariant i13: (x < 10000000) ==> (x % 2 == 0);\nloop invariant i14: \\forall integer i; 0 <= i < \\old(x) ==> x != i;\n*/\nwhile (x < 100000000) {\n    if (x < 10000000) {\n      x++;\n    } else {\n      x += 2;\n    }\n  }\n\n  {;\n//@ assert(x == 100000000);\n}\n\n}"
+            ]
+        },
+        {
+            "file": "../data/benchmarks/sv-benchmarks/loops-crafted-1/mono-crafted_11.c",
+            "benchmark_code": "#define assume(e) if(!(e)) return 0;\n\nint main() {\n  unsigned int x = 0;\n\n  while (x < 100000000) {\n    if (x < 10000000) {\n      x++;\n    } else {\n      x += 2;\n    }\n  }\n\n  {;\n//@ assert((x%2)==0);\n}\n\n  return 0;\n}",
+            "success": false,
+            "repair_tries": [],
+            "error": "'annotations'"
+        },
+        {
+            "file": "../data/benchmarks/sv-benchmarks/loop-floats-scientific-comp/loop2-1.c",
+            "benchmark_code": "#define assume(e) if(!(e)) return 0;\nextern int unknown_int(void);\n\nfloat pi = 3.14159 ;\n\nint main()\n{\n\tfloat x = unknown_float() ;\n\tfloat octant = pi/3 ;\n\tassume(x > 0 && x < octant) ;\n\tfloat oddExp = x ;\n\tfloat evenExp = 1.0 ;\n\tfloat term = x ;\n\tunsigned int count = 2 ;\n\tint multFactor = 0 ;\n\tint temp ;\n\n\twhile(1)\n\t{\n\t\tterm = term * (x/count) ;\n\t\tmultFactor = (count>>1 % 2 == 0) ? 1 : -1 ;\n\n\t\tevenExp = evenExp + multFactor*term ;\n\n\t\tcount++ ;\n\n\t\tterm = term * (x/count) ;\t\t\n\t\t\n\t\toddExp = oddExp + multFactor*term ;\n\t\t\n\t\tcount++ ;\n\n\t\ttemp = unknown_int() ;\n\t\tif(temp == 0) break ;\n\t}\n\n\t{;\n//@ assert( oddExp >= evenExp );\n}\n\n\treturn 0 ;\n}\t",
+            "success": false,
+            "repair_tries": [],
+            "error": "'tuple' object has no attribute 'splitlines'"
+        },
+        {
+            "file": "../data/benchmarks/sv-benchmarks/loop-invariants/linear-inequality-inv-a.c",
+            "benchmark_code": "#define assume(e) if(!(e)) return 0;\nextern unsigned char unknown_uchar(void);\n\nint main() {\n  unsigned char n = unknown_uchar();\n  if (n == 0) {\n    return 0;\n  }\n  unsigned char v = 0;\n  unsigned int  s = 0;\n  unsigned int  i = 0;\n  while (i < n) {\n    v = unknown_uchar();\n    s += v;\n    ++i;\n  }\n  if (s < v) {\n    {; \n//@ assert(\\false);\n};\n    return 1;\n  }\n  if (s > 65025) {\n    {; \n//@ assert(\\false);\n};\n    return 1;\n  }\n  return 0;\n}",
+            "success": true,
+            "repair_tries": [],
+            "candidates": [
+                "#define assume(e) if(!(e)) return 0;\nextern unsigned char unknown_uchar(void);\n\nint main() {\n  unsigned char n = unknown_uchar();\n  if (n == 0) {\n    return 0;\n  }\n  unsigned char v = 0;\n  unsigned int  s = 0;\n  unsigned int  i = 0;\n  /*@\nloop invariant i1: 0 <= i <= n;\nloop invariant i2: 0 <= v <= 255;\nloop invariant i3: 0 <= s <= 65025;\nloop invariant i4: i <= n ==> 0 <= s + v <= 65025;\nloop invariant i5: s >= i * 255 ==> n == i;\nloop invariant i6: s < i * 255 ==> n > i;\nloop invariant i7: s >= i * v;\nloop invariant i8: 0 <= i && i <= n;\nloop invariant i9: 0 <= s && s <= 65025;\nloop invariant i10: 0 <= v && v <= 255;\nloop invariant i11: 0 <= s;\nloop invariant i12: s <= i * 255;\nloop invariant i13: i <= n;\nloop invariant i14: s <= 255 * i;\nloop invariant i15: i <= n ==> s <= i * 255;\n*/\nwhile (i < n) {\n    v = unknown_uchar();\n    s += v;\n    ++i;\n  }\n  if (s < v) {\n    {; \n//@ assert(\\false);\n};\n    return 1;\n  }\n  if (s > 65025) {\n    {; \n//@ assert(\\false);\n};\n    return 1;\n  }\n  return 0;\n}",
+                "#define assume(e) if(!(e)) return 0;\nextern unsigned char unknown_uchar(void);\n\nint main() {\n  unsigned char n = unknown_uchar();\n  if (n == 0) {\n    return 0;\n  }\n  unsigned char v = 0;\n  unsigned int  s = 0;\n  unsigned int  i = 0;\n  /*@\nloop invariant i1: 0 <= i <= n;\nloop invariant i2: 0 <= v <= 255;\nloop invariant i3: 0 <= s <= 65025;\nloop invariant i4: s >= i * 255 ==> n == i;\nloop invariant i5: s < i * 255 ==> n > i;\nloop invariant i6: 0 <= s;\nloop invariant i7: i <= n;\nloop invariant i8: s <= 255 * i;\nloop invariant i9: i <= n ==> s <= i * 255;\nloop invariant i10: s >= i * v;\nloop invariant i11: s <= i * 255;\nloop invariant i12: s >= i*v_min ==> s >= i;\nloop invariant i13: s <= i*v_max ==> s <= i*255;\nloop invariant i14: 0 <= i && i <= n;\nloop invariant i15: 0 <= v && v <= s;\nloop invariant i16: i <= n ==> 0 <= s + v <= 65025;\n*/\nwhile (i < n) {\n    v = unknown_uchar();\n    s += v;\n    ++i;\n  }\n  if (s < v) {\n    {; \n//@ assert(\\false);\n};\n    return 1;\n  }\n  if (s > 65025) {\n    {; \n//@ assert(\\false);\n};\n    return 1;\n  }\n  return 0;\n}"
+            ]
+        },
+        {
+            "file": "../data/benchmarks/sv-benchmarks/loop-simple/nested_1.c",
+            "benchmark_code": "#define assume(e) if(!(e)) return 0;\n\nint main() {\n\tint a = 6;\n\n\tfor(a = 0; a < 6; ++a) {\n\n\t}\n\tif(!(a == 6 )) {\n\t\t{; \n//@ assert(\\false);\n};\n\t}\n\treturn 1;\n}",
+            "success": true,
+            "repair_tries": [],
+            "candidates": [
+                "#define assume(e) if(!(e)) return 0;\n\nint main() {\n\tint a = 6;\n\n\t/*@\nloop invariant i1: 0 <= a <= 6;\nloop invariant i2: a <= 6;\nloop invariant i3: 0 <= a;\n*/\nfor(a = 0; a < 6; ++a) {\n\n\t}\n\tif(!(a == 6 )) {\n\t\t{; \n//@ assert(\\false);\n};\n\t}\n\treturn 1;\n}",
+                "#define assume(e) if(!(e)) return 0;\n\nint main() {\n\tint a = 6;\n\n\t/*@\nloop invariant i1: 0 <= a <= 6;\nloop invariant i2: a <= 6;\nloop invariant i3: a >= 0;\nloop invariant i4: 0 <= a;\n*/\nfor(a = 0; a < 6; ++a) {\n\n\t}\n\tif(!(a == 6 )) {\n\t\t{; \n//@ assert(\\false);\n};\n\t}\n\treturn 1;\n}"
+            ]
+        },
+        {
+            "file": "../data/benchmarks/LinearArbitrary-SeaHorn/VeriMAP/MAP-forward_VeriMAP_true.c",
+            "benchmark_code": "#define assume(e) if(!(e)) return;\nextern int unknown_int(void);\n\n;\n\nvoid main(){\n\n   int i, n, a, b;\n   n = unknown_int();\n   assume( n>= 0 );\n\n   i = 0; \n   a = 0; \n   b = 0;\n\n   while( i < n ){\n      if(unknown_int()) {\n         a = a+1;\n         b = b+2;\n      } else {\n         a = a+2;\n         b = b+1;\n      }\n      i = i+1;\n   }\n\n   if ( a+b != 3*n)\n      goto ERROR;\n\nreturn;\n\n{ ERROR: {; \n//@ assert(\\false);\n}\n}\n}",
+            "success": true,
+            "repair_tries": [],
+            "candidates": [
+                "#define assume(e) if(!(e)) return;\nextern int unknown_int(void);\n\n;\n\nvoid main(){\n\n   int i, n, a, b;\n   n = unknown_int();\n   assume( n>= 0 );\n\n   i = 0; \n   a = 0; \n   b = 0;\n\n   /*@\nloop invariant i1: 0 <= i <= n;\nloop invariant i2: a >= 0 && b >= 0;\nloop invariant i3: a + b == 3 * i;\nloop invariant i4: 0 <= a <= 2*n;\nloop invariant i5: 0 <= b <= 2*n;\nloop invariant i6: a + b == 3*i;\nloop invariant i7: 0 <= a <= 2 * i;\nloop invariant i8: 0 <= b <= 2 * i;\nloop invariant i9: 0 <= a <= 2 * n;\nloop invariant i10: 0 <= b <= 2 * n;\nloop invariant i11: 0 <= i && i <= n;\nloop invariant i12: 0 <= a && a <= 2*n;\nloop invariant i13: 0 <= b && b <= 2*n;\n*/\nwhile( i < n ){\n      if(unknown_int()) {\n         a = a+1;\n         b = b+2;\n      } else {\n         a = a+2;\n         b = b+1;\n      }\n      i = i+1;\n   }\n\n   if ( a+b != 3*n)\n      goto ERROR;\n\nreturn;\n\n{ ERROR: {; \n//@ assert(\\false);\n}\n}\n}",
+                "#define assume(e) if(!(e)) return;\nextern int unknown_int(void);\n\n;\n\nvoid main(){\n\n   int i, n, a, b;\n   n = unknown_int();\n   assume( n>= 0 );\n\n   i = 0; \n   a = 0; \n   b = 0;\n\n   /*@\nloop invariant i1: 0 <= i <= n;\nloop invariant i2: 0 <= a <= 2*n;\nloop invariant i3: 0 <= b <= 2*n;\nloop invariant i4: a + b == 3*i;\nloop invariant i5: 0 <= a <= 2*i;\nloop invariant i6: 0 <= b <= 2*i;\nloop invariant i7: 0 <= i && i <= n;\nloop invariant i8: 0 <= a && a <= 2*n;\nloop invariant i9: 0 <= b && b <= 2*n;\nloop invariant i10: a >= 0 && b >= 0;\nloop invariant i11: a + b == 3 * i;\nloop invariant i12: a >= 0;\nloop invariant i13: b >= 0;\nloop invariant i14: 0 <= a <= 2 * i;\nloop invariant i15: 0 <= b <= 2 * i;\n*/\nwhile( i < n ){\n      if(unknown_int()) {\n         a = a+1;\n         b = b+2;\n      } else {\n         a = a+2;\n         b = b+1;\n      }\n      i = i+1;\n   }\n\n   if ( a+b != 3*n)\n      goto ERROR;\n\nreturn;\n\n{ ERROR: {; \n//@ assert(\\false);\n}\n}\n}"
+            ]
+        },
+        {
+            "file": "../data/benchmarks/LinearArbitrary-SeaHorn/VeriMAP/MAP-interpolants_needed-pepm-proc.c_VeriMAP_true.c",
+            "benchmark_code": "#define assume(e) if(!(e)) return 0;\nextern int unknown_int(void);\n\nint main(){\n\n\tint x=0;\n\tint y=0;\n\n\twhile (unknown_int()) {\n\t\tif (unknown_int()) {\n\t\t\tx = x+1; \n\t\t\ty = y+2;\n\t\t} else if (unknown_int()) {\n\t\t\tif (x >= 4) {\n\t\t\t    x = x+1; \n\t\t\t    y = y+3; \n\t\t\t}\n\t\t} \n\t}\n\n    if(3*x < y)\n\t\tgoto ERROR;\n\t\n\treturn 0;\n{ ERROR: {; \n//@ assert(\\false);\n}\n}\n\treturn -1;\n}",
+            "success": true,
+            "repair_tries": [],
+            "candidates": [
+                "#define assume(e) if(!(e)) return 0;\nextern int unknown_int(void);\n\nint main(){\n\n\tint x=0;\n\tint y=0;\n\n\t/*@\nloop invariant i1: 0 <= x;\nloop invariant i2: 0 <= y;\nloop invariant i3: 2*x <= y;\nloop invariant i4: y <= 3*x;\nloop invariant i5: y <= 2*x;\nloop invariant i6: x <= y + 1;\nloop invariant i7: x >= 0;\nloop invariant i8: y >= 0;\nloop invariant i9: y >= 2 * x;\nloop invariant i10: x >= 4 ==> y >= x + (x - 4);\nloop invariant i11: y >= x;\nloop invariant i12: (\\forall int k; 0 <= k <= x; y >= 2 * k);\nloop invariant i13: (\\forall int k; 4 <= k <= x; y >= 3 * k);\nloop invariant i14: (x < 4) ==> (y <= 2 * x + 1);\nloop invariant i15: x < 4 ==> 3*x <= y;\nloop invariant i16: 2 * x <= y;\nloop invariant i17: (x < 4) ==> (y <= 2*x);\n*/\nwhile (unknown_int()) {\n\t\tif (unknown_int()) {\n\t\t\tx = x+1; \n\t\t\ty = y+2;\n\t\t} else if (unknown_int()) {\n\t\t\tif (x >= 4) {\n\t\t\t    x = x+1; \n\t\t\t    y = y+3; \n\t\t\t}\n\t\t} \n\t}\n\n    if(3*x < y)\n\t\tgoto ERROR;\n\t\n\treturn 0;\n{ ERROR: {; \n//@ assert(\\false);\n}\n}\n\treturn -1;\n}",
+                "#define assume(e) if(!(e)) return 0;\nextern int unknown_int(void);\n\nint main(){\n\n\tint x=0;\n\tint y=0;\n\n\t/*@\nloop invariant i1: 0 <= x;\nloop invariant i2: 0 <= y;\nloop invariant i3: 2*x <= y;\nloop invariant i4: (x < 4) ==> (y <= 2*x);\nloop invariant i5: x >= 0;\nloop invariant i6: y >= 0;\nloop invariant i7: y >= 2 * x;\nloop invariant i8: (x >= 4) ==> (y >= 3 * (x - 4));\nloop invariant i9: y <= 3*x;\nloop invariant i10: y <= 2*x;\nloop invariant i11: x <= y + 1;\nloop invariant i12: x >= 4 ==> y >= x + (x - 4);\nloop invariant i13: x >= 4 ==> y >= 3 * x;\nloop invariant i14: (x < 4) ==> (y == 2 * x);\nloop invariant i15: (x >= 4) ==> (y >= 2 * x);\nloop invariant i16: y <= 3 * x;\n*/\nwhile (unknown_int()) {\n\t\tif (unknown_int()) {\n\t\t\tx = x+1; \n\t\t\ty = y+2;\n\t\t} else if (unknown_int()) {\n\t\t\tif (x >= 4) {\n\t\t\t    x = x+1; \n\t\t\t    y = y+3; \n\t\t\t}\n\t\t} \n\t}\n\n    if(3*x < y)\n\t\tgoto ERROR;\n\t\n\treturn 0;\n{ ERROR: {; \n//@ assert(\\false);\n}\n}\n\treturn -1;\n}"
+            ]
+        },
+        {
+            "file": "../data/benchmarks/LinearArbitrary-SeaHorn/invgen/ken-imp.c",
+            "benchmark_code": "#define assume(e) if(!(e)) return;\nextern int unknown(void);\n\nextern int unknown();\n\nvoid main() {\n  int i = unknown();\n  int j = unknown();\n  int x = i;\n  int y = j;\n  while(x!=0) {\n\tx--;\n\ty--;\n  }\n  if(i==j)\n\tif(y != 0) { ERROR: {; \n//@ assert(\\false);\n}\n}\n}",
+            "success": true,
+            "repair_tries": [],
+            "candidates": [
+                "#define assume(e) if(!(e)) return;\nextern int unknown(void);\n\nextern int unknown();\n\nvoid main() {\n  int i = unknown();\n  int j = unknown();\n  int x = i;\n  int y = j;\n  /*@\nloop invariant i1: x >= 0;\nloop invariant i2: y == j - (i - x);\nloop invariant i3: x <= i;\nloop invariant i4: i == x + (\\at(y, Pre) - y);\nloop invariant i5: j == \\at(y, Pre);\nloop invariant i6: i >= x >= 0;\nloop invariant i7: j >= y >= 0;\nloop invariant i8: i - x == j - y;\nloop invariant i9: i == x + y;\nloop invariant i10: 0 <= y;\nloop invariant i11: y <= j;\nloop invariant i12: i == x + i - y;\nloop invariant i13: j == y + i - x;\nloop invariant i14: y >= 0;\n*/\nwhile(x!=0) {\n\tx--;\n\ty--;\n  }\n  if(i==j)\n\tif(y != 0) { ERROR: {; \n//@ assert(\\false);\n}\n}\n}",
+                "#define assume(e) if(!(e)) return;\nextern int unknown(void);\n\nextern int unknown();\n\nvoid main() {\n  int i = unknown();\n  int j = unknown();\n  int x = i;\n  int y = j;\n  /*@\nloop invariant i1: 0 <= x <= i;\nloop invariant i2: 0 <= y <= j;\nloop invariant i3: i - x == j - y;\nloop invariant i4: x == i && y == j;\nloop invariant i5: x >= 0 && y >= 0;\nloop invariant i6: x == 0;\nloop invariant i7: x >= 0;\nloop invariant i8: y >= 0;\nloop invariant i9: y == j - (i - x);\nloop invariant i10: i >= x >= 0;\nloop invariant i11: j >= y >= 0;\nloop invariant i12: i == x + (\\at(y, Pre) - y);\nloop invariant i13: j == \\at(y, Pre);\nloop invariant i14: i == x + y;\nloop invariant i15: 0 <= y;\nloop invariant i16: y <= j;\n*/\nwhile(x!=0) {\n\tx--;\n\ty--;\n  }\n  if(i==j)\n\tif(y != 0) { ERROR: {; \n//@ assert(\\false);\n}\n}\n}"
+            ]
+        },
+        {
+            "file": "../data/benchmarks/LinearArbitrary-SeaHorn/VeriMAP/MAP-CPA-example_VeriMAP_true.c",
+            "benchmark_code": "#define assume(e) if(!(e)) return 0;\n\nint main() {\n  int i = 0;\n  int a = 0;\n\n  while (1) {\n    if (i == 20) {\n       goto LOOPEND;\n    } else {\n       i++;\n       a++;\n    }\n\n    if (i != a) {\n      goto ERROR;\n    }\n  }\n\n  LOOPEND:\n\n  if (a != 20) {\n     goto ERROR;\n  }\n\n  return (0);\n  { ERROR: {; \n//@ assert(\\false);\n}\n}\n  return (-1);\n}\n",
+            "success": true,
+            "repair_tries": [],
+            "candidates": [
+                "#define assume(e) if(!(e)) return 0;\n\nint main() {\n  int i = 0;\n  int a = 0;\n\n  /*@\nloop invariant i1: 0 <= i;\nloop invariant i2: i <= 20;\nloop invariant i3: 0 <= a;\nloop invariant i4: a <= 20;\nloop invariant i5: i == a;\nloop invariant i6: 0 <= i <= 20;\nloop invariant i7: 0 <= a <= 20;\n*/\nwhile (1) {\n    if (i == 20) {\n       goto LOOPEND;\n    } else {\n       i++;\n       a++;\n    }\n\n    if (i != a) {\n      goto ERROR;\n    }\n  }\n\n  LOOPEND:\n\n  if (a != 20) {\n     goto ERROR;\n  }\n\n  return (0);\n  { ERROR: {; \n//@ assert(\\false);\n}\n}\n  return (-1);\n}\n",
+                "#define assume(e) if(!(e)) return 0;\n\nint main() {\n  int i = 0;\n  int a = 0;\n\n  /*@\nloop invariant i1: 0 <= i && i <= 20;\nloop invariant i2: 0 <= a && a <= 20;\nloop invariant i3: i == a;\nloop invariant i4: 0 <= i;\nloop invariant i5: i <= 20;\nloop invariant i6: 0 <= a;\nloop invariant i7: a <= 20;\nloop invariant i8: 0 <= i <= 20;\nloop invariant i9: 0 <= a <= 20;\nloop invariant i10: i != 20 ==> i < 20;\nloop invariant i11: i == 20 ==> a == 20;\nloop invariant i12: i >= 0;\n*/\nwhile (1) {\n    if (i == 20) {\n       goto LOOPEND;\n    } else {\n       i++;\n       a++;\n    }\n\n    if (i != a) {\n      goto ERROR;\n    }\n  }\n\n  LOOPEND:\n\n  if (a != 20) {\n     goto ERROR;\n  }\n\n  return (0);\n  { ERROR: {; \n//@ assert(\\false);\n}\n}\n  return (-1);\n}\n"
+            ]
+        },
+        {
+            "file": "../data/benchmarks/LinearArbitrary-SeaHorn/VeriMAP/MAP-singleloop2-pepm-proc.c_VeriMAP_true.c",
+            "benchmark_code": "#define assume(e) if(!(e)) return 0;\nextern int unknown_int(void);\n\n;\nint main() {\nint x=0;\nint y=0;\nint n = unknown_int();\n\n\tassume(n>=1);\n\n\twhile(x < 2*n){\n\t   x = x + 1;\n\n\t   if ( x > n )\n\t\t  y = y - 1;\n\t   else\n\t\t  y = y + 2;\n\t}\n\n\tif(x < y)\n\t\tgoto ERROR;\n\n\treturn 0;\n{ ERROR: {; \n//@ assert(\\false);\n}\n}\n\treturn -1;\n}",
+            "success": true,
+            "repair_tries": [],
+            "candidates": [
+                "#define assume(e) if(!(e)) return 0;\nextern int unknown_int(void);\n\n;\nint main() {\nint x=0;\nint y=0;\nint n = unknown_int();\n\n\tassume(n>=1);\n\n\t/*@\nloop invariant i1: 0 <= x <= 2 * n;\nloop invariant i2: x <= y + x + 1;\nloop invariant i3: y >= -x;\nloop invariant i4: y <= 2 * x;\nloop invariant i5: 0 <= x <= 2*n;\nloop invariant i6: 0 <= y;\nloop invariant i7: x <= n ==> y == 2*x;\nloop invariant i8: x > n ==> y == 2*(n - x);\nloop invariant i9: (x <= n) ==> (y == 2 * x);\nloop invariant i10: (x > n) ==> (y == 4 * n - 2 * x);\nloop invariant i11: 0 <= y <= 2 * n;\nloop invariant i12: x <= 2 * n - y;\nloop invariant i13: x <= y + 2 * n;\nloop invariant i14: x <= 2 * n ==> y == (2 * x) - (x - n);\nloop invariant i15: x > 2 * n ==> y == n - (x - n);\nloop invariant i16: 0 <= x;\nloop invariant i17: x <= 2*n;\nloop invariant i18: x <= y + 2*n;\nloop invariant i19: (x <= n) ==> (y == 2*x);\nloop invariant i20: (x > n) ==> (y == 2*(n+1) - x);\nloop invariant i21: x <= 2 * y <= 2 * x;\nloop invariant i22: (x <= n) ==> (y == x);\nloop invariant i23: (x > n) ==> (y == 3 * n - x);\n*/\nwhile(x < 2*n){\n\t   x = x + 1;\n\n\t   if ( x > n )\n\t\t  y = y - 1;\n\t   else\n\t\t  y = y + 2;\n\t}\n\n\tif(x < y)\n\t\tgoto ERROR;\n\n\treturn 0;\n{ ERROR: {; \n//@ assert(\\false);\n}\n}\n\treturn -1;\n}",
+                "#define assume(e) if(!(e)) return 0;\nextern int unknown_int(void);\n\n;\nint main() {\nint x=0;\nint y=0;\nint n = unknown_int();\n\n\tassume(n>=1);\n\n\t/*@\nloop invariant i1: 0 <= x <= 2 * n;\nloop invariant i2: (x <= n) ==> (y == 2 * x);\nloop invariant i3: (x > n) ==> (y == 4 * n - 2 * x);\nloop invariant i4: 0 <= x <= 2*n;\nloop invariant i5: 0 <= y;\nloop invariant i6: x <= n ==> y == 2*x;\nloop invariant i7: x > n ==> y == 2*(n - x);\nloop invariant i8: x <= 2 * y <= 2 * x;\nloop invariant i9: (x <= n) ==> (y == x);\nloop invariant i10: (x > n) ==> (y == 3 * n - x);\nloop invariant i11: x >= 0;\nloop invariant i12: x <= 2 * n;\nloop invariant i13: y >= -x;\nloop invariant i14: x > n ==> y >= 2 * x - 2 * n;\nloop invariant i15: x <= y + x + 1;\nloop invariant i16: y <= 2 * x;\nloop invariant i17: 0 <= y <= 2 * n;\nloop invariant i18: x <= 2 * n - y;\nloop invariant i19: y >= 0;\nloop invariant i20: x <= 2*n;\nloop invariant i21: y <= 4*n;\nloop invariant i22: x >= n ==> y == 2*n - x;\nloop invariant i23: x < n ==> y == 2*x;\n*/\nwhile(x < 2*n){\n\t   x = x + 1;\n\n\t   if ( x > n )\n\t\t  y = y - 1;\n\t   else\n\t\t  y = y + 2;\n\t}\n\n\tif(x < y)\n\t\tgoto ERROR;\n\n\treturn 0;\n{ ERROR: {; \n//@ assert(\\false);\n}\n}\n\treturn -1;\n}"
+            ]
+        },
+        {
+            "file": "../data/benchmarks/LinearArbitrary-SeaHorn/VeriMAP/MAP-disj_VeriMAP_true.c",
+            "benchmark_code": "#define assume(e) if(!(e)) return;\n\nvoid main() {\n   int x, y;\n\n   x = 0;\n   y = 50;\n\n  while( x < 100 ) {\n    if( x < 50 ) {\n      x = x+1;\n    } else {\n      x = x+1;\n      y = y+1;\n    }\n  }\n\n  if( y > 100 || y < 100 )\n    goto ERROR;\n\nreturn;\n\n{ ERROR: {; \n//@ assert(\\false);\n}\n}\n\n}",
+            "success": true,
+            "repair_tries": [],
+            "candidates": [
+                "#define assume(e) if(!(e)) return;\n\nvoid main() {\n   int x, y;\n\n   x = 0;\n   y = 50;\n\n  /*@\nloop invariant i1: 0 <= x <= 100;\nloop invariant i2: 50 <= y <= 150;\nloop invariant i3: y == x + 50;\nloop invariant i4: 50 <= y;\nloop invariant i5: y <= x + 50;\nloop invariant i6: 0 <= x && x <= 100;\nloop invariant i7: 50 <= y && y <= 150;\nloop invariant i8: x <= y;\nloop invariant i9: x >= 50 ==> y == x + 50;\nloop invariant i10: (x < 50) ==> (y == 50);\nloop invariant i11: (x >= 50) ==> (y == x + 50);\nloop invariant i12: x < 50 ==> y == 50;\nloop invariant i13: x >= 50 ==> y == x;\nloop invariant i14: 50 <= y <= 100;\n*/\nwhile( x < 100 ) {\n    if( x < 50 ) {\n      x = x+1;\n    } else {\n      x = x+1;\n      y = y+1;\n    }\n  }\n\n  if( y > 100 || y < 100 )\n    goto ERROR;\n\nreturn;\n\n{ ERROR: {; \n//@ assert(\\false);\n}\n}\n\n}",
+                "#define assume(e) if(!(e)) return;\n\nvoid main() {\n   int x, y;\n\n   x = 0;\n   y = 50;\n\n  /*@\nloop invariant i1: 0 <= x <= 100;\nloop invariant i2: 50 <= y <= 150;\nloop invariant i3: y == 50 + (x <= 50 ? 0 : x - 50);\nloop invariant i4: x <= y;\nloop invariant i5: x >= 50 ==> y == x + 50;\nloop invariant i6: x < 50 ==> y == 50;\nloop invariant i7: x >= 50 ==> y == x;\nloop invariant i8: y == 50 + (x <= 50 ? x : 50);\nloop invariant i9: (x < 50) ==> (y == 50);\nloop invariant i10: (x >= 50) ==> (y == x + 50);\nloop invariant i11: 0 <= x && x <= 100;\nloop invariant i12: 50 <= y && y <= 100;\nloop invariant i13: 50 <= y && y <= 150;\nloop invariant i14: y == 50 || y == x;\nloop invariant i15: 50 <= y <= 100;\n*/\nwhile( x < 100 ) {\n    if( x < 50 ) {\n      x = x+1;\n    } else {\n      x = x+1;\n      y = y+1;\n    }\n  }\n\n  if( y > 100 || y < 100 )\n    goto ERROR;\n\nreturn;\n\n{ ERROR: {; \n//@ assert(\\false);\n}\n}\n\n}"
+            ]
+        },
+        {
+            "file": "../data/benchmarks/LinearArbitrary-SeaHorn/VeriMAP/TRACER-paper-prog_d-pepm-proc.c_VeriMAP_true.c",
+            "benchmark_code": "#define assume(e) if(!(e)) return 0;\nextern unsigned int unknown_uint(void);\n\n;\n\nvoid errorFn() {ERROR: goto ERROR;}\nint main(){\nint y = unknown_uint();\nint x=0;\n\n    assume(y>=0);\n\n\twhile ( x < 10000) {\n\t\ty = y + 1;\n\t\tx = x + 1;\n\t}\n\n\tif( y + x < 10000)\t\t\n\t\tgoto ERROR;\n\n\treturn 0;\n{ ERROR: {; \n//@ assert(\\false);\n}\n}\n\treturn -1;\n}",
+            "success": false,
+            "repair_tries": [],
+            "error": "'annotations'"
+        }
+    ],
+    "stats": {
+        "gen_success": [
+            "../data/benchmarks/sv-benchmarks/loops-crafted-1/Mono1_1-2.c",
+            "../data/benchmarks/sv-benchmarks/loop-invariants/linear-inequality-inv-a.c",
+            "../data/benchmarks/sv-benchmarks/loop-simple/nested_1.c",
+            "../data/benchmarks/LinearArbitrary-SeaHorn/VeriMAP/MAP-forward_VeriMAP_true.c",
+            "../data/benchmarks/LinearArbitrary-SeaHorn/VeriMAP/MAP-interpolants_needed-pepm-proc.c_VeriMAP_true.c",
+            "../data/benchmarks/LinearArbitrary-SeaHorn/invgen/ken-imp.c",
+            "../data/benchmarks/LinearArbitrary-SeaHorn/VeriMAP/MAP-CPA-example_VeriMAP_true.c",
+            "../data/benchmarks/LinearArbitrary-SeaHorn/VeriMAP/MAP-singleloop2-pepm-proc.c_VeriMAP_true.c",
+            "../data/benchmarks/LinearArbitrary-SeaHorn/VeriMAP/MAP-disj_VeriMAP_true.c"
+        ],
+        "repair_success": [],
+        "repair_failure": [
+            "../data/benchmarks/sv-benchmarks/loop-floats-scientific-comp/loop1-2.c",
+            "../data/benchmarks/sv-benchmarks/loop-simple/nested_1b.c",
+            "../data/benchmarks/sv-benchmarks/loop-invariants/linear-inequality-inv-b.c",
+            "../data/benchmarks/sv-benchmarks/loops-crafted-1/Mono1_1-1.c",
+            "../data/benchmarks/sv-benchmarks/loops-crafted-1/Mono3_1.c",
+            "../data/benchmarks/sv-benchmarks/loop-floats-scientific-comp/loop2-2.c",
+            "../data/benchmarks/sv-benchmarks/loop-floats-scientific-comp/loop3.c",
+            "../data/benchmarks/sv-benchmarks/loop-floats-scientific-comp/loop1-1.c"
+        ],
+        "gen_skipped": [],
+        "repair_skipped": [
+            "../data/benchmarks/sv-benchmarks/loops-crafted-1/mono-crafted_11.c",
+            "../data/benchmarks/sv-benchmarks/loop-floats-scientific-comp/loop2-1.c",
+            "../data/benchmarks/LinearArbitrary-SeaHorn/VeriMAP/TRACER-paper-prog_d-pepm-proc.c_VeriMAP_true.c"
+        ],
+        "total": 8,
+        "gen_success_count": 3,
+        "repair_success_count": 0,
+        "repair_failure_count": 8,
+        "gen_skipped_count": 0,
+        "repair_skipped_count": 2
+    }
+}
