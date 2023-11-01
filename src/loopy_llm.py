@@ -114,9 +114,10 @@ class LLM:
         return (
             annotation_block
             if len(annotation_block) > 0
-            else "\n".join(
-                lines[line_nos[0] + 1 : line_nos[1]]
-            )  # return the first code block if no annotation block is found
+            else (
+                "ERROR: Output does not contain at least 1 complete code block",
+                output,
+            )
         )
 
     def extract_label(self, output):

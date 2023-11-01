@@ -29,7 +29,7 @@ def combine_and_prune_with_k(
 ):
     invariants_1 = [b["annotations"] for b in benchmark["completions"]]
     # invariants_2 = [b["invariants"] for b in benchmark2["completions"]]
-    invariants_from_completions = invariants_1 # + invariants_2
+    invariants_from_completions = invariants_1  # + invariants_2
 
     if len(invariants_from_completions) < n:
         invariants_from_completions = invariants_from_completions + [
@@ -2685,19 +2685,22 @@ class LoopyPipeline:
                     completion_json["checker_message_for_annotations"] = checker_message
 
                     if not __success:
-                        (
-                            __success,
-                            pruned_code,
-                            num_frama_c_calls,
-                        ) = self.checker.houdini(
-                            checker_input_with_annotations,
-                            "one_loop_one_method",
-                            use_json_dump_for_invariants=self.use_json_output,
-                        )
+                        try:
+                            (
+                                __success,
+                                pruned_code,
+                                num_frama_c_calls,
+                            ) = self.checker.houdini(
+                                checker_input_with_annotations,
+                                "one_loop_one_method",
+                                use_json_dump_for_invariants=self.use_json_output,
+                            )
 
-                        completion_json["num_solver_calls"] += num_frama_c_calls
-                        completion_json["code_after_prune"] = pruned_code
-                        completion_json["checker_output_after_prune"] = __success
+                            completion_json["num_solver_calls"] += num_frama_c_calls
+                            completion_json["code_after_prune"] = pruned_code
+                            completion_json["checker_output_after_prune"] = __success
+                        except Exception as e:
+                            completion_json["houdini_error"] = str(e)
 
                     success = __success or success
 
@@ -2764,26 +2767,33 @@ class LoopyPipeline:
                         f"Houdini for combined annotations for benchmark: {start_index + benchmark_index + 1}/{len(sliced_benchmarks)}"
                     )
 
-                    __success, pruned_code, num_frama_c_calls = self.checker.houdini(
-                        checker_input_with_combined_annotations,
-                        "one_loop_one_method",
-                        use_json_dump_for_invariants=self.use_json_output,
-                    )
-
-                    if __success:
-                        Logger.log_success(
-                            f"Houdini for combined annotations successful for benchmark: {start_index + benchmark_index + 1}/{len(sliced_benchmarks)}"
-                        )
-                    else:
-                        Logger.log_error(
-                            f"Houdini for combined annotations unsuccessful for benchmark: {start_index + benchmark_index + 1}/{len(sliced_benchmarks)}"
+                    try:
+                        (
+                            __success,
+                            pruned_code,
+                            num_frama_c_calls,
+                        ) = self.checker.houdini(
+                            checker_input_with_combined_annotations,
+                            "one_loop_one_method",
+                            use_json_dump_for_invariants=self.use_json_output,
                         )
 
-                    instance_log_json["combined_annotation_num_solver_calls"] = (
-                        num_frama_c_calls + 1
-                    )
-                    instance_log_json["code_after_prune"] = pruned_code
-                    instance_log_json["checker_output_after_prune"] = __success
+                        if __success:
+                            Logger.log_success(
+                                f"Houdini for combined annotations successful for benchmark: {start_index + benchmark_index + 1}/{len(sliced_benchmarks)}"
+                            )
+                        else:
+                            Logger.log_error(
+                                f"Houdini for combined annotations unsuccessful for benchmark: {start_index + benchmark_index + 1}/{len(sliced_benchmarks)}"
+                            )
+
+                        instance_log_json["combined_annotation_num_solver_calls"] = (
+                            num_frama_c_calls + 1
+                        )
+                        instance_log_json["code_after_prune"] = pruned_code
+                        instance_log_json["checker_output_after_prune"] = __success
+                    except Exception as e:
+                        instance_log_json["houdini_error"] = str(e)
 
                 success = __success or success
 
@@ -2948,7 +2958,8 @@ class LoopyPipeline:
             success = False
 
             if (
-                "completions" not in gen_benchmark_log
+                "completions"
+                not in gen_benchmark_log
                 # or "completions" not in generation_log_2[benchmark_index]
             ):
                 Logger.log_info(
