@@ -56,8 +56,9 @@ def check_candidate(candidate_to_check):
             )
         if "success_after_prune" in completion and completion["success_after_prune"]:
             return True, completion["pruned_code"]
-
-    invariants = [c["invariants"] for c in completions]
+        
+    completions_with_invariants = list(filter(lambda c: "invariants" in c, completions))
+    invariants = [c["invariants"] for c in completions_with_invariants]
     checker_input_with_invariants = fb.combine_llm_outputs(
         checker_input, invariants, features="one_loop_one_method"
     )
