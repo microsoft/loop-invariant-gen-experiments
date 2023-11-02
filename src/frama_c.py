@@ -289,7 +289,7 @@ class FramaCChecker(Checker):
         code_queue = [input_code]
         num_frama_c_calls = 0
 
-        while len(code_queue) > 0 and num_frama_c_calls < 1000:
+        while len(code_queue) > 0 and num_frama_c_calls < 100:
             input_code = code_queue.pop(0)
             code_lines = input_code.splitlines()
             if not self.has_annotations(input_code):
@@ -371,8 +371,8 @@ class FramaCChecker(Checker):
 
             num_frama_c_calls += 1
 
-        if num_frama_c_calls == 1000:
-            Logger.log_error("Crossed 1000 iterations. Stopping pruning...")
+        if num_frama_c_calls == 100:
+            Logger.log_error("Crossed 100 iterations. Stopping pruning...")
 
         if not success:
             Logger.log_error("Could not find strong enough annotations.")
