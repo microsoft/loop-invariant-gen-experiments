@@ -1,0 +1,157 @@
+{
+    "logs": {
+        "file": "../data/benchmarks/accelerating_invariant_generation/invgen/split.c",
+        "benchmark_code": "#define assume(e) if(!(e)) return;\n\nvoid main() {\n  int k = 100;\n  int b;\n  int i;\n  int j;\n  int n;\n  i = j;\n  for( n = 0 ; n < 2*k ; n++ ) {\n        \n    if(b) {\n      i++;\n    } else {\n      j++;\n    }\n    b = !b;\n  }\n  {;\n//@ assert(i == j);\n}\n\n}",
+        "success": false,
+        "llm_conversation": [
+            {
+                "role": "system",
+                "content": "You are a helpful AI software assistant that reasons about how code behaves. Given a program, you can find loop invariants, which can then be used to verify some property in the program. \nFrama-C is a software verification tool for C programs. The input to Frama-C is a C program file with ACSL (ANSI/ISO C Specification Language) annotations.\nFor the given program, find the necessary loop invariants of the while loop to help Frama-C verify the post-condition.\n\nInstructions:\n- Make a note of the pre-conditions or variable assignments in the program.\n- Analyze the loop body and make a note of the loop condition. \n- Output loop invariants that are true \n(i) before the loop execution, \n(ii) in every iteration of the loop and \n(iii) after the loop termination, \nsuch that the loop invariants imply the post condition.\n- If a loop invariant is a conjunction, split it into its parts.\n- Output all the loop invariants in one code block. For example:\n```\n/*@ \n    loop invariant i1;\n    loop invariant i2;\n*/\n```\nRules:\n- **Do not use variables or functions that are not declared in the program.** \n- **Do not make any assumptions about functions whose definitions are not given.**\n- **All undefined variables contain garbage values. Do not use variables that have garbage values.**\n- **Do not use keywords that are not supported in ACSL annotations for loops.**\n- **Variables that are not explicitly initialized, could have garbage values. Do not make any assumptions about such values.**\n- **Do not use the \\at(x, Pre) notation for any variable x.**\n- **Do not use non-deterministic function calls.**"
+            },
+            {
+                "role": "user",
+                "content": "\nConsider the following C program:\n```\n#define assume(e) if(!(e)) return;\n\nvoid main() {\n  int k = 100;\n  int b;\n  int i;\n  int j;\n  int n;\n  i = j;\n  for( n = 0 ; n < 2*k ; n++ ) {\n        \n    if(b) {\n      i++;\n    } else {\n      j++;\n    }\n    b = !b;\n  }\n  {;\n//@ assert(i == j);\n}\n\n}\n```\n\nYou are allowed to use implication to take care of the conditional nature of the code. Use implication (==>) instead of using if-then.\n\nFor all variables, add conjunctions that bound the maximum and minimum values that they can take, if such bounds exist.\n\nIf a variable is always equal to or smaller or larger than another variable, add a conjunction for their relation.\n\nIf the assertion is guarded by a condition, use the guard condition in an implication.\n\nIf certain variables are non-deterministic at the beginning or end of the loop, use an implication to make the invariant trivially true at that location. \n\nOutput the loop invariants for the loop in the program above. Let's think step by step."
+            },
+            "Pre-conditions:\n- The program does not have any pre-conditions.\n- The variables `b`, `i`, `j`, and `n` are initialized with garbage values.\n\nLoop condition:\n- The loop will execute as long as `n < 2*k`.\n\nLoop invariants:\n- The values of `i` and `j` are always equal after each iteration of the loop.\n- The values of `i` and `j` are always even after each iteration of the loop.\n- The value of `b` alternates between iterations of the loop.\n- The value of `n` is always less than or equal to `2*k` after each iteration of the loop.\n\nLet's break down each loop invariant and write them in ACSL annotations:\n\n```\n#define assume(e) if(!(e)) return;\n\nvoid main() {\n  int k = 100;\n  int b;\n  int i;\n  int j;\n  int n;\n  \n  // initialization of i and j with garbage values\n  i = j;\n\n  /*@\n    loop invariant i == j;\n    loop invariant i % 2 == 0 && j % 2 == 0;\n    loop invariant \\forall integer m; (0 <= m < n) ==> ((m % 2 == 0) ==> i > j) && ((m % 2 == 1) ==> j > i);\n    loop invariant (n % 2 == 0) ==> (i > j);\n    loop invariant (n % 2 == 1) ==> (j > i);\n    loop invariant n <= 2*k;\n  */\n  for( n = 0 ; n < 2*k ; n++ ) {\n    if(b) {\n      i++;\n    } else {\n      j++;\n    }\n    b = !b;\n  }\n  \n  assume(i == j); // assertion with a guard condition\n}\n```\n\nExplanation of each loop invariant:\n- `i == j`: This invariant states that the values of `i` and `j` are always equal after each iteration of the loop.\n- `i % 2 == 0 && j % 2 == 0`: This invariant states that the values of `i` and `j` are always even after each iteration of the loop.\n- `\\forall integer m; (0 <= m < n) ==> ((m % 2 == 0) ==> i > j) && ((m % 2 == 1) ==> j > i)`: This invariant states that for all values of `m` between 0 and `n`, if `m` is even then `i` is greater than `j`, and if `m` is odd then `j` is greater than `i`. This invariant is true because the value of `b` alternates between iterations, causing `i` and `j` to increment alternately.\n- `(n % 2 == 0) ==> (i > j)`: This invariant states that if `n` is even, then `i` is greater than `j`. This is true because the loop starts with `b` equal to 0, and `i` and `j` are initially equal. Therefore, `i` will always be greater than `j` for even values of `n`.\n- `(n % 2 == 1) ==> (j > i)`: This invariant states that if `n` is odd, then `j` is greater than `i`. This is true because the loop starts with `b` equal to 0, and `i` and `j` are initially equal. Therefore, `j` will always be greater than `i` for odd values of `n`.\n- `n <= 2*k`: This invariant states that the value of `n` is always less than or equal to `2*k` after each iteration of the loop. This is true because the loop condition is `n < 2*k`, and `n` increments by 1 after each iteration of the loop.",
+            "Pre-conditions:\n- None\n\nVariable assignments:\n- `k` is assigned the value 100.\n- `b` is uninitialized.\n- `i` and `j` are uninitialized.\n- `n` is assigned the value 0.\n\nLoop condition:\n- `n < 2*k`\n\nLoop body:\n- If `b` is true, increment `i`. Otherwise, increment `j`. Then, toggle the value of `b`.\n\nPost-condition:\n- `i == j`\n\nLoop invariants:\n- `n >= 0`\n- `n <= 2 * k`\n- `i >= j - (n+1)/2`\n- `j >= i - n/2`\n- `i + j = 2 * (n/2) + i + j % 2`\n- `(n % 2 == 0) ==> (b == 0)`\n- `(n % 2 == 1) ==> (b == 1)`\n- `(n == 2 * k) ==> (i == j)`\n\nExplanation:\n- The first invariant ensures that `n` is always non-negative.\n- The second invariant ensures that `n` is always less than or equal to `2*k`.\n- The third and fourth invariants ensure that the difference between `i` and `j` is always at least or exactly the number of times `b` has been set to 0.\n- The fifth invariant ensures that `i+j` is always even, since `n/2` is always an integer and `i+j%2` is either 0 or 1.\n- The sixth and seventh invariants ensure that `b` is toggled in each iteration of the loop.\n- The eighth invariant ensures that the final values of `i` and `j` are equal if the loop has completed all iterations.",
+            "Pre-conditions/Variable Assignments:\n- int k is assigned the value 100.\n- int b, i, and j are uninitialized and contain garbage values.\n\nLoop Condition:\n- The loop executes for n < 2*k.\n\nLoop Invariants:\n- Since i and j are uninitialized and contain garbage values, we cannot bound their values in any way.\n- However, we can see that i and j are incremented alternatively within the loop. So, we can add the following loop invariant:\n```\n/*@ \n    loop invariant (i == j) || (i == j + 1) || (i + 1 == j);\n*/\n```\n- This loop invariant ensures that i and j are always either equal or differ by 1.\n- Since b is initialized to 0, we can add the following loop invariant to ensure that it alternates between 0 and 1:\n```\n/*@ \n    loop invariant ((n % 2 == 0) ==> (b == 0)) && ((n % 2 == 1) ==> (b == 1));\n*/\n```\n- This loop invariant ensures that b alternates between 0 and 1 in each iteration.\n- Combining the above two loop invariants, we get:\n```\n/*@ \n    loop invariant (i == j) || (i == j + 1) || (i + 1 == j);\n    loop invariant ((n % 2 == 0) ==> (b == 0)) && ((n % 2 == 1) ==> (b == 1));\n*/\n```\n- To ensure that the assertion holds, we can use the loop invariant and the loop condition together in an implication to show that i and j are equal after the loop terminates:\n```\n/*@ \n    loop invariant (i == j) || (i == j + 1) || (i + 1 == j);\n    loop invariant ((n % 2 == 0) ==> (b == 0)) && ((n % 2 == 1) ==> (b == 1));\n    loop invariant (n <= 2 * k);\n    loop assigns n;\n    loop variant (2 * k - n);\n*/\n```",
+            "First, let's analyze the program and note down the pre-conditions or variable assignments:\n- `k` is assigned the value 100.\n- `b`, `i`, and `j` are declared but not initialized and contain garbage values.\n- `i` is assigned the value of `j`.\n- There is an assertion that `i` is equal to `j`.\n\nNow let's analyze the loop body and note down the loop condition:\n- The loop iterates `2*k` times.\n- In each iteration of the loop, `i` is incremented if `b` is true and `j` is incremented if `b` is false.\n- `b` is flipped after each iteration.\n\nNext, let's derive the loop invariants:\n- Before the loop execution, `i` is equal to `j` since `i` is assigned the value of `j`. Hence, we can add the loop invariant:\n```\n/*@ loop invariant i == j; */\n```\n\n- In every iteration of the loop, either `i` or `j` is incremented by 1 and `b` is flipped. This means that the difference between `i` and `j` is either unchanged or changes by 2 in each iteration of the loop. Hence, we can add the loop invariant:\n```\n/*@ loop invariant (i - j) % 2 == 0; */\n```\n\n- After the loop termination, `i` is equal to `j` since the loop invariant `i == j` holds at the end of each iteration. Additionally, the loop iterates `2*k` times, so the difference between `i` and `j` is either unchanged or changes by 2 `k` times. Therefore, the difference between `i` and `j` is a multiple of 2 times `k`. Hence, we can add the loop invariant:\n```\n/*@ loop invariant (i - j) % (2*k) == 0; */\n```\n\n- Finally, the assertion `i == j` is guarded by no condition, so we can directly use it as a post-condition. However, since `i` and `j` are non-deterministic at the beginning of the loop, we need to use an implication to make the invariant trivially true at that location:\n```\n/*@ loop invariant i == j ==> i == j; */\n```\n\nPutting it all together, the loop invariants are:\n```\n/*@ \n    loop invariant i == j;\n    loop invariant (i - j) % 2 == 0;\n    loop invariant (i - j) % (2*k) == 0;\n    loop invariant i == j ==> i == j;\n*/\n```",
+            "Pre-conditions:\n- The program has no pre-conditions.\n- Variable `k` is assigned the value 100.\n- Variables `b`, `i`, and `j` are uninitialized and can have garbage values.\n\nLoop Condition:\n- The loop executes while `n` is less than `2*k`.\n\nLoop Invariants:\n- Before the loop execution, `i` and `j` are equal to `0`.\n```\n/*@ loop invariant i == 0;\n    loop invariant j == 0;\n*/\n```\n- In every iteration of the loop, `i + j` is equal to the number of iterations so far, and `b` is true if the number of iterations so far is odd, and false otherwise.\n```\n/*@ loop invariant i + j == n;\n    loop invariant (n % 2 == 0) ==> (b == 0);\n    loop invariant (n % 2 == 1) ==> (b == 1);\n*/\n```\n- After the loop termination, `i` and `j` are equal to `k`.\n```\n/*@ loop invariant i + j == 2 * k;\n    loop invariant i == k;\n    loop invariant j == k;\n*/\n```\n- Since `b` is assigned to `!b` at the end of each iteration, it alternates between `0` and `1` and hence is not required in the loop termination invariant.\n- Since all variables are deterministic, no implication is required to make any of the loop invariants trivially true. \n\nPost-condition:\n- The assertion is `i == j`. Since the assertion is not guarded by any condition, the loop invariants must imply the assertion. Therefore, we can include the assertion as an invariant in the loop termination invariant block. \n```\n/*@ loop invariant i + j == 2 * k;\n    loop invariant i == k;\n    loop invariant j == k;\n    loop invariant i == j;\n*/\n```"
+        ],
+        "annotation_blocks": [
+            "#define assume(e) if(!(e)) return;\n\nvoid main() {\n  int k = 100;\n  int b;\n  int i;\n  int j;\n  int n;\n  \n  // initialization of i and j with garbage values\n  i = j;\n\n  /*@\n    loop invariant i == j;\n    loop invariant i % 2 == 0 && j % 2 == 0;\n    loop invariant \\forall integer m; (0 <= m < n) ==> ((m % 2 == 0) ==> i > j) && ((m % 2 == 1) ==> j > i);\n    loop invariant (n % 2 == 0) ==> (i > j);\n    loop invariant (n % 2 == 1) ==> (j > i);\n    loop invariant n <= 2*k;\n  */\n  for( n = 0 ; n < 2*k ; n++ ) {\n    if(b) {\n      i++;\n    } else {\n      j++;\n    }\n    b = !b;\n  }\n  \n  assume(i == j); // assertion with a guard condition\n}",
+            [
+                "ERROR: Output does not contain at least 1 complete code block",
+                "Pre-conditions:\n- None\n\nVariable assignments:\n- `k` is assigned the value 100.\n- `b` is uninitialized.\n- `i` and `j` are uninitialized.\n- `n` is assigned the value 0.\n\nLoop condition:\n- `n < 2*k`\n\nLoop body:\n- If `b` is true, increment `i`. Otherwise, increment `j`. Then, toggle the value of `b`.\n\nPost-condition:\n- `i == j`\n\nLoop invariants:\n- `n >= 0`\n- `n <= 2 * k`\n- `i >= j - (n+1)/2`\n- `j >= i - n/2`\n- `i + j = 2 * (n/2) + i + j % 2`\n- `(n % 2 == 0) ==> (b == 0)`\n- `(n % 2 == 1) ==> (b == 1)`\n- `(n == 2 * k) ==> (i == j)`\n\nExplanation:\n- The first invariant ensures that `n` is always non-negative.\n- The second invariant ensures that `n` is always less than or equal to `2*k`.\n- The third and fourth invariants ensure that the difference between `i` and `j` is always at least or exactly the number of times `b` has been set to 0.\n- The fifth invariant ensures that `i+j` is always even, since `n/2` is always an integer and `i+j%2` is either 0 or 1.\n- The sixth and seventh invariants ensure that `b` is toggled in each iteration of the loop.\n- The eighth invariant ensures that the final values of `i` and `j` are equal if the loop has completed all iterations."
+            ],
+            "/*@ \n    loop invariant (i == j) || (i == j + 1) || (i + 1 == j);\n*/",
+            "/*@ loop invariant i == j; */",
+            "/*@ loop invariant i == 0;\n    loop invariant j == 0;\n*/"
+        ],
+        "completions": [
+            {
+                "num_solver_calls": 5,
+                "annotations": "#define assume(e) if(!(e)) return;\n\nvoid main() {\n  int k = 100;\n  int b;\n  int i;\n  int j;\n  int n;\n  \n  // initialization of i and j with garbage values\n  i = j;\n\n  /*@\n    loop invariant i == j;\n    loop invariant i % 2 == 0 && j % 2 == 0;\n    loop invariant \\forall integer m; (0 <= m < n) ==> ((m % 2 == 0) ==> i > j) && ((m % 2 == 1) ==> j > i);\n    loop invariant (n % 2 == 0) ==> (i > j);\n    loop invariant (n % 2 == 1) ==> (j > i);\n    loop invariant n <= 2*k;\n  */\n  for( n = 0 ; n < 2*k ; n++ ) {\n    if(b) {\n      i++;\n    } else {\n      j++;\n    }\n    b = !b;\n  }\n  \n  assume(i == j); // assertion with a guard condition\n}",
+                "checker_output_for_annotations": false,
+                "checker_message_for_annotations": "loop invariant i == j is partially proven to be inductive.\nloop invariant i % 2 == 0 && j % 2 == 0 is preserved but not established.\nloop invariant \\forall integer m; (0 <= m < n) ==> ((m % 2 == 0) ==> i > j) && ((m % 2 == 1) ==> j > i) is partially proven to be inductive.\nloop invariant (n % 2 == 0) ==> (i > j) is preserved but not established.\nloop invariant (n % 2 == 1) ==> (j > i) is partially proven to be inductive.\nloop invariant n <= 2*k is partially proven to be inductive.\nAssertion i == j: Partially proven",
+                "code_after_prune": "#define assume(e) if(!(e)) return;\n\nvoid main() {\n  int k = 100;\n  int b;\n  int i;\n  int j;\n  int n;\n  i = j;\n  /*@\n\n\n\n\n\nloop invariant i6: n <= 2*k;\n*/\nfor( n = 0 ; n < 2*k ; n++ ) {\n        \n    if(b) {\n      i++;\n    } else {\n      j++;\n    }\n    b = !b;\n  }\n  {;\n//@ assert(i == j);\n}\n\n}",
+                "checker_output_after_prune": false
+            },
+            {
+                "num_solver_calls": 0,
+                "success": false,
+                "llm_output": "Pre-conditions:\n- None\n\nVariable assignments:\n- `k` is assigned the value 100.\n- `b` is uninitialized.\n- `i` and `j` are uninitialized.\n- `n` is assigned the value 0.\n\nLoop condition:\n- `n < 2*k`\n\nLoop body:\n- If `b` is true, increment `i`. Otherwise, increment `j`. Then, toggle the value of `b`.\n\nPost-condition:\n- `i == j`\n\nLoop invariants:\n- `n >= 0`\n- `n <= 2 * k`\n- `i >= j - (n+1)/2`\n- `j >= i - n/2`\n- `i + j = 2 * (n/2) + i + j % 2`\n- `(n % 2 == 0) ==> (b == 0)`\n- `(n % 2 == 1) ==> (b == 1)`\n- `(n == 2 * k) ==> (i == j)`\n\nExplanation:\n- The first invariant ensures that `n` is always non-negative.\n- The second invariant ensures that `n` is always less than or equal to `2*k`.\n- The third and fourth invariants ensure that the difference between `i` and `j` is always at least or exactly the number of times `b` has been set to 0.\n- The fifth invariant ensures that `i+j` is always even, since `n/2` is always an integer and `i+j%2` is either 0 or 1.\n- The sixth and seventh invariants ensure that `b` is toggled in each iteration of the loop.\n- The eighth invariant ensures that the final values of `i` and `j` are equal if the loop has completed all iterations.",
+                "error": "Output does not contain at least 1 code block"
+            },
+            {
+                "num_solver_calls": 2,
+                "annotations": "/*@ \n    loop invariant (i == j) || (i == j + 1) || (i + 1 == j);\n*/",
+                "checker_output_for_annotations": false,
+                "checker_message_for_annotations": "loop invariant (i == j) || (i == j + 1) || (i + 1 == j) is established but not preserved.\nAssertion i == j: Unproven",
+                "code_after_prune": "#define assume(e) if(!(e)) return;\n\nvoid main() {\n  int k = 100;\n  int b;\n  int i;\n  int j;\n  int n;\n  i = j;\n  /*@\n\n*/\nfor( n = 0 ; n < 2*k ; n++ ) {\n        \n    if(b) {\n      i++;\n    } else {\n      j++;\n    }\n    b = !b;\n  }\n  {;\n//@ assert(i == j);\n}\n\n}",
+                "checker_output_after_prune": false
+            },
+            {
+                "num_solver_calls": 2,
+                "annotations": "/*@ loop invariant i == j; */",
+                "checker_output_for_annotations": false,
+                "checker_message_for_annotations": "loop invariant i == j is established but not preserved.\nAssertion i == j: Partially proven",
+                "code_after_prune": "#define assume(e) if(!(e)) return;\n\nvoid main() {\n  int k = 100;\n  int b;\n  int i;\n  int j;\n  int n;\n  i = j;\n  /*@\n\n*/\nfor( n = 0 ; n < 2*k ; n++ ) {\n        \n    if(b) {\n      i++;\n    } else {\n      j++;\n    }\n    b = !b;\n  }\n  {;\n//@ assert(i == j);\n}\n\n}",
+                "checker_output_after_prune": false
+            },
+            {
+                "num_solver_calls": 2,
+                "annotations": "/*@ loop invariant i == 0;\n    loop invariant j == 0;\n*/",
+                "checker_output_for_annotations": false,
+                "checker_message_for_annotations": "loop invariant i == 0 is neither established nor preserved.\nloop invariant j == 0 is established but not preserved.\nAssertion i == j: Partially proven",
+                "code_after_prune": "#define assume(e) if(!(e)) return;\n\nvoid main() {\n  int k = 100;\n  int b;\n  int i;\n  int j;\n  int n;\n  i = j;\n  /*@\n\n\n*/\nfor( n = 0 ; n < 2*k ; n++ ) {\n        \n    if(b) {\n      i++;\n    } else {\n      j++;\n    }\n    b = !b;\n  }\n  {;\n//@ assert(i == j);\n}\n\n}",
+                "checker_output_after_prune": false
+            }
+        ],
+        "checker_output_for_combined_annotations": false,
+        "checker_message_for_combined_annotations": "loop invariant i == j is partially proven to be inductive.\nloop invariant i % 2 == 0 && j % 2 == 0 is preserved but not established.\nloop invariant \\forall integer m; (0 <= m < n) ==> ((m % 2 == 0) ==> i > j) && ((m % 2 == 1) ==> j > i) is partially proven to be inductive.\nloop invariant (n % 2 == 0) ==> (i > j) is preserved but not established.\nloop invariant (n % 2 == 1) ==> (j > i) is partially proven to be inductive.\nloop invariant n <= 2*k is partially proven to be inductive.\nloop invariant (i == j) || (i == j + 1) || (i + 1 == j) is partially proven to be inductive.\nloop invariant i == 0 is partially proven to be inductive.\nloop invariant j == 0 is partially proven to be inductive.\nAssertion i == j: Partially proven",
+        "code_with_combined_annotations": "#define assume(e) if(!(e)) return;\n\nvoid main() {\n  int k = 100;\n  int b;\n  int i;\n  int j;\n  int n;\n  i = j;\n  /*@\nloop invariant i1: i == j;\nloop invariant i2: i % 2 == 0 && j % 2 == 0;\nloop invariant i3: \\forall integer m; (0 <= m < n) ==> ((m % 2 == 0) ==> i > j) && ((m % 2 == 1) ==> j > i);\nloop invariant i4: (n % 2 == 0) ==> (i > j);\nloop invariant i5: (n % 2 == 1) ==> (j > i);\nloop invariant i6: n <= 2*k;\nloop invariant i7: (i == j) || (i == j + 1) || (i + 1 == j);\nloop invariant i8: i == 0;\nloop invariant i9: j == 0;\n*/\nfor( n = 0 ; n < 2*k ; n++ ) {\n        \n    if(b) {\n      i++;\n    } else {\n      j++;\n    }\n    b = !b;\n  }\n  {;\n//@ assert(i == j);\n}\n\n}",
+        "combined_annotation_num_solver_calls": 5,
+        "code_after_prune": "#define assume(e) if(!(e)) return;\n\nvoid main() {\n  int k = 100;\n  int b;\n  int i;\n  int j;\n  int n;\n  i = j;\n  /*@\n\n\n\n\n\nloop invariant i6: n <= 2*k;\n\n\n\n*/\nfor( n = 0 ; n < 2*k ; n++ ) {\n        \n    if(b) {\n      i++;\n    } else {\n      j++;\n    }\n    b = !b;\n  }\n  {;\n//@ assert(i == j);\n}\n\n}",
+        "checker_output_after_prune": false
+    },
+    "stats": {
+        "success": [
+            "../data/benchmarks/accelerating_invariant_generation/cav/07.c",
+            "../data/benchmarks/accelerating_invariant_generation/cav/19.c",
+            "../data/benchmarks/accelerating_invariant_generation/cav/20.c",
+            "../data/benchmarks/accelerating_invariant_generation/cav/39.c",
+            "../data/benchmarks/accelerating_invariant_generation/cav/gulv_simp.c",
+            "../data/benchmarks/accelerating_invariant_generation/crafted/const_safe1.c",
+            "../data/benchmarks/accelerating_invariant_generation/crafted/diamond_safe1.c",
+            "../data/benchmarks/accelerating_invariant_generation/crafted/multivar_safe1.c",
+            "../data/benchmarks/accelerating_invariant_generation/crafted/simple_safe1.c",
+            "../data/benchmarks/accelerating_invariant_generation/crafted/simple_safe2.c",
+            "../data/benchmarks/accelerating_invariant_generation/crafted/simple_safe3.c",
+            "../data/benchmarks/accelerating_invariant_generation/crafted/simple_safe4.c",
+            "../data/benchmarks/accelerating_invariant_generation/crafted/underapprox_safe2.c",
+            "../data/benchmarks/accelerating_invariant_generation/dagger/barbrprime.c",
+            "../data/benchmarks/accelerating_invariant_generation/dagger/cars.c",
+            "../data/benchmarks/accelerating_invariant_generation/dagger/ex1.c",
+            "../data/benchmarks/accelerating_invariant_generation/dagger/lifo.c",
+            "../data/benchmarks/accelerating_invariant_generation/dagger/seesaw.c",
+            "../data/benchmarks/accelerating_invariant_generation/dagger/substring1.c",
+            "../data/benchmarks/accelerating_invariant_generation/dagger/swim1.c",
+            "../data/benchmarks/accelerating_invariant_generation/invgen/bind_expands_vars2.c",
+            "../data/benchmarks/accelerating_invariant_generation/invgen/ken-imp.c",
+            "../data/benchmarks/accelerating_invariant_generation/invgen/NetBSD_g_Ctoc.c",
+            "../data/benchmarks/accelerating_invariant_generation/invgen/NetBSD_loop.c",
+            "../data/benchmarks/accelerating_invariant_generation/invgen/NetBSD_loop_int.c",
+            "../data/benchmarks/accelerating_invariant_generation/invgen/rajamani_1.c",
+            "../data/benchmarks/accelerating_invariant_generation/invgen/sendmail-mime7to8_arr_three_chars_no_test_ok.c",
+            "../data/benchmarks/accelerating_invariant_generation/invgen/simple.c",
+            "../data/benchmarks/accelerating_invariant_generation/invgen/simple_if.c"
+        ],
+        "failure": [
+            "../data/benchmarks/accelerating_invariant_generation/cav/05.c",
+            "../data/benchmarks/accelerating_invariant_generation/cav/35.c",
+            "../data/benchmarks/accelerating_invariant_generation/cav/37.c",
+            "../data/benchmarks/accelerating_invariant_generation/cav/f2.c",
+            "../data/benchmarks/accelerating_invariant_generation/cav/gulv.c",
+            "../data/benchmarks/accelerating_invariant_generation/cav/pldi082_unbounded.c",
+            "../data/benchmarks/accelerating_invariant_generation/cav/substring1.c",
+            "../data/benchmarks/accelerating_invariant_generation/cav/xy10.c",
+            "../data/benchmarks/accelerating_invariant_generation/crafted/const_unsafe1.c",
+            "../data/benchmarks/accelerating_invariant_generation/crafted/diamond_safe2.c",
+            "../data/benchmarks/accelerating_invariant_generation/crafted/diamond_unsafe1.c",
+            "../data/benchmarks/accelerating_invariant_generation/crafted/diamond_unsafe2.c",
+            "../data/benchmarks/accelerating_invariant_generation/crafted/multivar_unsafe1.c",
+            "../data/benchmarks/accelerating_invariant_generation/crafted/overflow_safe1.c",
+            "../data/benchmarks/accelerating_invariant_generation/crafted/overflow_unsafe1.c",
+            "../data/benchmarks/accelerating_invariant_generation/crafted/phases_safe1.c",
+            "../data/benchmarks/accelerating_invariant_generation/crafted/phases_unsafe1.c",
+            "../data/benchmarks/accelerating_invariant_generation/crafted/simple_unsafe1.c",
+            "../data/benchmarks/accelerating_invariant_generation/crafted/simple_unsafe2.c",
+            "../data/benchmarks/accelerating_invariant_generation/crafted/simple_unsafe3.c",
+            "../data/benchmarks/accelerating_invariant_generation/crafted/simple_unsafe4.c",
+            "../data/benchmarks/accelerating_invariant_generation/crafted/underapprox_safe1.c",
+            "../data/benchmarks/accelerating_invariant_generation/crafted/underapprox_unsafe1.c",
+            "../data/benchmarks/accelerating_invariant_generation/crafted/underapprox_unsafe2.c",
+            "../data/benchmarks/accelerating_invariant_generation/dagger/barbr.c",
+            "../data/benchmarks/accelerating_invariant_generation/dagger/bk-nat.c",
+            "../data/benchmarks/accelerating_invariant_generation/dagger/bkley.c",
+            "../data/benchmarks/accelerating_invariant_generation/dagger/efm.c",
+            "../data/benchmarks/accelerating_invariant_generation/dagger/fig2.c",
+            "../data/benchmarks/accelerating_invariant_generation/dagger/lifnat.c",
+            "../data/benchmarks/accelerating_invariant_generation/dagger/lifnatprime.c",
+            "../data/benchmarks/accelerating_invariant_generation/dagger/swim.c",
+            "../data/benchmarks/accelerating_invariant_generation/invgen/gulwani_cegar1.c",
+            "../data/benchmarks/accelerating_invariant_generation/invgen/gulwani_cegar2.c",
+            "../data/benchmarks/accelerating_invariant_generation/invgen/id_trans.c",
+            "../data/benchmarks/accelerating_invariant_generation/invgen/MADWiFi-encode_ie_ok.c",
+            "../data/benchmarks/accelerating_invariant_generation/invgen/sendmail-close-angle.c",
+            "../data/benchmarks/accelerating_invariant_generation/invgen/sendmail-mime-fromqp.c",
+            "../data/benchmarks/accelerating_invariant_generation/invgen/split.c"
+        ],
+        "skipped": [],
+        "total": 68,
+        "success_count": 29,
+        "failure_count": 39,
+        "success_rate": 0.4264705882352941
+    }
+}

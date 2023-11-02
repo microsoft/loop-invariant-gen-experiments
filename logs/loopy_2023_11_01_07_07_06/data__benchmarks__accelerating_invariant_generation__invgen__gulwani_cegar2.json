@@ -1,0 +1,144 @@
+{
+    "logs": {
+        "file": "../data/benchmarks/accelerating_invariant_generation/invgen/gulwani_cegar2.c",
+        "benchmark_code": "#define assume(e) if(!(e)) return;\n\nint __BLAST_NONDET;\nvoid main() {\n  int x,m,n;\n\n  x = 0;\n  m = 0;\n  while( x < n ) {\n    if(__BLAST_NONDET)\n\tm = x;\n\tx++;\n  }\n  if( n > 0 )\n    {\n      {;\n//@ assert( 0<=m);\n}\n\n      {;\n//@ assert(m<n);\n}\n\n    }\n}",
+        "success": false,
+        "llm_conversation": [
+            {
+                "role": "system",
+                "content": "You are a helpful AI software assistant that reasons about how code behaves. Given a program, you can find loop invariants, which can then be used to verify some property in the program. \nFrama-C is a software verification tool for C programs. The input to Frama-C is a C program file with ACSL (ANSI/ISO C Specification Language) annotations.\nFor the given program, find the necessary loop invariants of the while loop to help Frama-C verify the post-condition.\n\nInstructions:\n- Make a note of the pre-conditions or variable assignments in the program.\n- Analyze the loop body and make a note of the loop condition. \n- Output loop invariants that are true \n(i) before the loop execution, \n(ii) in every iteration of the loop and \n(iii) after the loop termination, \nsuch that the loop invariants imply the post condition.\n- If a loop invariant is a conjunction, split it into its parts.\n- Output all the loop invariants in one code block. For example:\n```\n/*@ \n    loop invariant i1;\n    loop invariant i2;\n*/\n```\nRules:\n- **Do not use variables or functions that are not declared in the program.** \n- **Do not make any assumptions about functions whose definitions are not given.**\n- **All undefined variables contain garbage values. Do not use variables that have garbage values.**\n- **Do not use keywords that are not supported in ACSL annotations for loops.**\n- **Variables that are not explicitly initialized, could have garbage values. Do not make any assumptions about such values.**\n- **Do not use the \\at(x, Pre) notation for any variable x.**\n- **Do not use non-deterministic function calls.**"
+            },
+            {
+                "role": "user",
+                "content": "\nConsider the following C program:\n```\n#define assume(e) if(!(e)) return;\n\nint __BLAST_NONDET;\nvoid main() {\n  int x,m,n;\n\n  x = 0;\n  m = 0;\n  while( x < n ) {\n    if(__BLAST_NONDET)\n\tm = x;\n\tx++;\n  }\n  if( n > 0 )\n    {\n      {;\n//@ assert( 0<=m);\n}\n\n      {;\n//@ assert(m<n);\n}\n\n    }\n}\n```\n\nYou are allowed to use implication to take care of the conditional nature of the code. Use implication (==>) instead of using if-then.\n\nFor all variables, add conjunctions that bound the maximum and minimum values that they can take, if such bounds exist.\n\nIf a variable is always equal to or smaller or larger than another variable, add a conjunction for their relation.\n\nIf the assertion is guarded by a condition, use the guard condition in an implication.\n\nIf certain variables are non-deterministic at the beginning or end of the loop, use an implication to make the invariant trivially true at that location. \n\nOutput the loop invariants for the loop in the program above. Let's think step by step."
+            },
+            "Pre-conditions:\n- The program does not take any input.\n- The variable `__BLAST_NONDET` is non-deterministic and can take any value.\n- All other variables (`x`, `m`, `n`) are uninitialized and can contain garbage values.\n\nVariable bounds:\n- Since `x` is initialized to 0 before the loop, `x >= 0`.\n- `m` is initially 0, so `m >= 0`.\n- There are no bounds on `n`.\n\nLoop condition:\n- The loop continues as long as `x < n`.\n\nLoop invariants:\n- Before the loop: Since `x` is initially 0, and `n` is non-negative (since it is not initialized), we have `x >= 0` and `n >= 0`. Also, since `m` is initially 0, `m >= 0`. Therefore, the following loop invariants hold before the loop:\n```\n/*@ loop invariant x >= 0;\n    loop invariant n >= 0;\n    loop invariant m >= 0;*/\n```\n\n- In every iteration: In each iteration of the loop, `x` is incremented by 1, so `x >= 0` still holds. Also, since `m` is assigned the value of `x` only if `__BLAST_NONDET` is true, `m <= x`. Therefore, the following loop invariants hold in every iteration of the loop:\n```\n/*@ loop invariant x >= 0;\n    loop invariant m <= x;*/\n```\n\n- After the loop: When the loop terminates, `x >= n`, so `m <= n`. Also, if `n > 0`, then the condition `if (__BLAST_NONDET)` was true at least once, which means that `m` was assigned a value of `x` at least once, and hence `m >= x-1`. Therefore, the following loop invariants hold after the loop:\n```\n/*@ loop invariant m <= n;\n    loop invariant (n > 0 ==> m >= x-1); */\n```\n\nAssertion:\n- The assertion is guarded by the condition `n > 0`, so we need to use implication. Therefore, the assertion can be written as `(n > 0) ==> (0 <= m && m < n)`. \n\nPutting it all together, we get the following loop invariants:\n```\n/*@ loop invariant x >= 0;\n    loop invariant n >= 0;\n    loop invariant m >= 0;\n    loop invariant x >= 0;\n    loop invariant m <= x;\n    loop invariant m <= n;\n    loop invariant (n > 0 ==> m >= x-1);\n*/\n```",
+            "Pre-conditions:\n- None\n\nVariable assignments:\n- x = 0\n- m = 0\n\nLoop condition:\n- x < n\n\nPost-condition:\n- If n > 0, then 0 <= m < n\n\nLoop Invariants:\n- Before the loop: None\n- In each iteration of the loop:\n    - 0 <= x <= n\n    - 0 <= m <= x\n    - If m < x, then there exists an i, such that m <= i < x and i is not an iteration where __BLAST_NONDET is true.\n- After the loop:\n    - If n > 0, then 0 <= m < n\n\nExplanation:\n- Before the loop, there are no loop invariants as there are no constraints on the values of variables.\n- In each iteration of the loop:\n    - x is initialized to 0 and increments by 1 in each iteration, so 0 <= x <= n.\n    - m is initialized to 0 and is updated to x only if __BLAST_NONDET is true. So, 0 <= m <= x.\n    - If m < x, then there must have been an iteration where __BLAST_NONDET was false and m was not updated. Let i be the smallest such iteration. Then, m <= i < x. \n- After the loop, if n > 0, then m must be greater than or equal to 0 and less than n. \n\nWe can use the above loop invariants to verify the post-condition.",
+            "Pre-conditions:\n\nNone.\n\nVariable Assignments:\n\n- `x` is assigned the value `0`.\n- `m` is assigned the value `0`.\n\nLoop Condition:\n\n- The loop continues as long as `x` is less than `n`.\n\nLoop Invariants:\n\n- Before the loop execution, the following loop invariants hold:\n    ```\n    /*@\n        loop invariant 0 <= x <= n;\n        loop invariant m <= x;\n    */\n    ```\n    Explanation:\n    - The first invariant ensures that `x` is always greater than or equal to `0` and less than or equal to `n`.\n    - The second invariant ensures that `m` is always less than or equal to `x`. Since `m` is initially assigned `0`, this invariant holds before the loop execution.\n\n- In every iteration of the loop, the following loop invariants hold:\n    ```\n    /*@\n        loop invariant 0 <= x <= n;\n        loop invariant m <= x;\n        loop invariant (m == \\old(m)) || (m == \\old(x) && !__BLAST_NONDET);\n    */\n    ```\n    Explanation:\n    - The first two invariants are the same as before.\n    - The third invariant ensures that `m` either remains the same as its value before the loop iteration or it gets assigned the value of `x` if `__BLAST_NONDET` is false. This invariant is needed because `m` gets assigned the value of `x` only if the condition `__BLAST_NONDET` is false. So, if `__BLAST_NONDET` is true, `m` should remain the same as its previous value.\n\n- After the loop termination, the following loop invariants hold:\n    ```\n    /*@\n        loop invariant 0 <= x <= n;\n        loop invariant m <= x;\n        loop invariant (m == \\old(m)) || (m == \\old(x) && !__BLAST_NONDET);\n        loop invariant (!(n > 0) || (0 <= m && m < n));\n    */\n    ```\n    Explanation:\n    - The first three invariants are the same as before.\n    - The fourth invariant ensures that if `n` is greater than `0`, then `m` is greater than or equal to `0` and less than `n`. This is because the assertion is guarded by the condition `n > 0`. If `n` is `0`, then the assertion is trivially true. So, we use an implication to make the invariant trivially true when `n` is `0`.",
+            "Pre-conditions:\n- None\n\nVariable assignments:\n- `x = 0`\n- `m = 0`\n\nLoop condition:\n- `x < n`\n\nLoop invariants:\n- Before the loop: `m >= 0`\n- In every iteration: \n    - `m <= x`\n    - `m < n`\n- After the loop: \n    - `m >= 0`\n    - `m < n`\n\nExplanation:\n- Before the loop, since `m` is assigned `0`, it is greater than or equal to 0.\n- In every iteration, `m` can only be assigned a value smaller than or equal to `x` (if `__BLAST_NONDET` is true) and `x` is incremented by 1 in each iteration. Thus, `m` is always less than or equal to `x`.\n- In every iteration, `x` is incremented by 1 and as long as `x` is less than `n`, `m` is less than `n`.\n- After the loop, `m` can only be less than `n` because the loop condition is violated if `x >= n`. Also, `m` is greater than or equal to 0 because it is assigned a value greater than or equal to 0 at the beginning of the program. \n\nTherefore, the loop invariants are:\n```\n/*@ \n    loop invariant m >= 0;\n    loop invariant m <= x;\n    loop invariant m < n;\n*/\n``` \nand the post-condition is `0 <= m && m < n` which is implied by the loop invariants.",
+            "Step 1: Pre-conditions and Variable Assignments\n```\nPre-conditions:\nNone\n\nVariable Assignments:\nx = 0\nm = 0\n```\n\nStep 2: Loop Condition\n```\nwhile( x < n )\n```\n\nStep 3: Loop Invariants\n```\n/*@\nloop invariant 0 <= x <= n;\nloop invariant (m >= 0 && m <= x) || (m == 0 && x == 0);\nloop invariant (m < n) ==> (x <= n);\nloop assigns x, m;\n*/\n\nx = 0; // x is initialized to 0\nm = 0; // m is initialized to 0\n\n/* Loop Invariant 1: 0 <= x <= n\n   Explanation: x should always be between 0 and n (inclusive) */\n\n/* Loop Invariant 2: (m >= 0 && m <= x) || (m == 0 && x == 0)\n   Explanation: m should always be between 0 and x (inclusive) or if x is 0, m should be 0 as well. */\n\n/* Loop Invariant 3: (m < n) ==> (x <= n)\n   Explanation: If m is less than n, then x should be less than or equal to n. */\n\n/* Loop assigns x, m\n   Explanation: x and m are the only variables assigned in the loop. */\n```\n\nStep 4: Implication for Assertion\n```\nif( n > 0 )\n{\n\t{;\n\t//@ assert (0 <= m);\n\t}\n\n\t{;\n\t//@ assert ((m < n) ==> (m < n));\n\t}\n}\n```\nExplanation: Since the assertion is guarded by the condition `n > 0`, we can use it in an implication to make the invariant trivially true when `n <= 0`. \n\nPutting it all together, the final program with loop invariants becomes:\n```\n#define assume(e) if(!(e)) return;\n\nint __BLAST_NONDET;\nvoid main() {\n  int x,m,n;\n\n  x = 0;\n  m = 0;\n  /*@\n    loop invariant 0 <= x <= n;\n    loop invariant (m >= 0 && m <= x) || (m == 0 && x == 0);\n    loop invariant (m < n) ==> (x <= n);\n    loop assigns x, m;\n  */\n  while( x < n ) {\n    if(__BLAST_NONDET)\n      m = x;\n    x++;\n  }\n  if( n > 0 )\n  {\n    {;\n      //@ assert (0 <= m);\n    }\n\n    {;\n      //@ assert ((m < n) ==> (m < n));\n    }\n  }\n}\n```"
+        ],
+        "annotation_blocks": [
+            "/*@ loop invariant x >= 0;\n    loop invariant n >= 0;\n    loop invariant m >= 0;*/",
+            [
+                "ERROR: Output does not contain at least 1 complete code block",
+                "Pre-conditions:\n- None\n\nVariable assignments:\n- x = 0\n- m = 0\n\nLoop condition:\n- x < n\n\nPost-condition:\n- If n > 0, then 0 <= m < n\n\nLoop Invariants:\n- Before the loop: None\n- In each iteration of the loop:\n    - 0 <= x <= n\n    - 0 <= m <= x\n    - If m < x, then there exists an i, such that m <= i < x and i is not an iteration where __BLAST_NONDET is true.\n- After the loop:\n    - If n > 0, then 0 <= m < n\n\nExplanation:\n- Before the loop, there are no loop invariants as there are no constraints on the values of variables.\n- In each iteration of the loop:\n    - x is initialized to 0 and increments by 1 in each iteration, so 0 <= x <= n.\n    - m is initialized to 0 and is updated to x only if __BLAST_NONDET is true. So, 0 <= m <= x.\n    - If m < x, then there must have been an iteration where __BLAST_NONDET was false and m was not updated. Let i be the smallest such iteration. Then, m <= i < x. \n- After the loop, if n > 0, then m must be greater than or equal to 0 and less than n. \n\nWe can use the above loop invariants to verify the post-condition."
+            ],
+            "    /*@\n        loop invariant 0 <= x <= n;\n        loop invariant m <= x;\n    */",
+            "/*@ \n    loop invariant m >= 0;\n    loop invariant m <= x;\n    loop invariant m < n;\n*/",
+            "/*@\nloop invariant 0 <= x <= n;\nloop invariant (m >= 0 && m <= x) || (m == 0 && x == 0);\nloop invariant (m < n) ==> (x <= n);\nloop assigns x, m;\n*/\n\nx = 0; // x is initialized to 0\nm = 0; // m is initialized to 0\n\n/* Loop Invariant 1: 0 <= x <= n\n   Explanation: x should always be between 0 and n (inclusive) */\n\n/* Loop Invariant 2: (m >= 0 && m <= x) || (m == 0 && x == 0)\n   Explanation: m should always be between 0 and x (inclusive) or if x is 0, m should be 0 as well. */\n\n/* Loop Invariant 3: (m < n) ==> (x <= n)\n   Explanation: If m is less than n, then x should be less than or equal to n. */\n\n/* Loop assigns x, m\n   Explanation: x and m are the only variables assigned in the loop. */"
+        ],
+        "completions": [
+            {
+                "num_solver_calls": 3,
+                "annotations": "/*@ loop invariant x >= 0;\n    loop invariant n >= 0;\n    loop invariant m >= 0;*/",
+                "checker_output_for_annotations": false,
+                "checker_message_for_annotations": "loop invariant x >= 0 is partially proven to be inductive.\nloop invariant n >= 0 is preserved but not established.\nloop invariant m >= 0 is partially proven to be inductive.\nAssertion 0 <= m: Partially proven\nAssertion m < n: Unproven",
+                "code_after_prune": "#define assume(e) if(!(e)) return;\n\nint __BLAST_NONDET;\nvoid main() {\n  int x,m,n;\n\n  x = 0;\n  m = 0;\n  /*@\nloop invariant i1: x >= 0;\n\nloop invariant i3: m >= 0;\n*/\nwhile( x < n ) {\n    if(__BLAST_NONDET)\n\tm = x;\n\tx++;\n  }\n  if( n > 0 )\n    {\n      {;\n//@ assert( 0<=m);\n}\n\n      {;\n//@ assert(m<n);\n}\n\n    }\n}",
+                "checker_output_after_prune": false
+            },
+            {
+                "num_solver_calls": 0,
+                "success": false,
+                "llm_output": "Pre-conditions:\n- None\n\nVariable assignments:\n- x = 0\n- m = 0\n\nLoop condition:\n- x < n\n\nPost-condition:\n- If n > 0, then 0 <= m < n\n\nLoop Invariants:\n- Before the loop: None\n- In each iteration of the loop:\n    - 0 <= x <= n\n    - 0 <= m <= x\n    - If m < x, then there exists an i, such that m <= i < x and i is not an iteration where __BLAST_NONDET is true.\n- After the loop:\n    - If n > 0, then 0 <= m < n\n\nExplanation:\n- Before the loop, there are no loop invariants as there are no constraints on the values of variables.\n- In each iteration of the loop:\n    - x is initialized to 0 and increments by 1 in each iteration, so 0 <= x <= n.\n    - m is initialized to 0 and is updated to x only if __BLAST_NONDET is true. So, 0 <= m <= x.\n    - If m < x, then there must have been an iteration where __BLAST_NONDET was false and m was not updated. Let i be the smallest such iteration. Then, m <= i < x. \n- After the loop, if n > 0, then m must be greater than or equal to 0 and less than n. \n\nWe can use the above loop invariants to verify the post-condition.",
+                "error": "Output does not contain at least 1 code block"
+            },
+            {
+                "num_solver_calls": 3,
+                "annotations": "    /*@\n        loop invariant 0 <= x <= n;\n        loop invariant m <= x;\n    */",
+                "checker_output_for_annotations": false,
+                "checker_message_for_annotations": "loop invariant 0 <= x <= n is preserved but not established.\nloop invariant m <= x is partially proven to be inductive.\nAssertion 0 <= m: Unproven\nAssertion m < n: Unproven",
+                "code_after_prune": "#define assume(e) if(!(e)) return;\n\nint __BLAST_NONDET;\nvoid main() {\n  int x,m,n;\n\n  x = 0;\n  m = 0;\n  /*@\n\nloop invariant i2: m <= x;\n*/\nwhile( x < n ) {\n    if(__BLAST_NONDET)\n\tm = x;\n\tx++;\n  }\n  if( n > 0 )\n    {\n      {;\n//@ assert( 0<=m);\n}\n\n      {;\n//@ assert(m<n);\n}\n\n    }\n}",
+                "checker_output_after_prune": false
+            },
+            {
+                "num_solver_calls": 3,
+                "annotations": "/*@ \n    loop invariant m >= 0;\n    loop invariant m <= x;\n    loop invariant m < n;\n*/",
+                "checker_output_for_annotations": false,
+                "checker_message_for_annotations": "loop invariant m >= 0 is partially proven to be inductive.\nloop invariant m <= x is partially proven to be inductive.\nloop invariant m < n is preserved but not established.\nAssertion 0 <= m: Partially proven\nAssertion m < n: Partially proven",
+                "code_after_prune": "#define assume(e) if(!(e)) return;\n\nint __BLAST_NONDET;\nvoid main() {\n  int x,m,n;\n\n  x = 0;\n  m = 0;\n  /*@\nloop invariant i1: m >= 0;\nloop invariant i2: m <= x;\n\n*/\nwhile( x < n ) {\n    if(__BLAST_NONDET)\n\tm = x;\n\tx++;\n  }\n  if( n > 0 )\n    {\n      {;\n//@ assert( 0<=m);\n}\n\n      {;\n//@ assert(m<n);\n}\n\n    }\n}",
+                "checker_output_after_prune": false
+            },
+            {
+                "num_solver_calls": 3,
+                "annotations": "/*@\nloop invariant 0 <= x <= n;\nloop invariant (m >= 0 && m <= x) || (m == 0 && x == 0);\nloop invariant (m < n) ==> (x <= n);\nloop assigns x, m;\n*/\n\nx = 0; // x is initialized to 0\nm = 0; // m is initialized to 0\n\n/* Loop Invariant 1: 0 <= x <= n\n   Explanation: x should always be between 0 and n (inclusive) */\n\n/* Loop Invariant 2: (m >= 0 && m <= x) || (m == 0 && x == 0)\n   Explanation: m should always be between 0 and x (inclusive) or if x is 0, m should be 0 as well. */\n\n/* Loop Invariant 3: (m < n) ==> (x <= n)\n   Explanation: If m is less than n, then x should be less than or equal to n. */\n\n/* Loop assigns x, m\n   Explanation: x and m are the only variables assigned in the loop. */",
+                "checker_output_for_annotations": false,
+                "checker_message_for_annotations": "loop invariant 0 <= x <= n is preserved but not established.\nloop invariant (m >= 0 && m <= x) || (m == 0 && x == 0) is partially proven to be inductive.\nloop invariant (m < n) ==> (x <= n) is partially proven to be inductive.\nAssertion 0 <= m: Partially proven\nAssertion m < n: Unproven",
+                "code_after_prune": "#define assume(e) if(!(e)) return;\n\nint __BLAST_NONDET;\nvoid main() {\n  int x,m,n;\n\n  x = 0;\n  m = 0;\n  /*@\n\nloop invariant i2: (m >= 0 && m <= x) || (m == 0 && x == 0);\nloop invariant i3: (m < n) ==> (x <= n);\n*/\nwhile( x < n ) {\n    if(__BLAST_NONDET)\n\tm = x;\n\tx++;\n  }\n  if( n > 0 )\n    {\n      {;\n//@ assert( 0<=m);\n}\n\n      {;\n//@ assert(m<n);\n}\n\n    }\n}",
+                "checker_output_after_prune": false
+            }
+        ],
+        "checker_output_for_combined_annotations": false,
+        "checker_message_for_combined_annotations": "loop invariant x >= 0 is partially proven to be inductive.\nloop invariant n >= 0 is preserved but not established.\nloop invariant m >= 0 is partially proven to be inductive.\nloop invariant 0 <= x <= n is partially proven to be inductive.\nloop invariant m <= x is partially proven to be inductive.\nloop invariant m < n is preserved but not established.\nloop invariant (m >= 0 && m <= x) || (m == 0 && x == 0) is partially proven to be inductive.\nloop invariant (m < n) ==> (x <= n) is partially proven to be inductive.\nAssertion 0 <= m: Partially proven\nAssertion m < n: Partially proven",
+        "code_with_combined_annotations": "#define assume(e) if(!(e)) return;\n\nint __BLAST_NONDET;\nvoid main() {\n  int x,m,n;\n\n  x = 0;\n  m = 0;\n  /*@\nloop invariant i1: x >= 0;\nloop invariant i2: n >= 0;\nloop invariant i3: m >= 0;\nloop invariant i4: 0 <= x <= n;\nloop invariant i5: m <= x;\nloop invariant i6: m < n;\nloop invariant i7: (m >= 0 && m <= x) || (m == 0 && x == 0);\nloop invariant i8: (m < n) ==> (x <= n);\n*/\nwhile( x < n ) {\n    if(__BLAST_NONDET)\n\tm = x;\n\tx++;\n  }\n  if( n > 0 )\n    {\n      {;\n//@ assert( 0<=m);\n}\n\n      {;\n//@ assert(m<n);\n}\n\n    }\n}",
+        "combined_annotation_num_solver_calls": 4,
+        "code_after_prune": "#define assume(e) if(!(e)) return;\n\nint __BLAST_NONDET;\nvoid main() {\n  int x,m,n;\n\n  x = 0;\n  m = 0;\n  /*@\nloop invariant i1: x >= 0;\n\nloop invariant i3: m >= 0;\n\nloop invariant i5: m <= x;\n\nloop invariant i7: (m >= 0 && m <= x) || (m == 0 && x == 0);\nloop invariant i8: (m < n) ==> (x <= n);\n*/\nwhile( x < n ) {\n    if(__BLAST_NONDET)\n\tm = x;\n\tx++;\n  }\n  if( n > 0 )\n    {\n      {;\n//@ assert( 0<=m);\n}\n\n      {;\n//@ assert(m<n);\n}\n\n    }\n}",
+        "checker_output_after_prune": false
+    },
+    "stats": {
+        "success": [
+            "../data/benchmarks/accelerating_invariant_generation/cav/07.c",
+            "../data/benchmarks/accelerating_invariant_generation/cav/19.c",
+            "../data/benchmarks/accelerating_invariant_generation/cav/20.c",
+            "../data/benchmarks/accelerating_invariant_generation/cav/39.c",
+            "../data/benchmarks/accelerating_invariant_generation/cav/gulv_simp.c",
+            "../data/benchmarks/accelerating_invariant_generation/crafted/const_safe1.c",
+            "../data/benchmarks/accelerating_invariant_generation/crafted/diamond_safe1.c",
+            "../data/benchmarks/accelerating_invariant_generation/crafted/multivar_safe1.c",
+            "../data/benchmarks/accelerating_invariant_generation/crafted/simple_safe1.c",
+            "../data/benchmarks/accelerating_invariant_generation/crafted/simple_safe2.c",
+            "../data/benchmarks/accelerating_invariant_generation/crafted/simple_safe3.c",
+            "../data/benchmarks/accelerating_invariant_generation/crafted/simple_safe4.c",
+            "../data/benchmarks/accelerating_invariant_generation/crafted/underapprox_safe2.c",
+            "../data/benchmarks/accelerating_invariant_generation/dagger/barbrprime.c",
+            "../data/benchmarks/accelerating_invariant_generation/dagger/cars.c",
+            "../data/benchmarks/accelerating_invariant_generation/dagger/ex1.c",
+            "../data/benchmarks/accelerating_invariant_generation/dagger/lifo.c",
+            "../data/benchmarks/accelerating_invariant_generation/dagger/seesaw.c",
+            "../data/benchmarks/accelerating_invariant_generation/dagger/substring1.c",
+            "../data/benchmarks/accelerating_invariant_generation/dagger/swim1.c",
+            "../data/benchmarks/accelerating_invariant_generation/invgen/bind_expands_vars2.c"
+        ],
+        "failure": [
+            "../data/benchmarks/accelerating_invariant_generation/cav/05.c",
+            "../data/benchmarks/accelerating_invariant_generation/cav/35.c",
+            "../data/benchmarks/accelerating_invariant_generation/cav/37.c",
+            "../data/benchmarks/accelerating_invariant_generation/cav/f2.c",
+            "../data/benchmarks/accelerating_invariant_generation/cav/gulv.c",
+            "../data/benchmarks/accelerating_invariant_generation/cav/pldi082_unbounded.c",
+            "../data/benchmarks/accelerating_invariant_generation/cav/substring1.c",
+            "../data/benchmarks/accelerating_invariant_generation/cav/xy10.c",
+            "../data/benchmarks/accelerating_invariant_generation/crafted/const_unsafe1.c",
+            "../data/benchmarks/accelerating_invariant_generation/crafted/diamond_safe2.c",
+            "../data/benchmarks/accelerating_invariant_generation/crafted/diamond_unsafe1.c",
+            "../data/benchmarks/accelerating_invariant_generation/crafted/diamond_unsafe2.c",
+            "../data/benchmarks/accelerating_invariant_generation/crafted/multivar_unsafe1.c",
+            "../data/benchmarks/accelerating_invariant_generation/crafted/overflow_safe1.c",
+            "../data/benchmarks/accelerating_invariant_generation/crafted/overflow_unsafe1.c",
+            "../data/benchmarks/accelerating_invariant_generation/crafted/phases_safe1.c",
+            "../data/benchmarks/accelerating_invariant_generation/crafted/phases_unsafe1.c",
+            "../data/benchmarks/accelerating_invariant_generation/crafted/simple_unsafe1.c",
+            "../data/benchmarks/accelerating_invariant_generation/crafted/simple_unsafe2.c",
+            "../data/benchmarks/accelerating_invariant_generation/crafted/simple_unsafe3.c",
+            "../data/benchmarks/accelerating_invariant_generation/crafted/simple_unsafe4.c",
+            "../data/benchmarks/accelerating_invariant_generation/crafted/underapprox_safe1.c",
+            "../data/benchmarks/accelerating_invariant_generation/crafted/underapprox_unsafe1.c",
+            "../data/benchmarks/accelerating_invariant_generation/crafted/underapprox_unsafe2.c",
+            "../data/benchmarks/accelerating_invariant_generation/dagger/barbr.c",
+            "../data/benchmarks/accelerating_invariant_generation/dagger/bk-nat.c",
+            "../data/benchmarks/accelerating_invariant_generation/dagger/bkley.c",
+            "../data/benchmarks/accelerating_invariant_generation/dagger/efm.c",
+            "../data/benchmarks/accelerating_invariant_generation/dagger/fig2.c",
+            "../data/benchmarks/accelerating_invariant_generation/dagger/lifnat.c",
+            "../data/benchmarks/accelerating_invariant_generation/dagger/lifnatprime.c",
+            "../data/benchmarks/accelerating_invariant_generation/dagger/swim.c",
+            "../data/benchmarks/accelerating_invariant_generation/invgen/gulwani_cegar1.c",
+            "../data/benchmarks/accelerating_invariant_generation/invgen/gulwani_cegar2.c"
+        ],
+        "skipped": [],
+        "total": 55,
+        "success_count": 21,
+        "failure_count": 34,
+        "success_rate": 0.38181818181818183
+    }
+}

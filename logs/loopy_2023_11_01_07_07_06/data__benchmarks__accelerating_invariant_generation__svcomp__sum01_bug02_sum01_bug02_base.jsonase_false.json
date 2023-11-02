@@ -1,0 +1,166 @@
+{
+    "logs": {
+        "file": "../data/benchmarks/accelerating_invariant_generation/svcomp/sum01_bug02_sum01_bug02_base.case_false.c",
+        "benchmark_code": "#define assume(e) if(!(e)) return 0;\nextern unsigned int unknown_uint(void);\n\n#define a (2)\n\nint main() { \n  int i, n=unknown_uint(), sn=0;\n  for(i=1; i<=n; i++) {\n    sn = sn + a;\n    if (i==4) sn=-10;\n  }\n  {;\n//@ assert(sn==n*a || sn == 0);\n}\n\n}",
+        "success": false,
+        "llm_conversation": [
+            {
+                "role": "system",
+                "content": "You are a helpful AI software assistant that reasons about how code behaves. Given a program, you can find loop invariants, which can then be used to verify some property in the program. \nFrama-C is a software verification tool for C programs. The input to Frama-C is a C program file with ACSL (ANSI/ISO C Specification Language) annotations.\nFor the given program, find the necessary loop invariants of the while loop to help Frama-C verify the post-condition.\n\nInstructions:\n- Make a note of the pre-conditions or variable assignments in the program.\n- Analyze the loop body and make a note of the loop condition. \n- Output loop invariants that are true \n(i) before the loop execution, \n(ii) in every iteration of the loop and \n(iii) after the loop termination, \nsuch that the loop invariants imply the post condition.\n- If a loop invariant is a conjunction, split it into its parts.\n- Output all the loop invariants in one code block. For example:\n```\n/*@ \n    loop invariant i1;\n    loop invariant i2;\n*/\n```\nRules:\n- **Do not use variables or functions that are not declared in the program.** \n- **Do not make any assumptions about functions whose definitions are not given.**\n- **All undefined variables contain garbage values. Do not use variables that have garbage values.**\n- **Do not use keywords that are not supported in ACSL annotations for loops.**\n- **Variables that are not explicitly initialized, could have garbage values. Do not make any assumptions about such values.**\n- **Do not use the \\at(x, Pre) notation for any variable x.**\n- **Do not use non-deterministic function calls.**"
+            },
+            {
+                "role": "user",
+                "content": "\nConsider the following C program:\n```\n#define assume(e) if(!(e)) return 0;\nextern unsigned int unknown_uint(void);\n\n#define a (2)\n\nint main() { \n  int i, n=unknown_uint(), sn=0;\n  for(i=1; i<=n; i++) {\n    sn = sn + a;\n    if (i==4) sn=-10;\n  }\n  {;\n//@ assert(sn==n*a || sn == 0);\n}\n\n}\n```\n\nYou are allowed to use implication to take care of the conditional nature of the code. Use implication (==>) instead of using if-then.\n\nFor all variables, add conjunctions that bound the maximum and minimum values that they can take, if such bounds exist.\n\nIf a variable is always equal to or smaller or larger than another variable, add a conjunction for their relation.\n\nIf the assertion is guarded by a condition, use the guard condition in an implication.\n\nIf certain variables are non-deterministic at the beginning or end of the loop, use an implication to make the invariant trivially true at that location. \n\nOutput the loop invariants for the loop in the program above. Let's think step by step."
+            },
+            "Pre-conditions:\n- The macro `assume(e)` takes a boolean expression `e` and returns 0 if `e` is false.\n- The function `unknown_uint()` returns an unsigned integer with an unknown value.\n- The constant `a` is defined as 2.\n\nVariable assignments:\n- `i` is an integer variable initialized to 1.\n- `n` is an integer variable initialized to the value returned by `unknown_uint()`.\n- `sn` is an integer variable initialized to 0.\n\nLoop condition:\n- The loop iterates as long as `i` is less than or equal to `n`.\n\nLoop body:\n- `sn` is incremented by `a`.\n- If `i` is equal to 4, then `sn` is assigned the value -10.\n\nPost-condition:\n- `sn` is either equal to `n*a` or 0.\n\nLoop invariants:\n- Before the loop execution: `sn == 0 ==> i == 1`.\n- In every iteration of the loop: `1 <= i <= n+1`, `sn == (i-1)*a - (i > 4 ? 10 : 0)`, and `sn <= i*a`.\n- After the loop termination: `sn == n*a || sn == 0`.\n\nExplanation:\n- Before the loop execution, `sn` is 0 and `i` is 1.\n- In every iteration of the loop, `i` is between 1 and `n+1` inclusive. \n- The value of `sn` is `(i-1)*a - (i > 4 ? 10 : 0)`, which is the sum of the previous values of `sn` (`(i-1)*a`) minus 10 if `i` is 4 or greater. \n- Since `sn` is incremented by `a` in each iteration, it is always less than or equal to `i*a`.\n- After the loop termination, `sn` is either equal to `n*a` (if `i` is equal to `n+1`) or 0 (if `i` is less than or equal to `n`).",
+            "Pre-conditions: None\n\nVariable assignments:\n- `n` is assigned the value returned by the function `unknown_uint()`.\n- `sn` is assigned 0.\n\nLoop condition: `i<=n`\n\nLoop body:\n- `sn` is assigned `sn + a`.\n- If `i==4`, then `sn` is assigned `-10`.\n\nPost-condition: `sn==n*a || sn == 0`\n\nWe need to find loop invariants that are true:\n- Before the loop execution\n- In every iteration of the loop\n- After the loop termination\n\nLet's start with the loop invariants that are true before the loop execution:\n- `sn == 0`\n- `n >= 0`\n- `a > 0`\n\nNow, let's consider the loop invariants that are true in every iteration of the loop:\n- `1 <= i <= n+1`\n- `sn == (i-1)*a || sn == -10`\n- If `sn == -10`, then `i <= 4`\n\nFinally, let's consider the loop invariants that are true after the loop termination:\n- `sn == n*a || sn == 0`\n\nPutting it all together, we get the following loop invariants:\n```\n/*@ \n    loop invariant sn == 0;\n    loop invariant n >= 0;\n    loop invariant a > 0;\n    \n    loop invariant 1 <= i <= n+1;\n    loop invariant sn == (i-1)*a || sn == -10;\n    loop invariant (sn == -10) ==> (i <= 4);\n    \n    loop invariant sn == n*a || sn == 0;\n*/\n``` \nNote that we use implication to handle the conditional nature of the code. We also use the guard condition `sn == -10` in the third loop invariant, and use `(i-1)*a` instead of `i*a` to account for the initial value of `sn`.",
+            "First, let's look at the pre-conditions and variable assignments:\n- The macro `assume` takes a boolean expression as input. If the expression is false, the function returns 0. \n- The external function `unknown_uint` returns an unsigned integer.\n- The macro `a` is defined as 2.\n- The variable `n` is assigned the value returned by `unknown_uint`.\n- The variables `i` and `sn` are declared and `i` is assigned the value 1.\n\nNext, let's analyze the loop body and the loop condition:\n- The loop iterates from `i=1` to `n`.\n- In each iteration, the variable `sn` is updated by adding the value of `a` to it.\n- If `i` is equal to 4, `sn` is assigned the value -10.\n\nBased on the program, we can output the following loop invariants:\n```\n/*@\n  loop invariant 1 <= i <= n+1;\n  loop invariant sn == (i-1)*a || sn == -10;\n*/\n```\nExplanation of loop invariants:\n- `1 <= i <= n+1`: The variable `i` is always greater than or equal to 1 and less than or equal to `n+1`. This is because `i` starts at 1 and increases by 1 in each iteration until it reaches `n+1`. \n- `sn == (i-1)*a || sn == -10`: This invariant holds for every iteration of the loop. When `i` is less than or equal to 4, `sn` is equal to `(i-1)*a` because it is updated by adding `a` in each iteration. When `i` is equal to 4, `sn` is assigned the value -10. After `i` becomes greater than 4, `sn` will always be equal to `(i-1)*a` because the conditional statement will never be true again. Therefore, at the end of the loop, `sn` will be equal to `(n+1-1)*a = n*a` or -10. \n\nNote: We do not need to bound the maximum and minimum values of `i`, `n`, or `sn` because they are all initialized to non-deterministic values.",
+            "Pre-conditions and variable assignments:\n- The program defines a macro `assume` which is equivalent to `assert` but returns 0 if the assertion fails.\n- The program defines a macro `unknown_uint` which returns an unknown unsigned integer value.\n- The program defines a macro `a` which is assigned the value 2.\n- The main function declares three variables: `i` and `n` are integers, and `sn` is an unsigned integer, initially set to 0.\n\nLoop condition:\n- The loop iterates from `i=1` to `n` (inclusive) as long as `i<=n`.\n\nLoop invariants:\n- Before the loop execution: None needed.\n- In every iteration of the loop:\n    - `1 <= i <= n+1`\n    - `sn = (i-1)*a - 2*(i>4)`\n- After the loop termination:\n    - `sn = n*a || sn = 0`\n\nExplanation:\n- Before the loop execution: None needed.\n- In every iteration of the loop:\n    - `1 <= i <= n+1` since `i` starts from 1 and increases by 1 in each iteration, until `i` becomes `n+1` after the last iteration.\n    - `sn = (i-1)*a - 2*(i>4)` since `sn` is incremented by `a` in each iteration, except for when `i=4`, in which case `sn` is set to -10 and then does not change anymore. Therefore, if `i<=4`, `sn` is equal to `(i-1)*a`, and if `i>4`, `sn` is equal to `(i-1)*a - 2`.\n- After the loop termination:\n    - `sn = n*a || sn = 0` since `sn` is incremented by `a` in each iteration, and is set to -10 only when `i=4`. Therefore, if `n<4`, `sn` is equal to `n*a`, and if `n>=4`, `sn` is equal to `4*a - 2 + (n-3)*a`, which simplifies to `n*a - 2`. Thus, `sn` is equal to `n*a` or `0` depending on whether `n` is less than or greater than or equal to `4`.",
+            "Pre-conditions:\n- The macro `assume` takes an expression and returns 0 if the expression is false.\n- The function `unknown_uint` returns an unsigned integer value.\n\nVariable assignments:\n- The integer variable `n` is assigned the value returned by `unknown_uint()`.\n- The integer variable `sn` is assigned 0.\n\nLoop condition:\n- The loop executes while `i <= n`.\n\nLoop invariants:\n- Before the loop execution: none.\n- In every iteration of the loop:\n  - `1 <= i <= n+1`\n  - `sn = (i-1)*a || sn = 0` (if `i=4` then `sn=-10` else `sn` is updated by `sn = sn + a`)\n- After the loop termination:\n  - `i = n+1`\n  - `sn = n*a || sn = 0`\n\nWe can use the guard condition `i != 4 ==> sn == (i-1)*a` in the second loop invariant as an implication. Also, we can add a conjunction for the upper bound of `sn` based on the conditional statement inside the loop. Thus, the final loop invariants are:\n```\n/*@ \n    loop invariant 1 <= i <= n+1;\n    loop invariant (i != 4 ==> sn == (i-1)*a) && (i == 4 ==> sn == -10);\n    loop invariant sn <= (i-1)*a || sn == 0;\n    loop invariant sn >= -10;\n    loop assigns i, sn;\n*/\n```"
+        ],
+        "annotation_blocks": [
+            [
+                "ERROR: Output does not contain at least 1 complete code block",
+                "Pre-conditions:\n- The macro `assume(e)` takes a boolean expression `e` and returns 0 if `e` is false.\n- The function `unknown_uint()` returns an unsigned integer with an unknown value.\n- The constant `a` is defined as 2.\n\nVariable assignments:\n- `i` is an integer variable initialized to 1.\n- `n` is an integer variable initialized to the value returned by `unknown_uint()`.\n- `sn` is an integer variable initialized to 0.\n\nLoop condition:\n- The loop iterates as long as `i` is less than or equal to `n`.\n\nLoop body:\n- `sn` is incremented by `a`.\n- If `i` is equal to 4, then `sn` is assigned the value -10.\n\nPost-condition:\n- `sn` is either equal to `n*a` or 0.\n\nLoop invariants:\n- Before the loop execution: `sn == 0 ==> i == 1`.\n- In every iteration of the loop: `1 <= i <= n+1`, `sn == (i-1)*a - (i > 4 ? 10 : 0)`, and `sn <= i*a`.\n- After the loop termination: `sn == n*a || sn == 0`.\n\nExplanation:\n- Before the loop execution, `sn` is 0 and `i` is 1.\n- In every iteration of the loop, `i` is between 1 and `n+1` inclusive. \n- The value of `sn` is `(i-1)*a - (i > 4 ? 10 : 0)`, which is the sum of the previous values of `sn` (`(i-1)*a`) minus 10 if `i` is 4 or greater. \n- Since `sn` is incremented by `a` in each iteration, it is always less than or equal to `i*a`.\n- After the loop termination, `sn` is either equal to `n*a` (if `i` is equal to `n+1`) or 0 (if `i` is less than or equal to `n`)."
+            ],
+            "/*@ \n    loop invariant sn == 0;\n    loop invariant n >= 0;\n    loop invariant a > 0;\n    \n    loop invariant 1 <= i <= n+1;\n    loop invariant sn == (i-1)*a || sn == -10;\n    loop invariant (sn == -10) ==> (i <= 4);\n    \n    loop invariant sn == n*a || sn == 0;\n*/",
+            "/*@\n  loop invariant 1 <= i <= n+1;\n  loop invariant sn == (i-1)*a || sn == -10;\n*/",
+            [
+                "ERROR: Output does not contain at least 1 complete code block",
+                "Pre-conditions and variable assignments:\n- The program defines a macro `assume` which is equivalent to `assert` but returns 0 if the assertion fails.\n- The program defines a macro `unknown_uint` which returns an unknown unsigned integer value.\n- The program defines a macro `a` which is assigned the value 2.\n- The main function declares three variables: `i` and `n` are integers, and `sn` is an unsigned integer, initially set to 0.\n\nLoop condition:\n- The loop iterates from `i=1` to `n` (inclusive) as long as `i<=n`.\n\nLoop invariants:\n- Before the loop execution: None needed.\n- In every iteration of the loop:\n    - `1 <= i <= n+1`\n    - `sn = (i-1)*a - 2*(i>4)`\n- After the loop termination:\n    - `sn = n*a || sn = 0`\n\nExplanation:\n- Before the loop execution: None needed.\n- In every iteration of the loop:\n    - `1 <= i <= n+1` since `i` starts from 1 and increases by 1 in each iteration, until `i` becomes `n+1` after the last iteration.\n    - `sn = (i-1)*a - 2*(i>4)` since `sn` is incremented by `a` in each iteration, except for when `i=4`, in which case `sn` is set to -10 and then does not change anymore. Therefore, if `i<=4`, `sn` is equal to `(i-1)*a`, and if `i>4`, `sn` is equal to `(i-1)*a - 2`.\n- After the loop termination:\n    - `sn = n*a || sn = 0` since `sn` is incremented by `a` in each iteration, and is set to -10 only when `i=4`. Therefore, if `n<4`, `sn` is equal to `n*a`, and if `n>=4`, `sn` is equal to `4*a - 2 + (n-3)*a`, which simplifies to `n*a - 2`. Thus, `sn` is equal to `n*a` or `0` depending on whether `n` is less than or greater than or equal to `4`."
+            ],
+            "/*@ \n    loop invariant 1 <= i <= n+1;\n    loop invariant (i != 4 ==> sn == (i-1)*a) && (i == 4 ==> sn == -10);\n    loop invariant sn <= (i-1)*a || sn == 0;\n    loop invariant sn >= -10;\n    loop assigns i, sn;\n*/"
+        ],
+        "completions": [
+            {
+                "num_solver_calls": 0,
+                "success": false,
+                "llm_output": "Pre-conditions:\n- The macro `assume(e)` takes a boolean expression `e` and returns 0 if `e` is false.\n- The function `unknown_uint()` returns an unsigned integer with an unknown value.\n- The constant `a` is defined as 2.\n\nVariable assignments:\n- `i` is an integer variable initialized to 1.\n- `n` is an integer variable initialized to the value returned by `unknown_uint()`.\n- `sn` is an integer variable initialized to 0.\n\nLoop condition:\n- The loop iterates as long as `i` is less than or equal to `n`.\n\nLoop body:\n- `sn` is incremented by `a`.\n- If `i` is equal to 4, then `sn` is assigned the value -10.\n\nPost-condition:\n- `sn` is either equal to `n*a` or 0.\n\nLoop invariants:\n- Before the loop execution: `sn == 0 ==> i == 1`.\n- In every iteration of the loop: `1 <= i <= n+1`, `sn == (i-1)*a - (i > 4 ? 10 : 0)`, and `sn <= i*a`.\n- After the loop termination: `sn == n*a || sn == 0`.\n\nExplanation:\n- Before the loop execution, `sn` is 0 and `i` is 1.\n- In every iteration of the loop, `i` is between 1 and `n+1` inclusive. \n- The value of `sn` is `(i-1)*a - (i > 4 ? 10 : 0)`, which is the sum of the previous values of `sn` (`(i-1)*a`) minus 10 if `i` is 4 or greater. \n- Since `sn` is incremented by `a` in each iteration, it is always less than or equal to `i*a`.\n- After the loop termination, `sn` is either equal to `n*a` (if `i` is equal to `n+1`) or 0 (if `i` is less than or equal to `n`).",
+                "error": "Output does not contain at least 1 code block"
+            },
+            {
+                "num_solver_calls": 5,
+                "annotations": "/*@ \n    loop invariant sn == 0;\n    loop invariant n >= 0;\n    loop invariant a > 0;\n    \n    loop invariant 1 <= i <= n+1;\n    loop invariant sn == (i-1)*a || sn == -10;\n    loop invariant (sn == -10) ==> (i <= 4);\n    \n    loop invariant sn == n*a || sn == 0;\n*/",
+                "checker_output_for_annotations": false,
+                "checker_message_for_annotations": "loop invariant sn == 0 is established but not preserved.\nloop invariant n >= 0 is preserved but not established.\nloop invariant a > 0 is partially proven to be inductive.\nloop invariant 1 <= i <= n+1 is partially proven to be inductive.\nloop invariant sn == (i-1)*a || sn == -10 is partially proven to be inductive.\nloop invariant (sn == -10) ==> (i <= 4) is partially proven to be inductive.\nloop invariant sn == n*a || sn == 0 is partially proven to be inductive.\nAssertion sn == n * 2 || sn == 0: Partially proven",
+                "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern unsigned int unknown_uint(void);\n\n#define a (2)\n\nint main() { \n  int i, n=unknown_uint(), sn=0;\n  /*@\n\n\nloop invariant i3: a > 0;\n\n\n\n\n*/\nfor(i=1; i<=n; i++) {\n    sn = sn + a;\n    if (i==4) sn=-10;\n  }\n  {;\n//@ assert(sn==n*a || sn == 0);\n}\n\n}",
+                "checker_output_after_prune": false
+            },
+            {
+                "num_solver_calls": 2,
+                "annotations": "/*@\n  loop invariant 1 <= i <= n+1;\n  loop invariant sn == (i-1)*a || sn == -10;\n*/",
+                "checker_output_for_annotations": false,
+                "checker_message_for_annotations": "loop invariant 1 <= i <= n+1 is preserved but not established.\nloop invariant sn == (i-1)*a || sn == -10 is established but not preserved.\nAssertion sn == n * 2 || sn == 0: Unproven",
+                "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern unsigned int unknown_uint(void);\n\n#define a (2)\n\nint main() { \n  int i, n=unknown_uint(), sn=0;\n  /*@\n\n\n*/\nfor(i=1; i<=n; i++) {\n    sn = sn + a;\n    if (i==4) sn=-10;\n  }\n  {;\n//@ assert(sn==n*a || sn == 0);\n}\n\n}",
+                "checker_output_after_prune": false
+            },
+            {
+                "num_solver_calls": 0,
+                "success": false,
+                "llm_output": "Pre-conditions and variable assignments:\n- The program defines a macro `assume` which is equivalent to `assert` but returns 0 if the assertion fails.\n- The program defines a macro `unknown_uint` which returns an unknown unsigned integer value.\n- The program defines a macro `a` which is assigned the value 2.\n- The main function declares three variables: `i` and `n` are integers, and `sn` is an unsigned integer, initially set to 0.\n\nLoop condition:\n- The loop iterates from `i=1` to `n` (inclusive) as long as `i<=n`.\n\nLoop invariants:\n- Before the loop execution: None needed.\n- In every iteration of the loop:\n    - `1 <= i <= n+1`\n    - `sn = (i-1)*a - 2*(i>4)`\n- After the loop termination:\n    - `sn = n*a || sn = 0`\n\nExplanation:\n- Before the loop execution: None needed.\n- In every iteration of the loop:\n    - `1 <= i <= n+1` since `i` starts from 1 and increases by 1 in each iteration, until `i` becomes `n+1` after the last iteration.\n    - `sn = (i-1)*a - 2*(i>4)` since `sn` is incremented by `a` in each iteration, except for when `i=4`, in which case `sn` is set to -10 and then does not change anymore. Therefore, if `i<=4`, `sn` is equal to `(i-1)*a`, and if `i>4`, `sn` is equal to `(i-1)*a - 2`.\n- After the loop termination:\n    - `sn = n*a || sn = 0` since `sn` is incremented by `a` in each iteration, and is set to -10 only when `i=4`. Therefore, if `n<4`, `sn` is equal to `n*a`, and if `n>=4`, `sn` is equal to `4*a - 2 + (n-3)*a`, which simplifies to `n*a - 2`. Thus, `sn` is equal to `n*a` or `0` depending on whether `n` is less than or greater than or equal to `4`.",
+                "error": "Output does not contain at least 1 code block"
+            },
+            {
+                "num_solver_calls": 4,
+                "annotations": "/*@ \n    loop invariant 1 <= i <= n+1;\n    loop invariant (i != 4 ==> sn == (i-1)*a) && (i == 4 ==> sn == -10);\n    loop invariant sn <= (i-1)*a || sn == 0;\n    loop invariant sn >= -10;\n    loop assigns i, sn;\n*/",
+                "checker_output_for_annotations": false,
+                "checker_message_for_annotations": "loop invariant 1 <= i <= n+1 is preserved but not established.\nloop invariant (i != 4 ==> sn == (i-1)*a) && (i == 4 ==> sn == -10) is established but not preserved.\nloop invariant sn <= (i-1)*a || sn == 0 is partially proven to be inductive.\nloop invariant sn >= -10 is partially proven to be inductive.\nAssertion sn == n * 2 || sn == 0: Unproven",
+                "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern unsigned int unknown_uint(void);\n\n#define a (2)\n\nint main() { \n  int i, n=unknown_uint(), sn=0;\n  /*@\n\n\n\nloop invariant i4: sn >= -10;\n*/\nfor(i=1; i<=n; i++) {\n    sn = sn + a;\n    if (i==4) sn=-10;\n  }\n  {;\n//@ assert(sn==n*a || sn == 0);\n}\n\n}",
+                "checker_output_after_prune": false
+            }
+        ],
+        "checker_output_for_combined_annotations": false,
+        "checker_message_for_combined_annotations": "loop invariant sn == 0 is established but not preserved.\nloop invariant n >= 0 is preserved but not established.\nloop invariant a > 0 is partially proven to be inductive.\nloop invariant 1 <= i <= n+1 is partially proven to be inductive.\nloop invariant sn == (i-1)*a || sn == -10 is partially proven to be inductive.\nloop invariant (sn == -10) ==> (i <= 4) is partially proven to be inductive.\nloop invariant sn == n*a || sn == 0 is partially proven to be inductive.\nloop invariant (i != 4 ==> sn == (i-1)*a) && (i == 4 ==> sn == -10) is partially proven to be inductive.\nloop invariant sn <= (i-1)*a || sn == 0 is partially proven to be inductive.\nloop invariant sn >= -10 is partially proven to be inductive.\nAssertion sn == n * 2 || sn == 0: Partially proven",
+        "code_with_combined_annotations": "#define assume(e) if(!(e)) return 0;\nextern unsigned int unknown_uint(void);\n\n#define a (2)\n\nint main() { \n  int i, n=unknown_uint(), sn=0;\n  /*@\nloop invariant i1: sn == 0;\nloop invariant i2: n >= 0;\nloop invariant i3: a > 0;\nloop invariant i4: 1 <= i <= n+1;\nloop invariant i5: sn == (i-1)*a || sn == -10;\nloop invariant i6: (sn == -10) ==> (i <= 4);\nloop invariant i7: sn == n*a || sn == 0;\nloop invariant i8: (i != 4 ==> sn == (i-1)*a) && (i == 4 ==> sn == -10);\nloop invariant i9: sn <= (i-1)*a || sn == 0;\nloop invariant i10: sn >= -10;\n*/\nfor(i=1; i<=n; i++) {\n    sn = sn + a;\n    if (i==4) sn=-10;\n  }\n  {;\n//@ assert(sn==n*a || sn == 0);\n}\n\n}",
+        "combined_annotation_num_solver_calls": 7,
+        "code_after_prune": "#define assume(e) if(!(e)) return 0;\nextern unsigned int unknown_uint(void);\n\n#define a (2)\n\nint main() { \n  int i, n=unknown_uint(), sn=0;\n  /*@\n\n\nloop invariant i3: a > 0;\n\n\n\n\n\n\nloop invariant i10: sn >= -10;\n*/\nfor(i=1; i<=n; i++) {\n    sn = sn + a;\n    if (i==4) sn=-10;\n  }\n  {;\n//@ assert(sn==n*a || sn == 0);\n}\n\n}",
+        "checker_output_after_prune": false
+    },
+    "stats": {
+        "success": [
+            "../data/benchmarks/accelerating_invariant_generation/cav/07.c",
+            "../data/benchmarks/accelerating_invariant_generation/cav/19.c",
+            "../data/benchmarks/accelerating_invariant_generation/cav/20.c",
+            "../data/benchmarks/accelerating_invariant_generation/cav/39.c",
+            "../data/benchmarks/accelerating_invariant_generation/cav/gulv_simp.c",
+            "../data/benchmarks/accelerating_invariant_generation/crafted/const_safe1.c",
+            "../data/benchmarks/accelerating_invariant_generation/crafted/diamond_safe1.c",
+            "../data/benchmarks/accelerating_invariant_generation/crafted/multivar_safe1.c",
+            "../data/benchmarks/accelerating_invariant_generation/crafted/simple_safe1.c",
+            "../data/benchmarks/accelerating_invariant_generation/crafted/simple_safe2.c",
+            "../data/benchmarks/accelerating_invariant_generation/crafted/simple_safe3.c",
+            "../data/benchmarks/accelerating_invariant_generation/crafted/simple_safe4.c",
+            "../data/benchmarks/accelerating_invariant_generation/crafted/underapprox_safe2.c",
+            "../data/benchmarks/accelerating_invariant_generation/dagger/barbrprime.c",
+            "../data/benchmarks/accelerating_invariant_generation/dagger/cars.c",
+            "../data/benchmarks/accelerating_invariant_generation/dagger/ex1.c",
+            "../data/benchmarks/accelerating_invariant_generation/dagger/lifo.c",
+            "../data/benchmarks/accelerating_invariant_generation/dagger/seesaw.c",
+            "../data/benchmarks/accelerating_invariant_generation/dagger/substring1.c",
+            "../data/benchmarks/accelerating_invariant_generation/dagger/swim1.c",
+            "../data/benchmarks/accelerating_invariant_generation/invgen/bind_expands_vars2.c",
+            "../data/benchmarks/accelerating_invariant_generation/invgen/ken-imp.c",
+            "../data/benchmarks/accelerating_invariant_generation/invgen/NetBSD_g_Ctoc.c",
+            "../data/benchmarks/accelerating_invariant_generation/invgen/NetBSD_loop.c",
+            "../data/benchmarks/accelerating_invariant_generation/invgen/NetBSD_loop_int.c",
+            "../data/benchmarks/accelerating_invariant_generation/invgen/rajamani_1.c",
+            "../data/benchmarks/accelerating_invariant_generation/invgen/sendmail-mime7to8_arr_three_chars_no_test_ok.c",
+            "../data/benchmarks/accelerating_invariant_generation/invgen/simple.c",
+            "../data/benchmarks/accelerating_invariant_generation/invgen/simple_if.c",
+            "../data/benchmarks/accelerating_invariant_generation/invgen/up-nested.c",
+            "../data/benchmarks/accelerating_invariant_generation/svcomp/count_up_down_true.c",
+            "../data/benchmarks/accelerating_invariant_generation/svcomp/for_infinite_loop_1_true.c",
+            "../data/benchmarks/accelerating_invariant_generation/svcomp/for_infinite_loop_2_true.c"
+        ],
+        "failure": [
+            "../data/benchmarks/accelerating_invariant_generation/cav/05.c",
+            "../data/benchmarks/accelerating_invariant_generation/cav/35.c",
+            "../data/benchmarks/accelerating_invariant_generation/cav/37.c",
+            "../data/benchmarks/accelerating_invariant_generation/cav/f2.c",
+            "../data/benchmarks/accelerating_invariant_generation/cav/gulv.c",
+            "../data/benchmarks/accelerating_invariant_generation/cav/pldi082_unbounded.c",
+            "../data/benchmarks/accelerating_invariant_generation/cav/substring1.c",
+            "../data/benchmarks/accelerating_invariant_generation/cav/xy10.c",
+            "../data/benchmarks/accelerating_invariant_generation/crafted/const_unsafe1.c",
+            "../data/benchmarks/accelerating_invariant_generation/crafted/diamond_safe2.c",
+            "../data/benchmarks/accelerating_invariant_generation/crafted/diamond_unsafe1.c",
+            "../data/benchmarks/accelerating_invariant_generation/crafted/diamond_unsafe2.c",
+            "../data/benchmarks/accelerating_invariant_generation/crafted/multivar_unsafe1.c",
+            "../data/benchmarks/accelerating_invariant_generation/crafted/overflow_safe1.c",
+            "../data/benchmarks/accelerating_invariant_generation/crafted/overflow_unsafe1.c",
+            "../data/benchmarks/accelerating_invariant_generation/crafted/phases_safe1.c",
+            "../data/benchmarks/accelerating_invariant_generation/crafted/phases_unsafe1.c",
+            "../data/benchmarks/accelerating_invariant_generation/crafted/simple_unsafe1.c",
+            "../data/benchmarks/accelerating_invariant_generation/crafted/simple_unsafe2.c",
+            "../data/benchmarks/accelerating_invariant_generation/crafted/simple_unsafe3.c",
+            "../data/benchmarks/accelerating_invariant_generation/crafted/simple_unsafe4.c",
+            "../data/benchmarks/accelerating_invariant_generation/crafted/underapprox_safe1.c",
+            "../data/benchmarks/accelerating_invariant_generation/crafted/underapprox_unsafe1.c",
+            "../data/benchmarks/accelerating_invariant_generation/crafted/underapprox_unsafe2.c",
+            "../data/benchmarks/accelerating_invariant_generation/dagger/barbr.c",
+            "../data/benchmarks/accelerating_invariant_generation/dagger/bk-nat.c",
+            "../data/benchmarks/accelerating_invariant_generation/dagger/bkley.c",
+            "../data/benchmarks/accelerating_invariant_generation/dagger/efm.c",
+            "../data/benchmarks/accelerating_invariant_generation/dagger/fig2.c",
+            "../data/benchmarks/accelerating_invariant_generation/dagger/lifnat.c",
+            "../data/benchmarks/accelerating_invariant_generation/dagger/lifnatprime.c",
+            "../data/benchmarks/accelerating_invariant_generation/dagger/swim.c",
+            "../data/benchmarks/accelerating_invariant_generation/invgen/gulwani_cegar1.c",
+            "../data/benchmarks/accelerating_invariant_generation/invgen/gulwani_cegar2.c",
+            "../data/benchmarks/accelerating_invariant_generation/invgen/id_trans.c",
+            "../data/benchmarks/accelerating_invariant_generation/invgen/MADWiFi-encode_ie_ok.c",
+            "../data/benchmarks/accelerating_invariant_generation/invgen/sendmail-close-angle.c",
+            "../data/benchmarks/accelerating_invariant_generation/invgen/sendmail-mime-fromqp.c",
+            "../data/benchmarks/accelerating_invariant_generation/invgen/split.c",
+            "../data/benchmarks/accelerating_invariant_generation/svcomp/count_up_down_false.c",
+            "../data/benchmarks/accelerating_invariant_generation/svcomp/for_bounded_loop1_false.c",
+            "../data/benchmarks/accelerating_invariant_generation/svcomp/sum01_bug02_false.c",
+            "../data/benchmarks/accelerating_invariant_generation/svcomp/sum01_bug02_sum01_bug02_base.case_false.c"
+        ],
+        "skipped": [],
+        "total": 76,
+        "success_count": 33,
+        "failure_count": 43,
+        "success_rate": 0.4342105263157895
+    }
+}
