@@ -108,8 +108,7 @@ def main(file_name):
 
     input_data = None
     with open(input_file, "r") as f:
-        # input_data = json.load(f)
-        input_files = f.read().split("\n")
+        input_files = f.read().splitlines()
 
     output_log = {}
 
