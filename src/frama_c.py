@@ -504,6 +504,7 @@ class FramaCChecker(Checker):
     def get_variant_expressions(self, completions):
         variants = []
         for c in completions:
+            # All variants in a completion are considered as one sequence of variants
             c_variant = []
             for line in c.split("\n"):
                 if self.has_variant(line):
@@ -714,12 +715,12 @@ class FramaCBenchmark(Benchmark):
                     continue
 
                 elif len(variants) > 1:
-                    annotated_candidate = self.generate_lexicographic_variants(
-                        checker_input=checker_input,
-                        invariants=invariants,
-                        variants=llm_output,
-                    )
-                    annotated_candidates.append(annotated_candidate)
+                    lexicographic_candidate = self.generate_template_variant(
+                        checker_input, invariants, llm_output, template="lexicographic")
+                    multi_phase_candidate = self.generate_template_variant(
+                        checker_input, invariants, llm_output, template="multi_phase")
+                    annotated_candidates.append(lexicographic_candidate)
+                    annotated_candidates.append(multi_phase_candidate)
 
                 else:
                     variant = list(variants.keys())[0]
@@ -821,6 +822,137 @@ class FramaCBenchmark(Benchmark):
             labels.append((comment, comment_text))
 
         return labels
+
+    def generate_template_variant(
+        self, checker_input, invariants, variants, template="lexicographic"
+    ):
+        variant_expressions = []
+        for line in variants.split("\n"):
+            variant = re.findall(r"loop variant (.+);", line)
+            if len(variant) > 0:
+                variant_expressions.append(variant[0])
+
+        num_variants = len(variant_expressions)
+        if num_variants == 0:
+            return checker_input
+
+        struct_definition_string = """typedef struct {\n"""
+        for i in range(num_variants):
+            struct_definition_string += f"int {chr(i + 97)};\n"
+        struct_definition_string += "} variant_expression;\n"
+
+        ghost_var_string = (
+            """//@ ghost variant_expression measure = { """
+            + ", ".join(variant_expressions)
+            + " };\n"
+        )
+
+        ghost_inv_string = (
+            "loop invariant "
+            + " && ".join(
+                [
+                    f"measure.{chr(i + 97)} == {variant_expressions[i]}"
+                    for i in range(num_variants)
+                ]
+            )
+            + ";"
+        )
+        invariants = invariants + "\n" + ghost_inv_string
+
+        ghost_assign_string = "\n".join(
+            [
+                f"//@ ghost measure.{chr(i + 97)} = {variant_expressions[i]};"
+                for i in range(num_variants)
+            ]
+        )
+
+        predicate_string = ""
+        loop_variant_expression = ""
+        if template == "lexicographic":
+            predicate_string = """/*@\npredicate lexicographic(variant_expression v1, variant_expression v2) =\n"""
+            disjuncts = []
+            for i in range(num_variants):
+                conjunct_1 = f"v1.{chr(i + 97)} >= 0"
+                equality_conjunct_1 = " && ".join(
+                    [f"v1.{chr(j + 97)} == v2.{chr(j + 97)}" for j in range(i)]
+                )
+                inequality_conjunct_1 = f"v1.{chr(i + 97)} > v2.{chr(i + 97)}"
+
+                disjunct = (
+                    conjunct_1
+                    + (
+                        (" && " + equality_conjunct_1)
+                        if equality_conjunct_1 != ""
+                        else ""
+                    )
+                    + " && "
+                    + inequality_conjunct_1
+                )
+                disjunct = "(" + disjunct + ")"
+                disjuncts.append(disjunct)
+
+            predicate_string += " ||\n ".join(disjuncts) + ";\n*/"
+            loop_variant_expression = "loop variant measure for lexicographic;"
+
+        elif template == "multi_phase":
+            predicate_string = """/*@\npredicate multi_phase(variant_expression v1, variant_expression v2) =\n"""
+            disjuncts = []
+            for i in range(num_variants):
+                conjunct_1 = f"v1.{chr(i + 97)} >= 0"
+                inequality_conjunct_1 = f"v1.{chr(i + 97)} > v2.{chr(i + 97)}"
+
+                decreasing_conjuncts = []
+                for j in range(i):
+                    decreasing = f"v1.{chr(j + 97)} > v2.{chr(j + 97)}"
+                    negative = f"v1.{chr(j + 97)} < 0"
+                    decreasing_conjuncts.append(f"{decreasing} && {negative}")
+
+                disjunct = (
+                    (
+                        " && ".join(decreasing_conjuncts) + " && "
+                        if len(decreasing_conjuncts) > 0
+                        else ""
+                    )
+                    + inequality_conjunct_1
+                    + " && "
+                    + conjunct_1
+                )
+                disjunct = "(" + disjunct + ")"
+                disjuncts.append(disjunct)
+
+            predicate_string += " ||\n ".join(disjuncts) + ";\n*/"
+            loop_variant_expression = "loop variant measure for multi_phase;"
+
+        else:
+            raise Exception("Unknown ranking function template")
+
+        annotated_checker_input = (
+            struct_definition_string + "\n" + predicate_string + "\n" + checker_input
+        )
+
+        loop = self.get_loops(self.get_main_definition(annotated_checker_input))
+        if len(loop) != 1:
+            raise Exception(
+                "No singular loop found while adding annotations. Multiple loops not supported yet."
+            )
+        loop = loop[0]
+
+        annotated_code_with_variants = (
+            annotated_checker_input[: loop.start_byte]
+            + ghost_var_string
+            + "/*@\n"
+            + invariants
+            + "\n"
+            + loop_variant_expression
+            + "\n*/\n"
+            + annotated_checker_input[loop.start_byte : loop.end_byte - 1]
+            + "\n"
+            + ghost_assign_string
+            + "\n"
+            + annotated_checker_input[loop.end_byte - 1 :]
+        )
+
+        return annotated_code_with_variants
 
     def generate_lexicographic_variants(self, checker_input, invariants, variants):
         # Assume all the variant expressions are unique
