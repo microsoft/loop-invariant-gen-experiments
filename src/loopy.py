@@ -1986,7 +1986,7 @@ class LoopyPipeline:
 
     def check_variants(self, prompt, variants, checker_input):
         # one set of variants
-        invariants_log = {}
+        invariants_log = {"success" : False}
 
         for variant in variants:
             variant_log = {"variant": variant}
@@ -2123,10 +2123,11 @@ class LoopyPipeline:
                 )
 
                 invariants_log[str(variant)] = variant_log
-                invariants_log["success"] = variant_log["success"]
+                invariants_log["success"] = invariant_log["success"] or variant_log["success"]
 
                 if variant_log["success"]:
                     Logger.log_success(f"Variant {variant} is correct for benchmark")
+                    break
                 else:
                     Logger.log_error(f"Variant {variant} is incorrect for benchmark")
 
