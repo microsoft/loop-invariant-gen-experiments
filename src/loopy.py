@@ -2100,13 +2100,13 @@ class LoopyPipeline:
                 )
 
                 invariants_log[str(variant)] = variant_log
-                invariants_log[success] = variant_log["success"]
+                invariants_log["success"] = variant_log["success"]
 
             except Exception as e:
                 variant_log["error"] = str(e)
                 variant_log["success"] = False
                 invariants_log[str(variant)] = variant_log
-                invariants_log[success] = False
+                invariants_log["success"] = False
 
         return invariants_log
 

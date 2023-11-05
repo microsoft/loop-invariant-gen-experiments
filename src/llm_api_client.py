@@ -21,7 +21,7 @@ class LLMAPIClient(LLMClient):
         # Values for implementing cool-down and retry logic.
         self._interval = 60 / settings.prompts_per_minute
         self._last_call_time = None
-        self._max_retries: int = 5
+        self._max_retries: int = 10
 
     def chat(self, messages: list[dict[str, str]]) -> tuple[bool, List[str]]:
         """Send the chat completion prompt and get the response from the model."""
