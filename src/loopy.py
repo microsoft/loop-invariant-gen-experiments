@@ -148,36 +148,6 @@ class LoopyPipeline:
         else:
             raise Exception(f"Invalid checker: {config['checker']}")
 
-        # if not "loopy_sequence" in config:
-        #     raise Exception("No Loopy sequence found in config file")
-
-        # for step in config["loopy_sequence"]:
-        #     if type(step) == dict:
-        #         assert len(step.keys()) == 1 and list(step.keys())[0] in [
-        #             "prompt_llm",
-        #             "repair_llm",
-        #         ], "Invalid dict step in loopy sequence"
-        #         if list(step.keys())[0] == "prompt_llm":
-        #             prompt = Prompt().from_file(step["prompt_llm"])
-        #             annotation_type = step["prompt_llm"]["extract_annotation"]
-        #             self.steps.append(
-        #                 {"prompt": prompt, "annotation_type": annotation_type}
-        #             )
-        #         else:
-        #             prompt = Prompt().from_file(step["repair_llm"])
-        #             annotation_type = step["repair_llm"]["extract_annotation"]
-        #             self.steps.append(
-        #                 {
-        #                     "repair": prompt,
-        #                     "annotation_type": annotation_type,
-        #                     "num_retries": step["repair_llm"]["num_retries"],
-        #                 }
-        #             )
-        #     elif type(step) == str:
-        #         self.steps.append(step)
-        #     else:
-        #         raise Exception("Invalid step type in loopy sequence")
-
         self.llm = LLM(
             self.model,
             self.debug,
