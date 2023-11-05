@@ -1986,9 +1986,12 @@ class LoopyPipeline:
 
     def check_variants(self, prompt, variants, checker_input):
         # one set of variants
-        invariants_log = {"success" : False}
+        invariants_log = {"success": False}
 
-        for variant in variants:
+        for var_index, variant in enumerate(variants):
+            Logger.log_info(
+                f"Checking variant [{var_index + 1}]/[{len(variants)}]: {variant}"
+            )
             variant_log = {"variant": variant}
             try:
                 # syntax error check
@@ -2011,9 +2014,7 @@ class LoopyPipeline:
                     )
 
                     if "Annotation error on line " in checker_message:
-                        Logger.log_error(
-                            f"Annotation error in variant: {variant} for benchmark: {start_index + benchmark_index + 1}/{len(sliced_benchmarks)}"
-                        )
+                        Logger.log_error(f"Annotation error in variant: {variant}")
                         continue
                     else:
                         error_free_variants.append(checker_input_with_variant)
@@ -2123,7 +2124,9 @@ class LoopyPipeline:
                 )
 
                 invariants_log[str(variant)] = variant_log
-                invariants_log["success"] = invariants_log["success"] or variant_log["success"]
+                invariants_log["success"] = (
+                    invariants_log["success"] or variant_log["success"]
+                )
 
                 if variant_log["success"]:
                     Logger.log_success(f"Variant {variant} is correct for benchmark")
@@ -2208,6 +2211,7 @@ class LoopyPipeline:
             }
 
             try:
+                # Try the basic prompt first
                 Logger.log_info(
                     f"Using basic prompt for benchmark: {start_index + benchmark_index + 1}/{len(sliced_benchmarks)}"
                 )
@@ -2245,6 +2249,7 @@ class LoopyPipeline:
                 instance_log_json["simple_variant_log"] = invariants_log
                 instance_log_json["simple_variant_success"] = invariants_log["success"]
 
+                # If the basic prompt works, we are done
                 if invariants_log["success"]:
                     benchmark_success = True
                     Logger.log_success(
@@ -2258,6 +2263,7 @@ class LoopyPipeline:
                     )
                     continue
 
+                # If the basic prompt does not work, try the lexicographic prompt next
                 Logger.log_info(
                     f"Using lexicographic prompt for benchmark: {start_index + benchmark_index + 1}/{len(sliced_benchmarks)}"
                 )
@@ -2299,6 +2305,7 @@ class LoopyPipeline:
                     "success"
                 ]
 
+                # If the lexicographic prompt works, we can move on
                 if invariants_log["success"]:
                     benchmark_success = True
                     Logger.log_success(
@@ -2312,6 +2319,7 @@ class LoopyPipeline:
                     )
                     continue
 
+                # If the lexicographic prompt does not work, we try the multi-phase prompt
                 Logger.log_info(
                     f"Using multi-phase prompt for benchmark: {start_index + benchmark_index + 1}/{len(sliced_benchmarks)}"
                 )
@@ -2353,6 +2361,7 @@ class LoopyPipeline:
                     "success"
                 ]
 
+                # If the multi-phase prompt works, we can move on
                 if invariants_log["success"]:
                     benchmark_success = True
                     Logger.log_success(
@@ -2366,6 +2375,7 @@ class LoopyPipeline:
                     )
                     continue
 
+                # If no prompt works, we fail and move on
                 Logger.log_error(
                     f"Benchmark {start_index + benchmark_index + 1}/{len(sliced_benchmarks)} failed"
                 )
