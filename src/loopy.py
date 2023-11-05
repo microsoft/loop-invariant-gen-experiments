@@ -2178,6 +2178,9 @@ class LoopyPipeline:
             }
 
             try:
+                Logger.log_info(
+                    f"Using basic prompt for benchmark: {start_index + benchmark_index + 1}/{len(sliced_benchmarks)}"
+                )
                 (
                     alg_variant_code_blocks,
                     alg_variant_llm_output,
@@ -2215,7 +2218,7 @@ class LoopyPipeline:
                 if invariants_log["success"]:
                     benchmark_success = True
                     Logger.log_success(
-                        f"Benchmark {start_index + benchmark_index + 1}/{len(sliced_benchmarks)} succeeded with a simple variant"
+                        f"Benchmark {start_index + benchmark_index + 1}/{len(sliced_benchmarks)} succeeded with a basic prompt"
                     )
                     instance_log_json["success"] = True
                     log_json.append(instance_log_json)
@@ -2225,6 +2228,9 @@ class LoopyPipeline:
                     )
                     continue
 
+                Logger.log_info(
+                    f"Using lexicographic prompt for benchmark: {start_index + benchmark_index + 1}/{len(sliced_benchmarks)}"
+                )
                 (
                     lexico_variant_code_blocks,
                     lexico_variant_llm_output,
@@ -2246,11 +2252,11 @@ class LoopyPipeline:
                     ]
                 )
 
-                instance_log_json["lexico_variants"] = lexico_variants
+                instance_log_json["lexicographic_variants"] = lexico_variants
                 instance_log_json[
-                    "lexico_variant_llm_output"
+                    "lexicographic_variant_llm_output"
                 ] = lexico_variant_llm_output
-                instance_log_json["lexico_variant_log"] = {}
+                instance_log_json["lexicographic_variant_log"] = {}
 
                 invariants_log = self.check_variants(
                     invariants_prompt,
@@ -2258,13 +2264,15 @@ class LoopyPipeline:
                     self.benchmark.get_code(benchmark_file),
                 )
 
-                instance_log_json["lexico_variant_log"] = invariants_log
-                instance_log_json["lexico_variant_success"] = invariants_log["success"]
+                instance_log_json["lexicographic_variant_log"] = invariants_log
+                instance_log_json["lexicographic_variant_success"] = invariants_log[
+                    "success"
+                ]
 
                 if invariants_log["success"]:
                     benchmark_success = True
                     Logger.log_success(
-                        f"Benchmark {start_index + benchmark_index + 1}/{len(sliced_benchmarks)} succeeded with a lexico variant"
+                        f"Benchmark {start_index + benchmark_index + 1}/{len(sliced_benchmarks)} succeeded with a lexicographic prompt"
                     )
                     instance_log_json["success"] = True
                     log_json.append(instance_log_json)
@@ -2274,6 +2282,9 @@ class LoopyPipeline:
                     )
                     continue
 
+                Logger.log_info(
+                    f"Using multi-phase prompt for benchmark: {start_index + benchmark_index + 1}/{len(sliced_benchmarks)}"
+                )
                 (
                     multi_phase_variant_code_blocks,
                     multi_phase_variant_llm_output,
@@ -2315,7 +2326,7 @@ class LoopyPipeline:
                 if invariants_log["success"]:
                     benchmark_success = True
                     Logger.log_success(
-                        f"Benchmark {start_index + benchmark_index + 1}/{len(sliced_benchmarks)} succeeded with a multi-phase variant"
+                        f"Benchmark {start_index + benchmark_index + 1}/{len(sliced_benchmarks)} succeeded with a multi-phase prompt"
                     )
                     instance_log_json["success"] = True
                     log_json.append(instance_log_json)
