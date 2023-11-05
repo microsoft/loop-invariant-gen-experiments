@@ -187,10 +187,7 @@ def parse_args(args):
         choices=[
             "one_loop_one_method",
             "multiple_loops_one_method",
-            # "multiple_loops_multiple_methods",
             "termination_one_loop_one_method",
-            # "termination_multiple_loops_one_method",
-            # "termination_multiple_loops_multiple_methods",
             "all",
         ],
         default="one_loop_one_method",
@@ -274,7 +271,7 @@ def main(args):
         return
 
     if args.svcomp_files:
-        p.multiprocedural_loop_invariant_analysis(
+        p.interprocedural_loop_invariant_analysis(
             max_benchmarks=args.max_benchmarks,
             start_index=args.start_index,
         )

@@ -10,7 +10,6 @@ from jinja2 import Environment, FileSystemLoader
 from llm_api_client import LLMAPIClient
 from local_llm import LLMLocalClient
 from llm_utils import Settings
-from utils import ConvTree, Node
 
 
 class Prompt:
@@ -34,7 +33,6 @@ class Prompt:
         template = Environment(
             loader=FileSystemLoader(os.path.join(os.path.dirname(__file__), "../"))
         ).get_template(self.system_text_file)
-        # System prompt should ideally not have any inputs
         return template.render()
 
     def get_user_text(self, input: dict = None):
@@ -85,7 +83,7 @@ class LLM:
         """
         Extracts the first code block that returns true
         for the filter function. We adhere to markdown
-        format since it has shown to be very robust in
+        format since it has shown to be robust in
         the case of LLMs.
         """
         lines = output.split("\n")
@@ -174,20 +172,6 @@ class LLM:
         return response_blocks, response_logs
 
     def generate_annotation(
-        self,
-        input: dict = None,
-        prompt: Prompt = None,
-        label_only: bool = False,
-        extraction_filter=lambda x: True,
-    ):
-        return self.chat_completion(
-            input=input,
-            prompt=prompt,
-            label_only=label_only,
-            extraction_filter=extraction_filter,
-        )
-
-    def heal(
         self,
         input: dict = None,
         prompt: Prompt = None,

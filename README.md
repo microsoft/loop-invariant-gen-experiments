@@ -1,8 +1,8 @@
-# loop-invariant-gen-experiments
+# Loopy
 
 ## Setup instructions
 
-Easiest way is to use `src/Dockerfile` to build a docker image and run it.
+Easiest way is to use `Dockerfile` in `src` to build a docker image and run it.
 
 To do this, you need to have docker installed on your machine. To install docker, follow the instructions [here](https://docs.docker.com/install/).
 
