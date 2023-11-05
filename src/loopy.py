@@ -2024,7 +2024,10 @@ class LoopyPipeline:
                     ] = "All variant candidates have annotation errors"
                     variant_log["success"] = False
                     invariants_log[variant] = variant_log
+                    Logger.log_error(f"Annotation errors in variant: {variant}")
                     continue
+
+                Logger.log_info(f"Generating invariants for variant: {variant}")
 
                 # Generate invariants for this variant
                 (
@@ -2068,6 +2071,15 @@ class LoopyPipeline:
                     pruned_code
                 )
 
+                if len(inductive_invariants) == 0:
+                    Logger.log_error(
+                        f"No inductive invariants found for variant: {variant}"
+                    )
+                else:
+                    Logger.log_success(
+                        f"Inductive invariants found for variant: {variant}"
+                    )
+
                 variant_log["inductive_invariants"] = inductive_invariants
                 # candidates with variants and invariants
                 checker_full_inputs = self.benchmark.combine_llm_outputs(
@@ -2081,6 +2093,9 @@ class LoopyPipeline:
 
                 variant_candidates = []
                 for checker_inp in checker_full_inputs:
+                    Logger.log_info(
+                        f"Checking variant candidate for variant: {variant}"
+                    )
                     success, checker_message = self.checker.check(
                         checker_inp,
                         check_variant=True,
@@ -2093,6 +2108,14 @@ class LoopyPipeline:
                             "checker_message": checker_message,
                         }
                     )
+                    if success:
+                        Logger.log_success(
+                            f"Variant candidate is correct for variant: {variant}"
+                        )
+                    else:
+                        Logger.log_error(
+                            f"Variant candidate is incorrect for variant: {variant}"
+                        )
 
                 variant_log["final_variant_candidates"] = variant_candidates
                 variant_log["success"] = any(
@@ -2102,7 +2125,13 @@ class LoopyPipeline:
                 invariants_log[str(variant)] = variant_log
                 invariants_log["success"] = variant_log["success"]
 
+                if variant_log["success"]:
+                    Logger.log_success(f"Variant {variant} is correct for benchmark")
+                else:
+                    Logger.log_error(f"Variant {variant} is incorrect for benchmark")
+
             except Exception as e:
+                Logger.log_error(traceback.format_exc())
                 variant_log["error"] = str(e)
                 variant_log["success"] = False
                 invariants_log[str(variant)] = variant_log
