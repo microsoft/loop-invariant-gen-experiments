@@ -2024,7 +2024,7 @@ class LoopyPipeline:
                         "error"
                     ] = "All variant candidates have annotation errors"
                     variant_log["success"] = False
-                    invariants_log[variant] = variant_log
+                    invariants_log[str(variant)] = variant_log
                     Logger.log_error(f"Annotation errors in variant: {variant}")
                     continue
 
