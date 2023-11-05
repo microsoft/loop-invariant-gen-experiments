@@ -2042,6 +2042,9 @@ class LoopyPipeline:
                     extraction_filter=self.checker.has_invariant,
                 )
 
+                variant_log["invariant_code_blocks"] = invariant_code_blocks
+                variant_log["invariant_llm_output"] = invariant_llm_output
+
                 checker_input_with_invariants = self.benchmark.combine_llm_outputs(
                     checker_input,
                     list(
@@ -2051,14 +2054,11 @@ class LoopyPipeline:
                                 and x[0]
                                 == "ERROR: Output does not contain at least 1 complete code block"
                             ),
-                            invariant_llm_output,
+                            invariant_code_blocks,
                         )
                     ),
                     "one_loop_one_method",
                 )
-
-                variant_log["invariant_code_blocks"] = invariant_code_blocks
-                variant_log["invariant_llm_output"] = invariant_llm_output
 
                 # Houdini for the invariant set
                 success, pruned_code, num_frama_c_calls = self.checker.houdini(
