@@ -2123,7 +2123,7 @@ class LoopyPipeline:
                 )
 
                 invariants_log[str(variant)] = variant_log
-                invariants_log["success"] = invariant_log["success"] or variant_log["success"]
+                invariants_log["success"] = invariants_log["success"] or variant_log["success"]
 
                 if variant_log["success"]:
                     Logger.log_success(f"Variant {variant} is correct for benchmark")
