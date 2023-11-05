@@ -1995,7 +1995,7 @@ class LoopyPipeline:
                 checker_inputs_with_variants = self.benchmark.combine_llm_outputs(
                     checker_input,
                     (
-                        [],
+                        "",
                         ["\n".join(["loop variant " + x + ";" for x in variant])],
                     ),
                     "termination_one_loop_one_method",
@@ -2007,7 +2007,7 @@ class LoopyPipeline:
                     success, checker_message = self.checker.check(
                         checker_input_with_variant,
                         check_variant=True,
-                        use_json_output=self.use_json_output,
+                        use_json_dump_for_invariants=self.use_json_output,
                     )
 
                     if "Annotation error on line " in checker_message:
@@ -2061,7 +2061,7 @@ class LoopyPipeline:
                 success, pruned_code, num_frama_c_calls = self.checker.houdini(
                     checker_input_with_invariants,
                     "one_loop_one_method",
-                    use_json_output=self.use_json_output,
+                    use_json_dump_for_invariants=self.use_json_output,
                 )
 
                 inductive_invariants = self.benchmark.extract_loop_invariants(
@@ -2084,7 +2084,7 @@ class LoopyPipeline:
                     success, checker_message = self.checker.check(
                         checker_inp,
                         check_variant=True,
-                        use_json_output=self.use_json_output,
+                        use_json_dump_for_invariants=self.use_json_output,
                     )
                     variant_candidates.append(
                         {
@@ -2099,14 +2099,14 @@ class LoopyPipeline:
                     [x["checker_output"] for x in variant_candidates]
                 )
 
-                invariant_log[variant] = variant_log
-                invariant_log[success] = variant_log["success"]
+                invariants_log[str(variant)] = variant_log
+                invariants_log[success] = variant_log["success"]
 
             except Exception as e:
                 variant_log["error"] = str(e)
                 variant_log["success"] = False
-                invariant_log[variant] = variant_log
-                invariant_log[success] = False
+                invariants_log[str(variant)] = variant_log
+                invariants_log[success] = False
 
         return invariants_log
 
