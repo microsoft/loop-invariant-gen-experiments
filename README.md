@@ -4,7 +4,7 @@
 
 Easiest way is to pull the docker image from dockerhub and run it.
 
-To do this, you need to have docker installed on your machine. To install docker, follow the instructions [here](https://docs.docker.com/install/).
+To do this, you need to have docker installed on your machine. To install docker, follow the instructions at - [https://docs.docker.com/install/](https://docs.docker.com/install/).
 
 ```bash
 docker pull adkamath/loopy:latest

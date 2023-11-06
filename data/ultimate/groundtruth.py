@@ -116,7 +116,7 @@ def main(file_name):
         print(
             f"{ACTION}{BOLD}[>]{END} {INFO}{BOLD}Processing benchmark {i+1}/{len(input_files)} | {benchmark} |{END}"
         )
-        new_input_file = "../" + benchmark # We are one folder deeper in src/
+        new_input_file = benchmark
         if not os.path.isfile(new_input_file):
             print(f"{FAIL}{BOLD}File {new_input_file} does not exist{END}")
             continue
