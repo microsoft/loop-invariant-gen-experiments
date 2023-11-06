@@ -5,7 +5,7 @@ import sys
 import yaml
 
 from frama_c import FramaCBenchmark, FramaCChecker
-from loopy import Benchmark, Checker, LoopyPipeline
+from loopy import Benchmark, Checker, Loopy
 
 
 def parse_args(args):
@@ -59,20 +59,12 @@ def parse_args(args):
     )
 
     parser.add_argument(
-        "--repair-1",
+        "--repair-input",
         help="Repair invariants input 1",
         type=str,
         default="",
     )
 
-    parser.add_argument(
-        "--repair-2",
-        help="Repair invariants input 2",
-        type=str,
-        default="",
-    )
-
-    # Checker to use
     parser.add_argument(
         "--checker",
         help="Checker to use [Required]",
@@ -81,25 +73,12 @@ def parse_args(args):
         type=str,
     )
 
-    # LLM to use
     parser.add_argument(
         "--model",
         help="Model to use",
         choices=["gpt-4", "gpt-3.5-turbo", "gpt-4-32k", "codellama-34b-instruct"],
         default="gpt-4",
         type=str,
-    )
-    parser.add_argument(
-        "--temperature",
-        help="Temperature for sampling",
-        type=float,
-        default=0.7,
-    )
-    parser.add_argument(
-        "--num_completions",
-        help="Number of completions to generate",
-        type=int,
-        default=1,
     )
 
     # Input can be specified as a directory or a file
@@ -187,7 +166,6 @@ def parse_args(args):
             "one_loop_one_method",
             "multiple_loops_one_method",
             "termination_one_loop_one_method",
-            "all",
         ],
         default="one_loop_one_method",
         type=str,
@@ -213,24 +191,6 @@ def parse_args(args):
         default="",
     )
 
-    parser.add_argument(
-        "--classify",
-        help="Use the LLM as a classifier",
-        action="store_true",
-    )
-    parser.add_argument(
-        "--ground-truth-file",
-        help="File containing ground truth labels for the benchmarks",
-        type=str,
-        default="",
-    )
-
-    parser.add_argument(
-        "--loopy-sequence",
-        help="Run the loopy sequence algorithm",
-        action="store_true",
-    )
-
     return parser.parse_args(args)
 
 
@@ -240,7 +200,7 @@ def main(args):
     if args.provider not in ["azure-open-ai", "local"]:
         raise Exception("Only models on Azure Open AI are supported for now")
 
-    p = LoopyPipeline(
+    p = Loopy(
         arg_params=vars(args),
         model=args.model,
         debug=args.debug,

@@ -75,7 +75,7 @@ def combine_and_prune_with_k(
     return pass_k_prune, checker_inputs
 
 
-class LoopyPipeline:
+class Loopy:
     def __init__(
         self,
         benchmark: Benchmark,
