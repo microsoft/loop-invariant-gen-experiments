@@ -11,7 +11,6 @@ from loopy import Benchmark, Checker, LoopyPipeline
 def parse_args(args):
     parser = argparse.ArgumentParser()
 
-    # Config file to use. Either provide this, or everything as command line arguments
     parser.add_argument(
         "--config-file",
         help="Config file to use. Specify all params in this file (or as command line args).",
@@ -238,7 +237,6 @@ def parse_args(args):
 def main(args):
     args = parse_args(args[1:])
 
-    # TODO: Add support for other models/hosts when available
     if args.provider not in ["azure-open-ai", "local"]:
         raise Exception("Only models on Azure Open AI are supported for now")
 
@@ -249,7 +247,7 @@ def main(args):
         use_json_output=args.json_output,
     )
 
-    p = p.load_config(args.config_file)
+    p = p.set_config(args.config_file)
 
     if args.local_loopy:
         p.local_loopy(
@@ -278,7 +276,7 @@ def main(args):
         return
 
     if args.loop_invariants:
-        p.loop_invariant_analysis(
+        p.find_loop_invariants(
             max_benchmarks=args.max_benchmarks,
             start_index=args.start_index,
             prompt=args.loopy_prompt,
@@ -286,7 +284,7 @@ def main(args):
         return
 
     if args.repair_invariants:
-        p.repair_invariants(
+        p.repair_loop_invariants(
             max_benchmarks=args.max_benchmarks,
             start_index=args.start_index,
             input_log_1=args.repair_1,

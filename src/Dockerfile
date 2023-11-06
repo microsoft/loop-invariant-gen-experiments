@@ -26,7 +26,7 @@ ENV CONDA_DIR=/home/user/miniconda3
 RUN mkdir -p $CONDA_DIR
 RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O $CONDA_DIR/miniconda.sh
 RUN bash $CONDA_DIR/miniconda.sh -b -u -p $CONDA_DIR
-RUN rm -rf $CONDA_DIR/miniconda.sh
+RUN rm -f $CONDA_DIR/miniconda.sh
 ENV PATH=$CONDA_DIR/bin:$PATH
 
 # Install Conda packages

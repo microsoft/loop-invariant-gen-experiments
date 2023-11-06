@@ -1,5 +1,5 @@
-# Copyright (c) Meta Platforms, Inc. and affiliates.
-# This software may be used and distributed according to the terms of the Llama 2 Community License Agreement.
+# Llama 2 is licensed under the LLAMA 2 Community License, 
+# Copyright (c) Meta Platforms, Inc. All Rights Reserved.
 
 import argparse
 import json
