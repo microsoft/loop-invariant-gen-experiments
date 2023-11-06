@@ -1,0 +1,161 @@
+{
+    "log": {
+        "file": "../data/benchmarks/tpdb/C/Ultimate/Cairo_true-termination.c",
+        "benchmark_code": "#define assume(e) if(!(e)) return 0;\nextern int unknown_int(void);\n\nint main()\n{\n\tint x = unknown_int();\n\tif (x <= 0) {\n\t\treturn 0;\n\t}\n\twhile (x != 0) {\n\t\tx = x - 1;\n\t}\n\treturn 0;\n}",
+        "success": true,
+        "simple_variants": [
+            [
+                "x"
+            ]
+        ],
+        "simple_variant_llm_output": [
+            {
+                "role": "system",
+                "content": "A ranking function (also called variant) is an expression over program variables that are live as the loop head. The value of the expression must decrease with every successive iteration of the loop. And the value must be positive for the loop to continue executing. Finding a ranking function that helps prove that the loop must terminate.\nFind the ranking function for the loop in the following program and explain why it is a valid ranking function.\n\nInstructions:\n- Make note of the starting values or constraints for the variables that are live at the loop head.\n- Analyze the loop body and find a ranking function involving the variables in the loop body\n- Output the ranking function in one code block, in ACSL syntax. For example,\n```\n/*@\n    loop variant v;\n*/\n```\n\nRules:\n- **Do not use constants or functions not defined in the program. Use the ternary operator to describe the absolute value of an expression.**"
+            },
+            {
+                "role": "user",
+                "content": "Consider the following C program:  \n```\n#define assume(e) if(!(e)) return 0;\nextern int unknown_int(void);\n\nint main()\n{\n\tint x = unknown_int();\n\tif (x <= 0) {\n\t\treturn 0;\n\t}\n\twhile (x != 0) {\n\t\tx = x - 1;\n\t}\n\treturn 0;\n}\n```\nFind the ranking function for the loop in the given program. \n\nEnsure that the ranking function is **decreasing** with every iteration of the loop, and evaluates to a **positive value** while the loop is executing.\n\n**If there is an upper bound to the loop variable, and the loop condition requires the loop variable to not decrease, output an expression involving the upper bound and the old value of the loop variable in every iteration.**\n\nLet's think step by step. "
+            },
+            "At the beginning of the loop, the value of `x` is a positive integer because of the conditional `if (x <= 0) return 0;`. \n\nIn the body of the loop, `x` is decremented by 1 in each iteration. \n\nTherefore, we can take `x` as the ranking function. \n\nIt is a valid ranking function because:\n- It is positive at the beginning of each loop iteration due to the condition `if (x <= 0) return 0;`\n- It strictly decreases with each iteration because of the operation `x = x - 1;`\n- It is guaranteed to eventually reach 0 which is the condition for the loop to terminate.\n\nWe can express it in ACSL syntax as:\n```\n/*@\n    loop variant x;\n*/\n```",
+            "The loop variable is `x`. It is initialized with an unknown positive value. In the loop, `x` is decremented by 1 in every iteration until it reaches 0. \n\nTherefore, the ranking function for this loop is `x`. \n\nThis is a valid ranking function because `x` is always positive during the execution of the loop, and it decreases by 1 in every iteration, which ensures that the loop will eventually terminate.\n\nThe ACSL annotation would be:\n\n```\n/*@\n    loop variant x;\n*/\n```",
+            "The variable live at the loop head is `x`. The value of `x` is decreasing with every iteration of the loop because `x` is decremented by 1 in each iteration. The loop continues to execute as long as `x` is not equal to 0.\n\nTherefore, the ranking function for this loop is `x`. This is a valid ranking function because its value is positive while the loop is executing and it decreases with every iteration of the loop.\n\nIn ACSL syntax, the ranking function can be represented as follows:\n```\n/*@\n    loop variant x;\n*/\n```",
+            "- The loop in the program continues until the variable `x` becomes 0. \n- At the beginning of the loop, `x` is assigned an unknown positive integer value, and the loop decreases the value of `x` by 1 in each iteration.\n- Therefore, a valid ranking function for this loop is simply the value of `x` itself, since it decreases in every loop iteration and is positive for the loop to continue executing.\n\nThe ranking function in ACSL syntax is:\n\n```\n/*@\n    loop variant x;\n*/\n```",
+            "The variables that are live at the loop head are `x`.\n\nThe loop condition is `x != 0`. This means the loop continues to execute as long as `x` is not equal to zero.\n\nIn the loop body, `x` is decremented by 1 in every iteration (`x = x - 1`).\n\nThe value of `x` is positive at the start (`if (x <= 0) return 0;` ensures that `x` is greater than 0 when the loop starts). \n\nThe value of `x` decreases with every iteration of the loop, and is positive as long as the loop continues to execute.\n\nTherefore, the ranking function for this loop is `x`.\n\nIn ACSL syntax, we write this as:\n```\n/*@\n    loop variant x;\n*/\n``` \n\nThis is a valid ranking function because its value is positive at the start of each loop iteration (since `x` is greater than 0 when the loop starts), and decreases with each iteration (since `x` is decremented by 1 in every iteration). This guarantees that the loop will eventually terminate, as `x` will eventually become 0, at which point the loop condition `x != 0` will no longer be satisfied and the loop will exit."
+        ],
+        "simple_variant_log": {
+            "success": true,
+            "['x']": {
+                "variant": [
+                    "x"
+                ],
+                "invariant_code_blocks": [
+                    "/*@ \n    loop invariant x >= 0;\n    loop invariant \\at(x, LoopEntry) - 1 == x;\n*/",
+                    "/*@ \n    loop invariant x >= 0;\n    loop invariant \\at(x, LoopEntry) >= x;\n*/",
+                    "/*@ \n    loop invariant x >= 0;\n    loop invariant x <= \\at(x, LoopEntry);\n*/",
+                    "/*@ \n    loop invariant \\at(x, LoopEntry) >= 0;\n    loop invariant x <= \\at(x, LoopEntry);\n    loop invariant x >= 0;\n*/",
+                    "/*@ \n    loop invariant x >= 0;\n    loop invariant \\at(x, LoopEntry) >= x;\n*/"
+                ],
+                "invariant_llm_output": [
+                    {
+                        "role": "system",
+                        "content": "A ranking function (also called variant) is an expression over program variables that are live at the loop head, whose value is non-negative and decreases with every iteration of the loop.\nA ranking function can be used to prove the termination of a loop. \nA lexicographic ranking function is a sequence of expressions, where the expressions decrease lexicographically in every iteration of the loop. That is, the first expression decreases, or if it remains the same, the second expression decreases, and so on.\nA multi-phase ranking function is a sequence of expressions, where the expressions decrease in phases. That is, the first expression is positive and decreases initially, once it becomes negative, the second expression becomes positive and decreases, and so on.\nGiven a program with a ranking function for the loop in the program, find loop invariants that support the validity of the ranking function and prove the termination of the loop.\n\nInstructions:\n- Make note of the starting values or constraints for the variables that are live at the loop head.\n- Analyze the loop body and make a note of the loop condition and the given ranking function.\n- Output loop invariants that are true \n(i) before the loop execution, \n(ii) in every iteration of the loop and \n(iii) after the loop termination, \nsuch that the loop invariants imply that the ranking function decreases with every iteration.\n- If a loop invariant is a conjunction, split it into its parts.\n- Output all the loop invariants in one code block. For example:\n```\n/*@ \n    loop invariant i1;\n    loop invariant i2;\n*/\n```\nRules:\n- **Do not use variables or functions that are not declared in the program.** \n- **Do not make any assumptions about functions whose definitions are not given.**\n- **Assume all uninitialized variables to contain garbage values.**\n- **Assume non-deterministic functions to return any value permitted by its return type.**\n- **Do not use keywords that are not supported in ACSL annotations for loops.**\n- **Use the expression \"\\at(x, LoopEntry)\" to refer to the value of a variable \"x\" at the beginning of the loop.**"
+                    },
+                    {
+                        "role": "user",
+                        "content": "Consider the following C program:\n```\n#define assume(e) if(!(e)) return 0;\nextern int unknown_int(void);\n\nint main()\n{\n\tint x = unknown_int();\n\tif (x <= 0) {\n\t\treturn 0;\n\t}\n\twhile (x != 0) {\n\t\tx = x - 1;\n\t}\n\treturn 0;\n}\n```\n\nYou are allowed to use implication to take care of the conditional nature of the code. Use implication (==>) instead of using if-then.\n\nFor all variables, add conjunctions that bound the maximum and minimum values that they can take, if such bounds exist.\n\nIf a variable is always equal to or smaller or larger than another variable, add a conjunction for their relation.\n\nOutput the loop invariants to support the loop variant **(x)**, for the loop in the program above. Let's think step by step."
+                    },
+                    "Firstly, let's identify the variables that are live at the loop head. There is only one variable, `x`.\n\nThe loop condition is `x != 0`, and the loop body decreases the value of `x` by 1 in each iteration.\n\nBefore the loop, `x` is a non-negative integer due to the guard condition `if (x <= 0) return 0;`.\n\nIn every iteration of the loop, `x` is decreased by 1. This implies that `x` is always a non-negative integer during the loop execution.\n\nAfter the loop, `x` must be zero, because that is the condition for loop termination.\n\nThe ranking function here is `x`, which is always a non-negative integer and decreases by 1 in each iteration of the loop.\n\nBased on these observations, we can write the following loop invariants:\n\n```\n/*@ \n    loop invariant x >= 0;\n    loop invariant \\at(x, LoopEntry) - 1 == x;\n*/\n```\n\nThe first invariant states that `x` is always a non-negative integer.\n\nThe second invariant states that `x` decreases by 1 in each iteration. This is derived from the fact that the value of `x` at the beginning of the loop minus one equals the current value of `x`. This supports the ranking function and ensures that the loop terminates.",
+                    "The loop variant is **(x)**. The loop condition is **(x != 0)**. The loop variant decreases by 1 in each iteration of the loop.\n\nHere are the loop invariants that support these conditions:\n\n```\n/*@ \n    loop invariant x >= 0;\n    loop invariant \\at(x, LoopEntry) >= x;\n*/\n```\nThe first invariant states that **(x)** is non-negative, which supports the loop variant. The second invariant states that the value of **(x)** at the beginning of the loop is greater than or equal to the current value of **(x)**, which means that the loop variant decreases in every iteration of the loop. These invariants together ensure that the loop will eventually terminate.",
+                    "First, let's make note of the starting values or constraints for the variables that are live at the loop head. Here, the variable `x` is live at the loop head and it is initialized with a value from the function `unknown_int()`. We don't have any information about the value returned by `unknown_int()`, but we have a check `if (x <= 0) return 0;` before the loop starts. This check ensures that `x` is always greater than 0 at the start of the loop.\n\nThe loop condition is `x != 0` and the loop body contains the operation `x = x - 1;`. The ranking function for this loop is `(x)`.\n\nNow let's find the loop invariants. The loop invariant should be true:\n(i) before the loop execution,\n(ii) in every iteration of the loop and\n(iii) after the loop termination,\nsuch that the loop invariants imply that the ranking function decreases with every iteration.\n\nWe can derive the following loop invariants from the program:\n\n1. `x` is always non-negative. This is true because `x` is initialized to a positive value and is only decremented in the loop.\n2. `x` is always less than or equal to its value at the loop entry. This is true because `x` is only decremented in the loop.\n\nHere are the loop invariants in ACSL:\n\n```\n/*@ \n    loop invariant x >= 0;\n    loop invariant x <= \\at(x, LoopEntry);\n*/\n```\n\nThese invariants hold at all times during the loop execution and imply that the ranking function `(x)` decreases with every iteration. Thus, they support the termination of the loop.",
+                    "The loop variant is the variable `x`, which is initialized as a non-negative number and is decremented by 1 in every iteration of the loop. The loop condition is `x != 0`. So, the loop terminates when `x` becomes 0. \n\nLoop invariants that support the validity of the ranking function can be:\n\n- Before the loop execution, `x` is non-negative. This is true because if `x` is less than or equal to 0, the program returns 0 before entering the loop.\n\n- In every iteration of the loop, `x` is non-negative and decreases by 1. This is true because `x` is decremented by 1 in the loop body.\n\n- After the loop termination, `x` is 0. This is true because the loop condition is `x != 0`, so the loop terminates when `x` becomes 0.\n\nSo, the loop invariants can be defined as follows:\n\n```\n/*@ \n    loop invariant \\at(x, LoopEntry) >= 0;\n    loop invariant x <= \\at(x, LoopEntry);\n    loop invariant x >= 0;\n*/\n```",
+                    "- The variable `x` is live at the loop head.\n- The loop condition is `x != 0`.\n- The ranking function is `x`, which is non-negative and strictly decreases in each iteration of the loop.\n\nNow, let's define the loop invariants.\n\n```\n/*@ \n    loop invariant x >= 0;\n    loop invariant \\at(x, LoopEntry) >= x;\n*/\n```\n\n- The first invariant `x >= 0` is true before the loop execution because `x` is initialized with a non-negative value, remains true in every iteration of the loop because `x` is only decremented, and is true after the loop termination because the loop condition is `x != 0`.\n- The second invariant `\\at(x, LoopEntry) >= x` is true before the loop execution, remains true in every iteration of the loop because `x` is only decremented, and is true after the loop termination. \n- Together, these invariants imply that the ranking function `x` decreases in every iteration."
+                ],
+                "inductive_invariants": "loop invariant i1: x >= 0;\nloop invariant i3: \\at(x, LoopEntry) >= x;\nloop invariant i4: x <= \\at(x, LoopEntry);\nloop invariant i5: \\at(x, LoopEntry) >= 0;",
+                "final_variant_candidates": [
+                    {
+                        "candidate_with_combined_invariants_and_variant": "#define assume(e) if(!(e)) return 0;\nextern int unknown_int(void);\n\nint main()\n{\n\tint x = unknown_int();\n\tif (x <= 0) {\n\t\treturn 0;\n\t}\n\t/*@\nloop invariant i1: x >= 0;\nloop invariant i3: \\at(x, LoopEntry) >= x;\nloop invariant i4: x <= \\at(x, LoopEntry);\nloop invariant i5: \\at(x, LoopEntry) >= 0;\nloop variant x;\n*/\nwhile (x != 0) {\n\t\tx = x - 1;\n\t}\n\treturn 0;\n}",
+                        "checker_output": true,
+                        "checker_message": "loop invariant x >= 0 is inductive.\nloop invariant \\at(x, LoopEntry) >= x is inductive.\nloop invariant x <= \\at(x, LoopEntry) is inductive.\nloop invariant \\at(x, LoopEntry) >= 0 is inductive.\n\n\nLoop variant is Valid."
+                    }
+                ],
+                "success": true
+            }
+        },
+        "simple_variant_success": true
+    },
+    "stats": {
+        "success": [
+            "../data/benchmarks/non_termination/loop/Adding_Subtracting_Zero_1_T.c",
+            "../data/benchmarks/non_termination/loop/Incorrect_Bit_Calculation_1_T.c",
+            "../data/benchmarks/non_termination/loop/Incorrect_Initialization_4_T.c",
+            "../data/benchmarks/non_termination/loop/Incorrect_Update_for_Loop_Iterator_1_T.c",
+            "../data/benchmarks/non_termination/loop/Incorrect_Update_for_Loop_Iterator_2_T.c",
+            "../data/benchmarks/non_termination/loop/Missing_Corner-case_Handling_2_T.c",
+            "../data/benchmarks/non_termination/loop/Signed_Overflow_Error_1_T.c",
+            "../data/benchmarks/non_termination/loop/Signed_Overflow_Error_2_T.c",
+            "../data/benchmarks/non_termination/loop/Signed_Overflow_Error_3_T.c",
+            "../data/benchmarks/non_termination/loop/Type_Conversion_in_Comparison_1_T.c",
+            "../data/benchmarks/non_termination/loop/Undefined_Behavior_3_T.c",
+            "../data/benchmarks/non_termination/loop/Unsigned_Wraparound_Error_1_T.c",
+            "../data/benchmarks/non_termination/loop/Unsigned_Wraparound_Error_2_T.c",
+            "../data/benchmarks/non_termination/loop/Unsigned_Wraparound_Error_3_T.c",
+            "../data/benchmarks/non_termination/loop/Unsigned_Wraparound_Error_4_T.c",
+            "../data/benchmarks/non_termination/loop/Using_Erroneous_Condition_2_T.c",
+            "../data/benchmarks/tpdb/C/AProVE_numeric/svcomp_java_Break.c",
+            "../data/benchmarks/tpdb/C/AProVE_numeric/svcomp_java_Continue1.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/AliasDarteFeautrierGonnord-SAS2010-cousot9_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/AliasDarteFeautrierGonnord-SAS2010-ndecr_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/AliasDarteFeautrierGonnord-SAS2010-random1d_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/AliasDarteFeautrierGonnord-SAS2010-speedpldi3_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/AliasDarteFeautrierGonnord-SAS2010-speedpldi4_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/AliasDarteFeautrierGonnord-SAS2010-wise_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/ChawdharyCookGulwaniSagivYang-ESOP2008-aaron1_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/ChawdharyCookGulwaniSagivYang-ESOP2008-aaron6_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/ChawdharyCookGulwaniSagivYang-ESOP2008-random1d_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/ChenFlurMukhopadhyay-SAS2012-Ex1.02_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/ChenFlurMukhopadhyay-SAS2012-Ex1.03_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/ChenFlurMukhopadhyay-SAS2012-Ex1.04_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/ChenFlurMukhopadhyay-SAS2012-Ex1.05_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/ChenFlurMukhopadhyay-SAS2012-Ex2.01_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/ChenFlurMukhopadhyay-SAS2012-Ex2.10_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/ChenFlurMukhopadhyay-SAS2012-Ex2.16_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/ChenFlurMukhopadhyay-SAS2012-Ex2.20_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/ChenFlurMukhopadhyay-SAS2012-Ex3.03_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/ChenFlurMukhopadhyay-SAS2012-Ex3.04_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/GopanReps-CAV2006-Fig1a_true-termination.c.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/HeizmannHoenickeLeikePodelski-ATVA2013-Fig2_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/HeizmannHoenickeLeikePodelski-ATVA2013-Fig5_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/HeizmannHoenickeLeikePodelski-ATVA2013-Fig6_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/HeizmannHoenickeLeikePodelski-ATVA2013-Fig8_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/HeizmannHoenickeLeikePodelski-ATVA2013-Fig9_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/KroeningSharyginaTsitovichWintersteiger-CAV2010-Ex_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/LeikeHeizmann-TACAS2014-Ex9_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/LeikeHeizmann-WST2014-Ex9_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/PodelskiRybalchenko-TACAS2011-Fig4_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/TelAviv-Amir-Minimum_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/Toulouse-BranchesToLoop_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/Toulouse-MultiBranchesToLoop_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/aaron2_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/genady_true-termination.c",
+            "../data/benchmarks/tpdb/C/Ultimate/Bangalore_true-termination.c",
+            "../data/benchmarks/tpdb/C/Ultimate/Cairo_true-termination.c"
+        ],
+        "failure": [
+            "../data/benchmarks/non_termination/loop/Incorrect_Bit_Calculation_2_T.c",
+            "../data/benchmarks/non_termination/loop/Incorrect_Bit_Calculation_3_T.c",
+            "../data/benchmarks/non_termination/loop/Type_Conversion_in_Comparison_2_T.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/AliasDarteFeautrierGonnord-SAS2010-counterex1a_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/AliasDarteFeautrierGonnord-SAS2010-rsd_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/AliasDarteFeautrierGonnord-SAS2010-speedpldi2_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/AliasDarteFeautrierGonnord-SAS2010-terminate_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/BradleyMannaSipma-ICALP2005-Fig1_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/ChawdharyCookGulwaniSagivYang-ESOP2008-aaron12_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/ChawdharyCookGulwaniSagivYang-ESOP2008-aaron4_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/ChenFlurMukhopadhyay-SAS2012-Ex2.07_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/ChenFlurMukhopadhyay-SAS2012-Ex2.08_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/ChenFlurMukhopadhyay-SAS2012-Ex2.13_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/ChenFlurMukhopadhyay-SAS2012-Ex2.22_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/ChenFlurMukhopadhyay-SAS2012-Ex3.01_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/ChenFlurMukhopadhyay-SAS2012-Ex3.05_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/ChenFlurMukhopadhyay-SAS2012-Ex3.08_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/ChenFlurMukhopadhyay-SAS2012-Ex3.09_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/ChenFlurMukhopadhyay-SAS2012-Ex4.01_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/CookSeeZuleger-TACAS2013-Fig1_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/CookSeeZuleger-TACAS2013-Fig7a_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/CookSeeZuleger-TACAS2013-Fig7b_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/GulwaniJainKoskinen-PLDI2009-Fig1_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/KroeningSharyginaTsitovichWintersteiger-CAV2010-Fig1_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/Masse-VMCAI2014-Fig1b_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/PodelskiRybalchenko-LICS2004-Fig2_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/UrbanMine-ESOP2014-Fig3_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/aaron3_true-termination.c",
+            "../data/benchmarks/tpdb/C/SV-COMP_Termination_Category/min_rf_true-termination.c"
+        ],
+        "skipped": [],
+        "total": 29,
+        "success_count": 52,
+        "failure_count": 29,
+        "success_rate": 1.793103448275862
+    }
+}
