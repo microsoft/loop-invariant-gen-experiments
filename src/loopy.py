@@ -44,13 +44,16 @@ class Loopy:
     def set_config(self, config_file):
         config = yaml.load(open(config_file, "r"), Loader=yaml.FullLoader)
 
-        self.arg_params = {"cli": self.arg_params, "config_file": config}
+        self.arg_params = {"cli_args": self.arg_params, "config_file_args": config}
 
         if "analysis" in config:
             self.analysis = config["analysis"]
 
         if "model_host" in config:
             self.model_host = config["model_host"]
+
+        if "model" in config:
+            self.model = config["model"]
 
         if not "benchmarks" in config:
             raise Exception("No benchmarks file found in config file")
