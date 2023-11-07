@@ -857,7 +857,7 @@ class Loopy:
         pre_post_prompt = Prompt(
             system_text_file="templates/svcomp_system_message.txt",
             prompt_text_file="templates/svcomp_prompt.txt",
-            num_completions=5,
+            num_completions=8,
         )
 
         for benchmark_index, benchmark_file in enumerate(sliced_benchmarks):

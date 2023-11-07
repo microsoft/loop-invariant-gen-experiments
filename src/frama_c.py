@@ -829,7 +829,7 @@ class FramaCBenchmark(Benchmark):
                     code_block.find(begin[0]) + len(begin[0]) : code_block.find(end[0])
                 ]
             else:
-                print("Ill-formatted annotation found")
+                Logger.log_warning("Incomplete annotation found")
                 continue
             annotations[label[1]] = annotation
 
