@@ -908,6 +908,7 @@ class Loopy:
                         checker_input_with_annotations,
                         False,
                         use_json_dump_for_invariants=self.use_json_output,
+                        check_contracts=True,
                     )
 
                     completion_json["num_solver_calls"] += 1
@@ -968,6 +969,7 @@ class Loopy:
                     checker_input_with_combined_annotations,
                     False,
                     use_json_dump_for_invariants=self.use_json_output,
+                    check_contracts=True,
                 )
 
                 if __success:
@@ -998,6 +1000,7 @@ class Loopy:
                         checker_input_with_combined_annotations,
                         "multiple_loops_multiple_methods",
                         use_json_dump_for_invariants=self.use_json_output,
+                        check_contracts=True,
                     )
 
                     if __success:

@@ -280,7 +280,7 @@ class FramaCChecker(Checker):
 
         return success, checker_output
 
-    def houdini(self, input_code, features, use_json_dump_for_invariants=False):
+    def houdini(self, input_code, features, use_json_dump_for_invariants=False, check_contracts=False):
         Logger.log_info("Houdini procedure initiated")
 
         if not self.has_annotations(input_code):
@@ -289,7 +289,7 @@ class FramaCChecker(Checker):
         code_queue = [input_code]
         num_frama_c_calls = 0
 
-        while len(code_queue) > 0 and num_frama_c_calls < 100:
+        while len(code_queue) > 0 and num_frama_c_calls < 200:
             input_code = code_queue.pop(0)
             code_lines = input_code.splitlines()
             if not self.has_annotations(input_code):
@@ -299,6 +299,7 @@ class FramaCChecker(Checker):
                 input_code,
                 ("termination" in features),
                 use_json_dump_for_invariants=use_json_dump_for_invariants,
+                check_contracts=check_contracts,
             )
 
             if success:
@@ -371,7 +372,7 @@ class FramaCChecker(Checker):
 
             num_frama_c_calls += 1
 
-        if num_frama_c_calls == 100:
+        if num_frama_c_calls == 200:
             Logger.log_error("Crossed 100 iterations. Stopping pruning...")
 
         if not success:
