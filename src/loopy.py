@@ -20,8 +20,8 @@ from process_results import prune_wrapper, run_parallel, shuffle
 class Loopy:
     def __init__(
         self,
-        benchmark: Benchmark,
-        checker: Checker,
+        benchmark: Benchmark = None,
+        checker: Checker = None,
         model: str = "gpt-4",
         debug: bool = False,
         log_path: str = None,
@@ -43,6 +43,11 @@ class Loopy:
 
     def set_config(self, config_file):
         config = yaml.load(open(config_file, "r"), Loader=yaml.FullLoader)
+
+        self.arg_params = {
+            "cli" : self.arg_params,
+            "config_file" : config
+        }
 
         if "analysis" in config:
             self.analysis = config["analysis"]
