@@ -44,10 +44,7 @@ class Loopy:
     def set_config(self, config_file):
         config = yaml.load(open(config_file, "r"), Loader=yaml.FullLoader)
 
-        self.arg_params = {
-            "cli" : self.arg_params,
-            "config_file" : config
-        }
+        self.arg_params = {"cli": self.arg_params, "config_file": config}
 
         if "analysis" in config:
             self.analysis = config["analysis"]
@@ -841,11 +838,6 @@ class Loopy:
         if self.llm is None or self.benchmark is None or self.checker is None:
             raise Exception("Pipeline not initialized. Call load_config first.")
 
-        if not all(
-            [x in ["loop_invariants", "pre_post_conditions"] for x in self.analysis]
-        ):
-            raise Exception("Unsupported analysis for sequence pipeline")
-
         log_json = []
         stats = {"success": [], "failure": [], "skipped": [], "total": 0}
 
@@ -1360,13 +1352,13 @@ class Loopy:
         self,
         max_benchmarks=1,
         start_index=0,
-        input_log_1="",
+        input_log="",
         k=8,
         num_repairs=7,
     ):
-        generation_log_1 = json.load(open(input_log_1, "r", encoding="utf-8"))
+        generation_log = json.load(open(input_log, "r", encoding="utf-8"))
 
-        generation_log_1 = generation_log_1["logs"][
+        generation_log = generation_log["logs"][
             start_index : start_index + max_benchmarks
         ]
 
@@ -1405,9 +1397,9 @@ class Loopy:
                 num_completions=1,
             )
 
-        for benchmark_index, gen_benchmark_log in enumerate(generation_log_1):
+        for benchmark_index, gen_benchmark_log in enumerate(generation_log):
             Logger.log_info(
-                f"Running benchmark: {start_index + benchmark_index + 1}/{len(generation_log_1)}"
+                f"Running benchmark: {start_index + benchmark_index + 1}/{len(generation_log)}"
             )
 
             benchmark_code = gen_benchmark_log["benchmark_code"]
@@ -1421,7 +1413,7 @@ class Loopy:
 
             if "completions" not in gen_benchmark_log:
                 Logger.log_info(
-                    f"Skipping benchmark without completions: {start_index + benchmark_index + 1}/{len(generation_log_1)}"
+                    f"Skipping benchmark without completions: {start_index + benchmark_index + 1}/{len(generation_log)}"
                 )
                 instance_log_json["success"] = False
                 stats["gen_skipped"].append(gen_benchmark_log["file"])
@@ -1441,7 +1433,7 @@ class Loopy:
                 )
                 if pass_8_success:
                     Logger.log_success(
-                        f"Skipping successful benchmark: {start_index + benchmark_index + 1}/{len(generation_log_1)}"
+                        f"Skipping successful benchmark: {start_index + benchmark_index + 1}/{len(generation_log)}"
                     )
                     instance_log_json["success"] = True
                     instance_log_json["candidates"] = candidates
@@ -1457,7 +1449,7 @@ class Loopy:
                 failing_candidate = random.choice(candidates)
 
                 Logger.log_info(
-                    f"Starting repair for benchmark: {start_index + benchmark_index + 1}/{len(generation_log_1)}"
+                    f"Starting repair for benchmark: {start_index + benchmark_index + 1}/{len(generation_log)}"
                 )
 
                 num_repair_calls = 0
@@ -1473,7 +1465,7 @@ class Loopy:
 
                     if success:
                         Logger.log_success(
-                            f"Repair successful for benchmark: {start_index + benchmark_index + 1}/{len(generation_log_1)} with {num_repair_calls} repair calls"
+                            f"Repair successful for benchmark: {start_index + benchmark_index + 1}/{len(generation_log)} with {num_repair_calls} repair calls"
                         )
                         instance_log_json["success"] = True
                         repair_tries.append(
@@ -1519,7 +1511,7 @@ class Loopy:
                         "ERROR: Output does not contain at least 1 complete code block"
                     ):
                         Logger.log_error(
-                            f"LLM query failed for benchmark: {start_index + benchmark_index + 1}/{len(generation_log_1)}"
+                            f"LLM query failed for benchmark: {start_index + benchmark_index + 1}/{len(generation_log)}"
                         )
                         continue
 
@@ -1549,7 +1541,7 @@ class Loopy:
 
                     if success or houdini_success:
                         Logger.log_success(
-                            f"Repair successful for benchmark: {start_index + benchmark_index + 1}/{len(generation_log_1)} with {num_repair_calls} repair calls"
+                            f"Repair successful for benchmark: {start_index + benchmark_index + 1}/{len(generation_log)} with {num_repair_calls} repair calls"
                         )
                         repair_try_json["success"] = True
                         repair_try_json["checker_message"] = checker_message
@@ -1562,7 +1554,7 @@ class Loopy:
 
                     else:
                         Logger.log_error(
-                            f"Repair unsuccessful for benchmark: {start_index + benchmark_index + 1}/{len(generation_log_1)} with {num_repair_calls} repair calls"
+                            f"Repair unsuccessful for benchmark: {start_index + benchmark_index + 1}/{len(generation_log)} with {num_repair_calls} repair calls"
                         )
                         failing_candidate = new_checker_input
                         repair_try_json["success"] = False
@@ -1577,12 +1569,12 @@ class Loopy:
 
                 if instance_log_json["success"]:
                     Logger.log_success(
-                        f"Benchmark {start_index + benchmark_index + 1}/{len(generation_log_1)} succeeded"
+                        f"Benchmark {start_index + benchmark_index + 1}/{len(generation_log)} succeeded"
                     )
                     stats["repair_success"].append(gen_benchmark_log["file"])
                 else:
                     Logger.log_error(
-                        f"Benchmark {start_index + benchmark_index + 1}/{len(generation_log_1)} failed"
+                        f"Benchmark {start_index + benchmark_index + 1}/{len(generation_log)} failed"
                     )
                     stats["repair_failure"].append(gen_benchmark_log["file"])
 

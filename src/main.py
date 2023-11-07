@@ -52,17 +52,31 @@ def parse_args(args):
         ],
     )
 
+    # Repair invariants
     parser.add_argument(
         "--repair-invariants",
         help="Repair invariants",
         action="store_true",
     )
-
     parser.add_argument(
         "--repair-input",
         help="Repair invariants input",
         type=str,
         default="",
+    )
+    parser.add_argument(
+        "--repair-retries",
+        help="Number of retries for each repair run",
+        type=int,
+        default=5,
+        required=False,
+    )
+    parser.add_argument(
+        "--repair-from-k",
+        help="Start repairing from kth completion",
+        type=int,
+        default=0,
+        required=False,
     )
 
     parser.add_argument(
@@ -97,21 +111,6 @@ def parse_args(args):
     )
 
     parser.add_argument(
-        "--repair-retries",
-        help="Number of retries for each repair run",
-        type=int,
-        default=5,
-        required=False,
-    )
-    parser.add_argument(
-        "--repair-from-k",
-        help="Start repairing from kth completion",
-        type=int,
-        default=0,
-        required=False,
-    )
-
-    parser.add_argument(
         "--max-benchmarks",
         help="Maximum number of benchmarks to run",
         type=int,
@@ -126,8 +125,8 @@ def parse_args(args):
     )
 
     parser.add_argument(
-        "--provider",
-        help="Provider to fetch the model from",
+        "--model-host",
+        help="Host identifier for the model",
         choices=["azure-open-ai", "local"],
         default="azure-open-ai",
         type=str,
@@ -191,10 +190,6 @@ def main(args):
         )
         return
 
-    if args.loopy_sequence:
-        p.run_sequence(max_benchmarks=args.max_benchmarks, start_index=args.start_index)
-        return
-
     if args.termination_analysis:
         p.termination_analysis(
             max_benchmarks=args.max_benchmarks,
@@ -221,36 +216,12 @@ def main(args):
         p.repair_loop_invariants(
             max_benchmarks=args.max_benchmarks,
             start_index=args.start_index,
-            input_log_1=args.repair_1,
-            # input_log_2=args.repair_2,
+            input_log=args.repair_1,
+            k=args.repair_from_k,
+            num_repairs=args.repair_retries,
         )
         return
 
-    if args.provider == "local":
-        p.run_local(
-            max_benchmarks=args.max_benchmarks,
-            start_index=args.start_index,
-            local_llm_output=args.local_llm_output,
-        )
-        return
-
-    if args.classify:
-        p.run_classification(
-            max_benchmarks=args.max_benchmarks,
-            start_index=args.start_index,
-            ground_truth_file=args.ground_truth_file,
-        )
-        return
-
-    if args.problem_ids:
-        for problem_id in args.problem_ids:
-            p.log_path = datetime.datetime.now().strftime(
-                f"../logs/loopy_{problem_id}_%Y_%m_%d_%H_%M_%S/"
-            )
-            p.run(
-                max_benchmarks=1,
-                start_index=int(problem_id),
-            )
     elif args.recheck_input != "":
         p.recheck_logs(
             max_benchmarks=args.max_benchmarks,
@@ -260,16 +231,7 @@ def main(args):
         )
 
     else:
-        if args.repair_input:
-            p.log_path = datetime.datetime.now().strftime(
-                f"../logs/repair_loopy_%Y_%m_%d_%H_%M_%S/"
-            )
-            p.heal(max_benchmarks=args.max_benchmarks, start_index=args.start_index)
-        else:
-            p.run(
-                max_benchmarks=args.max_benchmarks,
-                start_index=args.start_index,
-            )
+        raise Exception("No task specified")
 
 
 if __name__ == "__main__":
