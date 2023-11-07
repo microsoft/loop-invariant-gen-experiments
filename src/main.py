@@ -170,7 +170,7 @@ def parse_args(args):
 def main(args):
     args = parse_args(args[1:])
 
-    if args.provider not in ["azure-open-ai", "local"]:
+    if args.model_host not in ["azure-open-ai", "local"]:
         raise Exception("Only models on Azure Open AI are supported for now")
 
     p = Loopy(
