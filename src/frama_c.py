@@ -333,7 +333,7 @@ class FramaCChecker(Checker):
                     checker_message
                 )[0]
 
-                if ": Warning: unexpected token ''" in checker_message:
+                if ": unexpected token ''" in checker_message:
                     # Some annotation has been emptied out
                     # Remove the annotation
                     new_input_code = self.remove_empty_annotations(deepcopy(input_code))
