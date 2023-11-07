@@ -60,7 +60,7 @@ def parse_args(args):
 
     parser.add_argument(
         "--repair-input",
-        help="Repair invariants input 1",
+        help="Repair invariants input",
         type=str,
         default="",
     )
@@ -81,22 +81,7 @@ def parse_args(args):
         type=str,
     )
 
-    # Input can be specified as a directory or a file
-    input_group = parser.add_mutually_exclusive_group(required=False)
-    input_group.add_argument(
-        "--benchmark-file",
-        help="Input file containing benchmark file paths (relative to main.py)",
-        default="benchmarks.txt",
-        type=str,
-    )
-    input_group.add_argument(
-        "--repair-input",
-        help="Input file to repair invariants for",
-        default="",
-        required=False,  # cannot set retries without setting input
-        type=str,
-    )
-    input_group.add_argument(
+    parser.add_argument(
         "--recheck-input",
         help="Recheck JSON logs from a previous run",
         type=str,
