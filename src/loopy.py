@@ -17,64 +17,6 @@ from frama_c import FramaCBenchmark, FramaCChecker
 from process_results import prune_wrapper, run_parallel, shuffle
 
 
-def combine_and_prune_with_k(
-    benchmark,
-    # benchmark2,
-    n,
-    k,
-    shuffle_times=10,
-    max_cores=4,
-    combine_llm_output_lambda=None,
-    features="one_loop_one_method",
-):
-    invariants_1 = [b["annotations"] for b in benchmark["completions"]]
-    # invariants_2 = [b["invariants"] for b in benchmark2["completions"]]
-    invariants_from_completions = invariants_1  # + invariants_2
-
-    if len(invariants_from_completions) < n:
-        invariants_from_completions = invariants_from_completions + [
-            "\nloop invariant \\false;\n"
-            for _ in range(n - len(invariants_from_completions))
-        ]
-
-    random_permutations = [
-        shuffle(invariants_from_completions) for _ in range(shuffle_times)
-    ]
-    candidates = [rp[:k] for rp in random_permutations]
-    candidate_inputs = [
-        combine_llm_output_lambda(benchmark["benchmark_code"], candidate, features)
-        for candidate in candidates
-    ]
-
-    max_m = (len(candidates) // max_cores) + 1
-    pass_k_prune = 0.0
-    for m in range(0, max_m):
-        checker_inputs = candidate_inputs[m * max_cores : (m + 1) * max_cores]
-        Logger.log_action(
-            "Combine and Pruning",
-            f"[Batch {m+1}/{max_m}]: {len(checker_inputs)} candidates in parallel, k={k}, File: {benchmark['file']}",
-        )
-        try:
-            results = run_parallel(checker_inputs, prune_wrapper)
-            pass_k_prune += sum(results)
-            Logger.log_info(
-                f"[Batch {m+1}/{max_m}]: Combine and Prune with k = {pass_k_prune / len(results)} for k={k}, {len(checker_inputs)} parallel benchmarks, File: {benchmark['file']}"
-            )
-        except Exception as e:
-            Logger.log_error(str(e))
-
-    pass_k_prune = pass_k_prune / len(candidates)
-    if pass_k_prune > 0.0:
-        Logger.log_success(
-            f"Combine and Prune with k = {pass_k_prune} for k={k}, {len(candidates)} benchmarks, File: {benchmark['file']}"
-        )
-    else:
-        Logger.log_error(
-            f"Combine and Prune with k = {pass_k_prune} for k={k}, {len(candidates)} benchmarks, File: {benchmark['file']}"
-        )
-    return pass_k_prune, checker_inputs
-
-
 class Loopy:
     def __init__(
         self,
@@ -155,6 +97,63 @@ class Loopy:
             encoding="utf-8",
         ) as f:
             f.write(json.dumps(json_log, indent=4, ensure_ascii=False))
+
+    def combine_and_prune_with_k(
+        self,
+        benchmark,
+        n,
+        k,
+        shuffle_times=10,
+        max_cores=16,
+        combine_llm_output_lambda=None,
+        features="one_loop_one_method",
+    ):
+        invariants_from_completions = [
+            b["annotations"] for b in benchmark["completions"]
+        ]
+
+        if len(invariants_from_completions) < n:
+            invariants_from_completions = invariants_from_completions + [
+                "\nloop invariant \\false;\n"
+                for _ in range(n - len(invariants_from_completions))
+            ]
+
+        random_permutations = [
+            shuffle(invariants_from_completions) for _ in range(shuffle_times)
+        ]
+        candidates = [rp[:k] for rp in random_permutations]
+        candidate_inputs = [
+            combine_llm_output_lambda(benchmark["benchmark_code"], candidate, features)
+            for candidate in candidates
+        ]
+
+        max_m = (len(candidates) // max_cores) + 1
+        pass_k_prune = 0.0
+        for m in range(0, max_m):
+            checker_inputs = candidate_inputs[m * max_cores : (m + 1) * max_cores]
+            Logger.log_action(
+                "Combine and Pruning",
+                f"[Batch {m+1}/{max_m}]: {len(checker_inputs)} candidates in parallel, k={k}, File: {benchmark['file']}",
+            )
+            try:
+                results = run_parallel(checker_inputs, prune_wrapper)
+                pass_k_prune += sum(results)
+                Logger.log_info(
+                    f"[Batch {m+1}/{max_m}]: Combine and Prune with k = {pass_k_prune / len(results)} for k={k}, {len(checker_inputs)} parallel benchmarks, File: {benchmark['file']}"
+                )
+            except Exception as e:
+                Logger.log_error(str(e))
+
+        pass_k_prune = pass_k_prune / len(candidates)
+        if pass_k_prune > 0.0:
+            Logger.log_success(
+                f"Combine and Prune with k = {pass_k_prune} for k={k}, {len(candidates)} benchmarks, File: {benchmark['file']}"
+            )
+        else:
+            Logger.log_error(
+                f"Combine and Prune with k = {pass_k_prune} for k={k}, {len(candidates)} benchmarks, File: {benchmark['file']}"
+            )
+        return pass_k_prune, checker_inputs
 
     def recheck_logs(
         self, max_benchmarks=1, start_index=0, input_log_path="", output_log_path=""
@@ -400,153 +399,6 @@ class Loopy:
             )
         )
         log_file.close()
-
-    def run_classification(self, max_benchmarks=1, start_index=0, ground_truth_file=""):
-        if self.llm is None:
-            raise Exception(
-                "LLM not initialized. Call load_config first, to load input and prompt files."
-            )
-
-        log_json = []
-        stats = {"success": [], "failure": [], "partial": [], "skipped": [], "total": 0}
-
-        # create logs dir
-        if not os.path.exists(os.path.dirname(self.log_path)):
-            os.makedirs(os.path.dirname(self.log_path))
-        log_file = open(self.log_path + "final.json", "w", encoding="utf-8")
-
-        sliced_benchmarks = self.benchmark.input_file_paths[
-            start_index : start_index + max_benchmarks
-        ]
-
-        sliced_benchmarks = [
-            (instance, {"code": self.benchmark.get_code(instance)})
-            for instance in sliced_benchmarks
-        ]
-
-        if ground_truth_file == "":
-            raise Exception("Ground truth file not provided")
-
-        ground_truth = None
-        with open(ground_truth_file, "r", encoding="utf-8") as f:
-            ground_truth = json.load(f)
-            ground_truth = ground_truth[start_index : start_index + max_benchmarks]
-
-        for i, instance in enumerate(sliced_benchmarks):
-            assert instance[0] == ground_truth[i]["file"]
-            print(
-                f"Classifying benchmark: {start_index + i + 1}/{len(sliced_benchmarks)}"
-            )
-
-            instance_log_json = {
-                "file": instance[0],
-                "benchmark_code": self.benchmark.get_code(instance[0]),
-                "ground_truth": ground_truth[i]["label"],
-            }
-
-            completions = []
-            try:
-                llm_outputs, llm_conversation = self.llm.generate_annotation(
-                    instance[1],
-                    output_full_tree=False,
-                    label_only=True,
-                )
-
-                completions = []
-                for j, llm_output in enumerate(llm_outputs):
-                    completion = {}
-                    if llm_output is None:
-                        completion["success"] = False
-                        completion["llm_output"] = "None"
-                        completion["error"] = "Output does not contain a label"
-                        Logger.log_error(f"Completion {j + 1} does not have a label")
-                        completions.append(completion)
-
-                        continue
-
-                    completion["label"] = llm_output
-                    completion["success"] = (
-                        llm_output == str(instance_log_json["ground_truth"]).lower()
-                    )
-                    if completion["success"]:
-                        Logger.log_success(f"Completion {j + 1} is correct")
-                    else:
-                        Logger.log_error(f"Completion {j + 1} is incorrect")
-
-                    completions.append(completion)
-
-                instance_log_json["completions"] = completions
-                instance_log_json["success"] = sum(
-                    [x["success"] for x in completions]
-                ) / len(completions)
-                instance_log_json["label"] = instance_log_json["success"]
-
-                if instance_log_json["ground_truth"] == False:
-                    instance_log_json["label"] = 1 - instance_log_json["label"]
-
-                instance_log_json["llm_conversation"] = llm_conversation
-
-                Logger.log_info(
-                    f"Ground truth label: {1 if instance_log_json['ground_truth'] else 0}, Predicted label: {instance_log_json['label']}"
-                )
-
-                if instance_log_json["success"] == 1.0:
-                    stats["success"].append(i)
-                elif instance_log_json["success"] == 0.0:
-                    stats["failure"].append(i)
-                else:
-                    stats["partial"].append(i)
-
-                stats["total"] += 1
-                stats["success_rate"] = (
-                    len(stats["success"]) / stats["total"] if stats["total"] != 0 else 0
-                )
-
-                self.write_to_benchmark_file(
-                    instance[0],
-                    {
-                        "logs": instance_log_json,
-                        "stats": stats,
-                    },
-                )
-                log_json.append(instance_log_json)
-
-            except (Exception, KeyboardInterrupt) as e:
-                print(traceback.format_exc())
-                instance_log_json["error"] = str(e)
-                stats["skipped"].append(i)
-                self.write_to_benchmark_file(
-                    instance[0],
-                    {
-                        "logs": instance_log_json,
-                        "stats": stats,
-                    },
-                )
-
-                log_json.append(instance_log_json)
-                if isinstance(e, KeyboardInterrupt):
-                    break
-                else:
-                    continue
-
-        stats["success_rate"] = (
-            len(stats["success"]) / stats["total"] if stats["total"] != 0 else 0
-        )
-        stats["success_count"] = len(stats["success"])
-        stats["failure_count"] = len(stats["failure"])
-        stats["partial_count"] = len(stats["partial"])
-        stats["skipped_count"] = len(stats["skipped"])
-
-        log_file.write(
-            json.dumps(
-                {"params": self.arg_params, "logs": log_json, "stats": stats},
-                indent=4,
-                ensure_ascii=False,
-            )
-        )
-        log_file.close()
-
-        return
 
     def generate_invariants_for_variant(self, prompt, variants, checker_input):
         # one set of variants
@@ -1566,7 +1418,7 @@ class Loopy:
                 continue
 
             try:
-                pass_8_success, candidates = combine_and_prune_with_k(
+                pass_8_success, candidates = self.combine_and_prune_with_k(
                     gen_benchmark_log,
                     15,
                     k,
