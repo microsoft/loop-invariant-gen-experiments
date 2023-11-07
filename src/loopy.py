@@ -857,7 +857,7 @@ class Loopy:
         pre_post_prompt = Prompt(
             system_text_file="templates/svcomp_system_message.txt",
             prompt_text_file="templates/svcomp_prompt.txt",
-            num_completions=8,
+            num_completions=10,
         )
 
         for benchmark_index, benchmark_file in enumerate(sliced_benchmarks):
@@ -928,6 +928,7 @@ class Loopy:
                             checker_input_with_annotations,
                             "multiple_loops_multiple_methods",
                             use_json_dump_for_invariants=self.use_json_output,
+                            check_contracts=True,
                         )
 
                         completion_json["num_solver_calls"] += num_frama_c_calls
