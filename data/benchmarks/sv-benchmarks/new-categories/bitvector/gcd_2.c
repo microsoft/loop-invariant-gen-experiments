@@ -17,14 +17,6 @@ void __VERIFIER_assert(int cond) {
   }
   return;
 }
-
-/*@
-requires \true;  
-        ensures \result >= 0 && (\result == 0 || (a % \result == 0 && b % \result == 0));
-
-        requires a >= -128 && a <= 127; b >= -128 && b <= 127;  
-        ensures \result >= 0 && \result <= \max(\at(a, Pre), \at(b, Pre)); 
-*/
 signed char gcd_test(signed char a, signed char b)
 {
     signed char t;
@@ -32,11 +24,6 @@ signed char gcd_test(signed char a, signed char b)
     if (a < (signed char)0) a = -a;
     if (b < (signed char)0) b = -b;
 
-/*@
-        loop invariant a >= 0;  
-        loop invariant b >= 0;  
-        loop invariant a <= \at(a, LoopEntry) && b <= \at(b, LoopEntry);  
-*/
     while (b != (signed char)0) {
         t = b;
         b = a % b;
@@ -55,7 +42,7 @@ int main()
     g = gcd_test(x, y);
 
     if (y > (signed char)0) {
-        //@ assert (y >= g);
+        __VERIFIER_assert(y >= g);
     }
 
     return 0;
