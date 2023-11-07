@@ -112,13 +112,6 @@ def parse_args(args):
     )
 
     parser.add_argument(
-        "--repair-input-2",
-        help="Second input file to repair invariants for",
-        default="",
-        required=False,  # cannot set retries without setting input
-        type=str,
-    )
-    parser.add_argument(
         "--repair-retries",
         help="Number of retries for each repair run",
         type=int,
@@ -140,15 +133,11 @@ def parse_args(args):
         default=-1,
     )
 
-    benchmark_group = parser.add_mutually_exclusive_group()
-    benchmark_group.add_argument(
+    parser.add_argument(
         "--start-index",
         help="Start the run from a given benchmark index",
         type=int,
         default=0,
-    )
-    benchmark_group.add_argument(
-        "--problem-ids", help="Problem IDs to run", nargs="+", default=[], type=str
     )
 
     parser.add_argument(

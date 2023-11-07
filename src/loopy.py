@@ -32,7 +32,7 @@ class Loopy:
         self.benchmark = benchmark
         self.checker = checker
         self.model = model
-        self.provider = "azure-open-ai"
+        self.model_host = "azure-open-ai"
         self.debug = debug
         self.log_path = log_path
         self.benchmark_features = ""
@@ -47,11 +47,12 @@ class Loopy:
         if "analysis" in config:
             self.analysis = config["analysis"]
 
-        if "provider" in config:
-            self.provider = config["provider"]
+        if "model_host" in config:
+            self.model_host = config["model_host"]
 
         if not "benchmarks" in config:
-            raise Exception("No benchmarks found in config file")
+            raise Exception("No benchmarks file found in config file")
+
         benchmarks = config["benchmarks"]
 
         if "benchmark_features" in config:
@@ -75,6 +76,12 @@ class Loopy:
             self.checker = Checker("boogie")
         else:
             raise Exception(f"Invalid checker: {config['checker']}")
+
+        if "use_json_output" in config:
+            self.use_json_output = config["use_json_output"]
+
+        if "debug" in config:
+            self.debug = config["debug"]
 
         self.llm = LLM(
             self.model,
