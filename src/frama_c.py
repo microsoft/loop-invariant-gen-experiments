@@ -280,7 +280,13 @@ class FramaCChecker(Checker):
 
         return success, checker_output
 
-    def houdini(self, input_code, features, use_json_dump_for_invariants=False, check_contracts=False):
+    def houdini(
+        self,
+        input_code,
+        features,
+        use_json_dump_for_invariants=False,
+        check_contracts=False,
+    ):
         Logger.log_info("Houdini procedure initiated")
 
         if not self.has_annotations(input_code):
@@ -326,6 +332,13 @@ class FramaCChecker(Checker):
                 annotation_error_line_no = self.get_line_no_from_error_msg(
                     checker_message
                 )[0]
+
+                if ": Warning: unexpected token ''" in checker_message:
+                    # Some annotation has been emptied out
+                    # Remove the annotation
+                    new_input_code = self.remove_empty_annotations(deepcopy(input_code))
+                    code_queue.append(new_input_code)
+                    continue
 
                 code_lines[annotation_error_line_no] = ""
                 input_code = "\n".join(code_lines)
@@ -373,7 +386,7 @@ class FramaCChecker(Checker):
             num_frama_c_calls += 1
 
         if num_frama_c_calls == 200:
-            Logger.log_error("Crossed 100 iterations. Stopping pruning...")
+            Logger.log_error("Crossed 200 iterations. Stopping pruning...")
 
         if not success:
             Logger.log_error("Could not find strong enough annotations.")
@@ -381,6 +394,29 @@ class FramaCChecker(Checker):
             Logger.log_info("Found strong enough annotations.")
 
         return success, input_code, num_frama_c_calls
+
+    def remove_empty_annotations(self, input_code):
+        ast = self.parser.parse(bytes(input_code, "utf-8"))
+        comment_query = self.language.query(
+            """
+            (comment) @comment 
+            """
+        )
+        comments = comment_query.captures(ast.root_node)
+        annotations = list(
+            filter(lambda x: x[0].text.decode("utf-8").startswith("/*@"), comments)
+        )
+        annotation_texts = [
+            (x[0].text.decode("utf-8")[3:-2].strip(), x) for x in annotations
+        ]
+        empty_annotations = [x[1] for x in annotation_texts if x[0].strip() == ""]
+        for annotation in empty_annotations:
+            input_code = (
+                input_code[: annotation[0].start_byte]
+                + input_code[annotation[0].end_byte :]
+            )
+
+        return input_code
 
     def has_invariant(self, line):
         inv = re.findall(r"loop invariant (.+);", line)
@@ -717,9 +753,11 @@ class FramaCBenchmark(Benchmark):
 
                 elif len(variants) > 1:
                     lexicographic_candidate = self.generate_template_variant(
-                        checker_input, invariants, llm_output, template="lexicographic")
+                        checker_input, invariants, llm_output, template="lexicographic"
+                    )
                     multi_phase_candidate = self.generate_template_variant(
-                        checker_input, invariants, llm_output, template="multi_phase")
+                        checker_input, invariants, llm_output, template="multi_phase"
+                    )
                     annotated_candidates.append(lexicographic_candidate)
                     annotated_candidates.append(multi_phase_candidate)
 
