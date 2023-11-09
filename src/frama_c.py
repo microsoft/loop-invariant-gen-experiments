@@ -1580,6 +1580,12 @@ class FramaCBenchmark(Benchmark):
                     + "{; \n//@ assert(\\false);\n}"
                     + code[function_call[0].end_byte :]
                 )
+            elif function_call[1] == "abort":
+                code = (
+                    code[: function_call[0].start_byte]
+                    + "return -1;"
+                    + code[function_call[0].end_byte :]
+                )
 
         return code
 
@@ -1618,6 +1624,11 @@ class FramaCBenchmark(Benchmark):
 
         for f in function_calls:
             f_call = f.split("(")[0].strip()
+            if f_call == "assume":
+                continue
+            fname = re.match(r"unknown_(int|uint|bool|float|double|char|uchar)", f_call)
+            if fname is not None:
+                continue
             if f_call not in function_names:
                 return False
 
@@ -1625,6 +1636,12 @@ class FramaCBenchmark(Benchmark):
 
     def preprocess(self, code, features, max_lines=500):
         try:
+            num_lines = len(code.splitlines())
+            if num_lines >= max_lines:
+                raise InvalidBenchmarkException(
+                    f"Number of lines ({num_lines}) exceeded max_lines ({max_lines})"
+                )
+
             code = self.remove_comments(code)
             code = self.remove_local_includes(code)
             code = self.remove_preprocess_lines(code)
@@ -1679,12 +1696,6 @@ class FramaCBenchmark(Benchmark):
                 self.is_interprocedural(code) or self.get_total_loop_count(code) > 1
             ):
                 raise InvalidBenchmarkException("Not for SV-COMP benchmark set")
-
-            num_lines = len(code.splitlines())
-            if num_lines > max_lines:
-                raise InvalidBenchmarkException(
-                    f"Number of lines ({num_lines}) exceeded max_lines ({max_lines})"
-                )
 
         except Exception as e:
             raise InvalidBenchmarkException(str(e))
