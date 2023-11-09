@@ -1570,7 +1570,10 @@ class FramaCBenchmark(Benchmark):
             function_calls, key=lambda x: x[0].start_byte, reverse=True
         )
         for function_call in function_calls:
-            if function_call[1] == "reach_error":
+            if (
+                function_call[1] == "reach_error"
+                or function_call[1] == "__blast_assert"
+            ):
                 code = (
                     code[: function_call[0].start_byte]
                     + "{; \n//@ assert(\\false);\n}"
@@ -1595,6 +1598,67 @@ class FramaCBenchmark(Benchmark):
             )
         return code
 
+    def any_child_satisfies(self, node, lambda_fn):
+        if lambda_fn(node):
+            return True
+        for child in node.children:
+            if self.any_child_satisfies(child, lambda_fn):
+                return True
+        return False
+
+    def replace_function_calls_in_asserts(self, code):
+        ast = self.parser.parse(bytes(code, "utf8"))
+        root_node = ast.root_node
+        assert_assumes = self.get_function_calls(root_node)
+
+        assert_assumes = sorted(
+            assert_assumes, key=lambda x: x[0].start_byte, reverse=True
+        )
+        assert_assumes = [a[0].parent for a in assert_assumes]
+
+        verifier_assert_calls = list(
+            filter(
+                lambda x: len(
+                    re.findall(
+                        r"^((__VERIFIER_|s)?assert)\s*(\(.*\))\s*;.*",
+                        x.text.decode("utf-8"),
+                    )
+                )
+                > 0,
+                assert_assumes,
+            )
+        )
+        verifier_assert_calls = [
+            self.get_child_by_type(x, "call_expression") for x in verifier_assert_calls
+        ]
+
+        verifier_assert_calls = [
+            self.get_child_by_type(x, "argument_list") for x in verifier_assert_calls
+        ]
+
+        assertion_with_function_calls = any(
+            [
+                self.any_child_satisfies(x, lambda y: y.type == "call_expression")
+                for x in verifier_assert_calls
+            ]
+        )
+
+    def all_functions_defined_in_program(self, input_code):
+        ast = self.parser.parse(bytes(input_code, "utf8"))
+        root_node = ast.root_node
+        functions = self.get_function_definitions(root_node)
+        function_names = [f[1] for f in functions]
+
+        function_calls = self.get_function_calls(root_node)
+        function_calls = [f[0].text.decode("utf-8") for f in function_calls]
+
+        for f in function_calls:
+            callee_id = f.split("(")[0].strip()
+            if callee_id not in function_names:
+                return False
+
+        return True
+
     def preprocess(self, code, features, max_lines=500):
         try:
             code = self.remove_comments(code)
@@ -1616,14 +1680,6 @@ class FramaCBenchmark(Benchmark):
             if self.has_ill_formed_asserts(code):
                 raise InvalidBenchmarkException("Ill-formed asserts")
 
-            # return (
-            #     self.get_total_loop_count(code),
-            #     self.is_interprocedural(code),
-            #     self.uses_arrays(code),
-            #     self.uses_pointers(code),
-            #     len(code.splitlines()),
-            # )
-
             if self.get_total_loop_count(code) < 1 and not self.is_interprocedural(
                 code
             ):
@@ -1642,7 +1698,14 @@ class FramaCBenchmark(Benchmark):
             Add labels or raise exception depending on the features set
             """
             if "multiple_methods" in features:
+                if self.all_functions_defined_in_program(code):
+                    raise InvalidBenchmarkException(
+                        "Not all methods are defined in the benchmark"
+                    )
+
+                code = self.replace_function_calls_in_asserts(code)
                 code = self.add_method_label(code)
+
             elif self.is_interprocedural(code):
                 raise InvalidBenchmarkException("Found multiple methods")
 
