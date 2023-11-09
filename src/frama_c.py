@@ -1174,6 +1174,7 @@ class FramaCBenchmark(Benchmark):
                         identifier.text.decode("utf-8"),
                     )
                 )
+                nodes.extend(node.children)
             else:
                 nodes.extend(node.children)
         return function_calls
@@ -1606,43 +1607,6 @@ class FramaCBenchmark(Benchmark):
                 return True
         return False
 
-    def replace_function_calls_in_asserts(self, code):
-        ast = self.parser.parse(bytes(code, "utf8"))
-        root_node = ast.root_node
-        assert_assumes = self.get_function_calls(root_node)
-
-        assert_assumes = sorted(
-            assert_assumes, key=lambda x: x[0].start_byte, reverse=True
-        )
-        assert_assumes = [a[0].parent for a in assert_assumes]
-
-        verifier_assert_calls = list(
-            filter(
-                lambda x: len(
-                    re.findall(
-                        r"^((__VERIFIER_|s)?assert)\s*(\(.*\))\s*;.*",
-                        x.text.decode("utf-8"),
-                    )
-                )
-                > 0,
-                assert_assumes,
-            )
-        )
-        verifier_assert_calls = [
-            self.get_child_by_type(x, "call_expression") for x in verifier_assert_calls
-        ]
-
-        verifier_assert_calls = [
-            self.get_child_by_type(x, "argument_list") for x in verifier_assert_calls
-        ]
-
-        assertion_with_function_calls = any(
-            [
-                self.any_child_satisfies(x, lambda y: y.type == "call_expression")
-                for x in verifier_assert_calls
-            ]
-        )
-
     def all_functions_defined_in_program(self, input_code):
         ast = self.parser.parse(bytes(input_code, "utf8"))
         root_node = ast.root_node
@@ -1653,8 +1617,8 @@ class FramaCBenchmark(Benchmark):
         function_calls = [f[0].text.decode("utf-8") for f in function_calls]
 
         for f in function_calls:
-            callee_id = f.split("(")[0].strip()
-            if callee_id not in function_names:
+            f_call = f.split("(")[0].strip()
+            if f_call not in function_names:
                 return False
 
         return True
@@ -1702,10 +1666,7 @@ class FramaCBenchmark(Benchmark):
                     raise InvalidBenchmarkException(
                         "Not all methods are defined in the benchmark"
                     )
-
-                code = self.replace_function_calls_in_asserts(code)
                 code = self.add_method_label(code)
-
             elif self.is_interprocedural(code):
                 raise InvalidBenchmarkException("Found multiple methods")
 
@@ -1714,10 +1675,10 @@ class FramaCBenchmark(Benchmark):
             elif self.is_multi_loop(code):
                 raise InvalidBenchmarkException("Found multiple loops")
 
-            # if not (
-            #     self.is_interprocedural(code) or self.get_total_loop_count(code) > 1
-            # ):
-            #     raise InvalidBenchmarkException("Not for SV-COMP benchmark set")
+            if not (
+                self.is_interprocedural(code) or self.get_total_loop_count(code) > 1
+            ):
+                raise InvalidBenchmarkException("Not for SV-COMP benchmark set")
 
             num_lines = len(code.splitlines())
             if num_lines > max_lines:
