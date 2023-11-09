@@ -1662,7 +1662,7 @@ class FramaCBenchmark(Benchmark):
             Add labels or raise exception depending on the features set
             """
             if "multiple_methods" in features:
-                if self.all_functions_defined_in_program(code):
+                if not self.all_functions_defined_in_program(code):
                     raise InvalidBenchmarkException(
                         "Not all methods are defined in the benchmark"
                     )
