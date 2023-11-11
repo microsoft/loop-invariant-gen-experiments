@@ -1504,6 +1504,20 @@ class FramaCBenchmark(Benchmark):
             nodes += node.children
         return False
 
+    def uses_floats_or_doubles(self, code):
+        ast = self.parser.parse(bytes(code, "utf-8"))
+        nodes = [ast.root_node]
+        while len(nodes) > 0:
+            node = nodes.pop()
+            if node.type == "primitive_type":
+                if (
+                    node.text.decode("utf-8") == "float"
+                    or node.text.decode("utf-8") == "double"
+                ):
+                    return True
+            nodes += node.children
+        return False
+
     def add_loop_labels(self, code):
         labels = string.ascii_uppercase
         ast = self.parser.parse(bytes(code, "utf-8"))
@@ -1638,6 +1652,9 @@ class FramaCBenchmark(Benchmark):
             """
             if self.has_ill_formed_asserts(code):
                 raise InvalidBenchmarkException("Ill-formed asserts")
+
+            if self.uses_floats_or_doubles(code):
+                raise InvalidBenchmarkException("Uses floats or doubles")
 
             if self.get_total_loop_count(code) < 1 and not self.is_interprocedural(
                 code
