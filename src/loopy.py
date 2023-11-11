@@ -923,20 +923,28 @@ class Loopy:
                     completion_json["checker_message_for_annotations"] = checker_message
 
                     if not __success:
-                        (
-                            __success,
-                            pruned_code,
-                            num_frama_c_calls,
-                        ) = self.checker.houdini(
-                            checker_input_with_annotations,
-                            "multiple_loops_multiple_methods",
-                            use_json_dump_for_invariants=self.use_json_output,
-                            check_contracts=True,
-                        )
+                        try:
+                            (
+                                __success,
+                                pruned_code,
+                                num_frama_c_calls,
+                            ) = self.checker.houdini(
+                                checker_input_with_annotations,
+                                "multiple_loops_multiple_methods",
+                                use_json_dump_for_invariants=self.use_json_output,
+                                check_contracts=True,
+                            )
 
-                        completion_json["num_solver_calls"] += num_frama_c_calls
-                        completion_json["code_after_prune"] = pruned_code
-                        completion_json["checker_output_after_prune"] = __success
+                            completion_json["num_solver_calls"] += num_frama_c_calls
+                            completion_json["code_after_prune"] = pruned_code
+                            completion_json["checker_output_after_prune"] = __success
+                        except Exception as e:
+                            completion_json[
+                                "code_after_prune"
+                            ] = checker_input_with_annotations
+                            completion_json["checker_output_after_prune"] = False
+                            completion_json["checker_message_after_prune"] = str(e)
+                            __success = False
 
                     success = __success or success
 
@@ -1004,12 +1012,23 @@ class Loopy:
                         f"Houdini for combined annotations for benchmark: {start_index + benchmark_index + 1}/{len(sliced_benchmarks)}"
                     )
 
-                    __success, pruned_code, num_frama_c_calls = self.checker.houdini(
-                        checker_input_with_combined_annotations,
-                        "multiple_loops_multiple_methods",
-                        use_json_dump_for_invariants=self.use_json_output,
-                        check_contracts=True,
-                    )
+                    try:
+                        (
+                            __success,
+                            pruned_code,
+                            num_frama_c_calls,
+                        ) = self.checker.houdini(
+                            checker_input_with_combined_annotations,
+                            "multiple_loops_multiple_methods",
+                            use_json_dump_for_invariants=self.use_json_output,
+                            check_contracts=True,
+                        )
+                    except Exception as e:
+                        Logger.log_error(traceback.format_exc())
+                        Logger.log_error(str(e))
+                        __success = False
+                        pruned_code = checker_input_with_combined_annotations
+                        num_frama_c_calls = 0
 
                     if __success:
                         Logger.log_success(
