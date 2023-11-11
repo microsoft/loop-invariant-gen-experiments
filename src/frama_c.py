@@ -71,8 +71,25 @@ class FramaCChecker(Checker):
         user_assertions = []
         loop_variant = ""
         function_contracts = []
+        csv_dump = []
         csv_loop_invariants = {}
         success = False
+
+        if not os.path.exists(temp_output_dump_file):
+            return False, "No CSV output dump found from Frama-C"
+
+        with open(temp_output_dump_file, "r", encoding="utf-8") as f:
+            csv_dump_full = [row for row in csv.DictReader(f, delimiter="\t")]
+            csv_dump = [
+                row
+                for row in csv_dump_full
+                if not row["directory"] == "FRAMAC_SHARE/libc"
+            ]
+            csv_loop_invariants = {
+                int(row["line"]): row["status"]
+                for row in csv_dump
+                if row["property kind"] == "loop invariant"
+            }
 
         """
         Get the status of each loop invariant
@@ -80,17 +97,6 @@ class FramaCChecker(Checker):
         if use_json_dump_for_invariants:
             if not os.path.exists(temp_wp_json_report_file):
                 return False, "No JSON report found"
-
-            if not os.path.exists(temp_output_dump_file):
-                return False, "No CSV output dump found from Frama-C"
-
-            with open(temp_output_dump_file, "r", encoding="utf-8") as f:
-                csv_dump = [row for row in csv.DictReader(f, delimiter="\t")]
-                csv_loop_invariants = {
-                    int(row["line"]): row["status"]
-                    for row in csv_dump
-                    if row["property kind"] == "loop invariant"
-                }
 
             with open(temp_wp_json_report_file, "r", encoding="utf-8") as f:
                 json_output = f.read()
@@ -176,74 +182,58 @@ class FramaCChecker(Checker):
 
         else:
             # Parse the output dump
-            if not os.path.exists(temp_output_dump_file):
-                return False, "No CSV output dump found from Frama-C"
+            success = all(
+                row["status"] == "Valid"
+                for row in checker_output
+                if row["property kind"] == "loop invariant"
+                or row["property kind"] == "user assertion"
+            )
 
-            with open(temp_output_dump_file, "r", encoding="utf-8") as f:
-                csv_dump = [row for row in csv.DictReader(f, delimiter="\t")]
-
-                success = all(
-                    row["status"] == "Valid"
-                    for row in checker_output
+            loop_invariants = "\n".join(
+                [
+                    f"Invariant {row['property']} on line {row['line']}: {row['status']}"
+                    for row in csv_dump
                     if row["property kind"] == "loop invariant"
-                    or row["property kind"] == "user assertion"
-                )
-
-                loop_invariants = "\n".join(
-                    [
-                        f"Invariant {row['property']} on line {row['line']}: {row['status']}"
-                        for row in csv_dump
-                        if row["property kind"] == "loop invariant"
-                    ]
-                )
-
-        if not check_variant and not os.path.exists(temp_output_dump_file):
-            return False, "No CSV output dump found from Frama-C"
+                ]
+            )
 
         """
         Get the status of each user assertion and function contract
         """
-        with open(temp_output_dump_file, "r", encoding="utf-8") as f:
-            csv_dump = [row for row in csv.DictReader(f, delimiter="\t")]
-
-            if check_contracts:
-                success = success and all(
-                    row["status"] == "Valid"
-                    for row in csv_dump
-                    if row["property kind"] == "precondition"
-                    or row["property kind"] == "postcondition"
-                )
-
-                for row in csv_dump:
-                    if row["property kind"] == "precondition":
-                        function_contracts.append(
-                            f"Pre-condition {row['property']} on line {row['line']}: {row['status']}"
-                        )
-                    elif row["property kind"] == "postcondition":
-                        function_contracts.append(
-                            f"Post-condition {row['property']} on line {row['line']}: {row['status']}"
-                        )
-
-            function_contracts = "\n".join(function_contracts)
-
+        if check_contracts:
             success = success and all(
                 row["status"] == "Valid"
                 for row in csv_dump
-                if row["property kind"] == "user assertion"
+                if row["property kind"] == "precondition"
+                or row["property kind"] == "postcondition"
             )
 
-            user_assertions = "\n".join(
-                [
-                    f"Assertion {row['property']}: "
-                    + (
-                        f"Unproven"
-                        if row["status"] == "Unknown"
-                        else f"{row['status']}"
+            for row in csv_dump:
+                if row["property kind"] == "precondition":
+                    function_contracts.append(
+                        f"Pre-condition {row['property']} on line {row['line']}: {row['status']}"
                     )
-                    for row in csv_dump
-                    if row["property kind"] == "user assertion"
-                ]
-            )
+                elif row["property kind"] == "postcondition":
+                    function_contracts.append(
+                        f"Post-condition {row['property']} on line {row['line']}: {row['status']}"
+                    )
+
+        function_contracts = "\n".join(function_contracts)
+
+        success = success and all(
+            row["status"] == "Valid"
+            for row in csv_dump
+            if row["property kind"] == "user assertion"
+        )
+
+        user_assertions = "\n".join(
+            [
+                f"Assertion {row['property']}: "
+                + (f"Unproven" if row["status"] == "Unknown" else f"{row['status']}")
+                for row in csv_dump
+                if row["property kind"] == "user assertion"
+            ]
+        )
 
         """
         Check the status of the loop variant
@@ -321,8 +311,10 @@ class FramaCChecker(Checker):
                 unknown_clause_lines = self.get_line_nums_for_unknown_contract_clauses(
                     checker_message
                 )
-                for line_no in unknown_clause_lines:
-                    code_lines[line_no] = ""
+                if len(unknown_clause_lines) > 0:
+                    for line_no in unknown_clause_lines:
+                        code_lines[line_no] = ""
+                    code_queue.append("\n".join(code_lines))
 
             if "Annotation error " in checker_message:
                 # TODO: Why not remove all annotation errors?
@@ -1411,10 +1403,11 @@ class FramaCBenchmark(Benchmark):
         main_definition_type = main_definition.child_by_field_name("type")
 
         code = (
-            (
-                "#define assume(e) if(!(e)) return;\n"
-                if main_definition_type.text.decode("utf-8") == "void"
-                else "#define assume(e) if(!(e)) return 0;\n"
+            ("#include <stdlib.h>\n#define assume(e) if(!(e)) exit(-1);\n")
+            + (
+                "#define abort() exit(-2);\n"
+                if len(re.findall(r"abort\s*\(\s*\)", code)) > 0
+                else ""
             )
             + ("#define LARGE_INT 1000000\n" if "LARGE_INT" in code else "")
             + ("extern int unknown(void);\n" if "unknown()" in code else "")
@@ -1580,12 +1573,6 @@ class FramaCBenchmark(Benchmark):
                     + "{; \n//@ assert(\\false);\n}"
                     + code[function_call[0].end_byte :]
                 )
-            elif function_call[1] == "abort":
-                code = (
-                    code[: function_call[0].start_byte]
-                    + "return -1;"
-                    + code[function_call[0].end_byte :]
-                )
 
         return code
 
@@ -1624,7 +1611,7 @@ class FramaCBenchmark(Benchmark):
 
         for f in function_calls:
             f_call = f.split("(")[0].strip()
-            if f_call == "assume":
+            if f_call == "assume" or f_call == "abort":
                 continue
             fname = re.match(r"unknown_(int|uint|bool|float|double|char|uchar)", f_call)
             if fname is not None:
