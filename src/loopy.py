@@ -1743,24 +1743,33 @@ class Loopy:
                             }
                         )
                     else:
-                        (
-                            __success,
-                            pruned_code,
-                            num_frama_c_calls,
-                        ) = self.checker.houdini(
-                            checker_input_with_annotations,
-                            "one_loop_one_method",
-                            use_json_dump_for_invariants=self.use_json_output,
-                        )
-                        completions.append(
-                            {
-                                "invariants": completion,
-                                "success": __success,
-                                "checker_message": checker_message,
-                                "code_after_prune": pruned_code,
-                                "success_after_prune": __success,
-                            }
-                        )
+                        try:
+                            (
+                                __success,
+                                pruned_code,
+                                num_frama_c_calls,
+                            ) = self.checker.houdini(
+                                checker_input_with_annotations,
+                                "one_loop_one_method",
+                                use_json_dump_for_invariants=self.use_json_output,
+                            )
+                            completions.append(
+                                {
+                                    "invariants": completion,
+                                    "success": __success,
+                                    "checker_message": checker_message,
+                                    "code_after_prune": pruned_code,
+                                    "success_after_prune": __success,
+                                }
+                            )
+                        except Exception as e:
+                            completions.append(
+                                {
+                                    "invariants": completion,
+                                    "success": __success,
+                                    "error": str(e),
+                                }
+                            )
 
                 instance_log_json["completions"] = completions
 
