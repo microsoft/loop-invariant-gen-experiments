@@ -389,6 +389,7 @@ class FramaCChecker(Checker):
         annotations = list(
             filter(lambda x: x[0].text.decode("utf-8").startswith("/*@"), comments)
         )
+        annotations = sorted(annotations, key=lambda x: x[0].start_byte, reverse=True)
         annotation_texts = [
             (x[0].text.decode("utf-8")[3:-2].strip(), x) for x in annotations
         ]
@@ -635,9 +636,11 @@ class FramaCBenchmark(Benchmark):
                         old_annotation = annotations[label]
                         annotations[label] = (
                             requires_clauses
-                            + "\n"
-                            + old_annotation
-                            + "\n"
+                            + (
+                                "\n" + old_annotation + "\n"
+                                if old_annotation != ""
+                                else "\n"
+                            )
                             + ensures_clauses
                         )
                     else:
