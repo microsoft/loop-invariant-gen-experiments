@@ -1619,9 +1619,11 @@ class FramaCBenchmark(Benchmark):
 
         for f in function_calls:
             f_call = f.split("(")[0].strip()
-            if f_call == "assume" or f_call == "abort":
+            if f_call == "assume" or f_call == "abort" or f_call == "exit":
                 continue
-            fname = re.match(r"unknown_(int|uint|bool|float|double|char|uchar)", f_call)
+            fname = re.match(
+                r"unknown_(int|uint|bool|float|double|char|uchar|long|ulong)", f_call
+            )
             if fname is not None:
                 continue
             if f_call not in function_names:
