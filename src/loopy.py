@@ -1,5 +1,7 @@
+import copy
 import datetime
 import json
+import multiprocessing
 import os
 import random
 import re
@@ -14,7 +16,6 @@ from checker import Checker
 from llm_utils import Logger
 from loopy_llm import LLM, Prompt
 from frama_c import FramaCBenchmark, FramaCChecker
-from process_results import prune_wrapper, run_parallel, shuffle
 
 
 class Loopy:
@@ -110,6 +111,36 @@ class Loopy:
         ) as f:
             f.write(json.dumps(json_log, indent=4, ensure_ascii=False))
 
+    @staticmethod
+    def shuffle(input_list):
+        temp = copy.deepcopy(input_list)
+        random.shuffle(temp)
+        return temp
+
+    @staticmethod
+    def run_parallel(inputs, func):
+        assert len(inputs) <= 32
+
+        pool = multiprocessing.Pool(processes=len(inputs))
+        results = pool.map(func, inputs)
+        pool.close()
+        pool.join()
+        return results
+
+    @staticmethod
+    def prune_wrapper(checker_input):
+        checker = FramaCChecker()
+        try:
+            success, pruned_code, num_frama_c_calls = checker.houdini(
+                checker_input,
+                features="one_loop_one_method",
+                use_json_dump_for_invariants=True,
+            )
+        except Exception as e:
+            print(e)
+            traceback.print_exc()
+        return success
+
     def combine_and_prune_with_k(
         self,
         benchmark,
@@ -131,7 +162,7 @@ class Loopy:
             ]
 
         random_permutations = [
-            shuffle(invariants_from_completions) for _ in range(shuffle_times)
+            Loopy.shuffle(invariants_from_completions) for _ in range(shuffle_times)
         ]
         candidates = [rp[:k] for rp in random_permutations]
         candidate_inputs = [
@@ -148,7 +179,7 @@ class Loopy:
                 f"[Batch {m+1}/{max_m}]: {len(checker_inputs)} candidates in parallel, k={k}, File: {benchmark['file']}",
             )
             try:
-                results = run_parallel(checker_inputs, prune_wrapper)
+                results = Loopy.run_parallel(checker_inputs, Loopy.prune_wrapper)
                 pass_k_prune += sum(results)
                 Logger.log_info(
                     f"[Batch {m+1}/{max_m}]: Combine and Prune with k = {pass_k_prune / len(results)} for k={k}, {len(checker_inputs)} parallel benchmarks, File: {benchmark['file']}"

@@ -12,7 +12,12 @@ import traceback
 import numpy as np
 
 from frama_c import FramaCBenchmark, FramaCChecker
+from loopy import Loopy
 from llm_utils import Logger
+
+shuffle = Loopy.shuffle
+prune_wrapper = Loopy.prune_wrapper
+run_parallel = Loopy.run_parallel
 
 max_cores = 32
 
@@ -23,36 +28,6 @@ def get_combinations(input, k):
     for i in temp:
         res.append(list(i))
     return res
-
-
-def shuffle(input_list):
-    temp = copy.deepcopy(input_list)
-    random.shuffle(temp)
-    return temp
-
-
-def run_parallel(inputs, func):
-    assert len(inputs) <= max_cores
-
-    pool = multiprocessing.Pool(processes=len(inputs))
-    results = pool.map(func, inputs)
-    pool.close()
-    pool.join()
-    return results
-
-
-def prune_wrapper(checker_input):
-    checker = FramaCChecker()
-    try:
-        success, pruned_code, num_frama_c_calls = checker.houdini(
-            checker_input,
-            features="one_loop_one_method",
-            use_json_dump_for_invariants=True,
-        )
-    except Exception as e:
-        print(e)
-        traceback.print_exc()
-    return success
 
 
 def check_wrapper(input):
