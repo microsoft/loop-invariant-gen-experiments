@@ -1372,23 +1372,12 @@ class FramaCBenchmark(Benchmark):
         # get main function
         main_definition = self.get_main_definition(code)
 
-        # catch non assume assert function calls
-        function_calls = self.language.query(
-            """
-            (call_expression) @function_call
-            """
-        )
-        function_calls = function_calls.captures(main_definition)
-        function_calls = [
-            f
-            for f in function_calls
-            if f[1] == "function_call"
-            and not re.match(
-                r"(abort|exit|assume|unknown.*)", f[0].text.decode("utf-8")
-            )
+        calls = self.get_function_calls(main_definition)
+        calls = [
+            c for c in calls if not re.match(r"(abort|exit|assume|unknown.*)", c[1])
         ]
 
-        return len(function_calls) != 0
+        return len(calls) > 0
 
     def add_boiler_plate(self, code):
         """
@@ -1695,9 +1684,7 @@ class FramaCBenchmark(Benchmark):
             elif self.is_multi_loop(code):
                 raise InvalidBenchmarkException("Found multiple loops")
 
-            if not (
-                self.is_interprocedural(code)
-            ):
+            if not (self.is_interprocedural(code)):
                 raise InvalidBenchmarkException("Not for SV-COMP benchmark set")
 
             if self.get_total_loop_count(code) >= 1:
@@ -1706,3 +1693,31 @@ class FramaCBenchmark(Benchmark):
         except Exception as e:
             raise InvalidBenchmarkException(str(e))
         return code
+
+
+code = """extern void abort(void);
+extern void __assert_fail(const char *, const char *, unsigned int, const char *) __attribute__ ((__nothrow__ , __leaf__)) __attribute__ ((__noreturn__));
+void reach_error() { __assert_fail("0", "test_cut_trace.i", 3, "reach_error"); }
+
+
+void __blast_assert()
+{
+ ERROR: {reach_error();abort();}
+}
+
+
+
+
+
+int main(void) {
+ int z,a;
+ z = 0;
+ ((z == 0) ? (0) : __blast_assert ());
+ a = z;
+ ((a == 0) ? (0) : __blast_assert ());
+ return 0;
+}
+"""
+
+fb = FramaCBenchmark(features="multiple_methods")
+print(fb.preprocess(code, "multiple_methods"))
