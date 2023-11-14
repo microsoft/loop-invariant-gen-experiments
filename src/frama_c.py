@@ -1125,6 +1125,7 @@ class FramaCBenchmark(Benchmark):
             if e.startswith("__VERIFIER_")
             or e == "reach_error"
             or e == "__assert_fail"
+            or e == "__blast_assert"
             or e == "assume"
             or e == "abort"
             or e == "assert"
