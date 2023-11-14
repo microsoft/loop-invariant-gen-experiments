@@ -1382,7 +1382,9 @@ class FramaCBenchmark(Benchmark):
             f
             for f in function_calls
             if f[1] == "function_call"
-            and not re.match(r"(assert|assume|unknown.*)", f[0].text.decode("utf-8"))
+            and not re.match(
+                r"(abort|exit|assume|unknown.*)", f[0].text.decode("utf-8")
+            )
         ]
 
         return len(function_calls) != 0
@@ -1665,7 +1667,7 @@ class FramaCBenchmark(Benchmark):
                 code
             ):
                 raise InvalidBenchmarkException(
-                    "No loop found. Cannot infer loop invariants"
+                    "No annotations to infer in the benchmark"
                 )
             """
             We do not support benchmarks with arrays or pointers.
@@ -1693,9 +1695,12 @@ class FramaCBenchmark(Benchmark):
                 raise InvalidBenchmarkException("Found multiple loops")
 
             if not (
-                self.is_interprocedural(code) or self.get_total_loop_count(code) > 1
+                self.is_interprocedural(code)
             ):
                 raise InvalidBenchmarkException("Not for SV-COMP benchmark set")
+
+            if self.get_total_loop_count(code) >= 1:
+                raise InvalidBenchmarkException("Not for pre-post set")
 
         except Exception as e:
             raise InvalidBenchmarkException(str(e))
