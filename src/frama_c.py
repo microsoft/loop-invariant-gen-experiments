@@ -1687,9 +1687,6 @@ class FramaCBenchmark(Benchmark):
             if not (self.is_interprocedural(code)):
                 raise InvalidBenchmarkException("Not for SV-COMP benchmark set")
 
-            if self.get_total_loop_count(code) >= 1:
-                raise InvalidBenchmarkException("Not for pre-post set")
-
         except Exception as e:
             raise InvalidBenchmarkException(str(e))
         return code
