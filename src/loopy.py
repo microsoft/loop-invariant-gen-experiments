@@ -889,8 +889,8 @@ class Loopy:
         ]
 
         pre_post_prompt = Prompt(
-            system_text_file="templates/prepost_system.txt",
-            prompt_text_file="templates/prepost_prompt.txt",
+            system_text_file="templates/m1_prepost_system.txt",
+            prompt_text_file="templates/m1_prepost_prompt.txt",
             num_completions=8,
         )
 
