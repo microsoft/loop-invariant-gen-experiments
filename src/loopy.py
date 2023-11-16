@@ -936,10 +936,12 @@ class Loopy:
                         )
                         continue
 
+                    invariants = self.checker.get_invariants(completion)
+                    invariants = "\n".join(invariants)
                     checker_input = self.benchmark.combine_llm_outputs(
                         self.benchmark.get_code(benchmark_file),
-                        [completion],
-                        "one_loop_one_method",
+                        (invariants, [completion]),
+                        "termination_one_loop_one_method",
                     )
 
                     success, checker_message = self.checker.check(
