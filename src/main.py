@@ -31,6 +31,12 @@ def parse_args(args):
     )
 
     parser.add_argument(
+        "--termination-baseline",
+        help="Run the termination baseline algorithm",
+        action="store_true",
+    )
+
+    parser.add_argument(
         "--svcomp-files",
         help="Run the SVCOMP benchmarks",
         action="store_true",
@@ -187,6 +193,13 @@ def main(args):
             max_benchmarks=args.max_benchmarks,
             start_index=args.start_index,
             local_output=args.local_llm_output,
+        )
+        return
+    
+    if args.termination_baseline:
+        p.termination_baseline(
+            max_benchmarks=args.max_benchmarks,
+            start_index=args.start_index,
         )
         return
 

@@ -868,6 +868,160 @@ class Loopy:
 
         return
 
+    def termination_baseline(self, max_benchmarks=1, start_index=0):
+        if self.llm is None or self.benchmark is None or self.checker is None:
+            raise Exception("Pipeline not initialized. Call load_config first.")
+
+        log_json = []
+        stats = {"success": [], "failure": [], "skipped": [], "total": 0}
+
+        # create logs dir
+        self.log_path = datetime.datetime.now().strftime(
+            f"../logs/loopy_%Y_%m_%d_%H_%M_%S/"
+        )
+        if not os.path.exists(os.path.dirname(self.log_path)):
+            os.makedirs(os.path.dirname(self.log_path))
+
+        log_file = open(self.log_path + "final.json", "w", encoding="utf-8")
+
+        sliced_benchmarks = self.benchmark.input_file_paths[
+            start_index : start_index + max_benchmarks
+        ]
+
+        baseline_prompt = Prompt(
+            system_text_file="templates/termination_baseline_system.txt",
+            prompt_text_file="templates/termination_baseline_prompt.txt",
+            num_completions=15,
+        )
+
+        for benchmark_index, benchmark_file in enumerate(sliced_benchmarks):
+            Logger.log_info(
+                f"Running benchmark: {start_index + benchmark_index + 1}/{len(sliced_benchmarks)}"
+            )
+            try:
+                Logger.log_info(
+                    f"Running benchmark: {start_index + benchmark_index + 1}/{len(sliced_benchmarks)}"
+                )
+
+                instance_log_json = {
+                    "file": benchmark_file,
+                    "benchmark_code": self.benchmark.get_code(benchmark_file),
+                    "success": False,
+                }
+
+                (
+                    baseline_code_blocks,
+                    baseline_llm_output,
+                ) = self.llm.generate_annotation(
+                    input={"code": self.benchmark.get_code(benchmark_file)},
+                    prompt=baseline_prompt,
+                    extraction_filter=self.checker.has_variant,
+                )
+
+                completions = []
+                for completion in baseline_code_blocks:
+                    Logger.log_info(f"Checking completion {len(completions) + 1}")
+                    if len(completion) == 2 and completion[0] == (
+                        "ERROR: Output does not contain at least 1 complete code block"
+                    ):
+                        completions.append(
+                            {
+                                "success": False,
+                                "llm_output": completion[1],
+                                "error": "Output does not contain at least 1 code block",
+                            }
+                        )
+                        Logger.log_error(
+                            f"Completion {len(completions)} is empty for benchmark"
+                        )
+                        continue
+
+                    checker_input = self.benchmark.combine_llm_outputs(
+                        self.benchmark.get_code(benchmark_file),
+                        [completion],
+                        "one_loop_one_method",
+                    )
+
+                    success, checker_message = self.checker.check(
+                        checker_input,
+                        check_variant=True,
+                        use_json_dump_for_invariants=self.use_json_output,
+                    )
+
+                    completions.append(
+                        {
+                            "success": success,
+                            "llm_output": completion,
+                            "checker_message": checker_message,
+                        }
+                    )
+                    if success:
+                        Logger.log_success(
+                            f"Completion {len(completions)} is correct for benchmark"
+                        )
+                    else:
+                        Logger.log_error(
+                            f"Completion {len(completions)} is incorrect for benchmark"
+                        )
+
+                instance_log_json["completions"] = completions
+
+                instance_log_json["success"] = any([x["success"] for x in completions])
+
+                if instance_log_json["success"]:
+                    Logger.log_success(
+                        f"Benchmark {start_index + benchmark_index + 1}/{len(sliced_benchmarks)} succeeded"
+                    )
+                    stats["success"].append(benchmark_file)
+
+                else:
+                    Logger.log_error(
+                        f"Benchmark {start_index + benchmark_index + 1}/{len(sliced_benchmarks)} failed"
+                    )
+                    stats["failure"].append(benchmark_file)
+
+                stats["total"] += 1
+                stats["success_count"] = len(stats["success"])
+                stats["failure_count"] = len(stats["failure"])
+                stats["success_rate"] = (
+                    stats["success_count"] / stats["total"]
+                    if stats["total"] != 0
+                    else 0
+                )
+
+                log_json.append(instance_log_json)
+
+                Loopy.write_to_benchmark_file(
+                    benchmark_file, {"log": instance_log_json, "stats": stats}
+                )
+
+            except Exception as e:
+                Logger.log_error(traceback.format_exc())
+                if isinstance(e, KeyboardInterrupt):
+                    instance_log_json["success"] = False
+                    stats["skipped"].append(benchmark_file)
+                    break
+                else:
+                    instance_log_json["error"] = str(e)
+                    instance_log_json["success"] = False
+                    stats["skipped"].append(benchmark_file)
+                    log_json.append(instance_log_json)
+                    Loopy.write_to_benchmark_file(
+                        benchmark_file, {"log": instance_log_json, "stats": stats}
+                    )
+                    continue
+
+        log_file.write(
+            json.dumps(
+                {"params": self.arg_params, "logs": log_json, "stats": stats},
+                indent=4,
+                ensure_ascii=False,
+            )
+        )
+        log_file.close()
+
+        return
+
     def interprocedural_loop_invariant_analysis(self, max_benchmarks=1, start_index=0):
         if self.llm is None or self.benchmark is None or self.checker is None:
             raise Exception("Pipeline not initialized. Call load_config first.")
