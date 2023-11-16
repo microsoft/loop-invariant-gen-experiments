@@ -891,7 +891,7 @@ class Loopy:
         baseline_prompt = Prompt(
             system_text_file="templates/termination_baseline_system.txt",
             prompt_text_file="templates/termination_baseline_prompt.txt",
-            num_completions=15,
+            num_completions=10,
         )
 
         for benchmark_index, benchmark_file in enumerate(sliced_benchmarks):
@@ -899,10 +899,6 @@ class Loopy:
                 f"Running benchmark: {start_index + benchmark_index + 1}/{len(sliced_benchmarks)}"
             )
             try:
-                Logger.log_info(
-                    f"Running benchmark: {start_index + benchmark_index + 1}/{len(sliced_benchmarks)}"
-                )
-
                 instance_log_json = {
                     "file": benchmark_file,
                     "benchmark_code": self.benchmark.get_code(benchmark_file),
@@ -936,38 +932,47 @@ class Loopy:
                         )
                         continue
 
-                    invariants = self.checker.get_invariants(completion)
+                    invariants = self.checker.get_invariants(completion.splitlines())
                     invariants = "\n".join(invariants)
-                    checker_input = self.benchmark.combine_llm_outputs(
+                    checker_inputs = self.benchmark.combine_llm_outputs(
                         self.benchmark.get_code(benchmark_file),
                         (invariants, [completion]),
                         "termination_one_loop_one_method",
                     )
 
-                    success, checker_message = self.checker.check(
-                        checker_input,
-                        check_variant=True,
-                        use_json_dump_for_invariants=self.use_json_output,
-                    )
+                    candidates = []
+                    for candidate in checker_inputs:
+                        success, checker_message = self.checker.check(
+                            candidate,
+                            check_variant=True,
+                            use_json_dump_for_invariants=self.use_json_output,
+                        )
+                        candidates.append(
+                            {
+                                "candidate_with_invariants_and_variant": candidate,
+                                "checker_output": success,
+                                "checker_message": checker_message,
+                            }
+                        )
+                        if success:
+                            Logger.log_success(
+                                f"Completion {len(completions) + 1} is correct for benchmark"
+                            )
+                            break
+                        else:
+                            Logger.log_error(
+                                f"Completion {len(completions) + 1} is incorrect for benchmark"
+                            )
 
                     completions.append(
                         {
-                            "success": success,
+                            "success": any([x["checker_output"] for x in candidates]),
                             "llm_output": completion,
-                            "checker_message": checker_message,
+                            "candidates": candidates,
                         }
                     )
-                    if success:
-                        Logger.log_success(
-                            f"Completion {len(completions)} is correct for benchmark"
-                        )
-                    else:
-                        Logger.log_error(
-                            f"Completion {len(completions)} is incorrect for benchmark"
-                        )
-
                 instance_log_json["completions"] = completions
-
+                instance_log_json["llm_conversation"] = baseline_llm_output
                 instance_log_json["success"] = any([x["success"] for x in completions])
 
                 if instance_log_json["success"]:
@@ -993,7 +998,7 @@ class Loopy:
 
                 log_json.append(instance_log_json)
 
-                Loopy.write_to_benchmark_file(
+                self.write_to_benchmark_file(
                     benchmark_file, {"log": instance_log_json, "stats": stats}
                 )
 
@@ -1008,7 +1013,7 @@ class Loopy:
                     instance_log_json["success"] = False
                     stats["skipped"].append(benchmark_file)
                     log_json.append(instance_log_json)
-                    Loopy.write_to_benchmark_file(
+                    self.write_to_benchmark_file(
                         benchmark_file, {"log": instance_log_json, "stats": stats}
                     )
                     continue
