@@ -933,6 +933,7 @@ class Loopy:
                         continue
 
                     invariants = self.checker.get_invariants(completion.splitlines())
+                    invariants = "\n".join(invariants)
                     checker_input_with_invariants = self.benchmark.combine_llm_outputs(
                         self.benchmark.get_code(benchmark_file),
                         [invariants],
@@ -941,7 +942,6 @@ class Loopy:
                     invariants_with_id = self.benchmark.extract_loop_invariants(
                         checker_input_with_invariants
                     )
-                    invariants = "\n".join(invariants)
                     checker_inputs = self.benchmark.combine_llm_outputs(
                         self.benchmark.get_code(benchmark_file),
                         (invariants_with_id, [completion]),
