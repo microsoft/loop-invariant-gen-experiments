@@ -1353,7 +1353,7 @@ class Loopy:
         elif prompt == "arrays_with_nudges":
             loopy_prompt = Prompt(
                 system_text_file="templates/array_system_message.txt",
-                prompt_text_file="templates/array_prompt_with_nudges_vf.txt",
+                prompt_text_file="templates/array_prompt_with_nudges.txt",
                 num_completions=8,
             )
         else:
