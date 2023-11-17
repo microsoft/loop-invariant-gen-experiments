@@ -583,11 +583,15 @@ class FramaCBenchmark(Benchmark):
             assert "multiple_methods" in features, "Multiple methods found"
         if len(loops) > 1:
             assert "multiple_loops" in features, "Multiple loops found"
+        if self.uses_arrays(checker_input):
+            assert "arrays" in features, "Uses arrays"
 
         labels = self.get_labels(checker_input)
         annotations = None
         if len(labels) > 0:
             annotations = {label[1]: "" for label in labels}
+            invariants_across_completions = {label[1]: {} for label in labels}
+            assigns_across_completions = {label[1]: {} for label in labels}
             inv_count = 0
             for llm_output in llm_outputs:
                 annotation = self.get_annotations(llm_output, labels)
@@ -645,20 +649,35 @@ class FramaCBenchmark(Benchmark):
                         )
                     else:
                         invariants = {}
+                        assigns = {}
                         for line in ann.split("\n"):
                             invariant = re.findall(r"loop invariant (.+);", line)
                             if len(invariant) > 0:
                                 inv_id = re.findall(r"loop invariant (\w+:) ", line)
                                 if len(inv_id) > 0:
                                     invariant = [invariant[0].replace(inv_id[0], "")]
+                                if invariant[0] in invariants_across_completions[label]:
+                                    continue
+                                invariants_across_completions[label][invariant[0]] = True
                                 invariant = f"loop invariant i{inv_count + 1}: {invariant[0]};"  # add loop invariant label
                                 invariants[invariant] = True
                                 inv_count += 1
+                            else:
+                                assign = re.findall(r"loop assigns .+;", line)
+
+                                if len(assign) > 0:
+                                    if assign[0] in assigns_across_completions[label]:
+                                        continue
+                                    assigns_across_completions[label][assign[0]] = True
+                                    assigns[assign[0]] = True
+                                    
 
                         annotations[label] = (
                             annotations[label]
                             + "\n"
                             + "\n".join(list(invariants.keys()))
+                            + "\n"
+                            + "\n".join(list(assigns.keys()))
                         )
 
             labels = sorted(labels, key=lambda x: x[0][0].start_byte, reverse=True)
@@ -843,6 +862,7 @@ class FramaCBenchmark(Benchmark):
         labels = []
         for comment in comments:
             comment_text = re.findall(r"\/\*(.+)\*\/", comment[0].text.decode("utf-8"))
+            if len(comment_text) == 0: continue
             comment_text = comment_text[0].strip()
             labels.append((comment, comment_text))
 
@@ -1024,6 +1044,10 @@ class FramaCBenchmark(Benchmark):
         comments = comment_query.captures(ast.root_node)
         comments = sorted(comments, key=lambda x: x[0].start_byte, reverse=True)
         for comment in comments:
+            if comment[0].text.decode().startswith("//@"):
+                continue
+            if comment[0].text.decode().startswith("/*@"):
+                continue
             code = code[: comment[0].start_byte] + code[comment[0].end_byte :]
         return code
 

@@ -1339,6 +1339,23 @@ class Loopy:
                 prompt_text_file="templates/simplified_prompt.txt",
                 num_completions=15,
             )
+        elif prompt == "arrays_simplified":
+            loopy_prompt = Prompt(
+                prompt_text_file="templates/simplified_prompt_arrays.txt",
+                num_completions=8,
+            )
+        elif prompt == "arrays_without_nudges":
+            loopy_prompt = Prompt(
+                system_text_file="templates/array_system_message.txt",
+                prompt_text_file="templates/simplified_prompt_with_nudges.txt",
+                num_completions=8,
+            )
+        elif prompt == "arrays_with_nudges":
+            loopy_prompt = Prompt(
+                system_text_file="templates/array_system_message.txt",
+                prompt_text_file="templates/array_prompt_with_nudges_vf.txt",
+                num_completions=8,
+            )
         else:
             loopy_prompt = Prompt(
                 system_text_file=None,
@@ -1391,7 +1408,7 @@ class Loopy:
                     checker_input_with_annotations = self.benchmark.combine_llm_outputs(
                         self.benchmark.get_code(benchmark_file),
                         [block],
-                        "one_loop_one_method",
+                        self.benchmark_features,
                     )
                     completion_json["annotations"] = block
                     __success, checker_message = self.checker.check(

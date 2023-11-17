@@ -55,6 +55,9 @@ def parse_args(args):
         choices=[
             "with_nudges",
             "without_nudges",
+            "arrays_simplified",
+            "arrays_without_nudges",
+            "arrays_with_nudges",
         ],
     )
 
