@@ -2,16 +2,11 @@ extern void __VERIFIER_error() __attribute__ ((__noreturn__));
 void __VERIFIER_assert(int cond) { if(!(cond)) { ERROR: __VERIFIER_error(); } }
 extern int __VERIFIER_nondet_int();
 
-int N;
-
-int main( ) {
-	N = __VERIFIER_nondet_int();
-	int a1[N];
-	int a2[N];
-	int a3[N];
-	int a4[N];
-	int a5[N];
-	int a6[N];
+/*@
+	requires N > 0;
+	requires \separated(a1+(0..N-1), a2+(0..N-1), a3+(0..N-1), a4+(0..N-1), a5+(0..N-1), a6+(0..N-1));
+*/
+int main(int* a1, int* a2, int* a3, int* a4, int* a5, int* a6, int N) {
 
 	int a;
 	for ( a = 0 ; a < N ; a++ ) {

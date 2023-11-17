@@ -8,13 +8,11 @@ Bjorner, McMillan, and Rybalchenko
 SAS 2013
 */
 
-int SIZE;
-
-int main( ) {
-	SIZE = __VERIFIER_nondet_int();
-	int a[SIZE];
-	int b[SIZE];
-	int c[SIZE];
+/*@
+	requires SIZE > 0;
+	requires \separated(a+(0..SIZE-1), b+(0..SIZE-1), c+(0..SIZE-1));
+*/
+int main(int* a, int* b, int* c, int SIZE){
 	int i = 0;
 
 	for(i = 0; i < SIZE; i++)

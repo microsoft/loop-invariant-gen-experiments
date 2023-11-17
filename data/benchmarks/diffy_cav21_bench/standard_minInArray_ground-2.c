@@ -6,6 +6,7 @@ int N;
 
 int main( ) {
 	N = __VERIFIER_nondet_int();
+	if (N <= 0) return 1;
 	int i;
 	int a[N];
 	int min[1];

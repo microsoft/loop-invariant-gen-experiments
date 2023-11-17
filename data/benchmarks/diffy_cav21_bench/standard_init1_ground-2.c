@@ -5,6 +5,8 @@ extern int __VERIFIER_nondet_int(void);
 int N;
 int main ( ) {
 	N = __VERIFIER_nondet_int();
+	if (N <= 0) return 1;
+	
 	int a[N];
 	int i = 0;
 	while ( i < N ) {

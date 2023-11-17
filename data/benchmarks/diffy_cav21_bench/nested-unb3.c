@@ -10,17 +10,13 @@ extern void __VERIFIER_assume(int);
 void __VERIFIER_assert(int cond) { if(!(cond)) { ERROR: __VERIFIER_error(); } }
 extern int __VERIFIER_nondet_int(void);
 
-int N;
-
-int main()
+/*@
+	requires N > 0;
+	requires \separated(a+(0..N-1), b+(0..N-1));
+*/
+int main(int* a, int* b, int N)
 {
-	N = __VERIFIER_nondet_int();
-	if(N <= 0) return 1;
-	__VERIFIER_assume(N <= 2147483647/sizeof(int));
-
 	int i, j;
-	int a[N];
-	int b[N];
 
 	for (i = 0; i < N; i++)
 	{

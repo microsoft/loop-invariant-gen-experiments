@@ -12,14 +12,13 @@ extern int __VERIFIER_nondet_int(void);
 
 int N;
 
-int main()
+/*@
+	requires N > 0;
+	requires \separated(a+(0..N-1), b+(0..N-1));
+*/
+int main(int* a, int* b, int N)
 {
-	N = __VERIFIER_nondet_int();
-	if(N <= 0) return 1;
-
 	int i;
-	int a[N];
-	int b[N];
 
 	a[0] = 4;
 	b[0] = 1;

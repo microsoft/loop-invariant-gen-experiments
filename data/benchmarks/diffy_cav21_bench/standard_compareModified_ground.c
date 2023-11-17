@@ -2,13 +2,13 @@ extern void __VERIFIER_error() __attribute__ ((__noreturn__));
 void __VERIFIER_assert(int cond) { if(!(cond)) { ERROR: __VERIFIER_error(); } }
 extern int __VERIFIER_nondet_int();
 
-int SIZE;
-int main( ) {
-	SIZE = __VERIFIER_nondet_int();
-	int a[SIZE];
-	int b[SIZE];
+/*@
+	requires SIZE > 0;
+	requires \separated(a+(0..SIZE-1), b+(0..SIZE-1), c+(0..SIZE-1));
+*/
+int main(int* a, int* b, int* c, int SIZE)
+{
 	int i = 0;
-	int c [SIZE];
 	int rv[1];
 
 	rv[0] = 1;
