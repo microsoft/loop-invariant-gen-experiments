@@ -2,10 +2,7 @@ import argparse
 import datetime
 import sys
 
-import yaml
-
-from frama_c import FramaCBenchmark, FramaCChecker
-from loopy import Benchmark, Checker, Loopy
+from loopy import Loopy
 
 
 def parse_args(args):
@@ -98,13 +95,6 @@ def parse_args(args):
         type=str,
     )
 
-    parser.add_argument(
-        "--recheck-input",
-        help="Recheck JSON logs from a previous run",
-        type=str,
-        default="",
-    )
-
     # Output logs directory
     parser.add_argument(
         "--output-dir",
@@ -189,13 +179,6 @@ def main(args):
             local_output=args.local_llm_output,
         )
         return
-    
-    if args.termination_baseline:
-        p.termination_baseline(
-            max_benchmarks=args.max_benchmarks,
-            start_index=args.start_index,
-        )
-        return
 
     if args.termination_analysis:
         p.termination_analysis(
@@ -228,14 +211,6 @@ def main(args):
             num_repairs=args.repair_retries,
         )
         return
-
-    elif args.recheck_input != "":
-        p.recheck_logs(
-            max_benchmarks=args.max_benchmarks,
-            start_index=args.start_index,
-            input_log_path=args.recheck_input,
-            output_log_path=args.recheck_input.replace("final", "final_rechecked"),
-        )
 
     else:
         raise Exception("No task specified")
