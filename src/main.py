@@ -31,12 +31,6 @@ def parse_args(args):
     )
 
     parser.add_argument(
-        "--termination-baseline",
-        help="Run the termination baseline algorithm",
-        action="store_true",
-    )
-
-    parser.add_argument(
         "--svcomp-files",
         help="Run the SVCOMP benchmarks",
         action="store_true",
@@ -178,9 +172,6 @@ def parse_args(args):
 
 def main(args):
     args = parse_args(args[1:])
-
-    if args.model_host not in ["azure-open-ai", "local"]:
-        raise Exception("Only models on Azure Open AI are supported for now")
 
     p = Loopy(
         arg_params=vars(args),

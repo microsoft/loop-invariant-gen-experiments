@@ -98,11 +98,12 @@ class Loopy:
 
         return self
 
-    def write_to_benchmark_file(self, benchmark_file, json_log):
+    @staticmethod
+    def write_benchmark_log(log_folder, benchmark_filename, json_log):
         with open(
             os.path.join(
-                self.log_path,
-                benchmark_file.replace(".c", ".json")
+                log_folder,
+                benchmark_filename.replace(".c", ".json")
                 .replace("../", "")
                 .replace("/", "__"),
             ),
@@ -197,251 +198,6 @@ class Loopy:
                 f"Combine and Prune with k = {pass_k_prune} for k={k}, {len(candidates)} benchmarks, File: {benchmark['file']}"
             )
         return pass_k_prune, checker_inputs
-
-    def recheck_logs(
-        self, max_benchmarks=1, start_index=0, input_log_path="", output_log_path=""
-    ):
-        # Rerun only the checker on the logs and generate new logs
-        if self.llm is None:
-            raise Exception(
-                "LLM not initialized. Call load_config first, to load input and prompt files."
-            )
-
-        if output_log_path == "":
-            output_log_path = self.log_path
-
-        existing_log_json = None
-        # Load existing log file. Throws error if it doesn't exist
-        with open(input_log_path, "r", encoding="utf-8") as f:
-            existing_log_json = json.load(f)
-
-        log_json = []
-
-        stats = {"success": [], "failure": [], "skipped": [], "total": 0}
-        log_file = open(output_log_path, "w", encoding="utf-8")
-        benchmark_subset = existing_log_json["logs"][
-            start_index : start_index + max_benchmarks
-        ]
-        total = len(benchmark_subset)
-        for i, instance in enumerate(benchmark_subset):
-            if "completions" not in instance.keys():
-                Logger.log_info(
-                    f"Skipping benchmark: {i}/{total} because it does not have completions"
-                )
-                stats["skipped"].append(i)
-                log_json.append(instance)
-                continue
-
-            if "checker_output" in instance and instance["checker_output"]:
-                Logger.log_info(
-                    f"Skipping benchmark: {i}/{total} because it already succeeded"
-                )
-                stats["success"].append(i)
-                log_json.append(instance)
-                continue
-
-            if (
-                "checker_output_after_combine_and_prune" in instance
-                and instance["checker_output_after_combine_and_prune"]
-            ):
-                Logger.log_info(
-                    f"Skipping benchmark: {i}/{total} because it already succeeded"
-                )
-                stats["success"].append(i)
-                log_json.append(instance)
-                continue
-
-            print(
-                "Rechecking benchmark: {i}/{n}".format(i=start_index + i + 1, n=total)
-            )
-            instance_log_json = deepcopy(instance)
-            try:
-                success = False
-                if not "benchmark_code" in instance:
-                    log_json.append(instance)
-                    print(
-                        "Skipping benchmark: {i}/{n}".format(
-                            i=start_index + i + 1, n=total
-                        )
-                    )
-                    continue
-                checker_input_without_invariants = instance["benchmark_code"]
-
-                if not "llm_conversation" in instance:
-                    log_json.append(instance)
-                    print(
-                        "Skipping benchmark: {i}/{n}".format(
-                            i=start_index + i + 1, n=total
-                        )
-                    )
-                    continue
-                llm_outputs = [
-                    self.llm.extract_code(
-                        x["content"], filter=self.checker.has_invariant
-                    )
-                    for x in instance["llm_conversation"][-1]
-                ]
-
-                completions = []
-                for j, llm_output in enumerate(llm_outputs):
-                    print(f"Checking completion {j + 1}/{len(llm_outputs)}")
-                    completion = {}
-                    if len(llm_output) == 2 and llm_output[0] == (
-                        "ERROR: Output does not contain at least 1 complete code block"
-                    ):
-                        completion["success"] = False
-                        completion["llm_output"] = llm_output[1]
-                        completion[
-                            "error"
-                        ] = "Output does not contain at least 1 code block"
-                        continue
-
-                    checker_input = self.benchmark.combine_llm_outputs(
-                        instance["benchmark_code"],
-                        [
-                            llm_output
-                            if not (
-                                len(llm_output) == 2
-                                and llm_output[0]
-                                == "ERROR: Output does not contain at least 1 complete code block"
-                            )
-                            else ""
-                        ],
-                        "one_loop_one_method",
-                    )
-                    completion["invariants"] = llm_output
-                    completion["code_with_invariants"] = checker_input
-                    __success, checker_message = self.checker.check(
-                        checker_input,
-                        ("termination" in self.analysis),
-                        use_json_dump_for_invariants=self.use_json_output,
-                    )
-                    completion["success"] = __success
-                    completion["checker_message"] = checker_message
-
-                    if not __success:
-                        print(f"Pruning completion {j + 1}/{len(llm_outputs)}")
-                        try:
-                            (
-                                __success,
-                                pruned_code,
-                                frama_c_calls,
-                            ) = self.checker.houdini(
-                                checker_input,
-                                "one_loop_one_method",
-                                use_json_dump_for_invariants=self.use_json_output,
-                            )
-                            success, checker_message = self.checker.check(
-                                pruned_code,
-                                ("termination" in self.analysis),
-                                use_json_dump_for_invariants=self.use_json_output,
-                            )
-                            completion["success_after_prune"] = success
-                            completion["pruned_code"] = pruned_code
-                            completion["checker_message_after_prune"] = checker_message
-                        except Exception as e:
-                            print(e)
-                            print(traceback.format_exc())
-                            completion["success_after_prune"] = False
-                            completion["pruned_code"] = checker_input
-                            completion["checker_message_after_prune"] = e.args[0]
-                            success = False
-
-                    completions.append(completion)
-                    success = success or __success
-
-                instance_log_json["completions"] = completions
-
-                print(f"Checking combined completion")
-                checker_input = self.benchmark.combine_llm_outputs(
-                    instance["benchmark_code"],
-                    [
-                        llm_output
-                        for llm_output in llm_outputs
-                        if not (
-                            len(llm_output) == 2
-                            and llm_output[0]
-                            == "ERROR: Output does not contain at least 1 complete code block"
-                        )
-                    ],
-                    "one_loop_one_method",
-                )
-                __success, checker_message = self.checker.check(
-                    checker_input,
-                    ("termination" in self.analysis),
-                    use_json_dump_for_invariants=self.use_json_output,
-                )
-
-                instance_log_json["code_with_combined_invariants"] = checker_input
-                instance_log_json["checker_output"] = success
-                instance_log_json["checker_message"] = checker_message
-
-                if not __success:
-                    print("Pruning combined completion")
-                    try:
-                        __success, pruned_code, frama_c_calls = self.checker.houdini(
-                            checker_input,
-                            "one_loop_one_method",
-                            use_json_dump_for_invariants=self.use_json_output,
-                        )
-                        __success, checker_message = self.checker.check(
-                            pruned_code,
-                            ("termination" in self.analysis),
-                            use_json_dump_for_invariants=self.use_json_output,
-                        )
-                        instance_log_json["code_after_combine_and_prune"] = pruned_code
-                        instance_log_json[
-                            "checker_output_after_combine_and_prune"
-                        ] = success
-                        instance_log_json[
-                            "checker_message_after_combine_and_prune"
-                        ] = checker_message
-                    except Exception as e:
-                        print(e)
-                        instance_log_json[
-                            "checker_output_after_combine_and_prune"
-                        ] = False
-                        instance_log_json[
-                            "code_after_combine_and_prune"
-                        ] = checker_input
-                        instance_log_json[
-                            "checker_message_after_combine_and_prune"
-                        ] = e.args[0]
-                        success = False
-
-                success = success or __success
-                if success:
-                    stats["success"].append(i)
-                else:
-                    stats["failure"].append(i)
-                stats["total"] += 1
-
-                log_json.append(instance_log_json)
-            except (Exception, KeyboardInterrupt) as e:
-                print(traceback.format_exc())
-                instance_log_json["error"] = str(e)
-                log_json.append(instance_log_json)
-                if isinstance(e, KeyboardInterrupt):
-                    break
-                else:
-                    continue
-
-        stats["success_rate"] = (
-            len(stats["success"]) / stats["total"] if stats["total"] != 0 else 0
-        )
-
-        stats["success_count"] = len(stats["success"])
-        stats["failure_count"] = len(stats["failure"])
-        stats["skipped_count"] = len(stats["skipped"])
-
-        log_file.write(
-            json.dumps(
-                {"params": self.arg_params, "logs": log_json, "stats": stats},
-                indent=4,
-                ensure_ascii=False,
-            )
-        )
-        log_file.close()
 
     def generate_invariants_for_variant(self, prompt, variants, checker_input):
         # one set of variants
@@ -704,8 +460,10 @@ class Loopy:
                     instance_log_json["success"] = True
                     log_json.append(instance_log_json)
                     stats["success"].append(benchmark_file)
-                    self.write_to_benchmark_file(
-                        benchmark_file, {"log": instance_log_json, "stats": stats}
+                    Loopy.write_benchmark_log(
+                        self.log_path,
+                        benchmark_file,
+                        {"log": instance_log_json, "stats": stats},
                     )
                     continue
 
@@ -760,8 +518,10 @@ class Loopy:
                     instance_log_json["success"] = True
                     log_json.append(instance_log_json)
                     stats["success"].append(benchmark_file)
-                    self.write_to_benchmark_file(
-                        benchmark_file, {"log": instance_log_json, "stats": stats}
+                    Loopy.write_benchmark_log(
+                        self.log_path,
+                        benchmark_file,
+                        {"log": instance_log_json, "stats": stats},
                     )
                     continue
 
@@ -816,8 +576,10 @@ class Loopy:
                     instance_log_json["success"] = True
                     log_json.append(instance_log_json)
                     stats["success"].append(benchmark_file)
-                    self.write_to_benchmark_file(
-                        benchmark_file, {"log": instance_log_json, "stats": stats}
+                    Loopy.write_benchmark_log(
+                        self.log_path,
+                        benchmark_file,
+                        {"log": instance_log_json, "stats": stats},
                     )
                     continue
 
@@ -828,8 +590,10 @@ class Loopy:
                 log_json.append(instance_log_json)
                 stats["failure"].append(benchmark_file)
                 instance_log_json["success"] = False
-                self.write_to_benchmark_file(
-                    benchmark_file, {"log": instance_log_json, "stats": stats}
+                Loopy.write_benchmark_log(
+                    self.log_path,
+                    benchmark_file,
+                    {"log": instance_log_json, "stats": stats},
                 )
 
             except Exception as e:
@@ -843,8 +607,10 @@ class Loopy:
                     instance_log_json["success"] = False
                     stats["skipped"].append(benchmark_file)
                     log_json.append(instance_log_json)
-                    self.write_to_benchmark_file(
-                        benchmark_file, {"log": instance_log_json, "stats": stats}
+                    Loopy.write_benchmark_log(
+                        self.log_path,
+                        benchmark_file,
+                        {"log": instance_log_json, "stats": stats},
                     )
                     continue
 
@@ -856,175 +622,6 @@ class Loopy:
             )
 
             log_json.append(instance_log_json)
-
-        log_file.write(
-            json.dumps(
-                {"params": self.arg_params, "logs": log_json, "stats": stats},
-                indent=4,
-                ensure_ascii=False,
-            )
-        )
-        log_file.close()
-
-        return
-
-    def termination_baseline(self, max_benchmarks=1, start_index=0):
-        if self.llm is None or self.benchmark is None or self.checker is None:
-            raise Exception("Pipeline not initialized. Call load_config first.")
-
-        log_json = []
-        stats = {"success": [], "failure": [], "skipped": [], "total": 0}
-
-        # create logs dir
-        self.log_path = datetime.datetime.now().strftime(
-            f"../logs/loopy_%Y_%m_%d_%H_%M_%S/"
-        )
-        if not os.path.exists(os.path.dirname(self.log_path)):
-            os.makedirs(os.path.dirname(self.log_path))
-
-        log_file = open(self.log_path + "final.json", "w", encoding="utf-8")
-
-        sliced_benchmarks = self.benchmark.input_file_paths[
-            start_index : start_index + max_benchmarks
-        ]
-
-        baseline_prompt = Prompt(
-            system_text_file="templates/termination_baseline_system.txt",
-            prompt_text_file="templates/termination_baseline_prompt.txt",
-            num_completions=10,
-        )
-
-        for benchmark_index, benchmark_file in enumerate(sliced_benchmarks):
-            Logger.log_info(
-                f"Running benchmark: {start_index + benchmark_index + 1}/{len(sliced_benchmarks)}"
-            )
-            try:
-                instance_log_json = {
-                    "file": benchmark_file,
-                    "benchmark_code": self.benchmark.get_code(benchmark_file),
-                    "success": False,
-                }
-
-                (
-                    baseline_code_blocks,
-                    baseline_llm_output,
-                ) = self.llm.generate_annotation(
-                    input={"code": self.benchmark.get_code(benchmark_file)},
-                    prompt=baseline_prompt,
-                    extraction_filter=self.checker.has_variant,
-                )
-
-                completions = []
-                for completion in baseline_code_blocks:
-                    Logger.log_info(f"Checking completion {len(completions) + 1}")
-                    if len(completion) == 2 and completion[0] == (
-                        "ERROR: Output does not contain at least 1 complete code block"
-                    ):
-                        completions.append(
-                            {
-                                "success": False,
-                                "llm_output": completion[1],
-                                "error": "Output does not contain at least 1 code block",
-                            }
-                        )
-                        Logger.log_error(
-                            f"Completion {len(completions)} is empty for benchmark"
-                        )
-                        continue
-
-                    invariants = self.checker.get_invariants(completion.splitlines())
-                    invariants = "\n".join(invariants)
-                    checker_input_with_invariants = self.benchmark.combine_llm_outputs(
-                        self.benchmark.get_code(benchmark_file),
-                        [invariants],
-                        "one_loop_one_method",
-                    )
-                    invariants_with_id = self.benchmark.extract_loop_invariants(
-                        checker_input_with_invariants
-                    )
-                    checker_inputs = self.benchmark.combine_llm_outputs(
-                        self.benchmark.get_code(benchmark_file),
-                        (invariants_with_id, [completion]),
-                        "termination_one_loop_one_method",
-                    )
-
-                    candidates = []
-                    for candidate in checker_inputs:
-                        success, checker_message = self.checker.check(
-                            candidate,
-                            check_variant=True,
-                            use_json_dump_for_invariants=self.use_json_output,
-                        )
-                        candidates.append(
-                            {
-                                "candidate_with_invariants_and_variant": candidate,
-                                "checker_output": success,
-                                "checker_message": checker_message,
-                            }
-                        )
-                        if success:
-                            Logger.log_success(
-                                f"Completion {len(completions) + 1} is correct for benchmark"
-                            )
-                            break
-                        else:
-                            Logger.log_error(
-                                f"Completion {len(completions) + 1} is incorrect for benchmark"
-                            )
-
-                    completions.append(
-                        {
-                            "success": any([x["checker_output"] for x in candidates]),
-                            "llm_output": completion,
-                            "candidates": candidates,
-                        }
-                    )
-                instance_log_json["completions"] = completions
-                instance_log_json["llm_conversation"] = baseline_llm_output
-                instance_log_json["success"] = any([x["success"] for x in completions])
-
-                if instance_log_json["success"]:
-                    Logger.log_success(
-                        f"Benchmark {start_index + benchmark_index + 1}/{len(sliced_benchmarks)} succeeded"
-                    )
-                    stats["success"].append(benchmark_file)
-
-                else:
-                    Logger.log_error(
-                        f"Benchmark {start_index + benchmark_index + 1}/{len(sliced_benchmarks)} failed"
-                    )
-                    stats["failure"].append(benchmark_file)
-
-                stats["total"] += 1
-                stats["success_count"] = len(stats["success"])
-                stats["failure_count"] = len(stats["failure"])
-                stats["success_rate"] = (
-                    stats["success_count"] / stats["total"]
-                    if stats["total"] != 0
-                    else 0
-                )
-
-                log_json.append(instance_log_json)
-
-                self.write_to_benchmark_file(
-                    benchmark_file, {"log": instance_log_json, "stats": stats}
-                )
-
-            except Exception as e:
-                Logger.log_error(traceback.format_exc())
-                if isinstance(e, KeyboardInterrupt):
-                    instance_log_json["success"] = False
-                    stats["skipped"].append(benchmark_file)
-                    break
-                else:
-                    instance_log_json["error"] = str(e)
-                    instance_log_json["success"] = False
-                    stats["skipped"].append(benchmark_file)
-                    log_json.append(instance_log_json)
-                    self.write_to_benchmark_file(
-                        benchmark_file, {"log": instance_log_json, "stats": stats}
-                    )
-                    continue
 
         log_file.write(
             json.dumps(
@@ -1260,8 +857,10 @@ class Loopy:
                     instance_log_json["success"] = False
                     stats["skipped"].append(benchmark_file)
                     log_json.append(instance_log_json)
-                    self.write_to_benchmark_file(
-                        benchmark_file, {"log": instance_log_json, "stats": stats}
+                    Loopy.write_benchmark_log(
+                        self.log_path,
+                        benchmark_file,
+                        {"log": instance_log_json, "stats": stats},
                     )
                     continue
 
@@ -1286,8 +885,10 @@ class Loopy:
 
             log_json.append(instance_log_json)
 
-            self.write_to_benchmark_file(
-                benchmark_file, {"log": instance_log_json, "stats": stats}
+            Loopy.write_benchmark_log(
+                self.log_path,
+                benchmark_file,
+                {"log": instance_log_json, "stats": stats},
             )
 
         log_file.write(
@@ -1547,8 +1148,10 @@ class Loopy:
                     instance_log_json["success"] = False
                     stats["skipped"].append(benchmark_file)
                     log_json.append(instance_log_json)
-                    self.write_to_benchmark_file(
-                        benchmark_file, {"log": instance_log_json, "stats": stats}
+                    Loopy.write_benchmark_log(
+                        self.log_path,
+                        benchmark_file,
+                        {"log": instance_log_json, "stats": stats},
                     )
                     continue
 
@@ -1573,7 +1176,8 @@ class Loopy:
 
             log_json.append(instance_log_json)
 
-            self.write_to_benchmark_file(
+            Loopy.write_benchmark_log(
+                self.log_path,
                 benchmark_file,
                 {"logs": instance_log_json, "stats": stats},
             )
@@ -1658,7 +1262,8 @@ class Loopy:
                 instance_log_json["success"] = False
                 stats["gen_skipped"].append(gen_benchmark_log["file"])
                 log_json.append(instance_log_json)
-                self.write_to_benchmark_file(
+                Loopy.write_benchmark_log(
+                    self.log_path,
                     gen_benchmark_log["file"],
                     {"logs": instance_log_json, "stats": stats},
                 )
@@ -1680,7 +1285,8 @@ class Loopy:
                     stats["gen_success"].append(gen_benchmark_log["file"])
 
                     log_json.append(instance_log_json)
-                    self.write_to_benchmark_file(
+                    Loopy.write_benchmark_log(
+                        self.log_path,
                         gen_benchmark_log["file"],
                         {"logs": instance_log_json, "stats": stats},
                     )
@@ -1818,7 +1424,8 @@ class Loopy:
                     )
                     stats["repair_failure"].append(gen_benchmark_log["file"])
 
-                self.write_to_benchmark_file(
+                Loopy.write_benchmark_log(
+                    self.log_path,
                     gen_benchmark_log["file"],
                     {"logs": instance_log_json, "stats": stats},
                 )
@@ -1834,7 +1441,8 @@ class Loopy:
                     instance_log_json["success"] = False
                     stats["repair_skipped"].append(gen_benchmark_log["file"])
                     log_json.append(instance_log_json)
-                    self.write_to_benchmark_file(
+                    Loopy.write_benchmark_log(
+                        self.log_path,
                         gen_benchmark_log["file"],
                         {"logs": instance_log_json, "stats": stats},
                     )
@@ -2076,7 +1684,8 @@ class Loopy:
 
                 log_json.append(instance_log_json)
 
-                self.write_to_benchmark_file(
+                Loopy.write_benchmark_log(
+                    self.log_path,
                     instance[0],
                     {"logs": instance_log_json, "stats": stats},
                 )
@@ -2089,7 +1698,8 @@ class Loopy:
                 else:
                     stats["skipped"].append(instance[0])
                     log_json.append(instance_log_json)
-                    self.write_to_benchmark_file(
+                    Loopy.write_benchmark_log(
+                        self.log_path,
                         instance[0],
                         {"logs": instance_log_json, "stats": stats},
                     )
