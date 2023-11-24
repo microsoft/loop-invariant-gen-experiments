@@ -2,15 +2,8 @@
 
 ## Setup instructions
 
-Easiest way is to pull the docker image from dockerhub and run it.
-
+Easiest way is to use `Dockerfile` in `src` to build a docker image and use it.
 To do this, you need to have docker installed on your machine. To install docker, follow the instructions at - [https://docs.docker.com/install/](https://docs.docker.com/install/).
-
-```bash
-docker pull adkamath/loopy:latest
-```
-
-You can also use `Dockerfile` in `src` to build a docker image and run it.
 
 You can build the docker image by running the following commands starting **from the root of this repository**:
 (If you get a permission error, you may need to run the following command with `sudo`)
