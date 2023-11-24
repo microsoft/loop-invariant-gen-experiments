@@ -14,8 +14,6 @@ docker build -t loopy --build-arg USER_ID=$(id -u) --build-arg GROUP_ID=$(id -g)
 ```
 
 Once the image is built, you can run it using the following command **from the root of this repository**:
-**NOTE: If you don't need to interact with the OpenAI API, skip the -e CLI option**
-
 (If you get a permission error, you may need to run the following command with `sudo`)
 
 ```bash
@@ -30,10 +28,12 @@ docker run -it --rm \
     loopy /bin/bash
 ```
 
+**NOTE: If you don't need to interact with the OpenAI API, skip the -e CLI option**
+
 You can run the toolchain using the following command:
 
 ```bash
-python3 main.py --config-file <YAML_config_file> --model <model_name> --max-benchmarks <max_benchmarks>
+python3 main.py --config-file [CONFIG_FILE] --max-benchmarks [MAX_BENCHMARKS] [OPTIONS]
 ```
 
 Use `python3 main.py --help` to see the list of available options.
