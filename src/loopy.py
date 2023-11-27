@@ -127,8 +127,8 @@ class Loopy:
             traceback.print_exc()
         return success
 
+    @staticmethod
     def combine_and_prune_with_k(
-        self,
         benchmark,
         n,
         k,
@@ -1259,7 +1259,7 @@ class Loopy:
                 continue
 
             try:
-                pass_8_success, candidates = self.combine_and_prune_with_k(
+                pass_8_success, candidates = Loopy.combine_and_prune_with_k(
                     gen_benchmark_log,
                     15,
                     k,
