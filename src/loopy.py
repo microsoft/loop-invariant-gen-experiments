@@ -15,73 +15,58 @@ from benchmark import Benchmark
 from checker import Checker
 from llm_utils import Logger
 from loopy_llm import LLM, Prompt
-from frama_c import FramaCBenchmark, FramaCChecker
+from loopy_factory import LoopyFactory
 
 
 class Loopy:
     def __init__(
         self,
-        benchmark: Benchmark = None,
-        checker: Checker = None,
         model: str = "gpt-4",
         debug: bool = False,
         log_path: str = None,
-        analysis: str = "one_loop_one_method",
         arg_params: dict = None,
         use_json_output: bool = False,
     ):
-        self.benchmark = benchmark
-        self.checker = checker
         self.model = model
-        self.model_host = "azure-open-ai"
         self.debug = debug
         self.log_path = log_path
         self.benchmark_features = ""
-
-        self.analysis = analysis
         self.arg_params = arg_params
         self.use_json_output = use_json_output
+        self.benchmark = None
+        self.checker = None
 
     def set_config(self, config_file):
         config = yaml.load(open(config_file, "r"), Loader=yaml.FullLoader)
 
         self.arg_params = {"cli_args": self.arg_params, "config_file_args": config}
 
-        if "analysis" in config:
-            self.analysis = config["analysis"]
-
-        if "model_host" in config:
-            self.model_host = config["model_host"]
-
         if "model" in config:
             self.model = config["model"]
 
         if not "benchmarks" in config:
             raise Exception("No benchmarks file found in config file")
-
         benchmarks = config["benchmarks"]
 
         if "benchmark_features" in config:
             self.benchmark_features = config["benchmark_features"]
         else:
-            self.benchmark_features = "one_loop_one_method"
+            self.benchmark_features = "one_loop one_method"
 
-        if config["checker"] == "frama-c":
-            self.benchmark = FramaCBenchmark(
-                benchmarks_file=benchmarks, features=self.benchmark_features
-            )
-            self.checker = FramaCChecker()
-        elif config["checker"] == "boogie":
+        if "checker" not in config:
+            raise Exception("No checker specified in config file")
+
+        if config["checker"] == "boogie":
             warnings.warn(
-                "Boogie checker integration might not fully work, use Frama-C instead",
+                "Boogie checker integration is still experimental, use Frama-C instead",
                 UserWarning,
             )
-            self.benchmark = Benchmark(
-                benchmarks_file=benchmarks, features=self.benchmark_features
-            )
-            self.checker = Checker("boogie")
-        else:
-            raise Exception(f"Invalid checker: {config['checker']}")
+        loopyfact = LoopyFactory(config["checker"])
+        self.benchmark = loopyfact.get_benchmark(benchmarks, self.benchmark_features)
+        self.checker = loopyfact.get_checker()
+
+        if "checker_timeout" in config:
+            self.checker.timeout = config["checker_timeout"]
 
         if "use_json_output" in config:
             self.use_json_output = config["use_json_output"]
@@ -94,7 +79,7 @@ class Loopy:
             self.debug,
         )
 
-        self.benchmark.check_input()
+        self.benchmark.validate_inputs()
 
         return self
 
@@ -426,7 +411,7 @@ class Loopy:
                     extraction_filter=self.checker.has_variant,
                 )
 
-                alg_variants = self.checker.get_variant_expressions(
+                alg_variants = self.benchmark.get_variant_expressions(
                     [
                         code_block
                         for code_block in alg_variant_code_blocks
@@ -480,7 +465,7 @@ class Loopy:
                     extraction_filter=self.checker.has_variant,
                 )
 
-                lexico_variants = self.checker.get_variant_expressions(
+                lexico_variants = self.benchmark.get_variant_expressions(
                     [
                         code_block
                         for code_block in lexico_variant_code_blocks
@@ -538,7 +523,7 @@ class Loopy:
                     extraction_filter=self.checker.has_variant,
                 )
 
-                multi_phase_variants = self.checker.get_variant_expressions(
+                multi_phase_variants = self.benchmark.get_variant_expressions(
                     [
                         code_block
                         for code_block in multi_phase_variant_code_blocks
@@ -977,11 +962,15 @@ class Loopy:
             success = False
 
             try:
+                codeblock_filter = lambda x: self.checker.has_invariant(x) or (
+                    self.checker.has_function_contract(x)
+                    if "multiple_methods" in self.benchmark_features
+                    else False
+                )
                 annotation_blocks, llm_outputs = self.llm.generate_annotation(
                     input={"code": self.benchmark.get_code(benchmark_file)},
                     prompt=loopy_prompt,
-                    extraction_filter=lambda x: self.checker.has_invariant(x)
-                    or self.checker.has_function_contract(x),
+                    extraction_filter=codeblock_filter,
                 )
 
                 instance_log_json["llm_conversation"] = llm_outputs

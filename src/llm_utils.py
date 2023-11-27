@@ -58,7 +58,7 @@ END = "\033[0m"
 
 
 class Logger:
-    """A helper class for logging messages."""
+    """A helper class for logging messages to std output."""
 
     verbose = False
     debug = False
