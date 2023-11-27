@@ -2,12 +2,11 @@ extern void __VERIFIER_error() __attribute__ ((__noreturn__));
 void __VERIFIER_assert(int cond) { if(!(cond)) { ERROR: __VERIFIER_error(); } }
 extern int __VERIFIER_nondet_int();
 
-int N;
-
-int main ( ) {
-	N = __VERIFIER_nondet_int();
-	int a [N];
-	int b [N]; 
+/*@
+	requires N > 0;
+	requires \separated(a+(0..N-1), b+(0..N-1));
+*/
+int main (int* a, int* b, int N ) {
 	int i = 0;
 	while ( i < N ) {
 		a[i] = 42;

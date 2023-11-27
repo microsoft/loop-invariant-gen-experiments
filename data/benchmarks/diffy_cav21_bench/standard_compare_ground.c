@@ -2,12 +2,13 @@ extern void __VERIFIER_error() __attribute__ ((__noreturn__));
 void __VERIFIER_assert(int cond) { if(!(cond)) { ERROR: __VERIFIER_error(); } }
 extern int __VERIFIER_nondet_int();
 
-int SIZE;
-int main( ) {
-	SIZE = __VERIFIER_nondet_int();
+/*@
+	requires SIZE > 0;
+	requires \separated(a+(0..SIZE-1), b+(0..SIZE-1));
+*/
+int main(int* a, int* b, int SIZE)
+{
 	int i;
-	int a[SIZE];
-	int b[SIZE];
 	int rv[1];
 
 	for (i = 0; i < SIZE ; i++ ) {

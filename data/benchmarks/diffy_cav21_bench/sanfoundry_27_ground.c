@@ -11,6 +11,7 @@ int SIZE;
 int main()
 {
 	SIZE = __VERIFIER_nondet_int();
+	if(SIZE <= 0) return 1;
 	int i;
 	int largest[1];
 	int array[SIZE];

@@ -2,14 +2,12 @@ extern void __VERIFIER_error() __attribute__ ((__noreturn__));
 void __VERIFIER_assert(int cond) { if(!(cond)) { ERROR: __VERIFIER_error(); } }
 extern int __VERIFIER_nondet_int();
 
-int SIZE;
-/* Invited talk at ETAPS 2014 */
-
-int main( ) {
-	SIZE = __VERIFIER_nondet_int();
-	int password[ SIZE ];
-	int guess[ SIZE ];
-
+/*@
+	requires SIZE > 0;
+	requires \separated(password+(0..SIZE-1), guess+(0..SIZE-1));
+*/
+int main(int* password, int* guess, int SIZE)
+{
 	int i;
 	int result[1];
 	result[0] = 1;	

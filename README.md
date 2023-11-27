@@ -1,16 +1,74 @@
 # Loopy
 
-## Setup instructions
+## Setup
 
-Easiest way is to pull the docker image from dockerhub and run it.
+### Without Docker
 
-To do this, you need to have docker installed on your machine. To install docker, follow the instructions at - [https://docs.docker.com/install/](https://docs.docker.com/install/).
+#### Install Frama-C
 
 ```bash
-docker pull adkamath/loopy:latest
+# Install opam (OCaml package manager)
+sudo apt install opam # or dnf, pacman, etc.
+
+# Or you can download an opam binary, put it in the PATH
+# and run it directly (no sudo required)
+
+# Initialize opam (install an OCaml compiler)
+opam init --compiler 4.14.1 # may take a while
+eval $(opam env)
+
+# Install Frama-C (including dependencies)
+opam install frama-c
 ```
 
-You can also use `Dockerfile` in `src` to build a docker image and run it.
+#### Install CVC4
+
+```bash
+wget http://cvc4.cs.stanford.edu/downloads/builds/{x86_64-linux, win64}-opt/cvc4-1.6-{x86_64-linux, win64}-opt/
+mv cvc4-1.6-{x86_64-linux, win64}-opt cvc4
+```
+
+#### Install Alt-Ergo
+
+```bash
+opam install alt-ergo
+```
+
+#### Install Z3
+
+```bash
+wget wget https://github.com/Z3Prover/z3/releases/download/z3-4.12.2/z3-4.12.2-x64-glibc-2.31.zip
+unzip z3-4.12.2-x64-glibc-2.31.zip
+ln -s z3-4.12.2-x64-glibc-2.31/bin/z3
+```
+
+#### Configure Why3
+
+```bash
+rm -f ~/.why3.conf
+
+why3 config detect
+```
+
+#### Install python dependencies
+
+```bash
+# Ensure python version >= 3.11
+pip install pyyaml jinja2 openai tiktoken tree_sitter numpy
+```
+
+#### Build the tree-sitter-c library
+
+```bash
+git clone https://github.com/tree-sitter/tree-sitter-c.git tree_sitter_lib/vendor/tree-sitter-c
+python3 build_parser.py
+```
+
+Depending on how you access the LLM, you can follow the steps in the LLM access section below.
+
+### With Docker
+
+You can use `Dockerfile` in `src` to build a docker image and run it.
 
 You can build the docker image by running the following commands starting **from the root of this repository**:
 (If you get a permission error, you may need to run the following command with `sudo`)
@@ -21,7 +79,7 @@ docker build -t loopy --build-arg USER_ID=$(id -u) --build-arg GROUP_ID=$(id -g)
 ```
 
 Once the image is built, you can run it using the following command **from the root of this repository**:
-**NOTE: If you don't need to interact with the OpenAI API, skip the -e CLI option**
+**NOTE: If you don't need to interact with the Azure OpenAI API, skip the -e CLI option**
 
 (If you get a permission error, you may need to run the following command with `sudo`)
 
@@ -40,10 +98,30 @@ docker run -it --rm \
 You can run the toolchain using the following command:
 
 ```bash
-python3 main.py --config-file <YAML_config_file> --model <model_name> --max-benchmarks <max_benchmarks>
+python3 main.py --config-file <YAML_config_file> --max-benchmarks <max_benchmarks> [options]
 ```
 
 Use `python3 main.py --help` to see the list of available options.
+
+### LLM access
+
+If you are using an Azure OpenAI endpoint, you need to set the following environment variables before running the toolchain:
+
+```bash
+export OPENAI_API_KEY=<your key>
+```
+
+You should now be able to run the toolchain using the following command:
+
+```bash
+python3 main.py --config-file <YAML_config_file> --max-benchmarks <max_benchmarks> [options]
+```
+
+If you are using a different endpoint, you will have to implement a wrapper class that inherits `Provider` in `llm_api_client.py`.
+See the `AzureOpenAI` class for an example.
+
+Currently we support running only the Llama-2 family of models locally.
+If you are using an LLM locally on your machine or your servers, you will have to download the model and set the path to the model checkpoints and tokenizer accordingly in `llama_2.py`.
 
 ## Contributing
 
