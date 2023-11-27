@@ -184,709 +184,6 @@ class Loopy:
             )
         return pass_k_prune, checker_inputs
 
-    def generate_invariants_for_variant(self, prompt, variants, checker_input):
-        # one set of variants
-        invariants_log = {"success": False}
-
-        for var_index, variant in enumerate(variants):
-            Logger.log_info(
-                f"Checking variant [{var_index + 1}]/[{len(variants)}]: {variant}"
-            )
-            variant_log = {"variant": variant}
-            try:
-                # syntax error check
-                checker_inputs_with_variants = self.benchmark.combine_llm_outputs(
-                    checker_input,
-                    (
-                        "",
-                        ["\n".join(["loop variant " + x + ";" for x in variant])],
-                    ),
-                    "termination_one_loop_one_method",
-                )
-
-                error_free_variants = []
-
-                for checker_input_with_variant in checker_inputs_with_variants:
-                    success, checker_message = self.checker.check(
-                        checker_input_with_variant,
-                        check_variant=True,
-                        use_json_dump_for_invariants=self.use_json_output,
-                    )
-
-                    if "Annotation error on line " in checker_message:
-                        Logger.log_error(f"Annotation error in variant: {variant}")
-                        continue
-                    else:
-                        error_free_variants.append(checker_input_with_variant)
-
-                if len(error_free_variants) == 0:
-                    variant_log[
-                        "error"
-                    ] = "All variant candidates have annotation errors"
-                    variant_log["success"] = False
-                    invariants_log[str(variant)] = variant_log
-                    Logger.log_error(f"Annotation errors in variant: {variant}")
-                    continue
-
-                Logger.log_info(f"Generating invariants for variant: {variant}")
-
-                # Generate invariants for this variant
-                (
-                    invariant_code_blocks,
-                    invariant_llm_output,
-                ) = self.llm.generate_annotation(
-                    input={
-                        "code": checker_input,
-                        "loop_variant": "(" + ", ".join(variant) + ")",
-                    },
-                    prompt=prompt,
-                    extraction_filter=self.checker.has_invariant,
-                )
-
-                variant_log["invariant_code_blocks"] = invariant_code_blocks
-                variant_log["invariant_llm_output"] = invariant_llm_output
-
-                checker_input_with_invariants = self.benchmark.combine_llm_outputs(
-                    checker_input,
-                    list(
-                        filter(
-                            lambda x: not (
-                                len(x) == 2
-                                and x[0]
-                                == "ERROR: Output does not contain at least 1 complete code block"
-                            ),
-                            invariant_code_blocks,
-                        )
-                    ),
-                    "one_loop_one_method",
-                )
-
-                # Houdini for the invariant set
-                success, pruned_code, num_frama_c_calls = self.checker.houdini(
-                    checker_input_with_invariants,
-                    "one_loop_one_method",
-                    use_json_dump_for_invariants=self.use_json_output,
-                )
-
-                inductive_invariants = self.benchmark.extract_loop_invariants(
-                    pruned_code
-                )
-
-                if len(inductive_invariants) == 0:
-                    Logger.log_error(
-                        f"No inductive invariants found for variant: {variant}"
-                    )
-                else:
-                    Logger.log_success(
-                        f"Inductive invariants found for variant: {variant}"
-                    )
-
-                variant_log["inductive_invariants"] = inductive_invariants
-                # candidates with variants and invariants
-                checker_full_inputs = self.benchmark.combine_llm_outputs(
-                    checker_input,
-                    (
-                        inductive_invariants,
-                        ["\n".join(["loop variant " + x + ";" for x in variant])],
-                    ),
-                    "termination_one_loop_one_method",
-                )
-
-                variant_candidates = []
-                for checker_inp in checker_full_inputs:
-                    Logger.log_info(
-                        f"Checking variant candidate for variant: {variant}"
-                    )
-                    success, checker_message = self.checker.check(
-                        checker_inp,
-                        check_variant=True,
-                        use_json_dump_for_invariants=self.use_json_output,
-                    )
-                    variant_candidates.append(
-                        {
-                            "candidate_with_combined_invariants_and_variant": checker_inp,
-                            "checker_output": success,
-                            "checker_message": checker_message,
-                        }
-                    )
-                    if success:
-                        Logger.log_success(
-                            f"Variant candidate is correct for variant: {variant}"
-                        )
-                    else:
-                        Logger.log_error(
-                            f"Variant candidate is incorrect for variant: {variant}"
-                        )
-
-                variant_log["final_variant_candidates"] = variant_candidates
-                variant_log["success"] = any(
-                    [x["checker_output"] for x in variant_candidates]
-                )
-
-                invariants_log[str(variant)] = variant_log
-                invariants_log["success"] = (
-                    invariants_log["success"] or variant_log["success"]
-                )
-
-                if variant_log["success"]:
-                    Logger.log_success(f"Variant {variant} is correct for benchmark")
-                    break
-                else:
-                    Logger.log_error(f"Variant {variant} is incorrect for benchmark")
-
-            except Exception as e:
-                Logger.log_error(traceback.format_exc())
-                variant_log["error"] = str(e)
-                variant_log["success"] = False
-                invariants_log[str(variant)] = variant_log
-                invariants_log["success"] = False
-
-        return invariants_log
-
-    def termination_analysis(self, max_benchmarks=1, start_index=0):
-        if self.llm is None or self.benchmark is None or self.checker is None:
-            raise Exception("Pipeline not initialized. Call load_config first.")
-
-        log_json = []
-        stats = {"success": [], "failure": [], "skipped": [], "total": 0}
-
-        # create logs dir
-        self.log_path = datetime.datetime.now().strftime(
-            f"../logs/loopy_%Y_%m_%d_%H_%M_%S/"
-        )
-        if not os.path.exists(os.path.dirname(self.log_path)):
-            os.makedirs(os.path.dirname(self.log_path))
-
-        log_file = open(self.log_path + "final.json", "w", encoding="utf-8")
-
-        sliced_benchmarks = self.benchmark.input_file_paths[
-            start_index : start_index + max_benchmarks
-        ]
-
-        alg_variant_prompt = Prompt(
-            system_text_file="templates/termination_variants_system.txt",
-            prompt_text_file="templates/termination_variants_prompt.txt",
-            num_completions=5,
-        )
-        lexico_variant_prompt = Prompt(
-            system_text_file="templates/termination_lexico_system.txt",
-            prompt_text_file="templates/termination_lexico_prompt.txt",
-            num_completions=5,
-        )
-        multi_phase_variant_prompt = Prompt(
-            system_text_file="templates/termination_mphase_system.txt",
-            prompt_text_file="templates/termination_mphase_prompt.txt",
-            num_completions=5,
-        )
-
-        invariants_prompt = Prompt(
-            system_text_file="templates/termination_invariants_system.txt",
-            prompt_text_file="templates/termination_invariants_prompt.txt",
-            num_completions=5,
-        )
-
-        for benchmark_index, benchmark_file in enumerate(sliced_benchmarks):
-            Logger.log_info(
-                f"Running benchmark: {start_index + benchmark_index + 1}/{len(sliced_benchmarks)}"
-            )
-            benchmark_success = False
-
-            instance_log_json = {
-                "file": benchmark_file,
-                "benchmark_code": self.benchmark.get_code(benchmark_file),
-                "success": False,
-            }
-
-            try:
-                # Try the basic prompt first
-                Logger.log_info(
-                    f"Using basic prompt for benchmark: {start_index + benchmark_index + 1}/{len(sliced_benchmarks)}"
-                )
-                (
-                    alg_variant_code_blocks,
-                    alg_variant_llm_output,
-                ) = self.llm.generate_annotation(
-                    input={"code": self.benchmark.get_code(benchmark_file)},
-                    prompt=alg_variant_prompt,
-                    extraction_filter=self.checker.has_variant,
-                )
-
-                alg_variants = self.benchmark.get_variant_expressions(
-                    [
-                        code_block
-                        for code_block in alg_variant_code_blocks
-                        if not (
-                            len(code_block) == 2
-                            and code_block[0]
-                            == "ERROR: Output does not contain at least 1 complete code block"
-                        )
-                    ]
-                )
-
-                instance_log_json["simple_variants"] = alg_variants
-                instance_log_json["simple_variant_llm_output"] = alg_variant_llm_output
-                instance_log_json["simple_variant_log"] = {}
-
-                invariants_log = self.generate_invariants_for_variant(
-                    invariants_prompt,
-                    alg_variants,
-                    self.benchmark.get_code(benchmark_file),
-                )
-
-                instance_log_json["simple_variant_log"] = invariants_log
-                instance_log_json["simple_variant_success"] = invariants_log["success"]
-
-                # If the basic prompt works, we are done
-                if invariants_log["success"]:
-                    benchmark_success = True
-                    Logger.log_success(
-                        f"Benchmark {start_index + benchmark_index + 1}/{len(sliced_benchmarks)} succeeded with a basic prompt"
-                    )
-                    instance_log_json["success"] = True
-                    log_json.append(instance_log_json)
-                    stats["success"].append(benchmark_file)
-                    Loopy.write_benchmark_log(
-                        self.log_path,
-                        benchmark_file,
-                        {"log": instance_log_json, "stats": stats},
-                    )
-                    continue
-
-                # If the basic prompt does not work, try the lexicographic prompt next
-                Logger.log_info(
-                    f"Using lexicographic prompt for benchmark: {start_index + benchmark_index + 1}/{len(sliced_benchmarks)}"
-                )
-                (
-                    lexico_variant_code_blocks,
-                    lexico_variant_llm_output,
-                ) = self.llm.generate_annotation(
-                    input={"code": self.benchmark.get_code(benchmark_file)},
-                    prompt=lexico_variant_prompt,
-                    extraction_filter=self.checker.has_variant,
-                )
-
-                lexico_variants = self.benchmark.get_variant_expressions(
-                    [
-                        code_block
-                        for code_block in lexico_variant_code_blocks
-                        if not (
-                            len(code_block) == 2
-                            and code_block[0]
-                            == "ERROR: Output does not contain at least 1 complete code block"
-                        )
-                    ]
-                )
-
-                instance_log_json["lexicographic_variants"] = lexico_variants
-                instance_log_json[
-                    "lexicographic_variant_llm_output"
-                ] = lexico_variant_llm_output
-                instance_log_json["lexicographic_variant_log"] = {}
-
-                invariants_log = self.generate_invariants_for_variant(
-                    invariants_prompt,
-                    lexico_variants,
-                    self.benchmark.get_code(benchmark_file),
-                )
-
-                instance_log_json["lexicographic_variant_log"] = invariants_log
-                instance_log_json["lexicographic_variant_success"] = invariants_log[
-                    "success"
-                ]
-
-                # If the lexicographic prompt works, we can move on
-                if invariants_log["success"]:
-                    benchmark_success = True
-                    Logger.log_success(
-                        f"Benchmark {start_index + benchmark_index + 1}/{len(sliced_benchmarks)} succeeded with a lexicographic prompt"
-                    )
-                    instance_log_json["success"] = True
-                    log_json.append(instance_log_json)
-                    stats["success"].append(benchmark_file)
-                    Loopy.write_benchmark_log(
-                        self.log_path,
-                        benchmark_file,
-                        {"log": instance_log_json, "stats": stats},
-                    )
-                    continue
-
-                # If the lexicographic prompt does not work, we try the multi-phase prompt
-                Logger.log_info(
-                    f"Using multi-phase prompt for benchmark: {start_index + benchmark_index + 1}/{len(sliced_benchmarks)}"
-                )
-                (
-                    multi_phase_variant_code_blocks,
-                    multi_phase_variant_llm_output,
-                ) = self.llm.generate_annotation(
-                    input={"code": self.benchmark.get_code(benchmark_file)},
-                    prompt=multi_phase_variant_prompt,
-                    extraction_filter=self.checker.has_variant,
-                )
-
-                multi_phase_variants = self.benchmark.get_variant_expressions(
-                    [
-                        code_block
-                        for code_block in multi_phase_variant_code_blocks
-                        if not (
-                            len(code_block) == 2
-                            and code_block[0]
-                            == "ERROR: Output does not contain at least 1 complete code block"
-                        )
-                    ]
-                )
-
-                instance_log_json["multi_phase_variants"] = multi_phase_variants
-                instance_log_json[
-                    "multi_phase_variant_llm_output"
-                ] = multi_phase_variant_llm_output
-                instance_log_json["multi_phase_variant_log"] = {}
-
-                invariants_log = self.generate_invariants_for_variant(
-                    invariants_prompt,
-                    multi_phase_variants,
-                    self.benchmark.get_code(benchmark_file),
-                )
-
-                instance_log_json["multi_phase_variant_log"] = invariants_log
-                instance_log_json["multi_phase_variant_success"] = invariants_log[
-                    "success"
-                ]
-
-                # If the multi-phase prompt works, we can move on
-                if invariants_log["success"]:
-                    benchmark_success = True
-                    Logger.log_success(
-                        f"Benchmark {start_index + benchmark_index + 1}/{len(sliced_benchmarks)} succeeded with a multi-phase prompt"
-                    )
-                    instance_log_json["success"] = True
-                    log_json.append(instance_log_json)
-                    stats["success"].append(benchmark_file)
-                    Loopy.write_benchmark_log(
-                        self.log_path,
-                        benchmark_file,
-                        {"log": instance_log_json, "stats": stats},
-                    )
-                    continue
-
-                # If no prompt works, we fail and move on
-                Logger.log_error(
-                    f"Benchmark {start_index + benchmark_index + 1}/{len(sliced_benchmarks)} failed"
-                )
-                log_json.append(instance_log_json)
-                stats["failure"].append(benchmark_file)
-                instance_log_json["success"] = False
-                Loopy.write_benchmark_log(
-                    self.log_path,
-                    benchmark_file,
-                    {"log": instance_log_json, "stats": stats},
-                )
-
-            except Exception as e:
-                Logger.log_error(traceback.format_exc())
-                if isinstance(e, KeyboardInterrupt):
-                    instance_log_json["success"] = False
-                    stats["skipped"].append(benchmark_file)
-                    break
-                else:
-                    instance_log_json["error"] = str(e)
-                    instance_log_json["success"] = False
-                    stats["skipped"].append(benchmark_file)
-                    log_json.append(instance_log_json)
-                    Loopy.write_benchmark_log(
-                        self.log_path,
-                        benchmark_file,
-                        {"log": instance_log_json, "stats": stats},
-                    )
-                    continue
-
-            stats["total"] += 1
-            stats["success_count"] = len(stats["success"])
-            stats["failure_count"] = len(stats["failure"])
-            stats["success_rate"] = (
-                stats["success_count"] / stats["total"] if stats["total"] != 0 else 0
-            )
-
-            log_json.append(instance_log_json)
-
-        log_file.write(
-            json.dumps(
-                {"params": self.arg_params, "logs": log_json, "stats": stats},
-                indent=4,
-                ensure_ascii=False,
-            )
-        )
-        log_file.close()
-
-        return
-
-    def interprocedural_loop_invariant_analysis(self, max_benchmarks=1, start_index=0):
-        if self.llm is None or self.benchmark is None or self.checker is None:
-            raise Exception("Pipeline not initialized. Call load_config first.")
-
-        log_json = []
-        stats = {"success": [], "failure": [], "skipped": [], "total": 0}
-
-        # create logs dir
-        self.log_path = datetime.datetime.now().strftime(
-            f"../logs/loopy_%Y_%m_%d_%H_%M_%S/"
-        )
-        if not os.path.exists(os.path.dirname(self.log_path)):
-            os.makedirs(os.path.dirname(self.log_path))
-
-        log_file = open(self.log_path + "final.json", "w", encoding="utf-8")
-
-        sliced_benchmarks = self.benchmark.input_file_paths[
-            start_index : start_index + max_benchmarks
-        ]
-
-        pre_post_prompt = Prompt(
-            system_text_file="templates/m1_prepost_system.txt",
-            prompt_text_file="templates/m1_prepost_prompt.txt",
-            num_completions=8,
-        )
-
-        for benchmark_index, benchmark_file in enumerate(sliced_benchmarks):
-            Logger.log_info(
-                f"Running benchmark: {start_index + benchmark_index + 1}/{len(sliced_benchmarks)}"
-            )
-
-            instance_log_json = {
-                "file": benchmark_file,
-                "benchmark_code": self.benchmark.get_code(benchmark_file),
-                "success": False,
-            }
-            success = False
-
-            try:
-                annotation_blocks, llm_outputs = self.llm.generate_annotation(
-                    input={"code": self.benchmark.get_code(benchmark_file)},
-                    prompt=pre_post_prompt,
-                    extraction_filter=lambda x: self.checker.has_invariant(x)
-                    or self.checker.has_function_contract(x),
-                )
-
-                instance_log_json["llm_conversation"] = llm_outputs
-                instance_log_json["annotation_blocks"] = annotation_blocks
-
-                completions = []
-                for block in annotation_blocks:
-                    completion_json = {
-                        "num_solver_calls": 0,
-                    }
-                    if len(block) == 2 and block[0] == (
-                        "ERROR: Output does not contain at least 1 complete code block"
-                    ):
-                        completion_json["success"] = False
-                        completion_json["num_solver_calls"] = 0
-                        completion_json["llm_output"] = block[1]
-                        completion_json[
-                            "error"
-                        ] = "Output does not contain at least 1 code block"
-                        completions.append(completion_json)
-                        continue
-
-                    Logger.log_info(f"Checking completion {len(completions) + 1}")
-
-                    checker_input_with_annotations = self.benchmark.combine_llm_outputs(
-                        self.benchmark.get_code(benchmark_file),
-                        [block],
-                        "multiple_loops_multiple_methods",
-                    )
-                    completion_json["annotations"] = block
-                    __success, checker_message = self.checker.check(
-                        checker_input_with_annotations,
-                        False,
-                        use_json_dump_for_invariants=self.use_json_output,
-                        check_contracts=True,
-                    )
-
-                    completion_json["num_solver_calls"] += 1
-                    completion_json["checker_output_for_annotations"] = __success
-                    completion_json["checker_message_for_annotations"] = checker_message
-
-                    if not __success:
-                        try:
-                            (
-                                __success,
-                                pruned_code,
-                                num_frama_c_calls,
-                            ) = self.checker.houdini(
-                                checker_input_with_annotations,
-                                "multiple_loops_multiple_methods",
-                                use_json_dump_for_invariants=self.use_json_output,
-                                check_contracts=True,
-                            )
-
-                            completion_json["num_solver_calls"] += num_frama_c_calls
-                            completion_json["code_after_prune"] = pruned_code
-                            completion_json["checker_output_after_prune"] = __success
-                        except Exception as e:
-                            completion_json[
-                                "code_after_prune"
-                            ] = checker_input_with_annotations
-                            completion_json["checker_output_after_prune"] = False
-                            completion_json["checker_message_after_prune"] = str(e)
-                            __success = False
-
-                    success = __success or success
-
-                    if __success:
-                        Logger.log_success(
-                            f"Completion {len(completions) + 1} is correct"
-                        )
-                    else:
-                        Logger.log_error(
-                            f"Completion {len(completions) + 1} is incorrect"
-                        )
-
-                    completions.append(completion_json)
-
-                instance_log_json["completions"] = completions
-
-                checker_input_with_combined_annotations = self.benchmark.combine_llm_outputs(
-                    self.benchmark.get_code(benchmark_file),
-                    [
-                        block
-                        for block in annotation_blocks
-                        if not (
-                            len(block) == 2
-                            and block[0]
-                            == (
-                                "ERROR: Output does not contain at least 1 complete code block"
-                            )
-                        )
-                    ],
-                    "multiple_loops_multiple_methods",
-                )
-
-                Logger.log_info(
-                    f"Checking combined annotations for benchmark: {start_index + benchmark_index + 1}/{len(sliced_benchmarks)}"
-                )
-
-                __success, checker_message = self.checker.check(
-                    checker_input_with_combined_annotations,
-                    False,
-                    use_json_dump_for_invariants=self.use_json_output,
-                    check_contracts=True,
-                )
-
-                if __success:
-                    Logger.log_success(
-                        f"Combined annotations are correct for benchmark: {start_index + benchmark_index + 1}/{len(sliced_benchmarks)}"
-                    )
-                else:
-                    Logger.log_error(
-                        f"Combined annotations are incorrect for benchmark: {start_index + benchmark_index + 1}/{len(sliced_benchmarks)}"
-                    )
-
-                instance_log_json["checker_output_for_combined_annotations"] = __success
-                instance_log_json[
-                    "checker_message_for_combined_annotations"
-                ] = checker_message
-                instance_log_json[
-                    "code_with_combined_annotations"
-                ] = checker_input_with_combined_annotations
-
-                success = __success or success
-
-                if not __success:
-                    Logger.log_info(
-                        f"Houdini for combined annotations for benchmark: {start_index + benchmark_index + 1}/{len(sliced_benchmarks)}"
-                    )
-
-                    try:
-                        (
-                            __success,
-                            pruned_code,
-                            num_frama_c_calls,
-                        ) = self.checker.houdini(
-                            checker_input_with_combined_annotations,
-                            "multiple_loops_multiple_methods",
-                            use_json_dump_for_invariants=self.use_json_output,
-                            check_contracts=True,
-                        )
-                    except Exception as e:
-                        Logger.log_error(traceback.format_exc())
-                        Logger.log_error(str(e))
-                        __success = False
-                        pruned_code = checker_input_with_combined_annotations
-                        num_frama_c_calls = 0
-
-                    if __success:
-                        Logger.log_success(
-                            f"Houdini for combined annotations successful for benchmark: {start_index + benchmark_index + 1}/{len(sliced_benchmarks)}"
-                        )
-                    else:
-                        Logger.log_error(
-                            f"Houdini for combined annotations unsuccessful for benchmark: {start_index + benchmark_index + 1}/{len(sliced_benchmarks)}"
-                        )
-
-                    instance_log_json["combined_annotation_num_solver_calls"] = (
-                        num_frama_c_calls + 1
-                    )
-                    instance_log_json["code_after_prune"] = pruned_code
-                    instance_log_json["checker_output_after_prune"] = __success
-
-                success = __success or success
-
-                instance_log_json["success"] = success
-
-            except Exception as e:
-                Logger.log_error(traceback.format_exc())
-                if isinstance(e, KeyboardInterrupt):
-                    instance_log_json["success"] = False
-                    stats["skipped"].append(benchmark_file)
-                    break
-                else:
-                    instance_log_json["error"] = str(e)
-                    instance_log_json["success"] = False
-                    stats["skipped"].append(benchmark_file)
-                    log_json.append(instance_log_json)
-                    Loopy.write_benchmark_log(
-                        self.log_path,
-                        benchmark_file,
-                        {"log": instance_log_json, "stats": stats},
-                    )
-                    continue
-
-            if instance_log_json["success"]:
-                Logger.log_success(
-                    f"Benchmark {start_index + benchmark_index + 1}/{len(sliced_benchmarks)} succeeded"
-                )
-                stats["success"].append(benchmark_file)
-
-            else:
-                Logger.log_error(
-                    f"Benchmark {start_index + benchmark_index + 1}/{len(sliced_benchmarks)} failed"
-                )
-                stats["failure"].append(benchmark_file)
-
-            stats["total"] += 1
-            stats["success_count"] = len(stats["success"])
-            stats["failure_count"] = len(stats["failure"])
-            stats["success_rate"] = (
-                stats["success_count"] / stats["total"] if stats["total"] != 0 else 0
-            )
-
-            log_json.append(instance_log_json)
-
-            Loopy.write_benchmark_log(
-                self.log_path,
-                benchmark_file,
-                {"log": instance_log_json, "stats": stats},
-            )
-
-        log_file.write(
-            json.dumps(
-                {"params": self.arg_params, "logs": log_json, "stats": stats},
-                indent=4,
-                ensure_ascii=False,
-            )
-        )
-        log_file.close()
-
-        return
-
     def find_loop_invariants(
         self, max_benchmarks=1, start_index=0, prompt="with_nudges"
     ):
@@ -1711,3 +1008,706 @@ class Loopy:
         log_file.close()
 
         return
+
+    def interprocedural_loop_invariant_analysis(self, max_benchmarks=1, start_index=0):
+        if self.llm is None or self.benchmark is None or self.checker is None:
+            raise Exception("Pipeline not initialized. Call load_config first.")
+
+        log_json = []
+        stats = {"success": [], "failure": [], "skipped": [], "total": 0}
+
+        # create logs dir
+        self.log_path = datetime.datetime.now().strftime(
+            f"../logs/loopy_%Y_%m_%d_%H_%M_%S/"
+        )
+        if not os.path.exists(os.path.dirname(self.log_path)):
+            os.makedirs(os.path.dirname(self.log_path))
+
+        log_file = open(self.log_path + "final.json", "w", encoding="utf-8")
+
+        sliced_benchmarks = self.benchmark.input_file_paths[
+            start_index : start_index + max_benchmarks
+        ]
+
+        pre_post_prompt = Prompt(
+            system_text_file="templates/m1_prepost_system.txt",
+            prompt_text_file="templates/m1_prepost_prompt.txt",
+            num_completions=8,
+        )
+
+        for benchmark_index, benchmark_file in enumerate(sliced_benchmarks):
+            Logger.log_info(
+                f"Running benchmark: {start_index + benchmark_index + 1}/{len(sliced_benchmarks)}"
+            )
+
+            instance_log_json = {
+                "file": benchmark_file,
+                "benchmark_code": self.benchmark.get_code(benchmark_file),
+                "success": False,
+            }
+            success = False
+
+            try:
+                annotation_blocks, llm_outputs = self.llm.generate_annotation(
+                    input={"code": self.benchmark.get_code(benchmark_file)},
+                    prompt=pre_post_prompt,
+                    extraction_filter=lambda x: self.checker.has_invariant(x)
+                    or self.checker.has_function_contract(x),
+                )
+
+                instance_log_json["llm_conversation"] = llm_outputs
+                instance_log_json["annotation_blocks"] = annotation_blocks
+
+                completions = []
+                for block in annotation_blocks:
+                    completion_json = {
+                        "num_solver_calls": 0,
+                    }
+                    if len(block) == 2 and block[0] == (
+                        "ERROR: Output does not contain at least 1 complete code block"
+                    ):
+                        completion_json["success"] = False
+                        completion_json["num_solver_calls"] = 0
+                        completion_json["llm_output"] = block[1]
+                        completion_json[
+                            "error"
+                        ] = "Output does not contain at least 1 code block"
+                        completions.append(completion_json)
+                        continue
+
+                    Logger.log_info(f"Checking completion {len(completions) + 1}")
+
+                    checker_input_with_annotations = self.benchmark.combine_llm_outputs(
+                        self.benchmark.get_code(benchmark_file),
+                        [block],
+                        "multiple_loops_multiple_methods",
+                    )
+                    completion_json["annotations"] = block
+                    __success, checker_message = self.checker.check(
+                        checker_input_with_annotations,
+                        False,
+                        use_json_dump_for_invariants=self.use_json_output,
+                        check_contracts=True,
+                    )
+
+                    completion_json["num_solver_calls"] += 1
+                    completion_json["checker_output_for_annotations"] = __success
+                    completion_json["checker_message_for_annotations"] = checker_message
+
+                    if not __success:
+                        try:
+                            (
+                                __success,
+                                pruned_code,
+                                num_frama_c_calls,
+                            ) = self.checker.houdini(
+                                checker_input_with_annotations,
+                                "multiple_loops_multiple_methods",
+                                use_json_dump_for_invariants=self.use_json_output,
+                                check_contracts=True,
+                            )
+
+                            completion_json["num_solver_calls"] += num_frama_c_calls
+                            completion_json["code_after_prune"] = pruned_code
+                            completion_json["checker_output_after_prune"] = __success
+                        except Exception as e:
+                            completion_json[
+                                "code_after_prune"
+                            ] = checker_input_with_annotations
+                            completion_json["checker_output_after_prune"] = False
+                            completion_json["checker_message_after_prune"] = str(e)
+                            __success = False
+
+                    success = __success or success
+
+                    if __success:
+                        Logger.log_success(
+                            f"Completion {len(completions) + 1} is correct"
+                        )
+                    else:
+                        Logger.log_error(
+                            f"Completion {len(completions) + 1} is incorrect"
+                        )
+
+                    completions.append(completion_json)
+
+                instance_log_json["completions"] = completions
+
+                checker_input_with_combined_annotations = self.benchmark.combine_llm_outputs(
+                    self.benchmark.get_code(benchmark_file),
+                    [
+                        block
+                        for block in annotation_blocks
+                        if not (
+                            len(block) == 2
+                            and block[0]
+                            == (
+                                "ERROR: Output does not contain at least 1 complete code block"
+                            )
+                        )
+                    ],
+                    "multiple_loops_multiple_methods",
+                )
+
+                Logger.log_info(
+                    f"Checking combined annotations for benchmark: {start_index + benchmark_index + 1}/{len(sliced_benchmarks)}"
+                )
+
+                __success, checker_message = self.checker.check(
+                    checker_input_with_combined_annotations,
+                    False,
+                    use_json_dump_for_invariants=self.use_json_output,
+                    check_contracts=True,
+                )
+
+                if __success:
+                    Logger.log_success(
+                        f"Combined annotations are correct for benchmark: {start_index + benchmark_index + 1}/{len(sliced_benchmarks)}"
+                    )
+                else:
+                    Logger.log_error(
+                        f"Combined annotations are incorrect for benchmark: {start_index + benchmark_index + 1}/{len(sliced_benchmarks)}"
+                    )
+
+                instance_log_json["checker_output_for_combined_annotations"] = __success
+                instance_log_json[
+                    "checker_message_for_combined_annotations"
+                ] = checker_message
+                instance_log_json[
+                    "code_with_combined_annotations"
+                ] = checker_input_with_combined_annotations
+
+                success = __success or success
+
+                if not __success:
+                    Logger.log_info(
+                        f"Houdini for combined annotations for benchmark: {start_index + benchmark_index + 1}/{len(sliced_benchmarks)}"
+                    )
+
+                    try:
+                        (
+                            __success,
+                            pruned_code,
+                            num_frama_c_calls,
+                        ) = self.checker.houdini(
+                            checker_input_with_combined_annotations,
+                            "multiple_loops_multiple_methods",
+                            use_json_dump_for_invariants=self.use_json_output,
+                            check_contracts=True,
+                        )
+                    except Exception as e:
+                        Logger.log_error(traceback.format_exc())
+                        Logger.log_error(str(e))
+                        __success = False
+                        pruned_code = checker_input_with_combined_annotations
+                        num_frama_c_calls = 0
+
+                    if __success:
+                        Logger.log_success(
+                            f"Houdini for combined annotations successful for benchmark: {start_index + benchmark_index + 1}/{len(sliced_benchmarks)}"
+                        )
+                    else:
+                        Logger.log_error(
+                            f"Houdini for combined annotations unsuccessful for benchmark: {start_index + benchmark_index + 1}/{len(sliced_benchmarks)}"
+                        )
+
+                    instance_log_json["combined_annotation_num_solver_calls"] = (
+                        num_frama_c_calls + 1
+                    )
+                    instance_log_json["code_after_prune"] = pruned_code
+                    instance_log_json["checker_output_after_prune"] = __success
+
+                success = __success or success
+
+                instance_log_json["success"] = success
+
+            except Exception as e:
+                Logger.log_error(traceback.format_exc())
+                if isinstance(e, KeyboardInterrupt):
+                    instance_log_json["success"] = False
+                    stats["skipped"].append(benchmark_file)
+                    break
+                else:
+                    instance_log_json["error"] = str(e)
+                    instance_log_json["success"] = False
+                    stats["skipped"].append(benchmark_file)
+                    log_json.append(instance_log_json)
+                    Loopy.write_benchmark_log(
+                        self.log_path,
+                        benchmark_file,
+                        {"log": instance_log_json, "stats": stats},
+                    )
+                    continue
+
+            if instance_log_json["success"]:
+                Logger.log_success(
+                    f"Benchmark {start_index + benchmark_index + 1}/{len(sliced_benchmarks)} succeeded"
+                )
+                stats["success"].append(benchmark_file)
+
+            else:
+                Logger.log_error(
+                    f"Benchmark {start_index + benchmark_index + 1}/{len(sliced_benchmarks)} failed"
+                )
+                stats["failure"].append(benchmark_file)
+
+            stats["total"] += 1
+            stats["success_count"] = len(stats["success"])
+            stats["failure_count"] = len(stats["failure"])
+            stats["success_rate"] = (
+                stats["success_count"] / stats["total"] if stats["total"] != 0 else 0
+            )
+
+            log_json.append(instance_log_json)
+
+            Loopy.write_benchmark_log(
+                self.log_path,
+                benchmark_file,
+                {"log": instance_log_json, "stats": stats},
+            )
+
+        log_file.write(
+            json.dumps(
+                {"params": self.arg_params, "logs": log_json, "stats": stats},
+                indent=4,
+                ensure_ascii=False,
+            )
+        )
+        log_file.close()
+
+        return
+
+    def termination_analysis(self, max_benchmarks=1, start_index=0):
+        if self.llm is None or self.benchmark is None or self.checker is None:
+            raise Exception("Pipeline not initialized. Call load_config first.")
+
+        log_json = []
+        stats = {"success": [], "failure": [], "skipped": [], "total": 0}
+
+        # create logs dir
+        self.log_path = datetime.datetime.now().strftime(
+            f"../logs/loopy_%Y_%m_%d_%H_%M_%S/"
+        )
+        if not os.path.exists(os.path.dirname(self.log_path)):
+            os.makedirs(os.path.dirname(self.log_path))
+
+        log_file = open(self.log_path + "final.json", "w", encoding="utf-8")
+
+        sliced_benchmarks = self.benchmark.input_file_paths[
+            start_index : start_index + max_benchmarks
+        ]
+
+        alg_variant_prompt = Prompt(
+            system_text_file="templates/termination_variants_system.txt",
+            prompt_text_file="templates/termination_variants_prompt.txt",
+            num_completions=5,
+        )
+        lexico_variant_prompt = Prompt(
+            system_text_file="templates/termination_lexico_system.txt",
+            prompt_text_file="templates/termination_lexico_prompt.txt",
+            num_completions=5,
+        )
+        multi_phase_variant_prompt = Prompt(
+            system_text_file="templates/termination_mphase_system.txt",
+            prompt_text_file="templates/termination_mphase_prompt.txt",
+            num_completions=5,
+        )
+
+        invariants_prompt = Prompt(
+            system_text_file="templates/termination_invariants_system.txt",
+            prompt_text_file="templates/termination_invariants_prompt.txt",
+            num_completions=5,
+        )
+
+        for benchmark_index, benchmark_file in enumerate(sliced_benchmarks):
+            Logger.log_info(
+                f"Running benchmark: {start_index + benchmark_index + 1}/{len(sliced_benchmarks)}"
+            )
+            benchmark_success = False
+
+            instance_log_json = {
+                "file": benchmark_file,
+                "benchmark_code": self.benchmark.get_code(benchmark_file),
+                "success": False,
+            }
+
+            try:
+                # Try the basic prompt first
+                Logger.log_info(
+                    f"Using basic prompt for benchmark: {start_index + benchmark_index + 1}/{len(sliced_benchmarks)}"
+                )
+                (
+                    alg_variant_code_blocks,
+                    alg_variant_llm_output,
+                ) = self.llm.generate_annotation(
+                    input={"code": self.benchmark.get_code(benchmark_file)},
+                    prompt=alg_variant_prompt,
+                    extraction_filter=self.checker.has_variant,
+                )
+
+                alg_variants = self.benchmark.get_variant_expressions(
+                    [
+                        code_block
+                        for code_block in alg_variant_code_blocks
+                        if not (
+                            len(code_block) == 2
+                            and code_block[0]
+                            == "ERROR: Output does not contain at least 1 complete code block"
+                        )
+                    ]
+                )
+
+                instance_log_json["simple_variants"] = alg_variants
+                instance_log_json["simple_variant_llm_output"] = alg_variant_llm_output
+                instance_log_json["simple_variant_log"] = {}
+
+                invariants_log = self.generate_invariants_for_variant(
+                    invariants_prompt,
+                    alg_variants,
+                    self.benchmark.get_code(benchmark_file),
+                )
+
+                instance_log_json["simple_variant_log"] = invariants_log
+                instance_log_json["simple_variant_success"] = invariants_log["success"]
+
+                # If the basic prompt works, we are done
+                if invariants_log["success"]:
+                    benchmark_success = True
+                    Logger.log_success(
+                        f"Benchmark {start_index + benchmark_index + 1}/{len(sliced_benchmarks)} succeeded with a basic prompt"
+                    )
+                    instance_log_json["success"] = True
+                    log_json.append(instance_log_json)
+                    stats["success"].append(benchmark_file)
+                    Loopy.write_benchmark_log(
+                        self.log_path,
+                        benchmark_file,
+                        {"log": instance_log_json, "stats": stats},
+                    )
+                    continue
+
+                # If the basic prompt does not work, try the lexicographic prompt next
+                Logger.log_info(
+                    f"Using lexicographic prompt for benchmark: {start_index + benchmark_index + 1}/{len(sliced_benchmarks)}"
+                )
+                (
+                    lexico_variant_code_blocks,
+                    lexico_variant_llm_output,
+                ) = self.llm.generate_annotation(
+                    input={"code": self.benchmark.get_code(benchmark_file)},
+                    prompt=lexico_variant_prompt,
+                    extraction_filter=self.checker.has_variant,
+                )
+
+                lexico_variants = self.benchmark.get_variant_expressions(
+                    [
+                        code_block
+                        for code_block in lexico_variant_code_blocks
+                        if not (
+                            len(code_block) == 2
+                            and code_block[0]
+                            == "ERROR: Output does not contain at least 1 complete code block"
+                        )
+                    ]
+                )
+
+                instance_log_json["lexicographic_variants"] = lexico_variants
+                instance_log_json[
+                    "lexicographic_variant_llm_output"
+                ] = lexico_variant_llm_output
+                instance_log_json["lexicographic_variant_log"] = {}
+
+                invariants_log = self.generate_invariants_for_variant(
+                    invariants_prompt,
+                    lexico_variants,
+                    self.benchmark.get_code(benchmark_file),
+                )
+
+                instance_log_json["lexicographic_variant_log"] = invariants_log
+                instance_log_json["lexicographic_variant_success"] = invariants_log[
+                    "success"
+                ]
+
+                # If the lexicographic prompt works, we can move on
+                if invariants_log["success"]:
+                    benchmark_success = True
+                    Logger.log_success(
+                        f"Benchmark {start_index + benchmark_index + 1}/{len(sliced_benchmarks)} succeeded with a lexicographic prompt"
+                    )
+                    instance_log_json["success"] = True
+                    log_json.append(instance_log_json)
+                    stats["success"].append(benchmark_file)
+                    Loopy.write_benchmark_log(
+                        self.log_path,
+                        benchmark_file,
+                        {"log": instance_log_json, "stats": stats},
+                    )
+                    continue
+
+                # If the lexicographic prompt does not work, we try the multi-phase prompt
+                Logger.log_info(
+                    f"Using multi-phase prompt for benchmark: {start_index + benchmark_index + 1}/{len(sliced_benchmarks)}"
+                )
+                (
+                    multi_phase_variant_code_blocks,
+                    multi_phase_variant_llm_output,
+                ) = self.llm.generate_annotation(
+                    input={"code": self.benchmark.get_code(benchmark_file)},
+                    prompt=multi_phase_variant_prompt,
+                    extraction_filter=self.checker.has_variant,
+                )
+
+                multi_phase_variants = self.benchmark.get_variant_expressions(
+                    [
+                        code_block
+                        for code_block in multi_phase_variant_code_blocks
+                        if not (
+                            len(code_block) == 2
+                            and code_block[0]
+                            == "ERROR: Output does not contain at least 1 complete code block"
+                        )
+                    ]
+                )
+
+                instance_log_json["multi_phase_variants"] = multi_phase_variants
+                instance_log_json[
+                    "multi_phase_variant_llm_output"
+                ] = multi_phase_variant_llm_output
+                instance_log_json["multi_phase_variant_log"] = {}
+
+                invariants_log = self.generate_invariants_for_variant(
+                    invariants_prompt,
+                    multi_phase_variants,
+                    self.benchmark.get_code(benchmark_file),
+                )
+
+                instance_log_json["multi_phase_variant_log"] = invariants_log
+                instance_log_json["multi_phase_variant_success"] = invariants_log[
+                    "success"
+                ]
+
+                # If the multi-phase prompt works, we can move on
+                if invariants_log["success"]:
+                    benchmark_success = True
+                    Logger.log_success(
+                        f"Benchmark {start_index + benchmark_index + 1}/{len(sliced_benchmarks)} succeeded with a multi-phase prompt"
+                    )
+                    instance_log_json["success"] = True
+                    log_json.append(instance_log_json)
+                    stats["success"].append(benchmark_file)
+                    Loopy.write_benchmark_log(
+                        self.log_path,
+                        benchmark_file,
+                        {"log": instance_log_json, "stats": stats},
+                    )
+                    continue
+
+                # If no prompt works, we fail and move on
+                Logger.log_error(
+                    f"Benchmark {start_index + benchmark_index + 1}/{len(sliced_benchmarks)} failed"
+                )
+                log_json.append(instance_log_json)
+                stats["failure"].append(benchmark_file)
+                instance_log_json["success"] = False
+                Loopy.write_benchmark_log(
+                    self.log_path,
+                    benchmark_file,
+                    {"log": instance_log_json, "stats": stats},
+                )
+
+            except Exception as e:
+                Logger.log_error(traceback.format_exc())
+                if isinstance(e, KeyboardInterrupt):
+                    instance_log_json["success"] = False
+                    stats["skipped"].append(benchmark_file)
+                    break
+                else:
+                    instance_log_json["error"] = str(e)
+                    instance_log_json["success"] = False
+                    stats["skipped"].append(benchmark_file)
+                    log_json.append(instance_log_json)
+                    Loopy.write_benchmark_log(
+                        self.log_path,
+                        benchmark_file,
+                        {"log": instance_log_json, "stats": stats},
+                    )
+                    continue
+
+            stats["total"] += 1
+            stats["success_count"] = len(stats["success"])
+            stats["failure_count"] = len(stats["failure"])
+            stats["success_rate"] = (
+                stats["success_count"] / stats["total"] if stats["total"] != 0 else 0
+            )
+
+            log_json.append(instance_log_json)
+
+        log_file.write(
+            json.dumps(
+                {"params": self.arg_params, "logs": log_json, "stats": stats},
+                indent=4,
+                ensure_ascii=False,
+            )
+        )
+        log_file.close()
+
+        return
+
+    def generate_invariants_for_variant(self, prompt, variants, checker_input):
+        # one set of variants
+        invariants_log = {"success": False}
+
+        for var_index, variant in enumerate(variants):
+            Logger.log_info(
+                f"Checking variant [{var_index + 1}]/[{len(variants)}]: {variant}"
+            )
+            variant_log = {"variant": variant}
+            try:
+                # syntax error check
+                checker_inputs_with_variants = self.benchmark.combine_llm_outputs(
+                    checker_input,
+                    (
+                        "",
+                        ["\n".join(["loop variant " + x + ";" for x in variant])],
+                    ),
+                    "termination_one_loop_one_method",
+                )
+
+                error_free_variants = []
+
+                for checker_input_with_variant in checker_inputs_with_variants:
+                    success, checker_message = self.checker.check(
+                        checker_input_with_variant,
+                        check_variant=True,
+                        use_json_dump_for_invariants=self.use_json_output,
+                    )
+
+                    if "Annotation error on line " in checker_message:
+                        Logger.log_error(f"Annotation error in variant: {variant}")
+                        continue
+                    else:
+                        error_free_variants.append(checker_input_with_variant)
+
+                if len(error_free_variants) == 0:
+                    variant_log[
+                        "error"
+                    ] = "All variant candidates have annotation errors"
+                    variant_log["success"] = False
+                    invariants_log[str(variant)] = variant_log
+                    Logger.log_error(f"Annotation errors in variant: {variant}")
+                    continue
+
+                Logger.log_info(f"Generating invariants for variant: {variant}")
+
+                # Generate invariants for this variant
+                (
+                    invariant_code_blocks,
+                    invariant_llm_output,
+                ) = self.llm.generate_annotation(
+                    input={
+                        "code": checker_input,
+                        "loop_variant": "(" + ", ".join(variant) + ")",
+                    },
+                    prompt=prompt,
+                    extraction_filter=self.checker.has_invariant,
+                )
+
+                variant_log["invariant_code_blocks"] = invariant_code_blocks
+                variant_log["invariant_llm_output"] = invariant_llm_output
+
+                checker_input_with_invariants = self.benchmark.combine_llm_outputs(
+                    checker_input,
+                    list(
+                        filter(
+                            lambda x: not (
+                                len(x) == 2
+                                and x[0]
+                                == "ERROR: Output does not contain at least 1 complete code block"
+                            ),
+                            invariant_code_blocks,
+                        )
+                    ),
+                    "one_loop_one_method",
+                )
+
+                # Houdini for the invariant set
+                success, pruned_code, num_frama_c_calls = self.checker.houdini(
+                    checker_input_with_invariants,
+                    "one_loop_one_method",
+                    use_json_dump_for_invariants=self.use_json_output,
+                )
+
+                inductive_invariants = self.benchmark.extract_loop_invariants(
+                    pruned_code
+                )
+
+                if len(inductive_invariants) == 0:
+                    Logger.log_error(
+                        f"No inductive invariants found for variant: {variant}"
+                    )
+                else:
+                    Logger.log_success(
+                        f"Inductive invariants found for variant: {variant}"
+                    )
+
+                variant_log["inductive_invariants"] = inductive_invariants
+                # candidates with variants and invariants
+                checker_full_inputs = self.benchmark.combine_llm_outputs(
+                    checker_input,
+                    (
+                        inductive_invariants,
+                        ["\n".join(["loop variant " + x + ";" for x in variant])],
+                    ),
+                    "termination_one_loop_one_method",
+                )
+
+                variant_candidates = []
+                for checker_inp in checker_full_inputs:
+                    Logger.log_info(
+                        f"Checking variant candidate for variant: {variant}"
+                    )
+                    success, checker_message = self.checker.check(
+                        checker_inp,
+                        check_variant=True,
+                        use_json_dump_for_invariants=self.use_json_output,
+                    )
+                    variant_candidates.append(
+                        {
+                            "candidate_with_combined_invariants_and_variant": checker_inp,
+                            "checker_output": success,
+                            "checker_message": checker_message,
+                        }
+                    )
+                    if success:
+                        Logger.log_success(
+                            f"Variant candidate is correct for variant: {variant}"
+                        )
+                    else:
+                        Logger.log_error(
+                            f"Variant candidate is incorrect for variant: {variant}"
+                        )
+
+                variant_log["final_variant_candidates"] = variant_candidates
+                variant_log["success"] = any(
+                    [x["checker_output"] for x in variant_candidates]
+                )
+
+                invariants_log[str(variant)] = variant_log
+                invariants_log["success"] = (
+                    invariants_log["success"] or variant_log["success"]
+                )
+
+                if variant_log["success"]:
+                    Logger.log_success(f"Variant {variant} is correct for benchmark")
+                    break
+                else:
+                    Logger.log_error(f"Variant {variant} is incorrect for benchmark")
+
+            except Exception as e:
+                Logger.log_error(traceback.format_exc())
+                variant_log["error"] = str(e)
+                variant_log["success"] = False
+                invariants_log[str(variant)] = variant_log
+                invariants_log["success"] = False
+
+        return invariants_log

@@ -1,52 +1,6 @@
 import os
 
 
-class Settings:
-    def __init__(
-        self,
-        provider: str = "azure-openai",
-        api_key: str = "",
-        model: str = "gpt-4",
-        max_tokens: int = 1000,
-        temperature: float = 0.7,
-        top_p: float = 0.95,
-        frequency_penalty: float = 0.0,
-        presence_penalty: float = 0.0,
-        stop: str = None,
-        num_completions: int = 1,
-        max_retries: int = 10,
-        prompts_per_minute: int = 2,
-        max_batch_size: int = 5,
-        verbose: bool = False,
-        debug: bool = False,
-    ):
-        """Initializes a new 'Settings' instance from the specified parameters."""
-        self.provider = provider
-        self.api_key = api_key
-        self.model = model
-        self.max_tokens = max_tokens
-        self.temperature = temperature
-        self.top_p = top_p
-        self.frequency_penalty = frequency_penalty
-        self.presence_penalty = presence_penalty
-        self.stop = stop
-        self.num_completions = num_completions
-        self.max_retries = max_retries
-        self.prompts_per_minute = prompts_per_minute
-        self.max_batch_size = max_batch_size
-        self.verbose = verbose
-        self.debug = debug
-
-    def get_api_key(self) -> str:
-        """Returns the API key."""
-        if len(self.api_key) == 0:
-            self.api_key = os.environ.get("OPENAI_API_KEY")
-            if self.api_key is None or len(self.api_key) == 0:
-                raise ValueError("No API key provided.")
-            return self.api_key
-        return self.api_key
-
-
 ACTION = "\033[95m"
 INFO = "\033[94m"
 SUCCESS = "\033[92m"
@@ -130,3 +84,49 @@ class Logger:
     @staticmethod
     def log(msg: str):
         print(msg)
+
+
+class Settings:
+    def __init__(
+        self,
+        provider: str = "azure-openai",
+        api_key: str = "",
+        model: str = "gpt-4",
+        max_tokens: int = 1000,
+        temperature: float = 0.7,
+        top_p: float = 0.95,
+        frequency_penalty: float = 0.0,
+        presence_penalty: float = 0.0,
+        stop: str = None,
+        num_completions: int = 1,
+        max_retries: int = 10,
+        prompts_per_minute: int = 2,
+        max_batch_size: int = 5,
+        verbose: bool = False,
+        debug: bool = False,
+    ):
+        """Initializes a new 'Settings' instance from the specified parameters."""
+        self.provider = provider
+        self.api_key = api_key
+        self.model = model
+        self.max_tokens = max_tokens
+        self.temperature = temperature
+        self.top_p = top_p
+        self.frequency_penalty = frequency_penalty
+        self.presence_penalty = presence_penalty
+        self.stop = stop
+        self.num_completions = num_completions
+        self.max_retries = max_retries
+        self.prompts_per_minute = prompts_per_minute
+        self.max_batch_size = max_batch_size
+        self.verbose = verbose
+        self.debug = debug
+
+    def get_api_key(self) -> str:
+        """Returns the API key."""
+        if len(self.api_key) == 0:
+            self.api_key = os.environ.get("OPENAI_API_KEY")
+            if self.api_key is None or len(self.api_key) == 0:
+                raise ValueError("No API key provided.")
+            return self.api_key
+        return self.api_key
