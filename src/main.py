@@ -1,5 +1,4 @@
 import argparse
-import datetime
 import sys
 
 from loopy import Loopy

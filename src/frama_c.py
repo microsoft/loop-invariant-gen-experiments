@@ -4,14 +4,13 @@ import json
 import os
 import random
 import re
-import string
 import subprocess
-import sys
 from copy import deepcopy
+
+from tree_sitter import Language, Parser
 
 from benchmark import Benchmark, InvalidBenchmarkException
 from checker import Checker
-from tree_sitter import Language, Parser
 from llm_utils import Logger
 
 

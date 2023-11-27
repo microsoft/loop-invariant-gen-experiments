@@ -1,4 +1,3 @@
-import copy
 import datetime
 import json
 import multiprocessing
@@ -6,16 +5,14 @@ import os
 import random
 import re
 import traceback
-from copy import deepcopy
 import warnings
+from copy import deepcopy
 
 import yaml
 
-from benchmark import Benchmark
-from checker import Checker
 from llm_utils import Logger
-from loopy_llm import LLM, Prompt
 from loopy_factory import LoopyFactory
+from loopy_llm import LLM, Prompt
 
 
 class Loopy:
@@ -99,7 +96,7 @@ class Loopy:
 
     @staticmethod
     def shuffle(input_list):
-        temp = copy.deepcopy(input_list)
+        temp = deepcopy(input_list)
         random.shuffle(temp)
         return temp
 
