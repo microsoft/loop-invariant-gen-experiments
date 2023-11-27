@@ -115,7 +115,7 @@ class Loopy:
 
     @staticmethod
     def prune_wrapper(checker_input):
-        checker = FramaCChecker()
+        checker = LoopyFactory("frama-c").get_checker()
         try:
             success, pruned_code, num_frama_c_calls = checker.houdini(
                 checker_input,

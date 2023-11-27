@@ -91,15 +91,38 @@ class Logger:
         Logger.log(f"{FAIL}{BOLD}[Error]{END} {msg}")
 
     @staticmethod
-    def log_model_request(model: str, msg: str):
+    def log_model_request(model: str, messages: str):
         if Logger.debug:
+            msg = (
+                "\n".join(
+                    [
+                        f"{BOLD}{UNDERLINE}{SUCCESS}"
+                        + message["role"]
+                        + f":{END} "
+                        + message["content"]
+                        for message in messages
+                    ]
+                )
+                + f"\n{INFO}"
+                + ("==" * 30)
+                + f"{END}"
+            )
             Logger.log(
                 f"{INFO}{BOLD}Sending prompt to the '{model}' model:{END}\n{msg}"
             )
 
     @staticmethod
-    def log_model_response(model: str, msg):
+    def log_model_response(model: str, completions: [str]):
         if Logger.debug:
+            msg = "\n".join(
+                [
+                    f"{BOLD}{UNDERLINE}{SUCCESS}Completion "
+                    + str(i + 1)
+                    + f":{END}\n"
+                    + str(completion)
+                    for i, completion in enumerate(completions)
+                ]
+            )
             Logger.log(
                 f"{SUCCESS}{BOLD}Received response from the '{model}' model:{END}\n{msg}"
             )

@@ -5,7 +5,7 @@ from typing import Any, List
 import openai
 import tiktoken
 
-from llm_utils import BOLD, END, INFO, SUCCESS, UNDERLINE, Logger, Settings
+from llm_utils import Logger, Settings
 from llm import LLMClient
 
 
@@ -47,18 +47,7 @@ class LLMAPIClient(LLMClient):
                 # Make the request to the remote LLM API with retries.
                 Logger.log_model_request(
                     self.settings.model,
-                    "\n".join(
-                        [
-                            f"{BOLD}{UNDERLINE}{SUCCESS}"
-                            + message["role"]
-                            + f":{END} "
-                            + message["content"]
-                            for message in messages
-                        ]
-                    )
-                    + f"\n{INFO}"
-                    + ("==" * 30)
-                    + f"{END}",
+                    messages,
                 )
                 self._last_call_time = current_time
 
@@ -80,15 +69,7 @@ class LLMAPIClient(LLMClient):
 
                 Logger.log_model_response(
                     self.settings.model,
-                    "\n".join(
-                        [
-                            f"{BOLD}{UNDERLINE}{SUCCESS}Completion "
-                            + str(i + 1)
-                            + f":{END}\n"
-                            + str(completion)
-                            for i, completion in enumerate(completions)
-                        ]
-                    ),
+                    completions,
                 )
 
                 return True, completions
