@@ -151,3 +151,8 @@ debug: <debug_mode> # if true, the toolchain will print debug information
 ```
 
 See [config/sample_config.yaml](config/sample_config.yaml) for an example of a configuration file.
+
+## Dataset
+
+The dataset of pre-processed benchmarks used in our experiments is available [here](dataset.zip).
+This zip file contains benchmarks from all 4 experiments, after removing comments, and converting the assertions to ACSL assertions (for Frama-C).
