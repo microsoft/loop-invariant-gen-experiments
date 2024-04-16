@@ -24,7 +24,7 @@ opam init --compiler 4.14.1 # may take a while
 eval $(opam env)
 
 # Install Frama-C (including dependencies)
-opam install frama-c
+opam install frama-c=27.1
 ```
 
 #### Install CVC4
@@ -39,7 +39,7 @@ mv cvc4-1.6-{ARCH}-opt cvc4
 #### Install Alt-Ergo
 
 ```bash
-opam install alt-ergo
+opam install alt-ergo=2.4.3
 ```
 
 #### Install Z3
@@ -48,6 +48,7 @@ opam install alt-ergo
 wget wget https://github.com/Z3Prover/z3/releases/download/z3-4.12.2/z3-4.12.2-x64-glibc-2.31.zip
 unzip z3-4.12.2-x64-glibc-2.31.zip
 ln -s z3-4.12.2-x64-glibc-2.31/bin/z3
+# Add z3 to your PATH
 ```
 
 #### Configure Why3
@@ -117,6 +118,7 @@ export OPENAI_API_VERSION=<your API version>
 You should now be able to run the toolchain using the following command:
 
 ```bash
+cd src/
 python3 main.py --config-file <YAML_config_file> --max-benchmarks <max_benchmarks> [options]
 ```
 
@@ -130,14 +132,15 @@ If you are hosting a model locally, you can use a local model inference/serving 
 Extract the dataset from the ZIP file and place it in the root directory of the repository. You can run the toolchain using the following command:
 
 ```bash
+cd src/
 python3 main.py --config-file <YAML_config_file> --max-benchmarks <max_benchmarks> --no-preprocess [options]
 ```
+
+where options can be any of `--loop-invariants`, `--termination-analysis`, etc. Use `python3 main.py --help` to see the list of available options.
 
 The `--no-preprocess` option is used to skip the pre-processing step, since the datasets are already pre-processed.
 If you are using a different dataset with assertions in non-ACSL syntax, you can skip using this option.
 Pre-processing involves removing comments, converting the assertions to ACSL syntax, and filtering out benchmarks not supported by the specified benchmark_features.
-
-Use `python3 main.py --help` to see the list of available options.
 
 The YAML configuration file contains the following fields:
 

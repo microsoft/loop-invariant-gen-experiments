@@ -22,7 +22,7 @@ class Benchmark(ABC):
         self.no_preprocess = no_preprocess
 
     @abstractmethod
-    def preprocess(self, code):
+    def preprocess(self, code, features=None):
         raise NotImplementedError
 
     @abstractmethod
@@ -66,7 +66,7 @@ class Benchmark(ABC):
     def get_variant_expressions(self, completions):
         raise NotImplementedError
 
-    def validate_inputs(self):
+    def validate_inputs(self, no_preprocess=False):
         if not os.path.exists(self.input_benchmarks):
             raise InvalidBenchmarkException(
                 f"Input file {self.input_benchmarks} not found"
@@ -81,7 +81,8 @@ class Benchmark(ABC):
                     code = None
                     with open(file) as f:
                         code = f.read()
-                    self.preprocess(code, self.features)
+                    if not no_preprocess:
+                        self.preprocess(code, self.features)
                     self.input_file_paths.append(file)
                 except InvalidBenchmarkException as e:
                     print(f"Error: {e.message}. File: {file}.")
