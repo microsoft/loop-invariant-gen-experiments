@@ -125,12 +125,6 @@ def main(args):
             k=args.repair_from_k,
             num_repairs=args.repair_retries,
         )
-    elif args.dump_dataset_to_file != "":
-        p.dump_dataset(
-            max_benchmarks=args.max_benchmarks,
-            start_index=args.start_index,
-            path=args.dump_dataset_to_file,
-        )
     else:
         raise Exception(f"Invalid input args: {vars(args)}")
 

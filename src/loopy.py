@@ -83,14 +83,9 @@ class Loopy:
             self.debug,
         )
 
-        if not no_preprocess:
-            """
-            This call will filter out benchmarks that 
-            do not have features specified in the config file
-            """
-            Logger.log_info("Validating input files")
-            self.benchmark.validate_inputs()
-            Logger.log_info(f"Found {len(self.benchmark.input_file_paths)} valid benchmarks")
+        Logger.log_info("Validating input files")
+        self.benchmark.validate_inputs(no_preprocess)
+        Logger.log_info(f"Found {len(self.benchmark.input_file_paths)} valid benchmarks")
 
         return self
 

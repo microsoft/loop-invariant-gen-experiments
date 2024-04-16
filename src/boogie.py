@@ -20,7 +20,7 @@ class BoogieBenchmark(Benchmark):
         self.features = features
         self.input_file_paths = []
 
-    def preprocess(self, code):
+    def preprocess(self, code, features=None):
         raise NotImplementedError
 
     def combine_llm_outputs(self, checker_input, llm_outputs, features=None):
